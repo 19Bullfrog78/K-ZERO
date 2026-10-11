@@ -12,6 +12,13 @@ Si parte da Alpinabus (3 minibus + 1 auto) e si deve poter crescere fino a 500 m
 - Claude Code: programmatore, unico che scrive nel repository GitHub.
 - Claude in chat (progetto K-Zero): arbitro. Rivede piani e modifiche, non scrive codice nel repository.
 
+## Come si salvano le modifiche
+- Solo documenti (DIARIO.md, REGOLE.md, DECISIONI.md, altre note): salva direttamente
+  su main e annota nel diario. L'arbitro controlla dopo.
+- Programma (codice, CMakeLists.txt, test) e CLAUDE.md: ramo di lavoro, poi proposta
+  (pull request), poi controllo dell'arbitro, poi Mauro approva con Merge.
+  Non unire mai una proposta da solo.
+
 ## Comandi
 - Compilare: `cmake -S . -B build && cmake --build build`
 - Eseguire la prova: `./build/kzero`
