@@ -13,6 +13,9 @@
   `ctest --test-dir build`): giri, posti, assistente, carrozzine e pedana, categorie di corsa,
   assistente per l'infanzia, pause. Controllo automatico su GitHub a ogni proposta e salvataggio
   su main: compila con i warning trattati come errori ed esegue le prove. 12 su 12 passate.
+- 2026-10-11 - K-004 (chiusura): tolto dai prossimi passi il punto "prove automatiche", perche' fatto.
+  In CLAUDE.md aggiunti il comando per eseguire le prove, la regola del software professionale
+  e la regola dei codici mandato K-xxx.
 
 ## Bug aperti
 - (nessuno)
@@ -24,7 +27,6 @@
 - Spostare nel contratto altre regole del committente (mezzo minimo, pedana, tempi massimi).
 
 ## Prossimi passi
-1. Test automatici sui casi gia' noti (es. 38 ragazzi su 16 posti = 3 giri).
-2. Raccolta dati veri Alpinabus: mezzi, autisti (paese), giri di una giornata tipo.
-3. "Fotografia" dei giri attuali: km pieni, km a vuoto, tempi morti.
-4. Lettura dei paper e proposta del metodo di calcolo con OR-Tools.
+1. Raccolta dati veri Alpinabus: mezzi, autisti (paese), giri di una giornata tipo.
+2. "Fotografia" dei giri attuali: km pieni, km a vuoto, tempi morti.
+3. Lettura dei paper e proposta del metodo di calcolo con OR-Tools.

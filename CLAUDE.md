@@ -22,12 +22,18 @@ Si parte da Alpinabus (3 minibus + 1 auto) e si deve poter crescere fino a 500 m
 ## Comandi
 - Compilare: `cmake -S . -B build && cmake --build build`
 - Eseguire la prova: `./build/kzero`
+- Eseguire le prove: `ctest --test-dir build --output-on-failure`
 
 ## Regole di lavoro
+- IMPORTANTE: K-Zero è un software professionale: stabile, solido, preciso.
+  Niente pezze né scorciatoie: solo soluzioni che durano nel tempo.
+  Se una soluzione rapida e una solida divergono, scegli la solida e spiega perché.
 - IMPORTANTE: Mauro non e' un tecnico. Spiegazioni in italiano semplice, brevi, senza gergo.
 - Prima di dire "fatto": compilare senza warning, eseguire, mostrare l'output.
 - Ogni modifica va annotata in DIARIO.md. Le scelte di fondo vanno in DECISIONI.md.
 - Le regole del mestiere sono in REGOLE.md: leggerle prima di toccare il calcolo.
+- Ogni lavoro nasce da un mandato con codice K-xxx (es. K-005).
+  Il codice va nel titolo della proposta e nella riga del DIARIO.
 
 ## Scelte tecniche
 - C++17, CMake, Google OR-Tools (non ancora collegato).
