@@ -5,6 +5,8 @@
   ricoveri, contratti, corse, turni) e programma di prova. Compila senza errori ne' warning.
 - 2026-10-11 - Aperto l'archivio con storico su GitHub (repository privato 19Bullfrog78/K-ZERO):
   primo salvataggio dell'ossatura su main. Compila senza errori ne' warning.
+- 2026-10-11 - Tolta da CLAUDE.md la regola sulla cartella CODICE/ (l'archivio ufficiale e' solo GitHub)
+  e tolto dai prossimi passi il punto "archivio con storico", perche' fatto.
 
 ## Bug aperti
 - (nessuno)
@@ -20,4 +22,3 @@
 2. Raccolta dati veri Alpinabus: mezzi, autisti (paese), giri di una giornata tipo.
 3. "Fotografia" dei giri attuali: km pieni, km a vuoto, tempi morti.
 4. Lettura dei paper e proposta del metodo di calcolo con OR-Tools.
-5. Archivio con storico delle versioni (es. GitHub).
