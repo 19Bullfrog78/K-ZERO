@@ -21,12 +21,19 @@
   l'accompagnatore = assistente obbligatorio; senza richiesta, da solo, no. 13 prove su 13 passate.
   Avvisi trattati come errori solo sul codice K-Zero (opzione KZERO_WERROR, usata dal controllo GitHub).
   Aperta la sezione "Bug e limiti noti".
+- 2026-10-11 - K-006 (regole del mestiere, salvate direttamente su main): REGOLE.md aggiornato con
+  attesa massima a scuola (arrivo non prima di 25 minuti dall'inizio, ripresa entro 20 minuti dalla fine),
+  alunni attivi e sospesi (lo sblocco in un file separato, il file del CTA non si modifica mai), orari per
+  giorno della settimana e periodo, turni del giorno e rotazione degli autisti, estate, servizi fissi,
+  corse con piu' committenti; nuova sezione Glossario (GSH, MITT, inserviente, AM/RM/RP).
 
 ## Bug e limiti noti
 - check_home_breaks non usa ancora max_home_detour_km: oggi guarda solo la distanza da casa.
   Da completare con il calcolo vero (OR-Tools).
 - I dati di prova sono copiati sia in src/main.cpp sia nelle prove: da unificare quando
   arrivera' il caricamento dei dati veri.
+- Le regole aggiunte con K-006 (attesa massima, attivi/sospesi, giorni e periodi, turni, rotazione,
+  servizi fissi, piu' committenti) non sono ancora nel modello dati: entreranno con K-007 e con il calcolo.
 
 ## Idee
 - Generare scenari "gonfiati" (50-500 mezzi) dai giri reali per provare il carico.
@@ -35,6 +42,9 @@
 - Spostare nel contratto altre regole del committente (mezzo minimo, pedana, tempi massimi).
 
 ## Prossimi passi
-1. Raccolta dati veri Alpinabus: mezzi, autisti (paese), giri di una giornata tipo.
-2. "Fotografia" dei giri attuali: km pieni, km a vuoto, tempi morti.
-3. Lettura dei paper e proposta del metodo di calcolo con OR-Tools.
+1. K-007: formato standard dei dati e controllore.
+2. K-008: lettore del file alunni del CTA.
+3. K-009: programma per Windows da scaricare (i dati veri restano sul PC di Mauro).
+4. Raccolta dati veri Alpinabus: mezzi, autisti (paese), giri di una giornata tipo.
+5. "Fotografia" dei giri attuali: km pieni, km a vuoto, tempi morti.
+6. Lettura dei paper e proposta del metodo di calcolo con OR-Tools.
