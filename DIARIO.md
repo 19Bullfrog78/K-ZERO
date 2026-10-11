@@ -7,6 +7,8 @@
   primo salvataggio dell'ossatura su main. Compila senza errori ne' warning.
 - 2026-10-11 - Tolta da CLAUDE.md la regola sulla cartella CODICE/ (l'archivio ufficiale e' solo GitHub)
   e tolto dai prossimi passi il punto "archivio con storico", perche' fatto.
+- 2026-10-11 - Aggiunta in CLAUDE.md la sezione "Come si salvano le modifiche": documenti su main,
+  programma e CLAUDE.md con proposta, controllo dell'arbitro e approvazione di Mauro.
 
 ## Bug aperti
 - (nessuno)
