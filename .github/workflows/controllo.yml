@@ -1,5 +1,5 @@
 # Controllo automatico: a ogni proposta e a ogni salvataggio su main
-# compila senza warning (i warning diventano errori) ed esegue le prove.
+# compila senza warning (i warning del codice K-Zero diventano errori) ed esegue le prove.
 name: Controllo
 
 on:
@@ -14,7 +14,7 @@ jobs:
       - uses: actions/checkout@v4
       - name: Compila
         run: |
-          cmake -S . -B build -DCMAKE_CXX_FLAGS="-Werror"
+          cmake -S . -B build -DKZERO_WERROR=ON
           cmake --build build
       - name: Esegui il programma di prova
         run: ./build/kzero

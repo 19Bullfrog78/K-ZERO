@@ -10,3 +10,4 @@ Formato: data - decisione - perche'.
 - 2026-10-11 - Costo fisso giornaliero oltre al costo al km - senza, il confronto 16 vs 30 posti sarebbe falso.
 - 2026-10-11 - Fonte delle distanze intercambiabile - Google Maps gratis per Alpinabus, troppo caro per la provincia (OSRM).
 - 2026-10-11 - Per pochi mezzi un unico calcolo; divisione in due fasi (corse poi concatenazione) solo quando si cresce.
+- 2026-10-11 - Prove automatiche con GoogleTest 1.15.2, scaricato da CMake con versione e impronta fissate - standard del settore; ogni prova si registra da sola senza elenchi da tenere allineati; la compilazione resta uguale nel tempo.

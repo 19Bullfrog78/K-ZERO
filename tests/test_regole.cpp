@@ -1,23 +1,12 @@
 // K-Zero - prove automatiche delle regole del mestiere (REGOLE.md) con i dati di prova.
-// Uso: test_regole <nome_prova>   (senza argomenti esegue tutte le prove)
-#include <cstring>
-#include <functional>
-#include <iostream>
+// Ogni TEST viene trovato da solo da CTest (gtest_discover_tests): non va elencato altrove.
 #include <vector>
+
+#include <gtest/gtest.h>
 
 #include "domain_models.hpp"
 
 using namespace kzero;
-
-static int failures = 0;
-
-#define CHECK(cond)                                                                      \
-    do {                                                                                 \
-        if (!(cond)) {                                                                   \
-            std::cout << "  FALLITO: " #cond "  (" << __FILE__ << ":" << __LINE__ << ")\n"; \
-            ++failures;                                                                  \
-        }                                                                                \
-    } while (0)
 
 // --- Dati di prova (gli stessi di src/main.cpp, valori inventati) ----------
 
@@ -68,68 +57,75 @@ static ServiceType categoria(const Route& r) { return derive_service(r, find_p, 
 // --- Prove -------------------------------------------------------------------
 
 // 38 ragazzi su un 16 posti: servono 3 giri.
-static void giri_38_su_16() {
-    CHECK(trips_needed(minibus16, 38) == 3);
-    CHECK(trips_needed(minibus16, 16) == 1);
-    CHECK(trips_needed(minibus16, 17) == 2);
+TEST(Regole, giri_38_su_16) {
+    EXPECT_EQ(trips_needed(minibus16, 38), 3);
+    EXPECT_EQ(trips_needed(minibus16, 16), 1);
+    EXPECT_EQ(trips_needed(minibus16, 17), 2);
 }
 
 // L'assistente occupa un posto.
-static void assistente_occupa_un_posto() {
-    CHECK(fits(minibus16, 16, 0, false));    // 16 bambini da soli: ci stanno
-    CHECK(!fits(minibus16, 16, 0, true));    // 16 bambini + assistente: no
-    CHECK(fits(minibus16, 15, 0, true));     // 15 bambini + assistente: si'
+TEST(Regole, assistente_occupa_un_posto) {
+    EXPECT_TRUE(fits(minibus16, 16, 0, false));    // 16 bambini da soli: ci stanno
+    EXPECT_FALSE(fits(minibus16, 16, 0, true));    // 16 bambini + assistente: no
+    EXPECT_TRUE(fits(minibus16, 15, 0, true));     // 15 bambini + assistente: si'
 }
 
 // Ogni carrozzina toglie posti a sedere (attrezzato: 12 posti, 3 persi per carrozzina, max 2).
-static void carrozzina_toglie_posti() {
-    CHECK(fits(attrezzato, 12, 0));
-    CHECK(!fits(attrezzato, 10, 1));   // 12 - 3 = 9 posti
-    CHECK(fits(attrezzato, 9, 1));
-    CHECK(!fits(attrezzato, 7, 2));    // 12 - 6 = 6 posti
-    CHECK(fits(attrezzato, 6, 2));
-    CHECK(!fits(attrezzato, 0, 3));    // oltre le carrozzine ammesse
+TEST(Regole, carrozzina_toglie_posti) {
+    EXPECT_TRUE(fits(attrezzato, 12, 0));
+    EXPECT_FALSE(fits(attrezzato, 10, 1));   // 12 - 3 = 9 posti
+    EXPECT_TRUE(fits(attrezzato, 9, 1));
+    EXPECT_FALSE(fits(attrezzato, 7, 2));    // 12 - 6 = 6 posti
+    EXPECT_TRUE(fits(attrezzato, 6, 2));
+    EXPECT_FALSE(fits(attrezzato, 0, 3));    // oltre le carrozzine ammesse
 }
 
 // Senza pedana nessuna carrozzina.
-static void senza_pedana_nessuna_carrozzina() {
-    CHECK(!fits(minibus16, 0, 1));
+TEST(Regole, senza_pedana_nessuna_carrozzina) {
+    EXPECT_FALSE(fits(minibus16, 0, 1));
     Vehicle senza_pedana = attrezzato;
     senza_pedana.has_ramp = false;
-    CHECK(!fits(senza_pedana, 0, 1));
+    EXPECT_FALSE(fits(senza_pedana, 0, 1));
 }
 
 // Gruppi diversi sulla stessa corsa = Ibrido.
-static void gruppi_diversi_ibrido() {
-    CHECK(categoria(corsa({101, 103}, {1})) == ServiceType::Hybrid);        // studenti + handicap
-    CHECK(categoria(corsa({101}, {1}, true)) == ServiceType::Hybrid);       // studenti + linea
-    CHECK(categoria(corsa({105}, {1}, true)) == ServiceType::Hybrid);       // handicap + linea
+TEST(Regole, gruppi_diversi_ibrido) {
+    EXPECT_EQ(categoria(corsa({101, 103}, {1})), ServiceType::Hybrid);        // studenti + handicap
+    EXPECT_EQ(categoria(corsa({101}, {1}, true)), ServiceType::Hybrid);       // studenti + linea
+    EXPECT_EQ(categoria(corsa({105}, {1}, true)), ServiceType::Hybrid);       // handicap + linea
 }
 
 // Studenti verso un centro esterno = Ibrido.
-static void studenti_centro_esterno_ibrido() {
-    CHECK(categoria(corsa({104}, {3})) == ServiceType::Hybrid);
+TEST(Regole, studenti_centro_esterno_ibrido) {
+    EXPECT_EQ(categoria(corsa({104}, {3})), ServiceType::Hybrid);
 }
 
 // Solo studenti verso scuola = Scolastico.
-static void solo_studenti_scolastico() {
-    CHECK(categoria(corsa({101, 102}, {1})) == ServiceType::School);
+TEST(Regole, solo_studenti_scolastico) {
+    EXPECT_EQ(categoria(corsa({101, 102}, {1})), ServiceType::School);
 }
 
 // Solo handicap = Handicap.
-static void solo_handicap() {
-    CHECK(categoria(corsa({103, 105}, {1})) == ServiceType::Disability);
+TEST(Regole, solo_handicap) {
+    EXPECT_EQ(categoria(corsa({103, 105}, {1})), ServiceType::Disability);
 }
 
 // Solo utenti di linea = Linea.
-static void solo_linea() {
-    CHECK(categoria(corsa({}, {}, true)) == ServiceType::Line);
+TEST(Regole, solo_linea) {
+    EXPECT_EQ(categoria(corsa({}, {}, true)), ServiceType::Line);
 }
 
 // Corsa verso la scuola dell'infanzia = assistente obbligatorio.
-static void infanzia_assistente_obbligatorio() {
-    CHECK(needs_escort(corsa({}, {4}), find_p, find_d));
-    CHECK(!needs_escort(corsa({101, 102}, {1}), find_p, find_d));   // scuola media, nessuna richiesta
+TEST(Regole, infanzia_assistente_obbligatorio) {
+    EXPECT_TRUE(needs_escort(corsa({}, {4}), find_p, find_d));
+    EXPECT_FALSE(needs_escort(corsa({101, 102}, {1}), find_p, find_d));   // scuola media, nessuna richiesta
+}
+
+// Passeggero handicap che richiede l'accompagnatore = assistente obbligatorio;
+// passeggero handicap che non lo richiede, da solo, no.
+TEST(Regole, handicap_con_accompagnatore_assistente_obbligatorio) {
+    EXPECT_TRUE(needs_escort(corsa({103}, {1}), find_p, find_d));    // 103: richiede l'accompagnatore
+    EXPECT_FALSE(needs_escort(corsa({105}, {1}), find_p, find_d));   // 105: non lo richiede
 }
 
 // Pause: sotto i 60 minuti non contano; quella lunga lontano da casa viene segnalata.
@@ -148,70 +144,28 @@ static Driver autista_di_cles() {
     return d;   // pausa da casa: almeno 60 min, entro 5 km
 }
 
-static void pausa_breve_non_conta() {
+TEST(Regole, pausa_breve_non_conta) {
     Schedule s;
     s.routes = {tratto(cles, 7 * 60, rumo, 7 * 60 + 30),
                 tratto(rumo, 8 * 60 + 29, cles, 9 * 60)};   // 59 minuti fermo a Rumo
     const BreakReport br = check_home_breaks(s, autista_di_cles());
-    CHECK(br.near_home == 0);
-    CHECK(br.far_from_home == 0);
+    EXPECT_EQ(br.near_home, 0);
+    EXPECT_EQ(br.far_from_home, 0);
 }
 
-static void pausa_lunga_lontano_segnalata() {
+TEST(Regole, pausa_lunga_lontano_segnalata) {
     Schedule lontano;
     lontano.routes = {tratto(cles, 7 * 60, rumo, 7 * 60 + 30),
                       tratto(rumo, 8 * 60 + 30, cles, 9 * 60)};   // 60 minuti fermo a Rumo
     const BreakReport br = check_home_breaks(lontano, autista_di_cles());
-    CHECK(br.far_from_home == 1);
-    CHECK(br.near_home == 0);
+    EXPECT_EQ(br.far_from_home, 1);
+    EXPECT_EQ(br.near_home, 0);
 
     // Controprova: la stessa pausa a Cles (vicino a casa) non e' segnalata.
     Schedule vicino;
     vicino.routes = {tratto(rumo, 7 * 60, cles, 7 * 60 + 30),
                      tratto(cles, 9 * 60, rumo, 9 * 60 + 30)};
     const BreakReport bv = check_home_breaks(vicino, autista_di_cles());
-    CHECK(bv.far_from_home == 0);
-    CHECK(bv.near_home == 1);
-}
-
-// --- Esecuzione ----------------------------------------------------------------
-
-struct Prova {
-    const char* nome;
-    std::function<void()> fn;
-};
-
-int main(int argc, char** argv) {
-    const std::vector<Prova> prove = {
-        {"giri_38_su_16", giri_38_su_16},
-        {"assistente_occupa_un_posto", assistente_occupa_un_posto},
-        {"carrozzina_toglie_posti", carrozzina_toglie_posti},
-        {"senza_pedana_nessuna_carrozzina", senza_pedana_nessuna_carrozzina},
-        {"gruppi_diversi_ibrido", gruppi_diversi_ibrido},
-        {"studenti_centro_esterno_ibrido", studenti_centro_esterno_ibrido},
-        {"solo_studenti_scolastico", solo_studenti_scolastico},
-        {"solo_handicap", solo_handicap},
-        {"solo_linea", solo_linea},
-        {"infanzia_assistente_obbligatorio", infanzia_assistente_obbligatorio},
-        {"pausa_breve_non_conta", pausa_breve_non_conta},
-        {"pausa_lunga_lontano_segnalata", pausa_lunga_lontano_segnalata},
-    };
-
-    const char* scelta = argc > 1 ? argv[1] : nullptr;
-    int eseguite = 0, fallite = 0;
-    for (const auto& p : prove) {
-        if (scelta && std::strcmp(scelta, p.nome) != 0) continue;
-        const int prima = failures;
-        p.fn();
-        ++eseguite;
-        const bool ok = failures == prima;
-        if (!ok) ++fallite;
-        std::cout << (ok ? "OK      " : "FALLITA ") << p.nome << "\n";
-    }
-    if (eseguite == 0) {
-        std::cout << "Prova sconosciuta: " << (scelta ? scelta : "") << "\n";
-        return 1;
-    }
-    std::cout << eseguite - fallite << " prove passate su " << eseguite << "\n";
-    return fallite == 0 ? 0 : 1;
+    EXPECT_EQ(bv.far_from_home, 0);
+    EXPECT_EQ(bv.near_home, 1);
 }
