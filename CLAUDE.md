@@ -20,7 +20,6 @@ Si parte da Alpinabus (3 minibus + 1 auto) e si deve poter crescere fino a 500 m
 - IMPORTANTE: Mauro non e' un tecnico. Spiegazioni in italiano semplice, brevi, senza gergo.
 - Prima di dire "fatto": compilare senza warning, eseguire, mostrare l'output.
 - Ogni modifica va annotata in DIARIO.md. Le scelte di fondo vanno in DECISIONI.md.
-- Il codice aggiornato va salvato nel progetto in CODICE/ (finche' non c'e' un archivio con storico).
 - Le regole del mestiere sono in REGOLE.md: leggerle prima di toccare il calcolo.
 
 ## Scelte tecniche

@@ -20,4 +20,3 @@
 2. Raccolta dati veri Alpinabus: mezzi, autisti (paese), giri di una giornata tipo.
 3. "Fotografia" dei giri attuali: km pieni, km a vuoto, tempi morti.
 4. Lettura dei paper e proposta del metodo di calcolo con OR-Tools.
-5. Archivio con storico delle versioni (es. GitHub).
