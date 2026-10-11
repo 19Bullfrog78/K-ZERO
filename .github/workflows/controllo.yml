@@ -1,0 +1,22 @@
+# Controllo automatico: a ogni proposta e a ogni salvataggio su main
+# compila senza warning (i warning diventano errori) ed esegue le prove.
+name: Controllo
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  compila-e-prova:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Compila
+        run: |
+          cmake -S . -B build -DCMAKE_CXX_FLAGS="-Werror"
+          cmake --build build
+      - name: Esegui il programma di prova
+        run: ./build/kzero
+      - name: Esegui le prove
+        run: ctest --test-dir build --output-on-failure
