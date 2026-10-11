@@ -9,6 +9,10 @@
   e tolto dai prossimi passi il punto "archivio con storico", perche' fatto.
 - 2026-10-11 - Aggiunta in CLAUDE.md la sezione "Come si salvano le modifiche": documenti su main,
   programma e CLAUDE.md con proposta, controllo dell'arbitro e approvazione di Mauro.
+- 2026-10-11 - Prove automatiche delle regole di REGOLE.md (tests/, 12 prove, eseguite con
+  `ctest --test-dir build`): giri, posti, assistente, carrozzine e pedana, categorie di corsa,
+  assistente per l'infanzia, pause. Controllo automatico su GitHub a ogni proposta e salvataggio
+  su main: compila con i warning trattati come errori ed esegue le prove. 12 su 12 passate.
 
 ## Bug aperti
 - (nessuno)
