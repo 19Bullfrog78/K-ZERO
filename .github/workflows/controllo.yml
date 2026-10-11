@@ -1,5 +1,7 @@
-# Controllo automatico: a ogni proposta e a ogni salvataggio su main
-# compila senza warning (i warning del codice K-Zero diventano errori) ed esegue le prove.
+# Controllo automatico: a ogni proposta e a ogni salvataggio su main.
+# Compila senza warning (i warning del codice K-Zero diventano errori), prova i comandi,
+# esegue le prove e verifica le uscite JSON con gli schemi di docs/schema usando
+# uno strumento standard (check-jsonschema), indipendente dal codice di K-Zero.
 name: Controllo
 
 on:
@@ -9,14 +11,25 @@ on:
 
 jobs:
   compila-e-prova:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Installa check-jsonschema (versioni e impronte fissate)
+        run: python -m pip install --require-hashes -r tests/strumenti/check-jsonschema.txt
       - name: Compila
         run: |
-          cmake -S . -B build -DKZERO_WERROR=ON
+          cmake -S . -B build -DKZERO_WERROR=ON -DKZERO_SCHEMI_OBBLIGATORI=ON
           cmake --build build
-      - name: Esegui il programma di prova
-        run: ./build/kzero
+      - name: Prova i comandi
+        run: |
+          ./build/kzero versione
+          ./build/kzero descrivi
+          ./build/kzero dimostrazione
+          ./build/kzero dimostrazione --formato json
       - name: Esegui le prove
-        run: ctest --test-dir build --output-on-failure
+        run: ctest --test-dir build --output-on-failure --label-exclude schemi
+      - name: Verifica degli schemi JSON
+        run: ctest --test-dir build --output-on-failure --label-regex schemi

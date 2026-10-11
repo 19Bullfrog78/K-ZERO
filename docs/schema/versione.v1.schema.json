@@ -1,0 +1,18 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "kzero - versione, versione 1",
+  "description": "Uscita di 'kzero versione --formato json'.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "schema_versione", "programma", "versione"],
+  "properties": {
+    "schema": { "const": "versione" },
+    "schema_versione": { "const": 1 },
+    "programma": { "const": "kzero" },
+    "versione": {
+      "description": "Versione del programma: tre numeri separati da punti.",
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    }
+  }
+}

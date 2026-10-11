@@ -1,0 +1,5 @@
+# Strumento standard per controllare le uscite JSON di kzero con gli schemi di docs/schema.
+# Versione fissata qui; versioni e impronte di tutte le dipendenze in check-jsonschema.txt,
+# rigenerato con (Python 3.12, come nel controllo GitHub):
+#   pip-compile --generate-hashes --strip-extras --no-emit-index-url check-jsonschema.in
+check-jsonschema==0.38.2

@@ -1,0 +1,49 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "kzero - errore, versione 1",
+  "description": "Documento di errore di kzero con --formato json. Va sull'uscita di errore (stderr); il programma termina con lo stesso codice_uscita. Elenco dei codici in docs/errori.md.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "schema_versione", "codice_uscita", "errori"],
+  "properties": {
+    "schema": { "const": "errore" },
+    "schema_versione": { "const": 1 },
+    "codice_uscita": {
+      "description": "1 = errore nei dati, 2 = errore nei parametri, 3 = errore interno. Con piu' errori vale il piu' grave.",
+      "type": "integer",
+      "enum": [1, 2, 3]
+    },
+    "errori": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["codice", "messaggio"],
+        "properties": {
+          "codice": {
+            "description": "Codice fisso dell'errore: non cambia e non viene mai riusato.",
+            "type": "string",
+            "pattern": "^K-ERR-[0-9]{3}$"
+          },
+          "messaggio": {
+            "description": "Spiegazione in italiano del caso preciso.",
+            "type": "string",
+            "minLength": 1
+          },
+          "posizione": {
+            "description": "Dove sta il problema, quando lo si sa: solo le parti note.",
+            "type": "object",
+            "additionalProperties": false,
+            "minProperties": 1,
+            "properties": {
+              "file": { "type": "string", "minLength": 1 },
+              "riga": { "type": "integer", "minimum": 1 },
+              "colonna": { "type": "integer", "minimum": 1 }
+            }
+          }
+        }
+      }
+    }
+  }
+}
