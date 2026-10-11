@@ -16,9 +16,17 @@
 - 2026-10-11 - K-004 (chiusura): tolto dai prossimi passi il punto "prove automatiche", perche' fatto.
   In CLAUDE.md aggiunti il comando per eseguire le prove, la regola del software professionale
   e la regola dei codici mandato K-xxx.
+- 2026-10-11 - K-005: prove portate su GoogleTest 1.15.2 (versione fissata), ogni prova si registra
+  da sola; le 12 prove di prima sono rimaste identiche. Nuova prova: passeggero handicap che chiede
+  l'accompagnatore = assistente obbligatorio; senza richiesta, da solo, no. 13 prove su 13 passate.
+  Avvisi trattati come errori solo sul codice K-Zero (opzione KZERO_WERROR, usata dal controllo GitHub).
+  Aperta la sezione "Bug e limiti noti".
 
-## Bug aperti
-- (nessuno)
+## Bug e limiti noti
+- check_home_breaks non usa ancora max_home_detour_km: oggi guarda solo la distanza da casa.
+  Da completare con il calcolo vero (OR-Tools).
+- I dati di prova sono copiati sia in src/main.cpp sia nelle prove: da unificare quando
+  arrivera' il caricamento dei dati veri.
 
 ## Idee
 - Generare scenari "gonfiati" (50-500 mezzi) dai giri reali per provare il carico.
