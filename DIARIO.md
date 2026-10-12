@@ -35,6 +35,14 @@
   e impronta fissate. Prove: 63 su 63 (16 nucleo, 6 API, 24 sul programma, 1 documentazione,
   1 architettura, 15 sugli schemi con lo strumento standard check-jsonschema). Sabotaggio di 4 regole:
   tutte scoperte dalle prove. Controllo GitHub su ubuntu-24.04 con la verifica degli schemi.
+- 2026-10-12 - K-007 (regole del mestiere, salvate direttamente su main): REGOLE.md riorganizzato in due parti.
+  Parte 1, regole generali del mestiere: servizi e corse (la parola "linea" nei due sensi; di solito un servizio
+  si perde o si scambia una corsa alla volta, a volte un intero lotto), orari fissi per le linee e liberi per
+  scolastico e handicap, posti del libretto, mezzi e strade, trasbordi, assistente secondo regolamento o contratto,
+  corse ibride autorizzate, dati personali nel lavoro (tre classi, due livelli). Parte 2: il regolamento della
+  Provincia di Trento come esempio, con la fonte di ogni valore. L'attesa massima 25/20 non e' piu' una regola
+  generale: e' un valore del regolamento di Trento. Due punti "da confermare": infanzia e medie insieme;
+  "mezzi con piu' di 9 posti" letto come conducente compreso.
 
 ## Bug e limiti noti
 - check_home_breaks non usa ancora max_home_detour_km: oggi guarda solo la distanza da casa.
