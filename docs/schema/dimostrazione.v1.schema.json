@@ -1,0 +1,388 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "kzero - dimostrazione, versione 1",
+  "description": "Uscita di 'kzero dimostrazione --formato json': la stampa di prova con DATI INVENTATI. Orari in minuti dalla mezzanotte (465 = 07:45), distanze in km, costi in euro. I valori calcolati sono arrotondati: km al metro, euro al centesimo. Nessun dato personale: nomi, indirizzi e luoghi delle fermate stanno solo nel blocco dati_personali, presente solo con --includi-dati-personali.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema", "schema_versione", "dati_inventati", "dati_personali_inclusi", "destinazioni", "passeggeri",
+    "mezzi", "autisti", "turno", "ricoveri", "autista_esempio", "posti_a_bordo", "assistente"
+  ],
+  "properties": {
+    "schema": { "const": "dimostrazione" },
+    "schema_versione": { "const": 1 },
+    "dati_inventati": {
+      "description": "Sempre true: questi valori non vanno usati come dati reali.",
+      "const": true
+    },
+    "dati_personali_inclusi": {
+      "description": "true solo con --includi-dati-personali: allora c'e' il blocco dati_personali.",
+      "type": "boolean"
+    },
+    "destinazioni": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["codice", "nome", "tipo", "arrivo", "ripresa"],
+        "properties": {
+          "codice": { "$ref": "#/definitions/codice" },
+          "nome": { "description": "Nome della scuola o del centro (non e' un dato personale).", "type": "string" },
+          "tipo": { "enum": ["infanzia", "scuola", "centro_esterno"] },
+          "arrivo": { "$ref": "#/definitions/finestra" },
+          "ripresa": { "$ref": "#/definitions/finestra" }
+        }
+      }
+    },
+    "passeggeri": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "codice", "tipo", "destinazione", "arrivo_entro", "carrozzina", "accompagnatore", "massimo_a_bordo_minuti"
+        ],
+        "properties": {
+          "codice": { "$ref": "#/definitions/codice" },
+          "tipo": { "enum": ["studente", "handicap"] },
+          "destinazione": { "$ref": "#/definitions/codice" },
+          "arrivo_entro": { "$ref": "#/definitions/orario" },
+          "carrozzina": { "type": "boolean" },
+          "accompagnatore": { "type": "boolean" },
+          "massimo_a_bordo_minuti": {
+            "description": "Tempo massimo a bordo in minuti; null = nessun limite.",
+            "type": ["integer", "null"],
+            "minimum": 1
+          }
+        }
+      }
+    },
+    "mezzi": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["codice", "targa", "tipo", "motore", "posti", "carrozzine", "costo_euro_km", "autonomia_km"],
+        "properties": {
+          "codice": { "$ref": "#/definitions/codice" },
+          "targa": { "type": "string" },
+          "tipo": { "enum": ["auto", "minibus", "autobus", "attrezzato"] },
+          "motore": { "enum": ["termico", "elettrico"] },
+          "posti": { "$ref": "#/definitions/conteggio" },
+          "carrozzine": { "$ref": "#/definitions/conteggio" },
+          "costo_euro_km": { "type": "number", "minimum": 0 },
+          "autonomia_km": { "$ref": "#/definitions/km" }
+        }
+      }
+    },
+    "autisti": {
+      "description": "Solo codice e orario di servizio: i nomi stanno in dati_personali.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["codice", "servizio"],
+        "properties": {
+          "codice": { "$ref": "#/definitions/codice" },
+          "servizio": { "$ref": "#/definitions/finestra" }
+        }
+      }
+    },
+    "turno": {
+      "description": "Giornata di esempio del mezzo attrezzato, scritta a mano; la categoria di ogni corsa e' ricavata dal programma.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["mezzo", "autista", "corse", "totale"],
+      "properties": {
+        "mezzo": { "$ref": "#/definitions/codice" },
+        "autista": { "$ref": "#/definitions/codice" },
+        "corse": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["codice", "categoria", "inizio", "fine", "km_pieni", "km_vuoti", "fermate"],
+            "properties": {
+              "codice": { "$ref": "#/definitions/codice" },
+              "categoria": { "enum": ["linea", "handicap", "scolastico", "ibrido"] },
+              "inizio": { "$ref": "#/definitions/orario" },
+              "fine": { "$ref": "#/definitions/orario" },
+              "km_pieni": { "$ref": "#/definitions/km" },
+              "km_vuoti": { "$ref": "#/definitions/km" },
+              "fermate": {
+                "description": "Senza il luogo: nel porta a porta la fermata e' la casa del passeggero (vedi dati_personali).",
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["numero", "orario", "a_bordo"],
+                  "properties": {
+                    "numero": { "description": "Posizione della fermata nella corsa, da 1.", "type": "integer", "minimum": 1 },
+                    "orario": { "$ref": "#/definitions/orario" },
+                    "a_bordo": { "description": "Passeggeri a bordo dopo la fermata.", "$ref": "#/definitions/conteggio" }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "totale": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["km_pieni", "km_vuoti", "tempi_morti_minuti"],
+          "properties": {
+            "km_pieni": { "$ref": "#/definitions/km" },
+            "km_vuoti": { "$ref": "#/definitions/km" },
+            "tempi_morti_minuti": { "$ref": "#/definitions/conteggio" }
+          }
+        }
+      }
+    },
+    "ricoveri": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["codice", "nome", "rimessa", "posti", "ricarica"],
+        "properties": {
+          "codice": { "$ref": "#/definitions/codice" },
+          "nome": { "type": "string" },
+          "rimessa": { "description": "true = rimessa aziendale; false = ricovero esterno.", "type": "boolean" },
+          "posti": { "$ref": "#/definitions/conteggio" },
+          "ricarica": { "type": "boolean" }
+        }
+      }
+    },
+    "autista_esempio": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["autista", "tragitti", "pause_lunghe"],
+      "properties": {
+        "autista": { "$ref": "#/definitions/codice" },
+        "tragitti": {
+          "description": "Tragitto casa-ricovero dell'autista, andata e ritorno.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["ricovero", "km_al_giorno"],
+            "properties": {
+              "ricovero": { "$ref": "#/definitions/codice" },
+              "km_al_giorno": { "$ref": "#/definitions/km" }
+            }
+          }
+        },
+        "pause_lunghe": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["vicino_a_casa", "lontano_da_casa"],
+          "properties": {
+            "vicino_a_casa": { "$ref": "#/definitions/conteggio" },
+            "lontano_da_casa": { "$ref": "#/definitions/conteggio" }
+          }
+        }
+      }
+    },
+    "posti_a_bordo": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["giri", "carrozzine", "confronto_costi"],
+      "properties": {
+        "giri": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["ragazzi", "mezzo", "giri_necessari"],
+          "properties": {
+            "ragazzi": { "$ref": "#/definitions/conteggio" },
+            "mezzo": { "$ref": "#/definitions/codice" },
+            "giri_necessari": { "$ref": "#/definitions/conteggio" }
+          }
+        },
+        "carrozzine": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["mezzo", "ragazzi", "casi"],
+          "properties": {
+            "mezzo": { "$ref": "#/definitions/codice" },
+            "ragazzi": { "$ref": "#/definitions/conteggio" },
+            "casi": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["carrozzine", "ammesso", "posti_a_sedere", "ragazzi_ci_stanno"],
+                "properties": {
+                  "carrozzine": { "$ref": "#/definitions/conteggio" },
+                  "ammesso": { "description": "false = piu' carrozzine di quante il mezzo ne porti.", "type": "boolean" },
+                  "posti_a_sedere": {
+                    "description": "Posti a sedere rimasti; null se il caso non e' ammesso.",
+                    "type": ["integer", "null"],
+                    "minimum": 0
+                  },
+                  "ragazzi_ci_stanno": { "type": "boolean" }
+                }
+              }
+            }
+          }
+        },
+        "confronto_costi": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["km_al_giorno", "mezzo_flotta", "mezzo_richiesto", "differenza_euro_giorno"],
+          "properties": {
+            "km_al_giorno": { "$ref": "#/definitions/km" },
+            "mezzo_flotta": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["codice", "posti", "euro_giorno"],
+              "properties": {
+                "codice": { "$ref": "#/definitions/codice" },
+                "posti": { "$ref": "#/definitions/conteggio" },
+                "euro_giorno": { "$ref": "#/definitions/euro" }
+              }
+            },
+            "mezzo_richiesto": {
+              "description": "Mezzo ipotetico richiesto dal committente, non in flotta.",
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["posti", "euro_giorno"],
+              "properties": {
+                "posti": { "$ref": "#/definitions/conteggio" },
+                "euro_giorno": { "$ref": "#/definitions/euro" }
+              }
+            },
+            "differenza_euro_giorno": { "description": "Costo del mezzo richiesto meno costo del mezzo in flotta.", "type": "number" }
+          }
+        }
+      }
+    },
+    "assistente": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["infanzia", "corsa_handicap", "bambini_con_assistente", "contratti"],
+      "properties": {
+        "infanzia": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["destinazione", "obbligatorio"],
+          "properties": {
+            "destinazione": { "$ref": "#/definitions/codice" },
+            "obbligatorio": { "type": "boolean" }
+          }
+        },
+        "corsa_handicap": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["corsa", "obbligatorio"],
+          "properties": {
+            "corsa": { "$ref": "#/definitions/codice" },
+            "obbligatorio": { "type": "boolean" }
+          }
+        },
+        "bambini_con_assistente": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["mezzo", "bambini", "ci_stanno"],
+          "properties": {
+            "mezzo": { "$ref": "#/definitions/codice" },
+            "bambini": { "$ref": "#/definitions/conteggio" },
+            "ci_stanno": { "type": "boolean" }
+          }
+        },
+        "contratti": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["codice", "committente", "assistente_fornito_da"],
+            "properties": {
+              "codice": { "$ref": "#/definitions/codice" },
+              "committente": { "description": "Ente committente (non e' un dato personale).", "type": "string" },
+              "assistente_fornito_da": { "enum": ["committente", "azienda"] },
+              "costo_esempio": {
+                "description": "Solo se l'assistente e' dell'azienda: costo di un esempio di servizio.",
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["assistente", "ore", "euro_ora", "euro_giorno"],
+                "properties": {
+                  "assistente": { "$ref": "#/definitions/codice" },
+                  "ore": { "type": "number", "minimum": 0 },
+                  "euro_ora": { "$ref": "#/definitions/euro" },
+                  "euro_giorno": { "$ref": "#/definitions/euro" }
+                }
+              }
+            },
+            "if": { "properties": { "assistente_fornito_da": { "const": "azienda" } } },
+            "then": { "required": ["costo_esempio"] },
+            "else": { "not": { "required": ["costo_esempio"] } }
+          }
+        }
+      }
+    },
+    "dati_personali": {
+      "description": "Solo con --includi-dati-personali. Collegati agli altri blocchi dai codici.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["passeggeri", "autisti", "fermate"],
+      "properties": {
+        "passeggeri": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["codice", "indirizzo"],
+            "properties": {
+              "codice": { "$ref": "#/definitions/codice" },
+              "indirizzo": { "type": "string" }
+            }
+          }
+        },
+        "autisti": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["codice", "nome"],
+            "properties": {
+              "codice": { "$ref": "#/definitions/codice" },
+              "nome": { "type": "string" }
+            }
+          }
+        },
+        "fermate": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["corsa", "numero", "luogo"],
+            "properties": {
+              "corsa": { "$ref": "#/definitions/codice" },
+              "numero": { "type": "integer", "minimum": 1 },
+              "luogo": { "type": "string" }
+            }
+          }
+        }
+      }
+    }
+  },
+  "if": { "properties": { "dati_personali_inclusi": { "const": true } } },
+  "then": { "required": ["dati_personali"] },
+  "else": { "not": { "required": ["dati_personali"] } },
+  "definitions": {
+    "codice": { "description": "Codice numerico dell'elemento.", "type": "integer", "minimum": 1 },
+    "conteggio": { "type": "integer", "minimum": 0 },
+    "orario": { "description": "Minuti dalla mezzanotte (465 = 07:45).", "type": "integer", "minimum": 0 },
+    "km": { "type": "number", "minimum": 0 },
+    "euro": { "type": "number", "minimum": 0 },
+    "finestra": {
+      "description": "Intervallo di tempo: dal primo all'ultimo minuto ammesso.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["inizio", "fine"],
+      "properties": {
+        "inizio": { "$ref": "#/definitions/orario" },
+        "fine": { "$ref": "#/definitions/orario" }
+      }
+    }
+  }
+}

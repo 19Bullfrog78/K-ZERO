@@ -1,0 +1,4 @@
+# Uscite attese e esempi delle prove: sempre a capo "LF", anche su Windows,
+# perche' le prove li confrontano con quello che scrive il programma.
+tests/attesi/** text eol=lf
+tests/esempi/** text eol=lf

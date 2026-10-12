@@ -1,0 +1,60 @@
+=== DESTINAZIONI ===
+1  Scuola Media Cles (scuola)  arrivo 07:40-07:55  ripresa 13:00-13:15
+2  Primaria Revo' (scuola)  arrivo 07:55-08:10  ripresa 12:30-12:45
+3  Doposcuola Cles (centro esterno)  arrivo 13:10-13:30  ripresa 17:00-17:30
+4  Scuola dell'infanzia Rumo (infanzia)  arrivo 08:00-08:30  ripresa 15:30-16:00
+
+=== PASSEGGERI ===
+101  studente  Rumo, fraz. Marcena  -> dest. 1  arrivo entro 07:55
+102  studente  Livo, piazza  -> dest. 1  arrivo entro 07:55
+103  handicap  Cagno', via Centrale  -> dest. 1  arrivo entro 07:55  [carrozzina]  [accompagnatore]  [max 45 min a bordo]
+104  studente  Cles, Scuola Media  -> dest. 3  arrivo entro 13:30
+
+=== MEZZI ===
+1  MINIBUS-1  minibus  termico  posti 16 + carrozzine 0  costo 0.55 EUR/km  autonomia 900 km
+2  MINIBUS-2  attrezzato  termico  posti 12 + carrozzine 2  costo 0.55 EUR/km  autonomia 900 km
+3  MINIBUS-3  minibus  termico  posti 16 + carrozzine 0  costo 0.55 EUR/km  autonomia 900 km
+4  AUTO-1  auto  termico  posti 4 + carrozzine 0  costo 0.3 EUR/km  autonomia 800 km
+
+=== AUTISTI ===
+1  Autista A  servizio 06:30-14:00
+2  Autista B  servizio 07:00-13:30
+
+=== TURNO MEZZO 2 / AUTISTA 2 ===
+Corsa 1 (ibrido) 07:00-07:45  km pieni 16  km vuoti 0.5
+   07:00  Deposito Rumo  a bordo 0
+   07:05  Marcena  a bordo 1
+   07:20  Livo  a bordo 2
+   07:30  Cagno' (carrozzina)  a bordo 3
+   07:45  Scuola Media Cles  a bordo 0
+Corsa 2 (linea) 08:05-08:40  km pieni 15  km vuoti 0.3
+   08:05  Cles autostazione  a bordo 6
+   08:40  Rumo  a bordo 0
+Corsa 3 (ibrido) 13:05-13:15  km pieni 0.8  km vuoti 15
+   13:05  Scuola Media Cles  a bordo 1
+   13:15  Doposcuola Cles  a bordo 0
+Totale: km pieni 31.8, km vuoti 15.8, tempi morti 285 min
+
+=== RICOVERI ===
+1  Rimessa Cles  [rimessa]  posti 30  [ricarica]
+2  Ricovero Rumo  [esterno]  posti 2
+
+=== AUTISTA Autista B ===
+Tragitto casa-Rimessa Cles: 1.11195 km/giorno
+Tragitto casa-Ricovero Rumo: 16.7496 km/giorno
+Pause lunghe vicino a casa: 0, lontano da casa: 1
+
+=== POSTI A BORDO ===
+38 ragazzi su MINIBUS-1 (16 posti): servono 3 giri
+MINIBUS-2 con 0 carrozzine: posti a sedere 12  -> 6 ragazzi ci stanno
+MINIBUS-2 con 1 carrozzine: posti a sedere 9  -> 6 ragazzi ci stanno
+MINIBUS-2 con 2 carrozzine: posti a sedere 6  -> 6 ragazzi ci stanno
+MINIBUS-2 con 3 carrozzine: posti a sedere non ammesso  -> 6 ragazzi NON ci stanno
+Linea da 120 km/giorno: 16 posti 111 EUR, 30 posti 204 EUR (differenza 93 EUR/giorno)
+
+=== ASSISTENTE ===
+Corsa verso Scuola dell'infanzia Rumo: assistente OBBLIGATORIO
+Corsa 1 (con ragazzo handicap): assistente OBBLIGATORIO
+MINIBUS-1 con 16 bambini + assistente: NON ci stanno (l'assistente occupa un posto)
+Contratto "Provincia - scolastico": assistente fornito dal committente
+Contratto "Comune - asilo (assistente a carico ditta)": assistente da pianificare e pagare (es. 1,5 ore x 18 EUR = 27 EUR/giorno)

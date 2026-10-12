@@ -1,0 +1,9 @@
+#pragma once
+// Generato da CMake partendo da src/api/versione.hpp.in: non modificare a mano.
+// La versione si cambia solo in CMakeLists.txt (project ... VERSION).
+
+namespace kzero::api {
+
+inline constexpr const char* kVersione = "@PROJECT_VERSION@";
+
+}  // namespace kzero::api

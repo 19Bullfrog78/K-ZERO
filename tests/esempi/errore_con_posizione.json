@@ -1,0 +1,16 @@
+{
+  "schema": "errore",
+  "schema_versione": 1,
+  "codice_uscita": 2,
+  "errori": [
+    {
+      "codice": "K-ERR-006",
+      "messaggio": "Valore non ammesso: 'pulmino'.",
+      "posizione": {
+        "file": "mezzi.csv",
+        "riga": 3,
+        "colonna": 5
+      }
+    }
+  ]
+}

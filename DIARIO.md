@@ -26,14 +26,26 @@
   alunni attivi e sospesi (lo sblocco in un file separato, il file del CTA non si modifica mai), orari per
   giorno della settimana e periodo, turni del giorno e rotazione degli autisti, estate, servizi fissi,
   corse con piu' committenti; nuova sezione Glossario (GSH, MITT, inserviente, AM/RM/RP).
+- 2026-10-11 - K-006 (programma, proposta "K-006: fondamenta uomo + AI"): un solo programma kzero con
+  i comandi descrivi, versione e dimostrazione (la stampa di prova di prima, identica byte per byte, ora
+  anche in JSON). Uscita testo o JSON con "schema" e "schema_versione"; schemi JSON Schema draft-07 in
+  docs/schema; errori con codice fisso K-ERR (elenco in docs/errori.md); codici di uscita 0/1/2/3; nel
+  JSON nessun dato personale salvo --includi-dati-personali. Codice diviso in nucleo (src/nucleo) e API
+  (src/api), vedi docs/architettura.md. Nuove librerie CLI11 2.7.2 e nlohmann/json 3.12.0, con versione
+  e impronta fissate. Prove: 63 su 63 (16 nucleo, 6 API, 24 sul programma, 1 documentazione,
+  1 architettura, 15 sugli schemi con lo strumento standard check-jsonschema). Sabotaggio di 4 regole:
+  tutte scoperte dalle prove. Controllo GitHub su ubuntu-24.04 con la verifica degli schemi.
 
 ## Bug e limiti noti
 - check_home_breaks non usa ancora max_home_detour_km: oggi guarda solo la distanza da casa.
   Da completare con il calcolo vero (OR-Tools).
-- I dati di prova sono copiati sia in src/main.cpp sia nelle prove: da unificare quando
+- I dati di prova sono copiati sia in src/nucleo/dimostrazione.cpp sia nelle prove: da unificare quando
   arrivera' il caricamento dei dati veri.
 - Le regole aggiunte con K-006 (attesa massima, attivi/sospesi, giorni e periodi, turni, rotazione,
   servizi fissi, piu' committenti) non sono ancora nel modello dati: entreranno con K-007 e con il calcolo.
+- Il formato testo mostra sempre i dati personali (e' pensato per le persone): la protezione vale per il
+  JSON, che e' il formato da usare per gli assistenti AI.
+- Su Windows (K-009) sono da sistemare e provare gli argomenti con lettere accentate e gli a capo CR LF.
 
 ## Idee
 - Generare scenari "gonfiati" (50-500 mezzi) dai giri reali per provare il carico.
