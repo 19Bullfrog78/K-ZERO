@@ -136,6 +136,54 @@ Analisi analizza(const std::string& testo) {
     return a;
 }
 
+// --- Codifica: il JSON e' sempre UTF-8 (RFC 8259) -----------------------------------------------------
+
+struct CodificaSbagliata {
+    bool utf16 = false;     // file salvato in UTF-16 (il "Unicode" del Blocco note)
+    int riga = 0, colonna = 0;   // primo carattere non UTF-8 (solo se non e' UTF-16)
+};
+
+// Lunghezza della sequenza UTF-8 valida che comincia in t[i], oppure 0.
+std::size_t sequenza_utf8(const std::string& t, std::size_t i) {
+    const auto b = [&](std::size_t k) { return static_cast<unsigned char>(t[k]); };
+    const unsigned char c = b(i);
+    if (c < 0x80) return 1;
+    std::size_t n = 0;
+    unsigned cp = 0, minimo = 0;
+    if ((c & 0xE0) == 0xC0) { n = 2; cp = c & 0x1Fu; minimo = 0x80; }
+    else if ((c & 0xF0) == 0xE0) { n = 3; cp = c & 0x0Fu; minimo = 0x800; }
+    else if ((c & 0xF8) == 0xF0) { n = 4; cp = c & 0x07u; minimo = 0x10000; }
+    else return 0;
+    if (i + n > t.size()) return 0;
+    for (std::size_t k = 1; k < n; ++k) {
+        if ((b(i + k) & 0xC0) != 0x80) return 0;
+        cp = (cp << 6) | (b(i + k) & 0x3Fu);
+    }
+    if (cp < minimo || cp > 0x10FFFF || (cp >= 0xD800 && cp <= 0xDFFF)) return 0;
+    return n;
+}
+
+// Il testo non e' UTF-8? Il controllo viene prima della lettura del JSON: un carattere in un'altra codifica
+// (es. un file salvato come "ANSI") farebbe pensare a una virgola mancante.
+std::optional<CodificaSbagliata> codifica_sbagliata(const std::string& t) {
+    const auto b = [&](std::size_t k) { return static_cast<unsigned char>(t[k]); };
+    if (t.size() >= 2 && ((b(0) == 0xFF && b(1) == 0xFE) || (b(0) == 0xFE && b(1) == 0xFF) || b(0) == 0 || b(1) == 0))
+        return CodificaSbagliata{true, 0, 0};
+    int riga = 1, colonna = 1;
+    for (std::size_t i = 0; i < t.size();) {
+        const std::size_t n = sequenza_utf8(t, i);
+        if (n == 0) return CodificaSbagliata{false, riga, colonna};
+        if (t[i] == '\n') {
+            ++riga;
+            colonna = 1;
+        } else {
+            ++colonna;
+        }
+        i += n;
+    }
+    return std::nullopt;
+}
+
 // --- Dal JSON (gia' conforme allo schema) al modello --------------------------------------------------
 
 class Conversione {
@@ -612,7 +660,13 @@ Passenger passeggero(const JsonDati& j, const std::string& p, const Conversione&
     x.reason = c.testo(j, "motivo");
     if (j.contains("esigenze")) {
         const auto& e = j.at("esigenze");
-        x.needs = Needs{c.vero(e, "carrozzina"), c.vero(e, "assistente"), c.testo(e, "altro")};
+        const std::string carrozzina = c.testo(e, "carrozzina");
+        x.needs.wheelchair = carrozzina == "sulla_carrozzina" ? WheelchairUse::Seated
+                             : carrozzina == "piegata"        ? WheelchairUse::Folded
+                                                              : WheelchairUse::None;
+        x.needs.folded_aids = c.intero(e, "ausili_piegati").value_or(0);
+        x.needs.assistant = c.vero(e, "assistente");
+        x.needs.other = c.testo(e, "altro");
     }
     x.src = c.src(p);
     return x;
@@ -656,7 +710,7 @@ void servizi(const JsonDati& d, Package& pk) {
                 const std::string pf = indice(pg + "/fermate", f);
                 y.stops.push_back({c.ref(fermate[f], "luogo", pf), c.intero(fermate[f], "salgono").value_or(0),
                                    c.intero(fermate[f], "scendono").value_or(0), c.intero(fermate[f], "carrozzine").value_or(0),
-                                   c.src(pf)});
+                                   c.intero(fermate[f], "ausili_piegati").value_or(0), c.src(pf)});
             }
             y.assistant_required = c.vero(g, "assistente_richiesto");
             const auto& pass = c.elenco(g, "passeggeri");
@@ -753,6 +807,9 @@ void mezzi(const JsonDati& d, Package& pk) {
         x.seats_lost_per_wheelchair = c.intero(m, "posti_persi_per_carrozzina").value_or(0);
         x.has_ramp = c.vero(m, "pedana");
         x.ramp_seconds = c.intero(m, "tempo_pedana_secondi").value_or(0);
+        x.aids_in_trunk = c.intero(m, "ausili_bagagliaio").value_or(0);
+        if (m.contains("ausili_tra_i_sedili"))
+            x.seats_per_aid_between = m.at("ausili_tra_i_sedili").at("posti_occupati").get<int>();
         x.trailer = c.vero(m, "rimorchio");
         if (m.contains("misure")) {
             const auto& j = m.at("misure");
@@ -839,6 +896,15 @@ Lettura leggi_pacchetto(const Sorgente& sorgente) {
         const std::optional<std::string> testo = sorgente.leggi(f.file);
         if (!testo) {
             out.problemi.push_back(problema(Check::UnreadableFile, f.file, ""));
+            continue;
+        }
+        if (const auto codifica = codifica_sbagliata(*testo)) {
+            Problem p = codifica->utf16 ? problema(Check::NotUtf8, f.file, "", {}, 1)
+                                        : problema(Check::NotUtf8, f.file, "",
+                                                   {number_param("riga", codifica->riga), number_param("colonna", codifica->colonna)}, 0);
+            p.where.line = codifica->riga;
+            p.where.column = codifica->colonna;
+            out.problemi.push_back(p);
             continue;
         }
         Analisi a = analizza(*testo);

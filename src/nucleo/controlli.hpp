@@ -21,6 +21,7 @@ enum class Check {
     UnsupportedVersion,
     SchemaViolation,
     UnknownFile,
+    NotUtf8,
     // Contenuto: errori.
     DuplicateCode,
     UnknownReference,
@@ -48,6 +49,7 @@ enum class Check {
     LotServiceOtherContract,
     ServiceInTwoLots,
     GroupNotOnTripServices,
+    AssistantNotRequested,
     // Contenuto: avvisi.
     PlaceWithoutCoordinates,
     DwellTimesUndefined,

@@ -214,6 +214,8 @@ Json in_json(const DefinizioneComando& comando, const Resoconto& r, const Vista&
         x["carrozzine"] = v.wheelchair_places;
         x["posti_persi_per_carrozzina"] = v.seats_lost_per_wheelchair;
         x["pedana"] = v.has_ramp;
+        x["ausili_bagagliaio"] = v.aids_in_trunk;
+        x["ausili_tra_i_sedili"] = v.seats_per_aid_between ? Json(*v.seats_per_aid_between) : Json(nullptr);
         x["ipotetico"] = v.hypothetical;
         x["costo_fisso_giornaliero"] = v.daily_fixed_cost ? Json(arrotonda(*v.daily_fixed_cost, 2)) : Json(nullptr);
         x["costo_al_km"] = v.cost_per_km ? Json(arrotonda(*v.cost_per_km, 2)) : Json(nullptr);
@@ -250,10 +252,14 @@ Json in_json(const DefinizioneComando& comando, const Resoconto& r, const Vista&
             y["scuola"] = g.school ? Json(g.school->code) : Json(nullptr);
             y["persone"] = g.counts == kzero::CountKind::Unknown ? Json(nullptr) : Json(g.total_boarding());
             y["fermate"] = g.stops.size();
-            int carrozzine = 0;
-            for (const auto& st : g.stops) carrozzine += st.wheelchairs;
+            int carrozzine = 0, ausili = 0;
+            for (const auto& st : g.stops) {
+                carrozzine += st.wheelchairs;
+                ausili += st.folded_aids;
+            }
             const kzero::Source prima_fermata = g.stops.empty() ? g.src : g.stops.front().src;
             y["carrozzine"] = vista.filtra(vista.classe(prima_fermata, "carrozzine"), carrozzine, g.code);
+            y["ausili_piegati"] = vista.filtra(vista.classe(prima_fermata, "ausili_piegati"), ausili, g.code);
             y["assistente_richiesto"] = vista.campo(g.src, "assistente_richiesto", g.assistant_required, g.code);
             Json passeggeri = Json::array();
             for (const auto& q : g.passengers) {
@@ -267,9 +273,13 @@ Json in_json(const DefinizioneComando& comando, const Resoconto& r, const Vista&
                 // Il filtro vale per tutti, anche senza motivo: cosi' non si capisce chi ne ha uno.
                 z["motivo"] = vista.campo(q.src, "motivo", q.reason.empty() ? Json(nullptr) : Json(q.reason), q.code);
                 std::string esigenze;
-                if (q.needs.wheelchair) esigenze += "carrozzina";
-                if (q.needs.assistant) esigenze += std::string(esigenze.empty() ? "" : ", ") + "assistente";
-                if (!q.needs.other.empty()) esigenze += (esigenze.empty() ? "" : ", ") + q.needs.other;
+                const auto aggiungi = [&esigenze](const std::string& e) { esigenze += (esigenze.empty() ? "" : ", ") + e; };
+                if (q.needs.wheelchair == kzero::WheelchairUse::Seated) aggiungi("viaggia sulla carrozzina");
+                if (q.needs.wheelchair == kzero::WheelchairUse::Folded) aggiungi("carrozzina piegata");
+                if (q.needs.folded_aids > 0)
+                    aggiungi(std::to_string(q.needs.folded_aids) + (q.needs.folded_aids == 1 ? " ausilio piegato" : " ausili piegati"));
+                if (q.needs.assistant) aggiungi("assistente");
+                if (!q.needs.other.empty()) aggiungi(q.needs.other);
                 z["esigenze"] = vista.campo(q.src, "esigenze", esigenze.empty() ? Json(nullptr) : Json(esigenze), q.code);
                 passeggeri.push_back(z);
             }
@@ -369,6 +379,25 @@ Json in_json(const DefinizioneComando& comando, const Resoconto& r, const Vista&
         carrozzine.push_back(x);
     }
     regole["carrozzine"] = carrozzine;
+    Json ausili_piegati = Json::array();
+    for (const auto& a : d.ausili_piegati) {
+        Json x = Json::object();
+        x["mezzo"] = a.mezzo;
+        x["posti"] = a.posti;
+        x["bagagliaio"] = a.bagagliaio;
+        x["posti_tra_i_sedili"] = a.posti_tra_i_sedili ? Json(*a.posti_tra_i_sedili) : Json(nullptr);
+        Json casi = Json::array();
+        for (const auto& k : a.casi)
+            casi.push_back({{"ausili", k.ausili},
+                            {"seduti", k.seduti},
+                            {"ammesso", k.ammesso},
+                            {"nel_bagagliaio", k.ammesso ? Json(k.nel_bagagliaio) : Json(nullptr)},
+                            {"tra_i_sedili", k.ammesso ? Json(k.tra_i_sedili) : Json(nullptr)},
+                            {"posti_liberi", k.ammesso ? Json(k.posti_liberi) : Json(nullptr)}});
+        x["casi"] = casi;
+        ausili_piegati.push_back(x);
+    }
+    regole["ausili_piegati"] = ausili_piegati;
     Json assistente = Json::array();
     for (const auto& a : d.assistente) {
         Json x = Json::object();
@@ -437,6 +466,10 @@ std::string in_testo(const Json& j) {
                 t += "  carrozzine " + testo(v.at("carrozzine")) + " (" + testo(v.at("posti_persi_per_carrozzina")) +
                      " posti persi ciascuna)";
             if (v.at("pedana").get<bool>()) t += "  pedana";
+            if (v.at("ausili_bagagliaio").get<int>() > 0)
+                t += "  bagagliaio per " + quanti(v.at("ausili_bagagliaio").get<int>(), "ausilio piegato", "ausili piegati");
+            if (!v.at("ausili_tra_i_sedili").is_null())
+                t += "  ausili piegati tra i sedili (" + testo(v.at("ausili_tra_i_sedili")) + " posti ciascuno)";
             t += "  costo " + euro(v.at("costo_fisso_giornaliero")) + "/giorno + " + euro(v.at("costo_al_km")) + "/km";
             if (v.at("ipotetico").get<bool>()) t += "  (ipotetico)";
             t += "\n";
@@ -463,7 +496,7 @@ std::string in_testo(const Json& j) {
             if (!g.at("scuola").is_null()) t += "  scuola " + g.at("scuola").get<std::string>();
             t += "  persone " + (g.at("persone").is_null() ? std::string("non note") : testo(g.at("persone"))) + " in " +
                  testo(g.at("fermate")) + " fermate  carrozzine: " + testo(g.at("carrozzine")) +
-                 "  assistente richiesto: " + testo(g.at("assistente_richiesto")) + "\n";
+                 "  ausili piegati: " + testo(g.at("ausili_piegati")) + "  assistente richiesto: " + testo(g.at("assistente_richiesto")) + "\n";
             for (const auto& q : g.at("passeggeri")) {
                 t += "      passeggero " + q.at("codice").get<std::string>();
                 if (q.at("nome") != q.at("codice")) t += "  " + q.at("nome").get<std::string>();
@@ -517,6 +550,28 @@ std::string in_testo(const Json& j) {
             t += "  " + testo(k.at("carrozzine")) + " -> " +
                  (k.at("ammesso").get<bool>() ? testo(k.at("posti_a_sedere")) + " posti a sedere" : std::string("non ammesso")) +
                  ";";
+        t.back() = '\n';
+    }
+    for (const auto& a : r.at("ausili_piegati")) {
+        const int bagagliaio = a.at("bagagliaio").get<int>();
+        t += "Ausili piegati su " + a.at("mezzo").get<std::string>() + " (" + testo(a.at("posti")) + " posti; " +
+             (bagagliaio > 0 ? "bagagliaio per " + quanti(bagagliaio, "ausilio", "ausili") : std::string("nessun bagagliaio")) +
+             "; " +
+             (a.at("posti_tra_i_sedili").is_null() ? std::string("tra i sedili non ammessi")
+                                                    : "tra i sedili " + testo(a.at("posti_tra_i_sedili")) + " posti per ausilio") +
+             "):";
+        for (const auto& k : a.at("casi")) {
+            t += "  " + testo(k.at("ausili"));
+            if (k.at("seduti").get<int>() > 0) t += " con " + testo(k.at("seduti")) + " seduti";
+            t += " -> ";
+            if (!k.at("ammesso").get<bool>()) {
+                t += "non ammesso;";
+                continue;
+            }
+            if (k.at("nel_bagagliaio").get<int>() > 0) t += testo(k.at("nel_bagagliaio")) + " nel bagagliaio, ";
+            if (k.at("tra_i_sedili").get<int>() > 0) t += testo(k.at("tra_i_sedili")) + " tra i sedili, ";
+            t += quanti(k.at("posti_liberi").get<int>(), "posto libero", "posti liberi") + ";";
+        }
         t.back() = '\n';
     }
     for (const auto& a : r.at("assistente")) {

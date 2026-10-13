@@ -73,6 +73,32 @@ Dimostrazione calcola_dimostrazione(const Package& p) {
         d.carrozzine.push_back(cm);
     }
 
+    // Ausili piegati: ogni mezzo con il bagagliaio o che li ammette tra i sedili, a mezzo vuoto da un ausilio
+    // fino al primo caso non ammesso (al massimo due oltre il bagagliaio), poi un ausilio a mezzo pieno.
+    for (const Vehicle& v : p.vehicles) {
+        if (v.aids_in_trunk <= 0 && !v.seats_per_aid_between) continue;
+        AusiliMezzo am{v.code, v.seats, v.aids_in_trunk, v.seats_per_aid_between, {}};
+        const auto caso = [&v](int ausili, int seduti) {
+            const Fit f = fits(v, {seduti, 0, ausili, false});
+            AusiliMezzo::Caso c;
+            c.ausili = ausili;
+            c.seduti = seduti;
+            c.ammesso = f.admitted;
+            if (f.admitted) {
+                c.nel_bagagliaio = f.aids_in_trunk;
+                c.tra_i_sedili = f.aids_between_seats;
+                c.posti_liberi = f.free_seats;
+            }
+            return c;
+        };
+        for (int a = 1; a <= v.aids_in_trunk + 2; ++a) {
+            am.casi.push_back(caso(a, 0));
+            if (!am.casi.back().ammesso) break;
+        }
+        am.casi.push_back(caso(1, v.seats));
+        d.ausili_piegati.push_back(am);
+    }
+
     // Assistente: corse in cui il regolamento chiede l'assistente per il grado delle scuole servite,
     // almeno con uno dei mezzi dell'azienda.
     for (const Trip& t : p.trips) {

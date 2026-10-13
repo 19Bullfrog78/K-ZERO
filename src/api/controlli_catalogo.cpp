@@ -119,9 +119,13 @@ const std::vector<DefinizioneControllo>& catalogo_controlli() {
               "che salgono qui ({passeggeri}).",
               "Gruppo {gruppo}, fermata {luogo}: le persone che scendono ({conteggio}) non corrispondono ai passeggeri "
               "che scendono qui ({passeggeri}).",
-              "Gruppo {gruppo}, fermata {luogo}: le carrozzine non corrispondono ai passeggeri in carrozzina che salgono qui.",
-              "Il passeggero {passeggero} sale o scende a {luogo}, che non e' tra le fermate del gruppo {gruppo}."},
-             {{2, "Gruppo {gruppo}, fermata {luogo}: un dato particolare (riservato) non corrisponde ai passeggeri."}}},
+              "Gruppo {gruppo}, fermata {luogo}: le persone sedute sulla carrozzina non corrispondono ai passeggeri che "
+              "salgono qui seduti sulla carrozzina.",
+              "Il passeggero {passeggero} sale o scende a {luogo}, che non e' tra le fermate del gruppo {gruppo}.",
+              "Gruppo {gruppo}, fermata {luogo}: gli ausili piegati da caricare (carrozzine piegate comprese) non "
+              "corrispondono a quelli dei passeggeri che salgono qui."},
+             {{2, "Gruppo {gruppo}, fermata {luogo}: un dato particolare (riservato) non corrisponde ai passeggeri."},
+              {4, "Gruppo {gruppo}, fermata {luogo}: un dato particolare (riservato) non corrisponde ai passeggeri."}}},
             {Check::LotServiceOtherContract, "K-CTR-032", E, "Servizio di un altro contratto in un gruppo di servizi",
              {"Il servizio {servizio} ha il contratto {contratto}, ma il gruppo di servizi {gruppo_servizi} e' del "
               "contratto {contratto_gruppo}."}},
@@ -129,6 +133,16 @@ const std::vector<DefinizioneControllo>& catalogo_controlli() {
              {"Il servizio {servizio} e' sia nel gruppo di servizi {altro} sia in {gruppo_servizi}."}},
             {Check::GroupNotOnTripServices, "K-CTR-034", E, "Corsa che trasporta un gruppo di un servizio che non soddisfa",
              {"La corsa {corsa} trasporta il gruppo {gruppo} del servizio {servizio}, ma non soddisfa quel servizio."}},
+            {Check::AssistantNotRequested, "K-CTR-047", E, "Passeggero con un'esigenza che il suo gruppo non riporta",
+             {"Il passeggero {passeggero} ha bisogno dell'assistente a bordo, ma il gruppo {gruppo} non richiede "
+              "l'assistente."},
+             {{0, "Il passeggero {passeggero} ha un dato particolare (riservato) che il gruppo {gruppo} non riporta."}}},
+            {Check::NotUtf8, "K-CTR-048", E, "File non salvato in UTF-8",
+             {"Il file non e' salvato in UTF-8: alla riga {riga}, colonna {colonna} c'e' un carattere scritto in un'altra "
+              "codifica (succede con i file salvati come \"ANSI\" da programmi vecchi). Salvarlo di nuovo scegliendo la "
+              "codifica UTF-8. Il file non e' stato letto.",
+              "Il file e' salvato in UTF-16 (il \"Unicode\" del Blocco note), ma il formato accetta solo UTF-8. Salvarlo di "
+              "nuovo scegliendo la codifica UTF-8. Il file non e' stato letto."}},
             // Contenuto: avvisi
             {Check::PlaceWithoutCoordinates, "K-CTR-035", A, "Luogo senza coordinate",
              {"Il luogo {luogo} non ha le coordinate: serviranno al calcolo delle distanze."}},
@@ -307,20 +321,23 @@ std::string Presentatore::messaggio(const kzero::Problem& p) const {
         const bool nascosto =
             (it->sensitivity == kzero::Param::Sensitivity::Personal && !visibile(Classe::Personale, dati_->visibilita)) ||
             (it->sensitivity == kzero::Param::Sensitivity::Particular && !visibile(Classe::Particolare, dati_->visibilita));
+        std::string valore;
         if (nascosto) {
-            out += it->hidden.empty() ? std::string(kRiservato) : it->hidden;
-            i = fine;
-            continue;
+            valore = it->hidden.empty() ? std::string(kRiservato) : it->hidden;
+        } else {
+            switch (it->kind) {
+                case kzero::Param::Kind::Text: valore = it->text; break;
+                case kzero::Param::Kind::Number: valore = std::to_string(it->number); break;
+                case kzero::Param::Kind::Decimal: valore = decimale(it->decimal); break;
+                case kzero::Param::Kind::Time: valore = kzero::text_from_minutes(static_cast<kzero::Minutes>(it->number)); break;
+                case kzero::Param::Kind::Date: valore = kzero::text_from_day(static_cast<kzero::Day>(it->number)); break;
+                case kzero::Param::Kind::Ref: valore = riferimento(it->element, it->text); break;
+                case kzero::Param::Kind::Elements: valore = nome_elementi(it->element); break;
+            }
         }
-        switch (it->kind) {
-            case kzero::Param::Kind::Text: out += it->text; break;
-            case kzero::Param::Kind::Number: out += std::to_string(it->number); break;
-            case kzero::Param::Kind::Decimal: out += decimale(it->decimal); break;
-            case kzero::Param::Kind::Time: out += kzero::text_from_minutes(static_cast<kzero::Minutes>(it->number)); break;
-            case kzero::Param::Kind::Date: out += kzero::text_from_day(static_cast<kzero::Day>(it->number)); break;
-            case kzero::Param::Kind::Ref: out += riferimento(it->element, it->text); break;
-            case kzero::Param::Kind::Elements: out += nome_elementi(it->element); break;
-        }
+        // Un valore che finisce con il punto, seguito dal punto della frase: un punto solo.
+        if (!valore.empty() && valore.back() == '.' && fine + 1 < modello.size() && modello[fine + 1] == '.') valore.pop_back();
+        out += valore;
         i = fine;
     }
     return out;

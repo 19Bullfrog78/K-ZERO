@@ -191,6 +191,14 @@
       "indirizzo": "Via Roma 30",
       "comune": "Sorgenta",
       "coordinate": { "lat": 46.4295, "lon": 11.017 }
+    },
+    {
+      "codice": "PP-04",
+      "tipo": "porta_a_porta",
+      "nome": "Casa Gialli",
+      "indirizzo": "Via delle Fontane 7",
+      "comune": "Sorgenta",
+      "coordinate": { "lat": 46.4312, "lon": 11.0228 }
     }
   ]
 }

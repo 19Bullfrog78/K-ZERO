@@ -120,9 +120,10 @@
             "scuola": "SC-CENTRO",
             "finestra": { "dalle": "08:30", "alle": "09:00" },
             "conteggi": "esatti",
+            "assistente_richiesto": true,
             "fermate": [
               { "luogo": "F-PRADELLO", "salgono": 1, "carrozzine": 1 },
-              { "luogo": "F-CASTELROVO", "salgono": 1 },
+              { "luogo": "F-CASTELROVO", "salgono": 1, "ausili_piegati": 1 },
               { "luogo": "F-MONTEBRINO", "salgono": 1 },
               { "luogo": "L-CENTRO", "scendono": 3 }
             ]
@@ -177,6 +178,32 @@
               { "luogo": "F-VALFONDA-PIAZZA" },
               { "luogo": "F-CASTELROVO-ALTO" },
               { "luogo": "F-PRADELLO" }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "codice": "S-DIS-GIO",
+      "nome": "Trasporto al centro diurno Il Faro, il giovedi'",
+      "codici_esterni": [{ "sistema": "Consorzio Valle Alta", "tipo": "scheda", "codice": "48230" }],
+      "tipo": "disabili",
+      "contratto": "CT-SCU",
+      "calendario": "CAL-CENTRO-GIO",
+      "liberta_oraria": { "tipo": "libera", "soglia_da_concordare_minuti": 15 },
+      "domanda": {
+        "gruppi": [
+          {
+            "codice": "G-DIS-GIO",
+            "nome": "Centro diurno, andata del giovedi'",
+            "tipo": "disabili",
+            "verso": "andata",
+            "scuola": "SC-CENTRO",
+            "finestra": { "dalle": "08:30", "alle": "09:00" },
+            "conteggi": "esatti",
+            "fermate": [
+              { "luogo": "F-SORGENTA", "salgono": 1, "ausili_piegati": 1 },
+              { "luogo": "L-CENTRO", "scendono": 1 }
             ]
           }
         ]

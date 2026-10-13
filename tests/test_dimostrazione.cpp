@@ -14,12 +14,13 @@ using namespace kzero;
 using namespace kzero::prove;
 
 // La categoria di ogni corsa la ricava il nucleo: superiori + medie di due contratti = ibrido,
-// centro diurno = handicap, solo utenti di linea = linea.
+// centro diurno = handicap (anche la corsa del giovedi' con la carrozzina piegata), solo utenti di linea = linea.
 TEST(Dimostrazione, categorie_ricavate) {
     const std::vector<std::pair<std::string, ServiceType>> attese = {
         {"C-AM-1", ServiceType::School},      {"C-AM-2", ServiceType::School},     {"C-AM-3", ServiceType::School},
         {"C-RM-1", ServiceType::Hybrid},      {"C-DIS-R", ServiceType::Disability}, {"C-DIS-1", ServiceType::Disability},
-        {"C-ASILO-1", ServiceType::School},   {"C-LIN-533", ServiceType::Line},     {"C-LIN-560", ServiceType::Line}};
+        {"C-ASILO-1", ServiceType::School},   {"C-LIN-533", ServiceType::Line},     {"C-LIN-560", ServiceType::Line},
+        {"C-DIS-GIO", ServiceType::Disability}};
     const Index idx(demo());
     ASSERT_EQ(demo().trips.size(), attese.size());
     for (std::size_t i = 0; i < attese.size(); ++i) {
@@ -45,8 +46,8 @@ TEST(Dimostrazione, totali_e_pause) {
         pieni += t.loaded_km();
         vuoti += t.empty_km();
     }
-    EXPECT_NEAR(pieni, 122.7, 1e-9);
-    EXPECT_NEAR(vuoti, 55.3, 1e-9);
+    EXPECT_NEAR(pieni, 131.8, 1e-9);
+    EXPECT_NEAR(vuoti, 61.7, 1e-9);
 
     Schedule giornata;
     giornata.routes = {per_codice(demo().trips, "C-AM-1"), per_codice(demo().trips, "C-RM-1")};
@@ -82,6 +83,32 @@ TEST(Dimostrazione, posti_costi_assistente) {
     EXPECT_EQ(d.carrozzine[0].casi[2].posti_a_sedere, 6);
     EXPECT_TRUE(d.carrozzine[0].casi[2].ammesso);
     EXPECT_FALSE(d.carrozzine[0].casi[3].ammesso);
+
+    // Ausili piegati. ALFA-02 (16 posti, nessun bagagliaio): tra i sedili, 2 posti per ausilio, solo se liberi.
+    // ALFA-04 (auto, 4 posti): bagagliaio per 1 ausilio, tra i sedili no.
+    ASSERT_EQ(d.ausili_piegati.size(), 2u);
+    const AusiliMezzo& minibus = d.ausili_piegati[0];
+    EXPECT_EQ(minibus.mezzo, "ALFA-02");
+    EXPECT_EQ(minibus.bagagliaio, 0);
+    EXPECT_EQ(minibus.posti_tra_i_sedili, 2);
+    ASSERT_EQ(minibus.casi.size(), 3u);
+    EXPECT_TRUE(minibus.casi[0].ammesso);              // 1 ausilio a mezzo vuoto
+    EXPECT_EQ(minibus.casi[0].tra_i_sedili, 1);
+    EXPECT_EQ(minibus.casi[0].posti_liberi, 14);
+    EXPECT_EQ(minibus.casi[1].posti_liberi, 12);       // 2 ausili
+    EXPECT_EQ(minibus.casi[2].seduti, 16);             // 1 ausilio a mezzo pieno: non ammesso
+    EXPECT_FALSE(minibus.casi[2].ammesso);
+    const AusiliMezzo& auto_ = d.ausili_piegati[1];
+    EXPECT_EQ(auto_.mezzo, "ALFA-04");
+    EXPECT_EQ(auto_.bagagliaio, 1);
+    EXPECT_FALSE(auto_.posti_tra_i_sedili.has_value());
+    ASSERT_EQ(auto_.casi.size(), 3u);
+    EXPECT_TRUE(auto_.casi[0].ammesso);                // 1 ausilio: nel bagagliaio, 4 posti liberi
+    EXPECT_EQ(auto_.casi[0].nel_bagagliaio, 1);
+    EXPECT_EQ(auto_.casi[0].posti_liberi, 4);
+    EXPECT_FALSE(auto_.casi[1].ammesso);               // 2 ausili: non ammesso
+    EXPECT_TRUE(auto_.casi[2].ammesso);                // 1 ausilio con 4 seduti: nel bagagliaio
+    EXPECT_EQ(auto_.casi[2].posti_liberi, 0);
 
     // La linea chiede un mezzo da almeno 30 posti: solo il mezzo ipotetico e' ammesso.
     ASSERT_EQ(d.costi.size(), 2u);

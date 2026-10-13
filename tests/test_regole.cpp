@@ -16,6 +16,12 @@ namespace {
 
 const Vehicle& minibus16() { return per_codice(demo().vehicles, "ALFA-01"); }    // 16 posti, senza pedana
 const Vehicle& attrezzato() { return per_codice(demo().vehicles, "ALFA-03"); }   // 12 posti, 2 carrozzine, 3 posti persi l'una
+const Vehicle& senza_bagagliaio() { return per_codice(demo().vehicles, "ALFA-02"); }  // 16 posti, ausili tra i sedili (2 posti)
+const Vehicle& auto_() { return per_codice(demo().vehicles, "ALFA-04"); }        // 4 posti, bagagliaio per 1 ausilio
+
+Load seduti(int n, bool assistente = false) { return {n, 0, 0, assistente}; }
+Load con_carrozzine(int seduti, int carrozzine) { return {seduti, carrozzine, 0, false}; }
+Load con_ausili(int seduti, int ausili) { return {seduti, 0, ausili, false}; }
 
 std::optional<ServiceType> categoria(const Package& p, const std::string& corsa) {
     return Index(p).category(per_codice(p.trips, corsa));
@@ -47,27 +53,92 @@ TEST(Regole, giri_38_su_16) {
 
 // L'assistente occupa un posto.
 TEST(Regole, assistente_occupa_un_posto) {
-    EXPECT_TRUE(fits(minibus16(), 16, 0, false));    // 16 bambini da soli: ci stanno
-    EXPECT_FALSE(fits(minibus16(), 16, 0, true));    // 16 bambini + assistente: no
-    EXPECT_TRUE(fits(minibus16(), 15, 0, true));     // 15 bambini + assistente: si'
+    EXPECT_TRUE(fits(minibus16(), seduti(16)));          // 16 bambini da soli: ci stanno
+    EXPECT_FALSE(fits(minibus16(), seduti(16, true)));   // 16 bambini + assistente: no
+    EXPECT_TRUE(fits(minibus16(), seduti(15, true)));    // 15 bambini + assistente: si'
 }
 
 // Ogni carrozzina toglie posti a sedere (ALFA-03: 12 posti, 3 persi per carrozzina, al massimo 2).
 TEST(Regole, carrozzina_toglie_posti) {
-    EXPECT_TRUE(fits(attrezzato(), 12, 0));
-    EXPECT_FALSE(fits(attrezzato(), 10, 1));   // 12 - 3 = 9 posti
-    EXPECT_TRUE(fits(attrezzato(), 9, 1));
-    EXPECT_FALSE(fits(attrezzato(), 7, 2));    // 12 - 6 = 6 posti
-    EXPECT_TRUE(fits(attrezzato(), 6, 2));
-    EXPECT_FALSE(fits(attrezzato(), 0, 3));    // oltre le carrozzine ammesse
+    EXPECT_TRUE(fits(attrezzato(), seduti(12)));
+    EXPECT_FALSE(fits(attrezzato(), con_carrozzine(10, 1)));   // 12 - 3 = 9 posti
+    EXPECT_TRUE(fits(attrezzato(), con_carrozzine(9, 1)));
+    EXPECT_FALSE(fits(attrezzato(), con_carrozzine(7, 2)));    // 12 - 6 = 6 posti
+    EXPECT_TRUE(fits(attrezzato(), con_carrozzine(6, 2)));
+    EXPECT_FALSE(fits(attrezzato(), con_carrozzine(0, 3)));    // oltre le carrozzine ammesse
 }
 
 // Senza pedana nessuna carrozzina.
 TEST(Regole, senza_pedana_nessuna_carrozzina) {
-    EXPECT_FALSE(fits(minibus16(), 0, 1));
+    EXPECT_FALSE(fits(minibus16(), con_carrozzine(0, 1)));
     Vehicle senza_pedana = attrezzato();
     senza_pedana.has_ramp = false;
-    EXPECT_FALSE(fits(senza_pedana, 0, 1));
+    EXPECT_FALSE(fits(senza_pedana, con_carrozzine(0, 1)));
+}
+
+// Auto con la carrozzina piegata nel bagagliaio e il passeggero dietro: ammesso, nessun posto perso.
+TEST(Regole, auto_carrozzina_piegata_nel_bagagliaio) {
+    EXPECT_EQ(auto_().aids_in_trunk, 1);
+    EXPECT_FALSE(auto_().has_ramp);
+    const Fit f = fits(auto_(), con_ausili(1, 1));
+    EXPECT_TRUE(f.admitted);
+    EXPECT_EQ(f.aids_in_trunk, 1);
+    EXPECT_EQ(f.aids_between_seats, 0);
+    EXPECT_EQ(f.free_seats, 3);
+    EXPECT_TRUE(fits(auto_(), con_ausili(4, 1)));    // auto piena: il bagagliaio non toglie posti
+    EXPECT_FALSE(fits(auto_(), con_ausili(1, 2)));   // il secondo ausilio non ha posto: tra i sedili non e' ammesso
+}
+
+// Minibus senza bagagliaio: l'ausilio va tra i sedili, legato e bloccato, e occupa 2 posti se sono liberi.
+TEST(Regole, minibus_senza_bagagliaio_ausilio_tra_i_sedili) {
+    EXPECT_EQ(senza_bagagliaio().aids_in_trunk, 0);
+    ASSERT_TRUE(senza_bagagliaio().seats_per_aid_between.has_value());
+    EXPECT_EQ(*senza_bagagliaio().seats_per_aid_between, 2);
+    const Fit f = fits(senza_bagagliaio(), con_ausili(10, 1));
+    EXPECT_TRUE(f.admitted);
+    EXPECT_EQ(f.aids_in_trunk, 0);
+    EXPECT_EQ(f.aids_between_seats, 1);
+    EXPECT_EQ(f.free_seats, 4);   // 16 - 2 - 10: due posti in meno
+    EXPECT_TRUE(fits(senza_bagagliaio(), con_ausili(14, 1)));
+    // Stesso minibus pieno: i posti per l'ausilio non ci sono, non e' ammesso.
+    EXPECT_FALSE(fits(senza_bagagliaio(), con_ausili(16, 1)));
+    EXPECT_FALSE(fits(senza_bagagliaio(), con_ausili(15, 1)));
+    // Un mezzo che non ha bagagliaio e non ammette ausili tra i sedili non porta ausili piegati.
+    EXPECT_FALSE(fits(minibus16(), con_ausili(0, 1)));
+}
+
+// Minibus con il bagagliaio: gli ausili vanno li' e non si perde nessun posto; prima il bagagliaio, poi tra i sedili.
+TEST(Regole, minibus_con_bagagliaio_nessun_posto_perso) {
+    Vehicle con_bagagliaio = minibus16();
+    con_bagagliaio.aids_in_trunk = 2;
+    const Fit f = fits(con_bagagliaio, con_ausili(16, 2));
+    EXPECT_TRUE(f.admitted);
+    EXPECT_EQ(f.aids_in_trunk, 2);
+    EXPECT_EQ(f.free_seats, 0);
+    EXPECT_FALSE(fits(con_bagagliaio, con_ausili(0, 3)));   // il terzo non entra e tra i sedili non e' ammesso
+
+    Vehicle tutti_e_due = senza_bagagliaio();
+    tutti_e_due.aids_in_trunk = 1;
+    const Fit g = fits(tutti_e_due, con_ausili(10, 2));
+    EXPECT_TRUE(g.admitted);
+    EXPECT_EQ(g.aids_in_trunk, 1);
+    EXPECT_EQ(g.aids_between_seats, 1);
+    EXPECT_EQ(g.free_seats, 4);   // solo il secondo ausilio occupa posti
+}
+
+// La carrozzina piegata non chiede la pedana: su un mezzo senza pedana e' ammessa, la persona seduta sulla
+// carrozzina no. Carrozzina, assistente e ausilio insieme si sommano.
+TEST(Regole, carrozzina_piegata_senza_pedana) {
+    Vehicle senza_pedana = minibus16();
+    senza_pedana.aids_in_trunk = 1;
+    EXPECT_FALSE(senza_pedana.has_ramp);
+    EXPECT_TRUE(fits(senza_pedana, con_ausili(1, 1)));         // seduta su un posto, carrozzina piegata nel bagagliaio
+    EXPECT_FALSE(fits(senza_pedana, con_carrozzine(0, 1)));    // seduta sulla carrozzina: serve la pedana
+
+    Vehicle tutto = attrezzato();   // 12 posti, 3 persi per carrozzina
+    tutto.seats_per_aid_between = 2;
+    EXPECT_TRUE(fits(tutto, {6, 1, 1, true}));    // 12 - 3 - 1 (assistente) - 2 (ausilio) - 6 = 0
+    EXPECT_FALSE(fits(tutto, {7, 1, 1, true}));
 }
 
 // Gruppi di tipi diversi sulla stessa corsa = Ibrido. La corsa C-AM-2 porta due gruppi di studenti

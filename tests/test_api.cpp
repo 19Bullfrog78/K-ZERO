@@ -262,7 +262,7 @@ TEST(Api, pacchetto_demo_letto) {
     EXPECT_TRUE(l.problemi.empty());
     EXPECT_TRUE(l.forma_valida());
     EXPECT_EQ(l.versioni.size(), 13u);   // tutti i file del formato tranne tempi_sosta.json
-    EXPECT_EQ(l.pacchetto.trips.size(), 9u);
+    EXPECT_EQ(l.pacchetto.trips.size(), 10u);
 }
 
 TEST(Api, K_CTR_001_manca_il_manifesto) {
@@ -287,7 +287,7 @@ TEST(Api, K_CTR_003_json_non_valido) {
     ASSERT_EQ(l.problemi.size(), 1u);
     EXPECT_EQ(l.problemi[0].check, Check::InvalidJson);
     EXPECT_EQ(l.problemi[0].where.file, "mezzi.json");
-    EXPECT_EQ(l.problemi[0].where.line, 71);     // la riga dopo la virgola mancante: "alimentazione"...
+    EXPECT_EQ(l.problemi[0].where.line, 73);     // la riga dopo la virgola mancante: "alimentazione"...
     EXPECT_EQ(l.problemi[0].where.column, 21);   // ...letto fino in fondo prima di accorgersi dell'errore
     EXPECT_FALSE(l.usato("mezzi.json"));   // mai letto a meta'
 }
@@ -361,6 +361,109 @@ TEST(Api, K_CTR_008_file_non_riconosciuto) {
     const Resoconto r = controlla_pacchetto(m, Visibilita{});
     EXPECT_TRUE(r.contenuto_controllato);   // un avviso non ferma i controlli sul contenuto
     EXPECT_EQ(r.errori, 0);
+}
+
+namespace {
+
+// Da UTF-8 a UTF-16 (little endian, con il segno iniziale FF FE): come il "Unicode" del Blocco note di Windows.
+std::string in_utf16(const std::string& t, bool con_segno = true, bool big_endian = false) {
+    std::string out = con_segno ? (big_endian ? std::string("\xFE\xFF") : std::string("\xFF\xFE")) : std::string();
+    for (std::size_t i = 0; i < t.size();) {
+        const auto b = [&](std::size_t k) { return static_cast<unsigned char>(t[k]); };
+        unsigned cp = b(i);
+        std::size_t n = 1;
+        if (cp >= 0xE0) { cp = ((cp & 0x0Fu) << 12) | ((b(i + 1) & 0x3Fu) << 6) | (b(i + 2) & 0x3Fu); n = 3; }
+        else if (cp >= 0xC0) { cp = ((cp & 0x1Fu) << 6) | (b(i + 1) & 0x3Fu); n = 2; }
+        const char basso = static_cast<char>(cp & 0xFFu), alto = static_cast<char>(cp >> 8);
+        out += big_endian ? std::string{alto, basso} : std::string{basso, alto};
+        i += n;
+    }
+    return out;
+}
+
+}  // namespace
+
+// Il JSON e' sempre UTF-8: un file salvato come "ANSI" o come "Unicode" (UTF-16) da' un errore chiaro, con il
+// rimedio, invece di un JSON non valido. Il messaggio non riporta il testo del file (potrebbe contenere dati personali).
+TEST(Api, K_CTR_048_file_non_in_utf8) {
+    const std::string vecchio = "\"nome\": \"Centro diurno, giovedi'\"";
+    Memoria ansi;   // la "i" accentata in Latin-1 (un byte, 0xEC)
+    ansi.sostituisci("corse.json", vecchio, "\"nome\": \"Centro diurno, gioved\xEC\"");
+    EXPECT_TRUE(problemi(ansi, {{Check::NotUtf8, 0, "corse.json", ""}}));
+    const Lettura l = leggi_pacchetto(ansi);
+    EXPECT_EQ(l.problemi[0].where.line, 282);
+    EXPECT_EQ(l.problemi[0].where.column, 37);
+    EXPECT_FALSE(l.usato("corse.json"));
+    EXPECT_EQ(messaggio(ansi), "Il file non e' salvato in UTF-8: alla riga 282, colonna 37 c'e' un carattere scritto in "
+                               "un'altra codifica (succede con i file salvati come \"ANSI\" da programmi vecchi). Salvarlo "
+                               "di nuovo scegliendo la codifica UTF-8. Il file non e' stato letto.");
+    const Resoconto r = controlla_pacchetto(ansi, Visibilita{true, true});
+    EXPECT_FALSE(r.contenuto_controllato);
+    EXPECT_EQ(r.problemi[0].messaggio.find("gioved"), std::string::npos);
+
+    // Il pacchetto demo salvato in UTF-16, con il segno iniziale o senza, little o big endian.
+    Memoria utf16;
+    utf16.file["corse.json"] = in_utf16(*utf16.file.at("corse.json"));
+    EXPECT_TRUE(problemi(utf16, {{Check::NotUtf8, 1, "corse.json", ""}}));
+    EXPECT_EQ(messaggio(utf16).rfind("Il file e' salvato in UTF-16", 0), 0u) << messaggio(utf16);
+    Memoria senza_segno;
+    senza_segno.file["mezzi.json"] = in_utf16(*senza_segno.file.at("mezzi.json"), false);
+    EXPECT_TRUE(problemi(senza_segno, {{Check::NotUtf8, 1, "mezzi.json", ""}}));
+    Memoria big;
+    big.file["pacchetto.json"] = in_utf16(*big.file.at("pacchetto.json"), false, true);
+    EXPECT_TRUE(problemi(big, {{Check::NotUtf8, 1, "pacchetto.json", ""}}));
+
+    // Le lettere accentate scritte in UTF-8 vanno bene, anche con il segno iniziale (BOM) dei programmi di Windows.
+    Memoria buono;
+    buono.sostituisci("corse.json", vecchio, "\"nome\": \"Centro diurno, gioved\xC3\xAC\"");
+    buono.file["mezzi.json"] = "\xEF\xBB\xBF" + *buono.file.at("mezzi.json");
+    EXPECT_TRUE(problemi(buono, {}));
+    // Sequenze UTF-8 non valide: troncata, codifica troppo lunga, meta' di una coppia UTF-16.
+    for (const std::string& sbagliato : {std::string("\xC3"), std::string("\xC0\xAF"), std::string("\xED\xA0\x80")}) {
+        Memoria m;
+        m.sostituisci("corse.json", vecchio, "\"nome\": \"Centro diurno, gioved" + sbagliato + "\"");
+        EXPECT_TRUE(problemi(m, {{Check::NotUtf8, 0, "corse.json", ""}}));
+    }
+}
+
+// Un testo vuoto viola due regole dello schema (troppo corto e senza un carattere visibile): un solo errore.
+TEST(Api, testo_vuoto_un_solo_errore) {
+    Memoria m;
+    m.sostituisci("corse.json", "\"nome\": \"Centro diurno, giovedi'\"", "\"nome\": \"\"");
+    EXPECT_TRUE(problemi(m, {{Check::SchemaViolation, 0, "corse.json", "/corse/9/nome"}}));
+    EXPECT_EQ(messaggio(m), "Non rispetta lo schema: testo vuoto. Il file non e' stato usato.");
+    Memoria spazi;
+    spazi.sostituisci("corse.json", "\"nome\": \"Centro diurno, giovedi'\"", "\"nome\": \"   \"");
+    EXPECT_TRUE(problemi(spazi, {{Check::SchemaViolation, 0, "corse.json", "/corse/9/nome"}}));
+    EXPECT_EQ(messaggio(spazi), "Non rispetta lo schema: forma non valida (\"   \"): Testo di una riga, non vuoto (al massimo "
+                                "300 caratteri). Il file non e' stato usato.");
+}
+
+// Nessun messaggio del catalogo finisce con due punti di fila, neanche quando un valore finisce con il punto.
+TEST(Api, messaggi_senza_due_punti) {
+    const Memoria m;
+    const Lettura l = leggi_pacchetto(m);
+    for (const Visibilita v : {Visibilita{}, Visibilita{true, true}})
+        for (const auto sensibilita : {kzero::Param::Sensitivity::Common, kzero::Param::Sensitivity::Particular}) {
+            const Presentatore presentatore(&l.pacchetto, &l.versioni, v);
+            for (const DefinizioneControllo& d : catalogo_controlli()) {
+                std::vector<std::string> modelli = d.messaggi;
+                for (const auto& [variante, modello] : d.riservati) modelli.push_back(modello);
+                for (std::size_t variante = 0; variante < d.messaggi.size(); ++variante) {
+                    kzero::Problem p{d.controllo, static_cast<int>(variante), kzero::Source{}, {}};
+                    for (const std::string& modello : modelli)
+                        for (std::size_t i = modello.find('{'); i != std::string::npos; i = modello.find('{', i + 1)) {
+                            kzero::Param x = kzero::text_param(modello.substr(i + 1, modello.find('}', i) - i - 1), "valore.");
+                            x.sensitivity = sensibilita;
+                            x.hidden = "nascosto.";
+                            p.params.push_back(x);
+                        }
+                    const std::string testo = presentatore.messaggio(p);
+                    EXPECT_EQ(testo.find(".."), std::string::npos) << d.codice << ": " << testo;
+                    EXPECT_EQ(testo.back(), '.') << d.codice << ": " << testo;
+                }
+            }
+        }
 }
 
 // Traduzione dei messaggi della libreria (valijson) in italiano, con i valori attesi presi dallo schema.
@@ -469,8 +572,10 @@ TEST(Api, classi_marcate_negli_schemi) {
         "servizi/servizi/*/domanda/gruppi/*/tipo",
         "servizi/servizi/*/domanda/gruppi/*/tipo_descrizione",
         "servizi/servizi/*/domanda/gruppi/*/fermate/*/carrozzine",
+        "servizi/servizi/*/domanda/gruppi/*/fermate/*/ausili_piegati",
         "servizi/servizi/*/domanda/gruppi/*/assistente_richiesto",
         "servizi/servizi/*/domanda/gruppi/*/passeggeri/*/esigenze/carrozzina",
+        "servizi/servizi/*/domanda/gruppi/*/passeggeri/*/esigenze/ausili_piegati",
         "servizi/servizi/*/domanda/gruppi/*/passeggeri/*/esigenze/assistente",
         "servizi/servizi/*/domanda/gruppi/*/passeggeri/*/esigenze/altro",
     };

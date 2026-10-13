@@ -90,6 +90,7 @@ public:
         transfers();
         connections();
         passenger_counts();
+        assistant_requests();
         lots();
         groups_on_trips();
         coordinates();
@@ -585,7 +586,7 @@ private:
             for (const PassengerGroup& g : s.groups) {
                 if (g.passengers.empty() || g.counts == CountKind::Unknown) continue;
                 struct Expected {
-                    int boarding = 0, alighting = 0, wheelchairs = 0;
+                    int boarding = 0, alighting = 0, wheelchairs = 0, folded_aids = 0;
                 };
                 std::map<Code, Expected> expected;
                 std::set<Code> stops;
@@ -602,7 +603,10 @@ private:
                                 3);
                         Expected& e = expected[place];
                         (a == &x.boarding ? e.boarding : e.alighting) += 1;
-                        if (x.needs.wheelchair && a == &x.boarding) e.wheelchairs += 1;   // carrozzine: tra chi sale
+                        if (a == &x.boarding) {   // carrozzine e ausili piegati: si contano dove la persona sale
+                            if (x.needs.wheelchair == WheelchairUse::Seated) e.wheelchairs += 1;
+                            e.folded_aids += x.needs.folded_items();
+                        }
                     }
                 }
                 for (const DemandStop& d : g.stops) {
@@ -615,7 +619,21 @@ private:
                         add(Check::CountsDifferFromPassengers, d.src,
                             {group, place, number_param("conteggio", d.alighting), number_param("passeggeri", e.alighting)}, 1);
                     if (d.wheelchairs != e.wheelchairs) add(Check::CountsDifferFromPassengers, d.src, {group, place}, 2);
+                    if (d.folded_aids != e.folded_aids) add(Check::CountsDifferFromPassengers, d.src, {group, place}, 4);
                 }
+            }
+    }
+
+    // --- Assistente: gruppo e passeggeri coerenti --------------------------------------------------
+
+    void assistant_requests() {
+        for (const Service& s : p_.services)
+            for (const PassengerGroup& g : s.groups) {
+                if (g.assistant_required) continue;
+                for (const Passenger& x : g.passengers)
+                    if (x.travels() && x.needs.assistant)
+                        add(Check::AssistantNotRequested, x.src,
+                            {ref_param("passeggero", Element::Passenger, x.code), ref_param("gruppo", Element::Group, g.code)});
             }
     }
 

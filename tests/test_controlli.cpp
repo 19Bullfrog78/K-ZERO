@@ -220,7 +220,7 @@ TEST(Controlli, K_CTR_019_dati_personali_in_solo_numeri) {
     p.manifest.level = Level::NumbersOnly;
     EXPECT_TRUE(segnala(p, Check::NumbersOnlyPersonalData, 0, "luoghi.json", "/luoghi_privati/0"));
     EXPECT_TRUE(segnala(p, Check::NumbersOnlyPersonalData, 1, "servizi.json", "/servizi/3/domanda/gruppi/0/passeggeri/0"));
-    EXPECT_EQ(quanti(p, Check::NumbersOnlyPersonalData), 6);   // 4 luoghi privati, 2 gruppi con passeggeri
+    EXPECT_EQ(quanti(p, Check::NumbersOnlyPersonalData), 8);   // 5 luoghi privati, 3 gruppi con passeggeri
 }
 
 TEST(Controlli, K_CTR_020_persone_a_bordo_sotto_zero) {
@@ -362,7 +362,7 @@ TEST(Controlli, K_CTR_031_conteggi_diversi_dai_passeggeri) {
     gruppo(q, "G-ASILO").stops[2].alighting = 8;
     EXPECT_TRUE(segnala(q, Check::CountsDifferFromPassengers, 1, "servizi.json", "/servizi/4/domanda/gruppi/0/fermate/2"));
     Package r = demo();
-    gruppo(r, "G-DIS").stops[0].wheelchairs = 0;   // P-D1 e' in carrozzina
+    gruppo(r, "G-DIS").stops[0].wheelchairs = 0;   // P-D1 viaggia seduto sulla carrozzina
     EXPECT_TRUE(segnala(r, Check::CountsDifferFromPassengers, 2, "servizi.json", "/servizi/3/domanda/gruppi/0/fermate/0"));
     Package s = demo();
     per_codice(gruppo(s, "G-ASILO").passengers, "P-A1").boarding->place.code = "F-PRADELLO";
@@ -370,6 +370,50 @@ TEST(Controlli, K_CTR_031_conteggi_diversi_dai_passeggeri) {
     Package t = demo();
     per_codice(gruppo(t, "G-ASILO").passengers, "P-A8").status = PassengerStatus::Active;   // non piu' sospeso
     EXPECT_TRUE(segnala(t, Check::CountsDifferFromPassengers, 0, "servizi.json", "/servizi/4/domanda/gruppi/0/fermate/1"));
+}
+
+// Carrozzine (persone sedute sulla carrozzina) e ausili piegati si confrontano con i passeggeri uno per uno.
+TEST(Controlli, K_CTR_031_carrozzine_e_ausili_piegati) {
+    EXPECT_EQ(quanti(demo(), Check::CountsDifferFromPassengers), 0);
+    // P-D2 ha un deambulatore dichiarato: la fermata PP-02 deve riportare un ausilio piegato.
+    Package p = demo();
+    gruppo(p, "G-DIS").stops[1].folded_aids = 0;
+    EXPECT_TRUE(segnala(p, Check::CountsDifferFromPassengers, 4, "servizi.json", "/servizi/3/domanda/gruppi/0/fermate/1"));
+    EXPECT_EQ(quanti(p, Check::CountsDifferFromPassengers), 1);
+    // P-D4 viaggia con la carrozzina piegata: e' un ausilio piegato, non una carrozzina.
+    Package q = demo();
+    gruppo(q, "G-DIS-GIO").stops[0].folded_aids = 0;
+    EXPECT_TRUE(segnala(q, Check::CountsDifferFromPassengers, 4, "servizi.json", "/servizi/6/domanda/gruppi/0/fermate/0"));
+    Package r = demo();
+    gruppo(r, "G-DIS-GIO").stops[0].folded_aids = 0;
+    gruppo(r, "G-DIS-GIO").stops[0].wheelchairs = 1;
+    EXPECT_TRUE(segnala(r, Check::CountsDifferFromPassengers, 2, "servizi.json", "/servizi/6/domanda/gruppi/0/fermate/0"));
+    EXPECT_TRUE(segnala(r, Check::CountsDifferFromPassengers, 4, "servizi.json", "/servizi/6/domanda/gruppi/0/fermate/0"));
+    // Se P-D1 viaggiasse con la carrozzina piegata, a PP-01 cambierebbero tutti e due i conteggi.
+    Package s = demo();
+    per_codice(gruppo(s, "G-DIS").passengers, "P-D1").needs.wheelchair = WheelchairUse::Folded;
+    EXPECT_TRUE(segnala(s, Check::CountsDifferFromPassengers, 2, "servizi.json", "/servizi/3/domanda/gruppi/0/fermate/0"));
+    EXPECT_TRUE(segnala(s, Check::CountsDifferFromPassengers, 4, "servizi.json", "/servizi/3/domanda/gruppi/0/fermate/0"));
+}
+
+// Un passeggero che viaggia e ha bisogno dell'assistente, in un gruppo che non lo richiede: errore.
+TEST(Controlli, K_CTR_047_assistente_non_richiesto_dal_gruppo) {
+    EXPECT_EQ(quanti(demo(), Check::AssistantNotRequested), 0);
+    Package p = demo();
+    gruppo(p, "G-DIS").assistant_required = false;   // P-D1 ha bisogno dell'assistente
+    EXPECT_TRUE(segnala(p, Check::AssistantNotRequested, 0, "servizi.json", "/servizi/3/domanda/gruppi/0/passeggeri/0"));
+    EXPECT_EQ(quanti(p, Check::AssistantNotRequested), 1);
+    EXPECT_EQ(api::definizione_controllo(Check::AssistantNotRequested).livello, api::Livello::Errore);
+    const auto problemi = check_package(p);
+    const Problem* x = primo(problemi, Check::AssistantNotRequested);
+    ASSERT_NE(x, nullptr);
+    ASSERT_NE(parametro(*x, "passeggero"), nullptr);
+    EXPECT_EQ(parametro(*x, "passeggero")->text, "P-D1");
+    ASSERT_NE(parametro(*x, "gruppo"), nullptr);
+    EXPECT_EQ(parametro(*x, "gruppo")->text, "G-DIS");
+    // Un passeggero sospeso non viaggia: nessun errore.
+    per_codice(gruppo(p, "G-DIS").passengers, "P-D1").status = PassengerStatus::Suspended;
+    EXPECT_EQ(quanti(p, Check::AssistantNotRequested), 0);
 }
 
 TEST(Controlli, K_CTR_032_servizio_di_un_altro_contratto_nel_lotto) {
@@ -514,5 +558,7 @@ TEST(Controlli, K_CTR_046_contratto_senza_regolamento_valido) {
 TEST(Controlli, catalogo_coperto) {
     EXPECT_EQ(api::definizione_controllo(Check::DuplicateCode).codice, "K-CTR-009");
     EXPECT_EQ(api::definizione_controllo(Check::ContractWithoutRegulation).codice, "K-CTR-046");
-    EXPECT_EQ(api::catalogo_controlli().size(), 46u);
+    EXPECT_EQ(api::definizione_controllo(Check::AssistantNotRequested).codice, "K-CTR-047");
+    EXPECT_EQ(api::definizione_controllo(Check::NotUtf8).codice, "K-CTR-048");
+    EXPECT_EQ(api::catalogo_controlli().size(), 48u);
 }

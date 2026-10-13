@@ -6,7 +6,9 @@
 #   IMPOSTA     <file> <percorso JSON> <valore JSON>  cambia un valore (oltre la fine di un elenco: lo aggiunge)
 #   TOGLI       <file> <percorso JSON>                toglie un campo o un elemento di un elenco
 #   SOSTITUISCI <file> <testo> <nuovo testo>          cambia un testo che compare una volta sola nel file
-#                                                    (per i file che non devono restare JSON validi)
+#                                                    (per i file che non devono restare JSON validi); nel nuovo
+#                                                    testo @BYTE-hh@ e' un byte scritto in esadecimale (es.
+#                                                    @BYTE-EC@ = la "i" accentata di un file salvato come ANSI)
 #   ELIMINA     <file>                                toglie un file
 #   AGGIUNGI    <file> <contenuto>                    aggiunge un file
 #   CARTELLA    <nome>                                aggiunge una cartella
@@ -67,6 +69,13 @@ elseif(operazione STREQUAL "SOSTITUISCI")
   file(READ "${file_modificato}" testo)
   list(GET MODIFICA 2 vecchio)
   list(GET MODIFICA 3 nuovo)
+  string(REGEX MATCHALL "@BYTE-[0-9A-F][0-9A-F]@" bytes "${nuovo}")
+  foreach(b IN LISTS bytes)
+    string(SUBSTRING "${b}" 6 2 esadecimale)
+    math(EXPR valore "0x${esadecimale}")
+    string(ASCII ${valore} carattere)
+    string(REPLACE "${b}" "${carattere}" nuovo "${nuovo}")
+  endforeach()
   string(FIND "${testo}" "${vecchio}" primo)
   string(FIND "${testo}" "${vecchio}" ultimo REVERSE)
   if(primo EQUAL -1 OR NOT primo EQUAL ultimo)

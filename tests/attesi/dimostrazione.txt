@@ -7,9 +7,9 @@ Dati personali: sostituiti dal codice; dati particolari: riservati.
 === AZIENDE E MEZZI ===
 ALFA  Autoservizi Alfa
    ALFA-01  AA 101 AA  M2  posti 16  costo 45,00 EUR/giorno + 0,55 EUR/km
-   ALFA-02  AA 102 AA  M2  posti 16  costo 45,00 EUR/giorno + 0,55 EUR/km
+   ALFA-02  AA 102 AA  M2  posti 16  ausili piegati tra i sedili (2 posti ciascuno)  costo 45,00 EUR/giorno + 0,55 EUR/km
    ALFA-03  AA 103 AA  M2  posti 12  carrozzine 2 (3 posti persi ciascuna)  pedana  costo 50,00 EUR/giorno + 0,55 EUR/km
-   ALFA-04  AA 104 AA  M1  posti 4  costo 20,00 EUR/giorno + 0,30 EUR/km
+   ALFA-04  AA 104 AA  M1  posti 4  bagagliaio per 1 ausilio piegato  costo 20,00 EUR/giorno + 0,30 EUR/km
    ALFA-X30  NON IMMATRICOLATO  M3  posti 30 + 10 in piedi  costo 90,00 EUR/giorno + 0,95 EUR/km  (ipotetico)
 BETA  Trasporti Beta
    BETA-01  BB 201 BB  M2  posti 19  costo 48,00 EUR/giorno + 0,58 EUR/km
@@ -37,27 +37,28 @@ PP-01  porta a porta
 PP-02  porta a porta
 PP-03  porta a porta
 PR-01  ricovero esterno
+PP-04  porta a porta
 
 === SERVIZI ===
 S-SCU-AM  Andata mattina Pradello - Valfonda, medie e primaria
    tipo: riservato  contratto CT-SCU (committente CVA)  calendario CAL-SCUOLA-LV
-   gruppo G-AM-MEDIE  tipo: riservato  scuola SC-MEDIE  persone 24 in 4 fermate  carrozzine: riservato  assistente richiesto: riservato
-   gruppo G-AM-PRIM  tipo: riservato  scuola SC-PRIM  persone 14 in 3 fermate  carrozzine: riservato  assistente richiesto: riservato
+   gruppo G-AM-MEDIE  tipo: riservato  scuola SC-MEDIE  persone 24 in 4 fermate  carrozzine: riservato  ausili piegati: riservato  assistente richiesto: riservato
+   gruppo G-AM-PRIM  tipo: riservato  scuola SC-PRIM  persone 14 in 3 fermate  carrozzine: riservato  ausili piegati: riservato  assistente richiesto: riservato
 S-SCU-RM  Ritorno mezzogiorno medie
    tipo: riservato  contratto CT-SCU (committente CVA)  calendario CAL-SCUOLA-LV
-   gruppo G-RM-MEDIE  tipo: riservato  scuola SC-MEDIE  persone 11 in 4 fermate  carrozzine: riservato  assistente richiesto: riservato
+   gruppo G-RM-MEDIE  tipo: riservato  scuola SC-MEDIE  persone 11 in 4 fermate  carrozzine: riservato  ausili piegati: riservato  assistente richiesto: riservato
 S-SUP-RM  Ritorno superiori a supporto della linea B610
    tipo: riservato  contratto CT-LIN (committente TPV)  calendario CAL-SCUOLA-LV
-   gruppo G-RM-SUP  tipo: riservato  scuola SC-SUP  persone 5 in 4 fermate  carrozzine: riservato  assistente richiesto: riservato
+   gruppo G-RM-SUP  tipo: riservato  scuola SC-SUP  persone 5 in 4 fermate  carrozzine: riservato  ausili piegati: riservato  assistente richiesto: riservato
 S-DIS  Trasporto al centro diurno Il Faro
    tipo: riservato  contratto CT-SCU (committente CVA)  calendario CAL-CENTRO
-   gruppo G-DIS  tipo: riservato  scuola SC-CENTRO  persone 3 in 4 fermate  carrozzine: riservato  assistente richiesto: riservato
+   gruppo G-DIS  tipo: riservato  scuola SC-CENTRO  persone 3 in 4 fermate  carrozzine: riservato  ausili piegati: riservato  assistente richiesto: riservato
       passeggero P-D1  attivo  sale a PP-01, scende a L-CENTRO  esigenze: riservato
       passeggero P-D2  attivo  sale a PP-02, scende a L-CENTRO  esigenze: riservato
       passeggero P-D3  attivo  sale a PP-03, scende a L-CENTRO  esigenze: riservato
 S-ASILO  Scuola dell'infanzia di Lagobello, andata
    tipo: riservato  contratto CT-ASILO (committente CVA)  calendario CAL-INFANZIA
-   gruppo G-ASILO  tipo: riservato  scuola SC-INFANZIA  persone 7 in 3 fermate  carrozzine: riservato  assistente richiesto: riservato
+   gruppo G-ASILO  tipo: riservato  scuola SC-INFANZIA  persone 7 in 3 fermate  carrozzine: riservato  ausili piegati: riservato  assistente richiesto: riservato
       passeggero P-A1  attivo  sale a F-SORGENTA, scende a L-INFANZIA  esigenze: riservato
       passeggero P-A2  attivo  sale a F-SORGENTA, scende a L-INFANZIA  esigenze: riservato
       passeggero P-A3  attivo  sale a F-SORGENTA (bloccata), scende a L-INFANZIA  esigenze: riservato
@@ -68,7 +69,11 @@ S-ASILO  Scuola dell'infanzia di Lagobello, andata
       passeggero P-A8  sospeso  sale a F-LAGOBELLO, scende a L-INFANZIA  esigenze: riservato
 S-LIN-B610  Linea B610 Valfonda - Pradello
    tipo: riservato  contratto CT-LIN (committente TPV)  calendario CAL-FERIALI
-   gruppo G-LIN  tipo: riservato  persone non note in 4 fermate  carrozzine: riservato  assistente richiesto: riservato
+   gruppo G-LIN  tipo: riservato  persone non note in 4 fermate  carrozzine: riservato  ausili piegati: riservato  assistente richiesto: riservato
+S-DIS-GIO  Trasporto al centro diurno Il Faro, il giovedi'
+   tipo: riservato  contratto CT-SCU (committente CVA)  calendario CAL-CENTRO-GIO
+   gruppo G-DIS-GIO  tipo: riservato  scuola SC-CENTRO  persone 1 in 2 fermate  carrozzine: riservato  ausili piegati: riservato  assistente richiesto: riservato
+      passeggero P-D4  attivo  sale a PP-04, scende a L-CENTRO  esigenze: riservato
 
 === CORSE ===
 C-AM-1  Andata mattina, giro 1
@@ -130,10 +135,17 @@ C-LIN-560  Linea B610, corsa della sera (finisce dopo mezzanotte)
    23:48  F-CASTELROVO-ALTO  Castelrovo, Alto  a bordo non noto
    24:05  F-VALFONDA-PIAZZA  Valfonda, Piazza Grande  a bordo non noto
    24:12  F-STAZIONE  Valfonda, Stazione FVV  a bordo non noto
+C-DIS-GIO  Centro diurno, giovedi'
+   categoria: riservato  servizi S-DIS-GIO  calendario CAL-CENTRO-GIO  08:05-08:45  km a pieno 9,1, a vuoto 6,4
+   08:05  L-RIMESSA-ALFA  Valfonda, rimessa Autoservizi Alfa  a bordo 0
+   08:20  PP-04  salgono 1  a bordo 1
+   08:45  L-CENTRO  Valfonda, Centro diurno Il Faro  scendono 1  a bordo 0
 
 === REGOLE ===
 Giri per il servizio S-SCU-AM (38 persone):  ALFA-01 (16 posti) 3 giri;  ALFA-02 (16 posti) 3 giri;  ALFA-03 (12 posti) 4 giri;  ALFA-04 (4 posti) 10 giri;  ALFA-X30 (30 posti) 2 giri
 Carrozzine su ALFA-03:  0 -> 12 posti a sedere;  1 -> 9 posti a sedere;  2 -> 6 posti a sedere;  3 -> non ammesso
+Ausili piegati su ALFA-02 (16 posti; nessun bagagliaio; tra i sedili 2 posti per ausilio):  1 -> 1 tra i sedili, 14 posti liberi;  2 -> 2 tra i sedili, 12 posti liberi;  1 con 16 seduti -> non ammesso
+Ausili piegati su ALFA-04 (4 posti; bagagliaio per 1 ausilio; tra i sedili non ammessi):  1 -> 1 nel bagagliaio, 4 posti liberi;  2 -> non ammesso;  1 con 4 seduti -> 1 nel bagagliaio, nessun posto libero
 Assistente a bordo, corsa C-ASILO-1 (infanzia, regolamento R-TN):  con BETA-01 (19 posti) serve
 Costo di una giornata del servizio S-SUP-RM (mezzo minimo 12 posti, massimo 54; 24,3 km al giorno):
    ALFA-01  16 posti  ammesso  58,37 EUR

@@ -181,7 +181,14 @@
               "salgono": { "type": "integer", "minimum": 0, "maximum": 10000, "x-kzero-classe": "comune" },
               "scendono": { "type": "integer", "minimum": 0, "maximum": 10000, "x-kzero-classe": "comune" },
               "carrozzine": {
-                "description": "Persone in carrozzina tra quelle che salgono qui.",
+                "description": "Persone che salgono qui e viaggiano sedute sulla carrozzina (servono pedana e posto carrozzina). Chi viaggia con la carrozzina piegata non conta qui: conta tra gli ausili piegati.",
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 10000,
+                "x-kzero-classe": "particolare"
+              },
+              "ausili_piegati": {
+                "description": "Ausili piegati da caricare qui per le persone che salgono qui (carrozzine piegate comprese, deambulatori e altri ausili dichiarati).",
                 "type": "integer",
                 "minimum": 0,
                 "maximum": 10000,
@@ -258,7 +265,16 @@
           "type": "object",
           "additionalProperties": false,
           "properties": {
-            "carrozzina": { "type": "boolean" },
+            "carrozzina": {
+              "description": "Come viaggia con la carrozzina: sulla_carrozzina = seduto sulla carrozzina (servono pedana e posto carrozzina); piegata = su un posto normale, con la carrozzina piegata da caricare come ausilio.",
+              "enum": ["sulla_carrozzina", "piegata"]
+            },
+            "ausili_piegati": {
+              "description": "Numero di altri ausili dichiarati dal trasportato che viaggiano piegati (es. deambulatore), oltre alla carrozzina piegata. Il passeggino non si dichiara e non si pianifica.",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 10
+            },
             "assistente": { "description": "Serve l'assistente a bordo.", "type": "boolean" },
             "altro": { "$ref": "#/definitions/testo" }
           },

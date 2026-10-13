@@ -33,6 +33,24 @@ struct CarrozzineMezzo {
     std::vector<Caso> casi;
 };
 
+// Dove vanno gli ausili piegati (carrozzine piegate, deambulatori...) sui mezzi con bagagliaio o che li
+// ammettono tra i sedili: prima nel bagagliaio, poi tra i sedili se i posti sono liberi, altrimenti non ammesso.
+struct AusiliMezzo {
+    Code mezzo;
+    int posti = 0;
+    int bagagliaio = 0;                    // ausili che entrano nel bagagliaio
+    std::optional<int> posti_tra_i_sedili; // posti occupati da un ausilio tra i sedili; nessun valore = non ammesso
+    struct Caso {
+        int ausili = 0;
+        int seduti = 0;                    // passeggeri gia' seduti
+        bool ammesso = false;
+        int nel_bagagliaio = 0;            // valgono solo se ammesso
+        int tra_i_sedili = 0;
+        int posti_liberi = 0;
+    };
+    std::vector<Caso> casi;
+};
+
 // Serve l'assistente su una corsa, secondo il grado delle scuole servite e i posti del mezzo?
 // (Solo le condizioni del regolamento sul grado e sui posti: le esigenze di salute sono dati particolari.)
 struct AssistenteCorsa {
@@ -66,6 +84,7 @@ struct CostiServizio {
 struct Dimostrazione {
     std::vector<GiriServizio> giri;
     std::vector<CarrozzineMezzo> carrozzine;
+    std::vector<AusiliMezzo> ausili_piegati;
     std::vector<AssistenteCorsa> assistente;
     std::vector<CostiServizio> costi;
 };

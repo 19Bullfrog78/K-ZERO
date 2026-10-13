@@ -393,7 +393,8 @@ struct DemandStop {
     Ref place;
     int boarding = 0;
     int alighting = 0;
-    int wheelchairs = 0;   // persone in carrozzina tra quelle che salgono qui (dato particolare)
+    int wheelchairs = 0;   // persone che salgono qui e viaggiano sedute sulla carrozzina (dato particolare)
+    int folded_aids = 0;   // ausili piegati da caricare qui, carrozzine piegate comprese (dato particolare)
     Source src;
 };
 
@@ -405,10 +406,18 @@ struct StopAssignment {
     Assignment mode = Assignment::Proposed;
 };
 
+// Come viaggia una persona con la carrozzina: seduta sulla carrozzina (servono pedana e posto carrozzina)
+// oppure su un posto normale, con la carrozzina piegata da caricare (un ausilio piegato).
+enum class WheelchairUse { None, Seated, Folded };
+
 struct Needs {   // dati particolari
-    bool wheelchair = false;
+    WheelchairUse wheelchair = WheelchairUse::None;
+    int folded_aids = 0;     // altri ausili dichiarati che viaggiano piegati (es. deambulatore)
     bool assistant = false;
     std::string other;
+
+    // Ausili piegati da caricare: la carrozzina piegata e gli altri ausili.
+    int folded_items() const { return (wheelchair == WheelchairUse::Folded ? 1 : 0) + folded_aids; }
 };
 
 struct Home {   // dati personali
@@ -584,6 +593,10 @@ struct Vehicle {
     int seats_lost_per_wheelchair = 0;  // posti a sedere persi per ogni carrozzina caricata
     bool has_ramp = false;              // pedana o sollevatore
     int ramp_seconds = 0;               // tempo per azionare la pedana a ogni fermata
+    int aids_in_trunk = 0;              // ausili piegati che entrano nel bagagliaio (0 = niente bagagliaio)
+    // Posti occupati da un ausilio piegato fissato tra i sedili (cinghie o ancoraggi): scelta facoltativa
+    // dell'azienda. Nessun valore = tra i sedili non e' ammesso.
+    std::optional<int> seats_per_aid_between;
     bool trailer = false;
     Dimensions dims;
     Power power;
@@ -603,12 +616,42 @@ struct Depot {
     Source src;
 };
 
-// Ci stanno questi passeggeri sul mezzo? L'assistente, se presente, occupa un posto.
-inline bool fits(const Vehicle& v, int seated, int wheelchairs, bool with_escort = false) {
-    if (wheelchairs > 0 && !v.has_ramp) return false;
-    if (wheelchairs > v.wheelchair_places) return false;
-    const int free_seats = v.seats - wheelchairs * v.seats_lost_per_wheelchair - (with_escort ? 1 : 0);
-    return seated <= free_seats;
+// Chi e che cosa deve stare sul mezzo.
+struct Load {
+    int seated = 0;        // passeggeri sui posti a sedere (anche chi ha la carrozzina piegata)
+    int wheelchairs = 0;   // passeggeri seduti sulla propria carrozzina
+    int folded_aids = 0;   // ausili piegati da caricare: carrozzine piegate, deambulatori...
+    bool escort = false;   // l'assistente occupa un posto
+};
+
+// Esito: ci sta o no, dove vanno gli ausili piegati, quanti posti a sedere restano liberi.
+struct Fit {
+    bool admitted = false;
+    int aids_in_trunk = 0;
+    int aids_between_seats = 0;
+    int free_seats = 0;   // posti a sedere ancora liberi; negativo = mancano posti
+    explicit operator bool() const { return admitted; }
+};
+
+// Ci sta questo carico sul mezzo?
+// - chi viaggia seduto sulla carrozzina ha bisogno della pedana e di un posto carrozzina, e toglie posti a sedere;
+// - l'assistente occupa un posto;
+// - gli ausili piegati vanno prima nel bagagliaio; quelli che non ci stanno vanno tra i sedili, legati e
+//   bloccati, solo se il mezzo lo ammette e se i posti che occupano sono liberi; altrimenti non e' ammesso.
+// Si contano gli ausili, non il loro volume. Nessun valore nel codice: tutto viene dal mezzo.
+inline Fit fits(const Vehicle& v, const Load& load) {
+    Fit f;
+    f.aids_in_trunk = std::min(load.folded_aids, std::max(v.aids_in_trunk, 0));
+    const int other_aids = load.folded_aids - f.aids_in_trunk;
+    const bool between_allowed = v.seats_per_aid_between.has_value();
+    if (between_allowed) f.aids_between_seats = other_aids;
+    const int seats_for_aids = between_allowed ? other_aids * *v.seats_per_aid_between : 0;
+    f.free_seats = v.seats - load.wheelchairs * v.seats_lost_per_wheelchair - (load.escort ? 1 : 0) - seats_for_aids -
+                   load.seated;
+    const bool wheelchairs_ok = load.wheelchairs == 0 || (v.has_ramp && load.wheelchairs <= v.wheelchair_places);
+    const bool aids_ok = other_aids == 0 || between_allowed;
+    f.admitted = wheelchairs_ok && aids_ok && f.free_seats >= 0;
+    return f;
 }
 
 // Costo di una giornata del mezzo: quota fissa + km percorsi. Nessun valore se manca uno dei due costi.

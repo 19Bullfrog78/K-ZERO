@@ -38,6 +38,28 @@
           "posti_persi_per_carrozzina": { "type": "integer", "minimum": 0, "maximum": 1000, "x-kzero-classe": "comune" },
           "pedana": { "type": "boolean", "x-kzero-classe": "comune" },
           "tempo_pedana_secondi": { "type": "integer", "minimum": 0, "maximum": 3600, "x-kzero-classe": "comune" },
+          "ausili_bagagliaio": {
+            "description": "Quanti ausili piegati (carrozzine piegate, deambulatori...) entrano nel bagagliaio o nel baule. 0 o assente = niente bagagliaio. Si contano gli ausili, non il loro volume.",
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100,
+            "x-kzero-classe": "comune"
+          },
+          "ausili_tra_i_sedili": {
+            "description": "Presente = l'azienda ammette un ausilio piegato tra i sedili, legato e bloccato con cinghie o ancoraggi (scelta facoltativa dell'azienda, che ne risponde): ogni ausilio occupa i posti indicati, solo se sono liberi. Assente = tra i sedili non e' ammesso.",
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["posti_occupati"],
+            "properties": {
+              "posti_occupati": {
+                "description": "Posti a sedere occupati da ogni ausilio fissato tra i sedili (es. 2).",
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 10
+              }
+            },
+            "x-kzero-classe": "comune"
+          },
           "rimorchio": { "type": "boolean", "x-kzero-classe": "comune" },
           "misure": {
             "type": "object",

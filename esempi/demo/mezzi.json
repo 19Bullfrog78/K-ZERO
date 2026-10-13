@@ -20,6 +20,7 @@
       "targa": "AA 102 AA",
       "categoria": "M2",
       "posti": 16,
+      "ausili_tra_i_sedili": { "posti_occupati": 2 },
       "alimentazione": { "tipo": "gasolio" },
       "costo_fisso_giornaliero": 45.0,
       "costo_al_km": 0.55
@@ -44,6 +45,7 @@
       "targa": "AA 104 AA",
       "categoria": "M1",
       "posti": 4,
+      "ausili_bagagliaio": 1,
       "alimentazione": { "tipo": "elettrico", "batteria_kwh": 60, "consumo_kwh_km": 0.18, "carica_minima_percento": 20 },
       "costo_fisso_giornaliero": 20.0,
       "costo_al_km": 0.3

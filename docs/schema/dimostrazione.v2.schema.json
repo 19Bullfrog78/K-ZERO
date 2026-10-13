@@ -77,6 +77,8 @@
           "carrozzine",
           "posti_persi_per_carrozzina",
           "pedana",
+          "ausili_bagagliaio",
+          "ausili_tra_i_sedili",
           "ipotetico",
           "costo_fisso_giornaliero",
           "costo_al_km"
@@ -91,6 +93,16 @@
           "carrozzine": { "type": "integer", "minimum": 0 },
           "posti_persi_per_carrozzina": { "type": "integer", "minimum": 0 },
           "pedana": { "type": "boolean" },
+          "ausili_bagagliaio": {
+            "description": "Ausili piegati che entrano nel bagagliaio (0 = niente bagagliaio).",
+            "type": "integer",
+            "minimum": 0
+          },
+          "ausili_tra_i_sedili": {
+            "description": "Posti occupati da un ausilio piegato fissato tra i sedili; null = tra i sedili non ammesso.",
+            "type": ["integer", "null"],
+            "minimum": 1
+          },
           "ipotetico": { "type": "boolean" },
           "costo_fisso_giornaliero": { "$ref": "#/definitions/euro_o_null" },
           "costo_al_km": { "$ref": "#/definitions/euro_o_null" }
@@ -155,6 +167,7 @@
                 "persone",
                 "fermate",
                 "carrozzine",
+                "ausili_piegati",
                 "assistente_richiesto",
                 "passeggeri"
               ],
@@ -173,7 +186,14 @@
                   "minimum": 0
                 },
                 "fermate": { "type": "integer", "minimum": 0 },
-                "carrozzine": { "anyOf": [{ "type": "integer", "minimum": 0 }, { "$ref": "#/definitions/riservato" }] },
+                "carrozzine": {
+                  "description": "Persone che viaggiano sedute sulla carrozzina. Dato particolare: di base \"riservato\".",
+                  "anyOf": [{ "type": "integer", "minimum": 0 }, { "$ref": "#/definitions/riservato" }]
+                },
+                "ausili_piegati": {
+                  "description": "Ausili piegati da caricare (carrozzine piegate comprese). Dato particolare: di base \"riservato\".",
+                  "anyOf": [{ "type": "integer", "minimum": 0 }, { "$ref": "#/definitions/riservato" }]
+                },
                 "assistente_richiesto": { "anyOf": [{ "type": "boolean" }, { "$ref": "#/definitions/riservato" }] },
                 "passeggeri": {
                   "type": "array",
@@ -296,7 +316,7 @@
     "regole": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["giri", "carrozzine", "assistente", "costi"],
+      "required": ["giri", "carrozzine", "ausili_piegati", "assistente", "costi"],
       "properties": {
         "giri": {
           "description": "Giri necessari quando la domanda non sta sul mezzo piu' grande in flotta.",
@@ -343,6 +363,37 @@
                     "carrozzine": { "type": "integer", "minimum": 0 },
                     "ammesso": { "type": "boolean" },
                     "posti_a_sedere": { "type": ["integer", "null"], "minimum": 0 }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "ausili_piegati": {
+          "description": "Dove vanno gli ausili piegati sui mezzi con bagagliaio o che li ammettono tra i sedili: prima nel bagagliaio, poi tra i sedili se i posti sono liberi, altrimenti non ammesso.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["mezzo", "posti", "bagagliaio", "posti_tra_i_sedili", "casi"],
+            "properties": {
+              "mezzo": { "type": "string", "minLength": 1 },
+              "posti": { "type": "integer", "minimum": 0 },
+              "bagagliaio": { "type": "integer", "minimum": 0 },
+              "posti_tra_i_sedili": { "type": ["integer", "null"], "minimum": 1 },
+              "casi": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["ausili", "seduti", "ammesso", "nel_bagagliaio", "tra_i_sedili", "posti_liberi"],
+                  "properties": {
+                    "ausili": { "type": "integer", "minimum": 0 },
+                    "seduti": { "description": "Passeggeri gia' seduti sul mezzo.", "type": "integer", "minimum": 0 },
+                    "ammesso": { "type": "boolean" },
+                    "nel_bagagliaio": { "type": ["integer", "null"], "minimum": 0 },
+                    "tra_i_sedili": { "type": ["integer", "null"], "minimum": 0 },
+                    "posti_liberi": { "type": ["integer", "null"], "minimum": 0 }
                   }
                 }
               }
@@ -427,6 +478,7 @@
                     "properties": {
                       "tipo": { "$ref": "#/definitions/riservato" },
                       "carrozzine": { "$ref": "#/definitions/riservato" },
+                      "ausili_piegati": { "$ref": "#/definitions/riservato" },
                       "assistente_richiesto": { "$ref": "#/definitions/riservato" },
                       "passeggeri": { "items": { "properties": { "esigenze": { "$ref": "#/definitions/riservato" } } } }
                     }

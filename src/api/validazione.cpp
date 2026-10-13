@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <map>
 #include <memory>
+#include <set>
 #include <stdexcept>
 
 #include <valijson/adapters/nlohmann_json_adapter.hpp>
@@ -113,6 +114,22 @@ struct Grezzo {
     std::string messaggio;
 };
 
+// Piu' regole violate dallo stesso valore (es. un testo vuoto: troppo corto e senza la forma richiesta) danno un
+// solo errore: quello che spiega meglio. I campi obbligatori mancanti invece restano tutti (sono campi diversi).
+int priorita(const std::string& m) {
+    if (inizia(m, "Missing required property") || inizia(m, "Missing dependency") ||
+        inizia(m, "Object contains a property that could not be validated") ||
+        inizia(m, "Failed to validate against schema associated with property name"))
+        return -1;   // non si accorpa
+    if (inizia(m, "Value type not permitted")) return 0;
+    if (inizia(m, "Failed to match against any enum values") || inizia(m, "Failed to match expected value set by 'const'")) return 1;
+    if (inizia(m, "String should be no") || inizia(m, "Expected number") || inizia(m, "Array should contain") ||
+        inizia(m, "Object should have"))
+        return 2;
+    if (inizia(m, "Failed to match regex")) return 3;
+    return 4;
+}
+
 // C'e' un altro errore in quel punto o piu' in basso?
 bool altri_sotto(const std::vector<Grezzo>& grezzi, const std::string& puntatore, std::size_t escluso) {
     for (std::size_t i = 0; i < grezzi.size(); ++i)
@@ -137,8 +154,9 @@ std::string traduci_messaggio(const std::string& m, const JsonDati* s, const Jso
         return "valore non ammesso" + (istanza ? ": " + valore(*istanza) : std::string()) +
                (s && s->contains("const") ? ". Valore atteso: " + valore(s->at("const")) : "");
     if (inizia(m, "Failed to match regex specified by 'pattern' constraint")) {
-        const std::string forma =
+        std::string forma =
             s && s->contains("description") ? s->at("description").get<std::string>() : "il valore non ha la forma richiesta";
+        if (!forma.empty() && forma.back() == '.') forma.pop_back();   // il punto lo mette la frase che contiene il messaggio
         return "forma non valida" + (istanza ? " (" + valore(*istanza) + ")" : std::string()) + ": " + forma;
     }
     if (inizia(m, "String should be no fewer than")) {
@@ -181,6 +199,7 @@ std::vector<ErroreSchema> valida(const JsonDati& documento, const std::string& s
     // valijson ripete l'errore a ogni livello sopra il punto sbagliato ("non valido l'elemento #3",
     // "non valido il campo 'passaggi'"...): si tiene solo il punto preciso.
     std::vector<ErroreSchema> out;
+    std::vector<int> priorita_out;
     for (std::size_t i = 0; i < grezzi.size(); ++i) {
         const std::string& m = grezzi[i].messaggio;
         std::string puntatore = grezzi[i].puntatore;
@@ -203,16 +222,27 @@ std::vector<ErroreSchema> valida(const JsonDati& documento, const std::string& s
         const JsonDati::json_pointer jp(puntatore);
         const JsonDati* istanza = documento.contains(jp) ? &documento.at(jp) : nullptr;
         out.push_back({puntatore, traduci_messaggio(m, sotto, istanza), traduci_messaggio(m, sotto, nullptr)});
+        priorita_out.push_back(priorita(m));
     }
-    std::stable_sort(out.begin(), out.end(), [](const ErroreSchema& a, const ErroreSchema& b) {
-        return prima_nel_documento(a.puntatore, b.puntatore);
+    // In ordine di documento; a parita' di posizione, prima l'errore che spiega meglio.
+    std::vector<std::size_t> ordine(out.size());
+    for (std::size_t i = 0; i < ordine.size(); ++i) ordine[i] = i;
+    std::stable_sort(ordine.begin(), ordine.end(), [&](std::size_t a, std::size_t b) {
+        if (out[a].puntatore != out[b].puntatore) return prima_nel_documento(out[a].puntatore, out[b].puntatore);
+        return priorita_out[a] < priorita_out[b];
     });
-    out.erase(std::unique(out.begin(), out.end(),
-                          [](const ErroreSchema& a, const ErroreSchema& b) {
-                              return a.puntatore == b.puntatore && a.messaggio == b.messaggio;
-                          }),
-              out.end());
-    return out;
+    std::vector<ErroreSchema> finale;
+    std::set<std::string> valori_gia_segnalati;
+    for (std::size_t i : ordine) {
+        const ErroreSchema& e = out[i];
+        const bool doppione = std::any_of(finale.begin(), finale.end(), [&](const ErroreSchema& f) {
+            return f.puntatore == e.puntatore && f.messaggio == e.messaggio;
+        });
+        if (doppione) continue;
+        if (priorita_out[i] >= 0 && !valori_gia_segnalati.insert(e.puntatore).second) continue;   // stesso valore: basta un errore
+        finale.push_back(e);
+    }
+    return finale;
 }
 
 bool prima_nel_documento(const std::string& a, const std::string& b) {
