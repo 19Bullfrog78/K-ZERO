@@ -44,7 +44,16 @@ Le regole sono divise in due parti:
 - Se i ragazzi superano i posti, il mezzo fa piu' giri, purche' stiano nell'orario della scuola.
 - Il committente puo' chiedere un mezzo minimo (es. 30 posti) o la pedana, e puo' vietare un mezzo piu' grande.
 - Un mezzo piu' grande del richiesto non e' pagato di piu': la differenza e' a spese dell'azienda.
-- Ogni carrozzina toglie posti a sedere; serve un mezzo con pedana.
+- Carrozzina: chi viaggia seduto sulla carrozzina ha bisogno di un mezzo con pedana e di un posto carrozzina;
+  ogni carrozzina toglie posti a sedere.
+- Carrozzina piegata e altri ausili dichiarati (es. deambulatore): il passeggero siede su un posto normale e la
+  pedana non serve. L'ausilio piegato va nel bagagliaio: nell'auto nel baule, nel minibus con il vano bagagli
+  nel vano. Nel minibus senza vano va tra i sedili, legato e bloccato, e occupa dei posti (es. 2), solo se sono
+  liberi: se il mezzo e' pieno, il passeggero con l'ausilio non e' ammesso.
+- "Tra i sedili" e' una scelta facoltativa dell'azienda, che ne risponde: vale solo sui mezzi per cui l'azienda
+  l'ha indicata.
+- Gli ausili si contano, non si misurano: un deambulatore conta come una carrozzina piegata.
+- Il passeggino non si dichiara e non si pianifica.
 - Salita e discesa dei passeggeri handicap richiedono molto piu' tempo; si aggiunge il tempo della pedana a ogni fermata.
 
 ## Mezzi e strade
@@ -95,7 +104,8 @@ Le regole sono divise in due parti:
     committenti, contratti, regolamenti;
   - personali: nomi, indirizzi, case, punti di salita porta a porta, motivi scritti a mano, ricoveri presso
     la casa di una persona;
-  - particolari (salute): carrozzina, assistente necessario, servizio per disabili, conteggi di carrozzine.
+  - particolari (salute): carrozzina (seduto o piegata), ausili piegati, assistente necessario, servizio per
+    disabili, conteggi di carrozzine e di ausili.
 - Due livelli di pacchetto dati: "solo numeri" (solo conteggi per fermata: e' il livello consigliato)
   e "completo" (anche i passeggeri uno per uno).
 - Mai codice fiscale, telefoni, mail delle famiglie: per pianificare non servono.
