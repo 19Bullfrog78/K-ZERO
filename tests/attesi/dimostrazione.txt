@@ -1,60 +1,149 @@
-=== DESTINAZIONI ===
-1  Scuola Media Cles (scuola)  arrivo 07:40-07:55  ripresa 13:00-13:15
-2  Primaria Revo' (scuola)  arrivo 07:55-08:10  ripresa 12:30-12:45
-3  Doposcuola Cles (centro esterno)  arrivo 13:10-13:30  ripresa 17:00-17:30
-4  Scuola dell'infanzia Rumo (infanzia)  arrivo 08:00-08:30  ripresa 15:30-16:00
+=== PACCHETTO ===
+DEMO-2026  Pacchetto dimostrativo K-Zero  (dati inventati)
+Periodo 2026-09-01 - 2027-08-31, livello completo, fuso orario Europe/Rome, valuta EUR
+Controllo: nessun errore, 3 avvisi (dettagli con kzero controlla)
+Dati personali: sostituiti dal codice; dati particolari: riservati.
 
-=== PASSEGGERI ===
-101  studente  Rumo, fraz. Marcena  -> dest. 1  arrivo entro 07:55
-102  studente  Livo, piazza  -> dest. 1  arrivo entro 07:55
-103  handicap  Cagno', via Centrale  -> dest. 1  arrivo entro 07:55  [carrozzina]  [accompagnatore]  [max 45 min a bordo]
-104  studente  Cles, Scuola Media  -> dest. 3  arrivo entro 13:30
+=== AZIENDE E MEZZI ===
+ALFA  Autoservizi Alfa
+   ALFA-01  AA 101 AA  M2  posti 16  costo 45,00 EUR/giorno + 0,55 EUR/km
+   ALFA-02  AA 102 AA  M2  posti 16  costo 45,00 EUR/giorno + 0,55 EUR/km
+   ALFA-03  AA 103 AA  M2  posti 12  carrozzine 2 (3 posti persi ciascuna)  pedana  costo 50,00 EUR/giorno + 0,55 EUR/km
+   ALFA-04  AA 104 AA  M1  posti 4  costo 20,00 EUR/giorno + 0,30 EUR/km
+   ALFA-X30  NON IMMATRICOLATO  M3  posti 30 + 10 in piedi  costo 90,00 EUR/giorno + 0,95 EUR/km  (ipotetico)
+BETA  Trasporti Beta
+   BETA-01  BB 201 BB  M2  posti 19  costo 48,00 EUR/giorno + 0,58 EUR/km
 
-=== MEZZI ===
-1  MINIBUS-1  minibus  termico  posti 16 + carrozzine 0  costo 0.55 EUR/km  autonomia 900 km
-2  MINIBUS-2  attrezzato  termico  posti 12 + carrozzine 2  costo 0.55 EUR/km  autonomia 900 km
-3  MINIBUS-3  minibus  termico  posti 16 + carrozzine 0  costo 0.55 EUR/km  autonomia 900 km
-4  AUTO-1  auto  termico  posti 4 + carrozzine 0  costo 0.3 EUR/km  autonomia 800 km
+=== LUOGHI ===
+L-RIMESSA-ALFA  rimessa  Valfonda, rimessa Autoservizi Alfa  (Valfonda)
+L-RIMESSA-BETA  rimessa  Sorgenta, rimessa Trasporti Beta  (Sorgenta)
+L-SOSTA-VALFONDA  punto sosta  Valfonda, parcheggio pullman  (Valfonda)
+F-PRADELLO  fermata  Pradello, Piazza  (Pradello)
+F-CASTELROVO  fermata  Castelrovo, Bivio  (Castelrovo)
+F-CASTELROVO-ALTO  fermata  Castelrovo, Alto  (Castelrovo)
+F-MONTEBRINO  fermata  Montebrino, Centro  (Montebrino)
+F-SORGENTA  fermata  Sorgenta, Municipio  (Sorgenta)
+F-LAGOBELLO  fermata  Lagobello, Lago  (Lagobello)
+F-STAZIONE  fermata  Valfonda, Stazione FVV  (Valfonda)
+F-VALFONDA-PIAZZA  fermata  Valfonda, Piazza Grande  (Valfonda)
+L-MEDIE  scuola  Valfonda, Scuola media  (Valfonda)
+L-PRIM  scuola  Valfonda, Scuola primaria  (Valfonda)
+L-SUP  scuola  Valfonda, Istituto superiore  (Valfonda)
+L-INFANZIA  scuola  Lagobello, Scuola dell'infanzia  (Lagobello)
+L-CENTRO  centro  Valfonda, Centro diurno Il Faro  (Valfonda)
+L-TRASB-PONTE  punto sosta  Ponte di Sorgenta, piazzale  (Sorgenta)
+L-TRASB-CROCE  punto trasbordo  Croce di Pradello, parcheggio  (Pradello)
+PP-01  porta a porta
+PP-02  porta a porta
+PP-03  porta a porta
+PR-01  ricovero esterno
 
-=== AUTISTI ===
-1  Autista A  servizio 06:30-14:00
-2  Autista B  servizio 07:00-13:30
+=== SERVIZI ===
+S-SCU-AM  Andata mattina Pradello - Valfonda, medie e primaria
+   tipo: riservato  contratto CT-SCU (committente CVA)  calendario CAL-SCUOLA-LV
+   gruppo G-AM-MEDIE  tipo: riservato  scuola SC-MEDIE  persone 24 in 4 fermate  carrozzine: riservato  assistente richiesto: riservato
+   gruppo G-AM-PRIM  tipo: riservato  scuola SC-PRIM  persone 14 in 3 fermate  carrozzine: riservato  assistente richiesto: riservato
+S-SCU-RM  Ritorno mezzogiorno medie
+   tipo: riservato  contratto CT-SCU (committente CVA)  calendario CAL-SCUOLA-LV
+   gruppo G-RM-MEDIE  tipo: riservato  scuola SC-MEDIE  persone 11 in 4 fermate  carrozzine: riservato  assistente richiesto: riservato
+S-SUP-RM  Ritorno superiori a supporto della linea B610
+   tipo: riservato  contratto CT-LIN (committente TPV)  calendario CAL-SCUOLA-LV
+   gruppo G-RM-SUP  tipo: riservato  scuola SC-SUP  persone 5 in 4 fermate  carrozzine: riservato  assistente richiesto: riservato
+S-DIS  Trasporto al centro diurno Il Faro
+   tipo: riservato  contratto CT-SCU (committente CVA)  calendario CAL-CENTRO
+   gruppo G-DIS  tipo: riservato  scuola SC-CENTRO  persone 3 in 4 fermate  carrozzine: riservato  assistente richiesto: riservato
+      passeggero P-D1  attivo  sale a PP-01, scende a L-CENTRO  esigenze: riservato
+      passeggero P-D2  attivo  sale a PP-02, scende a L-CENTRO  esigenze: riservato
+      passeggero P-D3  attivo  sale a PP-03, scende a L-CENTRO  esigenze: riservato
+S-ASILO  Scuola dell'infanzia di Lagobello, andata
+   tipo: riservato  contratto CT-ASILO (committente CVA)  calendario CAL-INFANZIA
+   gruppo G-ASILO  tipo: riservato  scuola SC-INFANZIA  persone 7 in 3 fermate  carrozzine: riservato  assistente richiesto: riservato
+      passeggero P-A1  attivo  sale a F-SORGENTA, scende a L-INFANZIA  esigenze: riservato
+      passeggero P-A2  attivo  sale a F-SORGENTA, scende a L-INFANZIA  esigenze: riservato
+      passeggero P-A3  attivo  sale a F-SORGENTA (bloccata), scende a L-INFANZIA  esigenze: riservato
+      passeggero P-A4  sbloccato  sale a F-SORGENTA, scende a L-INFANZIA  esigenze: riservato
+      passeggero P-A5  attivo  sale a F-LAGOBELLO, scende a L-INFANZIA  esigenze: riservato
+      passeggero P-A6  attivo  sale a F-LAGOBELLO, scende a L-INFANZIA  esigenze: riservato
+      passeggero P-A7  attivo  sale a F-LAGOBELLO, scende a L-INFANZIA  esigenze: riservato
+      passeggero P-A8  sospeso  sale a F-LAGOBELLO, scende a L-INFANZIA  esigenze: riservato
+S-LIN-B610  Linea B610 Valfonda - Pradello
+   tipo: riservato  contratto CT-LIN (committente TPV)  calendario CAL-FERIALI
+   gruppo G-LIN  tipo: riservato  persone non note in 4 fermate  carrozzine: riservato  assistente richiesto: riservato
 
-=== TURNO MEZZO 2 / AUTISTA 2 ===
-Corsa 1 (ibrido) 07:00-07:45  km pieni 16  km vuoti 0.5
-   07:00  Deposito Rumo  a bordo 0
-   07:05  Marcena  a bordo 1
-   07:20  Livo  a bordo 2
-   07:30  Cagno' (carrozzina)  a bordo 3
-   07:45  Scuola Media Cles  a bordo 0
-Corsa 2 (linea) 08:05-08:40  km pieni 15  km vuoti 0.3
-   08:05  Cles autostazione  a bordo 6
-   08:40  Rumo  a bordo 0
-Corsa 3 (ibrido) 13:05-13:15  km pieni 0.8  km vuoti 15
-   13:05  Scuola Media Cles  a bordo 1
-   13:15  Doposcuola Cles  a bordo 0
-Totale: km pieni 31.8, km vuoti 15.8, tempi morti 285 min
+=== CORSE ===
+C-AM-1  Andata mattina, giro 1
+   categoria: riservato  servizi S-SCU-AM  calendario CAL-SCUOLA-LV  06:55-07:35  km a pieno 12, a vuoto 6,4
+   06:55  L-RIMESSA-ALFA  Valfonda, rimessa Autoservizi Alfa  a bordo 0
+   07:10  F-PRADELLO  Pradello, Piazza  salgono 9  a bordo 9
+   07:18  F-CASTELROVO  Castelrovo, Bivio  salgono 7  a bordo 16
+   07:35  L-MEDIE  Valfonda, Scuola media  scendono 16  a bordo 0
+C-AM-2  Andata mattina, giro 2
+   categoria: riservato  servizi S-SCU-AM  calendario CAL-SCUOLA-LV  06:50-07:42  km a pieno 15,5, a vuoto 8
+   06:50  L-RIMESSA-ALFA  Valfonda, rimessa Autoservizi Alfa  a bordo 0
+   07:12  F-CASTELROVO  Castelrovo, Bivio  salgono 1  a bordo 1
+   07:20  F-MONTEBRINO  Montebrino, Centro  salgono 7  a bordo 8
+   07:28  F-SORGENTA  Sorgenta, Municipio  salgono 6  a bordo 14
+   07:38  L-MEDIE  Valfonda, Scuola media  scendono 8  a bordo 6
+   07:42  L-PRIM  Valfonda, Scuola primaria  scendono 6  a bordo 0
+C-AM-3  Andata mattina, giro 3
+   categoria: riservato  servizi S-SCU-AM  calendario CAL-SCUOLA-LV  07:20-07:52  km a pieno 7,9, a vuoto 7,5
+   07:20  L-SOSTA-VALFONDA  Valfonda, parcheggio pullman  a bordo 0
+   07:38  F-LAGOBELLO  Lagobello, Lago  salgono 8  a bordo 8
+   07:52  L-PRIM  Valfonda, Scuola primaria  scendono 8  a bordo 0
+C-RM-1  Ritorno mezzogiorno superiori e medie
+   categoria: riservato  servizi S-SUP-RM, S-SCU-RM  calendario CAL-SCUOLA-LV  11:58-12:47  km a pieno 17,9, a vuoto 6,4
+   11:58  L-SUP  Valfonda, Istituto superiore  salgono 5  a bordo 5
+   12:05  L-MEDIE  Valfonda, Scuola media  salgono 11  a bordo 16
+   12:07  F-VALFONDA-PIAZZA  Valfonda, Piazza Grande  transito  a bordo 16
+   12:19  F-CASTELROVO  Castelrovo, Bivio  scendono 6  a bordo 10
+   12:26  F-MONTEBRINO  Montebrino, Centro  scendono 5  a bordo 5
+   12:35  F-PRADELLO  Pradello, Piazza  scendono 5  a bordo 0
+   12:47  L-RIMESSA-ALFA  Valfonda, rimessa Autoservizi Alfa  a bordo 0
+C-DIS-R  Centro diurno, ramo di Montebrino
+   categoria: riservato  servizi S-DIS  calendario CAL-CENTRO  07:50-08:45  km a pieno 11,2, a vuoto 19
+   07:50  L-RIMESSA-ALFA  Valfonda, rimessa Autoservizi Alfa  a bordo 0
+   08:05  PP-03  salgono 1  a bordo 1
+   08:25  L-TRASB-PONTE  Ponte di Sorgenta, piazzale  consegna il trasbordo T-01 (1)  a bordo 0
+   08:45  L-RIMESSA-ALFA  Valfonda, rimessa Autoservizi Alfa  a bordo 0
+C-DIS-1  Centro diurno, giro principale
+   categoria: riservato  servizi S-DIS  calendario CAL-CENTRO  07:40-08:52  km a pieno 20,3, a vuoto 5,5
+   07:40  L-RIMESSA-ALFA  Valfonda, rimessa Autoservizi Alfa  sale l'assistente  a bordo 0
+   07:52  PP-01  salgono 1  a bordo 1
+   08:05  PP-02  salgono 1  a bordo 2
+   08:20  L-TRASB-PONTE  Ponte di Sorgenta, piazzale  riparte 08:30  riceve il trasbordo T-01 (1)  a bordo 3
+   08:52  L-CENTRO  Valfonda, Centro diurno Il Faro  scendono 3  scende l'assistente  a bordo 0
+C-ASILO-1  Infanzia di Lagobello, andata
+   categoria: riservato  servizi S-ASILO  calendario CAL-INFANZIA  07:30-07:58  km a pieno 7,7, a vuoto 2,5
+   07:30  L-RIMESSA-BETA  Sorgenta, rimessa Trasporti Beta  a bordo 0
+   07:40  F-SORGENTA  Sorgenta, Municipio  salgono 4  sale l'assistente  a bordo 4
+   07:52  F-LAGOBELLO  Lagobello, Lago  salgono 3  a bordo 7
+   07:58  L-INFANZIA  Lagobello, Scuola dell'infanzia  scendono 7  scende l'assistente  a bordo 0
+C-LIN-533  Linea B610, corsa delle 07:52
+   categoria: riservato  servizi S-LIN-B610  calendario CAL-FERIALI  07:52-08:15  km a pieno 15,1, a vuoto 0
+   07:52  F-STAZIONE  Valfonda, Stazione FVV  a bordo non noto
+   07:56  F-VALFONDA-PIAZZA  Valfonda, Piazza Grande  a bordo non noto
+   08:08  F-CASTELROVO-ALTO  Castelrovo, Alto  a bordo non noto
+   08:15  F-PRADELLO  Pradello, Piazza  a bordo non noto
+C-LIN-560  Linea B610, corsa della sera (finisce dopo mezzanotte)
+   categoria: riservato  servizi S-LIN-B610  calendario CAL-FERIALI  23:40-24:12  km a pieno 15,1, a vuoto 0
+   23:40  F-PRADELLO  Pradello, Piazza  a bordo non noto
+   23:48  F-CASTELROVO-ALTO  Castelrovo, Alto  a bordo non noto
+   24:05  F-VALFONDA-PIAZZA  Valfonda, Piazza Grande  a bordo non noto
+   24:12  F-STAZIONE  Valfonda, Stazione FVV  a bordo non noto
 
-=== RICOVERI ===
-1  Rimessa Cles  [rimessa]  posti 30  [ricarica]
-2  Ricovero Rumo  [esterno]  posti 2
-
-=== AUTISTA Autista B ===
-Tragitto casa-Rimessa Cles: 1.11195 km/giorno
-Tragitto casa-Ricovero Rumo: 16.7496 km/giorno
-Pause lunghe vicino a casa: 0, lontano da casa: 1
-
-=== POSTI A BORDO ===
-38 ragazzi su MINIBUS-1 (16 posti): servono 3 giri
-MINIBUS-2 con 0 carrozzine: posti a sedere 12  -> 6 ragazzi ci stanno
-MINIBUS-2 con 1 carrozzine: posti a sedere 9  -> 6 ragazzi ci stanno
-MINIBUS-2 con 2 carrozzine: posti a sedere 6  -> 6 ragazzi ci stanno
-MINIBUS-2 con 3 carrozzine: posti a sedere non ammesso  -> 6 ragazzi NON ci stanno
-Linea da 120 km/giorno: 16 posti 111 EUR, 30 posti 204 EUR (differenza 93 EUR/giorno)
-
-=== ASSISTENTE ===
-Corsa verso Scuola dell'infanzia Rumo: assistente OBBLIGATORIO
-Corsa 1 (con ragazzo handicap): assistente OBBLIGATORIO
-MINIBUS-1 con 16 bambini + assistente: NON ci stanno (l'assistente occupa un posto)
-Contratto "Provincia - scolastico": assistente fornito dal committente
-Contratto "Comune - asilo (assistente a carico ditta)": assistente da pianificare e pagare (es. 1,5 ore x 18 EUR = 27 EUR/giorno)
+=== REGOLE ===
+Giri per il servizio S-SCU-AM (38 persone):  ALFA-01 (16 posti) 3 giri;  ALFA-02 (16 posti) 3 giri;  ALFA-03 (12 posti) 4 giri;  ALFA-04 (4 posti) 10 giri;  ALFA-X30 (30 posti) 2 giri
+Carrozzine su ALFA-03:  0 -> 12 posti a sedere;  1 -> 9 posti a sedere;  2 -> 6 posti a sedere;  3 -> non ammesso
+Assistente a bordo, corsa C-ASILO-1 (infanzia, regolamento R-TN):  con BETA-01 (19 posti) serve
+Costo di una giornata del servizio S-SUP-RM (mezzo minimo 12 posti, massimo 54; 24,3 km al giorno):
+   ALFA-01  16 posti  ammesso  58,37 EUR
+   ALFA-02  16 posti  ammesso  58,37 EUR
+   ALFA-03  12 posti  ammesso  63,37 EUR
+   ALFA-04  4 posti  non ammesso  27,29 EUR
+   ALFA-X30  30 posti (ipotetico)  ammesso  113,09 EUR
+Costo di una giornata del servizio S-LIN-B610 (mezzo minimo 30 posti, massimo 54; 30,2 km al giorno):
+   ALFA-01  16 posti  non ammesso  61,61 EUR
+   ALFA-02  16 posti  non ammesso  61,61 EUR
+   ALFA-03  12 posti  non ammesso  66,61 EUR
+   ALFA-04  4 posti  non ammesso  29,06 EUR
+   ALFA-X30  30 posti (ipotetico)  ammesso  118,69 EUR

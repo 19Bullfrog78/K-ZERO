@@ -1,0 +1,191 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "K-Zero - file di dati corse.json, versione 1",
+  "description": "Corse: i viaggi veri dei mezzi, con i passaggi (file corse.json). Una corsa che soddisfa piu' servizi e' ibrida.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "schema_versione", "corse"],
+  "properties": {
+    "schema": { "const": "corse", "x-kzero-classe": "comune" },
+    "schema_versione": { "const": 1, "x-kzero-classe": "comune" },
+    "corse": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["codice", "servizi", "calendario", "passaggi"],
+        "properties": {
+          "codice": { "$ref": "#/definitions/codice", "x-kzero-classe": "comune" },
+          "nome": { "$ref": "#/definitions/testo", "x-kzero-classe": "comune" },
+          "codici_esterni": { "$ref": "#/definitions/codici_esterni", "x-kzero-classe": "comune" },
+          "servizi": {
+            "description": "Servizi che la corsa soddisfa (piu' di uno = corsa ibrida).",
+            "type": "array",
+            "uniqueItems": true,
+            "items": { "$ref": "#/definitions/codice" },
+            "x-kzero-classe": "comune"
+          },
+          "calendario": { "$ref": "#/definitions/codice", "x-kzero-classe": "comune" },
+          "passaggi": { "type": "array", "minItems": 2, "items": { "$ref": "#/definitions/passaggio" } },
+          "km_totali": {
+            "description": "Totali come li scrive il committente sulla sua scheda (un dato, non un calcolo).",
+            "$ref": "#/definitions/km",
+            "x-kzero-classe": "comune"
+          },
+          "coincidenze": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["luogo", "servizio_esterno", "orario", "tipo"],
+              "properties": {
+                "luogo": { "$ref": "#/definitions/codice", "x-kzero-classe": "comune" },
+                "servizio_esterno": {
+                  "description": "Es. 'treno FTM n. 3'.",
+                  "$ref": "#/definitions/testo",
+                  "x-kzero-classe": "comune"
+                },
+                "orario": {
+                  "description": "Arrivo (aspettare l'arrivo) o partenza (garantire la partenza) del servizio esterno.",
+                  "$ref": "#/definitions/orario",
+                  "x-kzero-classe": "comune"
+                },
+                "tipo": { "enum": ["aspettare_arrivo", "garantire_partenza"], "x-kzero-classe": "comune" }
+              }
+            }
+          },
+          "testo_esposto": {
+            "description": "Testo da esporre sul mezzo.",
+            "$ref": "#/definitions/testo",
+            "x-kzero-classe": "comune"
+          },
+          "nota": { "$ref": "#/definitions/nota", "x-kzero-classe": "comune" }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "codice": {
+      "description": "Codice K-Zero: scelto da chi scrive i dati, unico per tipo di elemento. Lettere senza accenti, cifre, '-', '_' e '.'; inizia con una lettera o una cifra; al massimo 64 caratteri.",
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+    },
+    "testo": {
+      "description": "Testo di una riga, non vuoto (al massimo 300 caratteri).",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 300,
+      "pattern": "\\S"
+    },
+    "nota": {
+      "description": "Testo libero, non vuoto (al massimo 2000 caratteri).",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2000,
+      "pattern": "\\S"
+    },
+    "data": {
+      "description": "Data AAAA-MM-GG che esiste nel calendario (es. 2026-09-14; il 29 febbraio solo negli anni bisestili).",
+      "type": "string",
+      "pattern": "^([0-9]{4}-((0[13578]|1[02])-(0[1-9]|[12][0-9]|3[01])|(0[469]|11)-(0[1-9]|[12][0-9]|30)|02-(0[1-9]|1[0-9]|2[0-8]))|([0-9]{2}(0[48]|[2468][048]|[13579][26])|([02468][048]|[13579][26])00)-02-29)$"
+    },
+    "orario": {
+      "description": "Orario HH:MM, ora locale del fuso del pacchetto. Dopo mezzanotte si continua a contare come in GTFS: 24:15 = 00:15 del giorno dopo; al massimo 47:59.",
+      "type": "string",
+      "pattern": "^([0-3][0-9]|4[0-7]):[0-5][0-9]$"
+    },
+    "coordinate": {
+      "description": "Posizione WGS84 in gradi decimali.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["lat", "lon"],
+      "properties": {
+        "lat": { "type": "number", "minimum": -90, "maximum": 90 },
+        "lon": { "type": "number", "minimum": -180, "maximum": 180 }
+      }
+    },
+    "codici_esterni": {
+      "description": "Codici dello stesso elemento in altri sistemi (committenti, orari pubblici, piattaforme).",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["sistema", "tipo", "codice"],
+        "properties": {
+          "sistema": { "$ref": "#/definitions/testo" },
+          "tipo": { "$ref": "#/definitions/testo" },
+          "codice": { "$ref": "#/definitions/testo" }
+        }
+      }
+    },
+    "passaggio": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["luogo", "orario"],
+      "properties": {
+        "luogo": { "$ref": "#/definitions/codice", "x-kzero-classe": "comune" },
+        "orario": { "description": "Arrivo nel luogo.", "$ref": "#/definitions/orario", "x-kzero-classe": "comune" },
+        "partenza": {
+          "description": "Partenza, se il mezzo aspetta.",
+          "$ref": "#/definitions/orario",
+          "x-kzero-classe": "comune"
+        },
+        "transito": {
+          "description": "true = il mezzo passa senza fermarsi.",
+          "type": "boolean",
+          "x-kzero-classe": "comune"
+        },
+        "persone": {
+          "description": "Persone di ogni gruppo che salgono e scendono (come 'St. Car.' e 'St. Scar.' sulle schede).",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["gruppo"],
+            "properties": {
+              "gruppo": { "$ref": "#/definitions/codice", "x-kzero-classe": "comune" },
+              "salgono": { "type": "integer", "minimum": 0, "x-kzero-classe": "comune" },
+              "scendono": { "type": "integer", "minimum": 0, "x-kzero-classe": "comune" }
+            }
+          }
+        },
+        "assistente": { "enum": ["sale", "scende"], "x-kzero-classe": "comune" },
+        "trasbordi": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["codice", "azione", "gruppo", "persone"],
+            "properties": {
+              "codice": {
+                "description": "Codice del trasbordo: lo stesso sulla consegna e sulla ricezione.",
+                "$ref": "#/definitions/codice",
+                "x-kzero-classe": "comune"
+              },
+              "azione": { "enum": ["consegna", "ricezione"], "x-kzero-classe": "comune" },
+              "gruppo": { "$ref": "#/definitions/codice", "x-kzero-classe": "comune" },
+              "persone": { "type": "integer", "minimum": 1, "x-kzero-classe": "comune" },
+              "passeggero": { "$ref": "#/definitions/codice", "x-kzero-classe": "comune" }
+            },
+            "if": { "required": ["passeggero"] },
+            "then": { "properties": { "persone": { "const": 1 } } }
+          }
+        },
+        "km": {
+          "description": "Km dal passaggio precedente, come li scrive il committente.",
+          "$ref": "#/definitions/km",
+          "x-kzero-classe": "comune"
+        },
+        "nota": { "$ref": "#/definitions/nota", "x-kzero-classe": "comune" }
+      },
+      "if": { "properties": { "transito": { "const": true } }, "required": ["transito"] },
+      "then": { "properties": { "partenza": false, "persone": false, "assistente": false, "trasbordi": false } }
+    },
+    "km": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": { "pieni": { "type": "number", "minimum": 0 }, "vuoti": { "type": "number", "minimum": 0 } },
+      "minProperties": 1
+    }
+  }
+}

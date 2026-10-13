@@ -1,80 +1,76 @@
 #pragma once
-// K-Zero - scenario di dimostrazione: DATI INVENTATI e risultati calcolati dal nucleo.
+// K-Zero - calcoli della dimostrazione: alcune regole del mestiere applicate a un pacchetto dati.
+// Nessun dato e' scritto qui: tutto viene dal pacchetto (per "kzero dimostrazione": esempi/demo).
 // Il nucleo non stampa nulla: testo e JSON li prepara l'API (src/api).
-// I valori di questo scenario non vanno usati come dati reali.
 
+#include <optional>
 #include <vector>
 
 #include "domain_models.hpp"
 
 namespace kzero {
 
-// Mezzo attrezzato con un certo numero di carrozzine a bordo.
-struct CasoCarrozzine {
-    int carrozzine = 0;
-    bool ammesso = false;            // false = piu' carrozzine di quante il mezzo ne porti
-    int posti_a_sedere = 0;          // posti rimasti; vale solo se ammesso
-    bool ragazzi_ci_stanno = false;  // ci stanno i ragazzi della prova (Dimostrazione::ragazzi_prova_carrozzine)
+// Giri necessari per portare la domanda di un servizio con ogni mezzo dell'azienda del contratto.
+struct GiriServizio {
+    Code servizio;
+    int persone = 0;   // persone che salgono (domanda con conteggi esatti)
+    struct PerMezzo {
+        Code mezzo;
+        int posti = 0;
+        int giri = 0;
+    };
+    std::vector<PerMezzo> mezzi;
 };
 
-// Tragitto casa -> ricovero del mezzo (andata e ritorno) dell'autista di esempio.
-struct TragittoCasa {
-    Id ricovero_id = 0;
-    double km_al_giorno = 0.0;
+// Posti a sedere di un mezzo con pedana al crescere delle carrozzine a bordo.
+struct CarrozzineMezzo {
+    Code mezzo;
+    struct Caso {
+        int carrozzine = 0;
+        bool ammesso = false;     // false = piu' carrozzine di quante il mezzo ne porti
+        int posti_a_sedere = 0;   // vale solo se ammesso
+    };
+    std::vector<Caso> casi;
 };
 
-// Costo di una giornata di linea con il mezzo della flotta e con un mezzo piu' grande richiesto dal committente.
-struct ConfrontoCosti {
-    double km_al_giorno = 0.0;
-    Id mezzo_flotta_id = 0;
-    int posti_flotta = 0;
-    double costo_flotta = 0.0;       // EUR/giorno
-    int posti_richiesti = 0;         // mezzo ipotetico, non in flotta
-    double costo_richiesto = 0.0;    // EUR/giorno
-    double differenza = 0.0;         // EUR/giorno
+// Serve l'assistente su una corsa, secondo il grado delle scuole servite e i posti del mezzo?
+// (Solo le condizioni del regolamento sul grado e sui posti: le esigenze di salute sono dati particolari.)
+struct AssistenteCorsa {
+    Code corsa;
+    Code regolamento;
+    std::vector<Grade> gradi;
+    struct PerMezzo {
+        Code mezzo;
+        int posti = 0;
+        bool serve = false;
+    };
+    std::vector<PerMezzo> mezzi;
+};
+
+// Costo di una giornata di un servizio con ogni mezzo dell'azienda, quando il committente chiede un mezzo minimo.
+struct CostiServizio {
+    Code servizio;
+    int posti_minimi = 0;
+    std::optional<int> posti_massimi;
+    double km_al_giorno = 0.0;   // km a pieno e a vuoto delle corse del servizio
+    struct PerMezzo {
+        Code mezzo;
+        int posti = 0;
+        bool ipotetico = false;
+        bool ammesso = false;
+        std::optional<double> costo;   // nessun valore se il mezzo non ha i costi
+    };
+    std::vector<PerMezzo> mezzi;
 };
 
 struct Dimostrazione {
-    // --- Dati inventati ---------------------------------------------------------
-    std::vector<Destination> destinazioni;
-    std::vector<Passenger> passeggeri;
-    std::vector<Vehicle> mezzi;
-    std::vector<Driver> autisti;
-    std::vector<ParkingSpot> ricoveri;
-    std::vector<Contract> contratti;
-    std::vector<Escort> assistenti;
-
-    // --- Turno di esempio: corse scritte a mano, categoria ricavata dal nucleo ---
-    Schedule turno;
-
-    // --- Autista di esempio: tragitti casa-ricovero e pause lunghe ------------
-    Id autista_esempio_id = 0;
-    std::vector<TragittoCasa> tragitti;
-    BreakReport pause;
-
-    // --- Posti a bordo --------------------------------------------------------
-    int ragazzi_da_portare = 0;
-    Id mezzo_giri_id = 0;
-    int giri_necessari = 0;
-    Id mezzo_carrozzine_id = 0;
-    int ragazzi_prova_carrozzine = 0;
-    std::vector<CasoCarrozzine> casi_carrozzine;
-    ConfrontoCosti confronto_costi;
-
-    // --- Assistente a bordo ---------------------------------------------------
-    Id destinazione_infanzia_id = 0;
-    bool assistente_infanzia = false;
-    Id corsa_handicap_id = 0;
-    bool assistente_corsa_handicap = false;
-    Id mezzo_bambini_id = 0;
-    int bambini_con_assistente = 0;
-    bool bambini_con_assistente_ci_stanno = false;
-    Id assistente_ditta_id = 0;
-    double ore_assistente_ditta = 0.0;
-    double costo_assistente_ditta = 0.0;   // EUR/giorno
+    std::vector<GiriServizio> giri;
+    std::vector<CarrozzineMezzo> carrozzine;
+    std::vector<AssistenteCorsa> assistente;
+    std::vector<CostiServizio> costi;
 };
 
-// Costruisce lo scenario e fa i calcoli. Ogni chiamata da' lo stesso risultato.
-Dimostrazione crea_dimostrazione();
+// Applica le regole al pacchetto. Ogni chiamata con gli stessi dati da' lo stesso risultato.
+Dimostrazione calcola_dimostrazione(const Package& p);
 
 }  // namespace kzero

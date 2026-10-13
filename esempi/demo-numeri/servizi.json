@@ -1,0 +1,186 @@
+{
+  "schema": "servizi",
+  "schema_versione": 1,
+  "servizi": [
+    {
+      "codice": "S-SCU-AM",
+      "nome": "Andata mattina Pradello - Valfonda, medie e primaria",
+      "codici_esterni": [{ "sistema": "Consorzio Valle Alta", "tipo": "servizio", "codice": "2050001/1" }],
+      "tipo": "scolastico",
+      "contratto": "CT-SCU",
+      "calendario": "CAL-SCUOLA-LV",
+      "liberta_oraria": { "tipo": "libera", "soglia_da_concordare_minuti": 10 },
+      "domanda": {
+        "gruppi": [
+          {
+            "codice": "G-AM-MEDIE",
+            "nome": "Medie, andata",
+            "tipo": "studenti",
+            "verso": "andata",
+            "scuola": "SC-MEDIE",
+            "finestra": { "dalle": "07:30", "alle": "07:55" },
+            "conteggi": "esatti",
+            "fermate": [
+              { "luogo": "F-PRADELLO", "salgono": 9 },
+              { "luogo": "F-CASTELROVO", "salgono": 8 },
+              { "luogo": "F-MONTEBRINO", "salgono": 7 },
+              { "luogo": "L-MEDIE", "scendono": 24 }
+            ]
+          },
+          {
+            "codice": "G-AM-PRIM",
+            "nome": "Primaria, andata",
+            "tipo": "studenti",
+            "verso": "andata",
+            "scuola": "SC-PRIM",
+            "finestra": { "dalle": "07:40", "alle": "08:05" },
+            "conteggi": "esatti",
+            "fermate": [
+              { "luogo": "F-SORGENTA", "salgono": 6 },
+              { "luogo": "F-LAGOBELLO", "salgono": 8 },
+              { "luogo": "L-PRIM", "scendono": 14 }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "codice": "S-SCU-RM",
+      "nome": "Ritorno mezzogiorno medie",
+      "codici_esterni": [{ "sistema": "Consorzio Valle Alta", "tipo": "servizio", "codice": "2050001/2" }],
+      "tipo": "scolastico",
+      "contratto": "CT-SCU",
+      "calendario": "CAL-SCUOLA-LV",
+      "liberta_oraria": { "tipo": "libera", "soglia_da_concordare_minuti": 10 },
+      "domanda": {
+        "gruppi": [
+          {
+            "codice": "G-RM-MEDIE",
+            "nome": "Medie, ritorno",
+            "tipo": "studenti",
+            "verso": "ritorno",
+            "scuola": "SC-MEDIE",
+            "finestra": { "dalle": "12:00", "alle": "12:15" },
+            "conteggi": "esatti",
+            "fermate": [
+              { "luogo": "L-MEDIE", "salgono": 11 },
+              { "luogo": "F-CASTELROVO", "scendono": 4 },
+              { "luogo": "F-MONTEBRINO", "scendono": 4 },
+              { "luogo": "F-PRADELLO", "scendono": 3 }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "codice": "S-SUP-RM",
+      "nome": "Ritorno superiori a supporto della linea B610",
+      "codici_esterni": [{ "sistema": "Trasporti Provinciali Valfonda", "tipo": "servizio", "codice": "SUP-B610-R" }],
+      "tipo": "scolastico",
+      "contratto": "CT-LIN",
+      "calendario": "CAL-SCUOLA-LV",
+      "liberta_oraria": { "tipo": "libera", "soglia_da_concordare_minuti": 10 },
+      "regole": { "posti_minimi": 12 },
+      "domanda": {
+        "gruppi": [
+          {
+            "codice": "G-RM-SUP",
+            "nome": "Superiori, ritorno",
+            "tipo": "studenti",
+            "verso": "ritorno",
+            "scuola": "SC-SUP",
+            "finestra": { "dalle": "11:50", "alle": "12:00" },
+            "conteggi": "esatti",
+            "fermate": [
+              { "luogo": "L-SUP", "salgono": 5 },
+              { "luogo": "F-CASTELROVO", "scendono": 2 },
+              { "luogo": "F-MONTEBRINO", "scendono": 1 },
+              { "luogo": "F-PRADELLO", "scendono": 2 }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "codice": "S-DIS",
+      "nome": "Trasporto al centro diurno Il Faro",
+      "codici_esterni": [{ "sistema": "Consorzio Valle Alta", "tipo": "scheda", "codice": "48211" }],
+      "tipo": "disabili",
+      "contratto": "CT-SCU",
+      "calendario": "CAL-CENTRO",
+      "liberta_oraria": { "tipo": "libera", "soglia_da_concordare_minuti": 15 },
+      "regole": { "pedana_obbligatoria": true },
+      "domanda": {
+        "gruppi": [
+          {
+            "codice": "G-DIS",
+            "nome": "Centro diurno, andata",
+            "tipo": "disabili",
+            "verso": "andata",
+            "scuola": "SC-CENTRO",
+            "finestra": { "dalle": "08:30", "alle": "09:00" },
+            "conteggi": "esatti",
+            "fermate": [
+              { "luogo": "F-PRADELLO", "salgono": 1, "carrozzine": 1 },
+              { "luogo": "F-CASTELROVO", "salgono": 1 },
+              { "luogo": "F-MONTEBRINO", "salgono": 1 },
+              { "luogo": "L-CENTRO", "scendono": 3 }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "codice": "S-ASILO",
+      "nome": "Scuola dell'infanzia di Lagobello, andata",
+      "tipo": "scolastico",
+      "contratto": "CT-ASILO",
+      "calendario": "CAL-INFANZIA",
+      "liberta_oraria": { "tipo": "libera", "soglia_da_concordare_minuti": 10 },
+      "domanda": {
+        "gruppi": [
+          {
+            "codice": "G-ASILO",
+            "nome": "Bambini dell'infanzia",
+            "tipo": "studenti",
+            "verso": "andata",
+            "scuola": "SC-INFANZIA",
+            "finestra": { "dalle": "07:50", "alle": "08:00" },
+            "conteggi": "esatti",
+            "fermate": [
+              { "luogo": "F-SORGENTA", "salgono": 4 },
+              { "luogo": "F-LAGOBELLO", "salgono": 3 },
+              { "luogo": "L-INFANZIA", "scendono": 7 }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "codice": "S-LIN-B610",
+      "nome": "Linea B610 Valfonda - Pradello",
+      "codici_esterni": [{ "sistema": "Trasporti Provinciali Valfonda", "tipo": "linea", "codice": "B610" }],
+      "tipo": "linea",
+      "contratto": "CT-LIN",
+      "calendario": "CAL-FERIALI",
+      "liberta_oraria": { "tipo": "fissa" },
+      "domanda": {
+        "gruppi": [
+          {
+            "codice": "G-LIN",
+            "nome": "Utenti della linea B610",
+            "tipo": "utenti_linea",
+            "verso": "andata",
+            "conteggi": "non_noti",
+            "fermate": [
+              { "luogo": "F-STAZIONE" },
+              { "luogo": "F-VALFONDA-PIAZZA" },
+              { "luogo": "F-CASTELROVO-ALTO" },
+              { "luogo": "F-PRADELLO" }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}
