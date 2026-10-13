@@ -69,6 +69,22 @@
   La carrozzina toglie posti e chiede la pedana solo per chi viaggia seduto sulla carrozzina; la carrozzina piegata
   e gli altri ausili dichiarati vanno nel bagagliaio, oppure tra i sedili (legati, bloccati, se i posti sono liberi)
   solo sui mezzi per cui l'azienda lo ammette. Gli ausili si contano, non si misurano. Il passeggino non si pianifica.
+- 2026-10-13 - K-007 aggiunta 1 (programma, stessa proposta K-007, correzioni dopo il controllo dell'arbitro):
+  carrozzina "sulla_carrozzina" oppure "piegata"; ausili piegati dichiarati (es. deambulatore) per passeggero e per
+  fermata (dati particolari); per ogni mezzo quanti ausili entrano nel bagagliaio e se l'azienda li ammette tra i
+  sedili, con i posti occupati (dati comuni). La regola "ci sta sul mezzo" (fits) ora conta seduti, carrozzine,
+  ausili piegati e assistente: prima il bagagliaio, poi tra i sedili se ammesso e se i posti sono liberi, altrimenti
+  non ammesso. kzero dimostrazione ha la riga "Ausili piegati" (ALFA-04 auto con il baule, ALFA-02 minibus con
+  l'ausilio tra i sedili). Nuovi controlli: K-CTR-047 (passeggero che ha bisogno dell'assistente in un gruppo che
+  non lo richiede; di base il messaggio non nomina l'assistente) e K-CTR-048 (file non salvato in UTF-8: "ANSI" con
+  riga e colonna, oppure UTF-16, con il rimedio e senza riportare il testo del file); K-CTR-031 confronta anche gli
+  ausili piegati. Testo vuoto: un solo errore, senza "..". Demo: G-DIS chiede l'assistente (P-D1 ne ha bisogno),
+  servizio del giovedi' con una carrozzina piegata in auto (S-DIS-GIO, corsa C-DIS-GIO); il nome della corsa non
+  dice "carrozzina" (sarebbe un dato sulla salute in un campo comune). Schemi modificati nella versione attuale
+  (servizi 1, mezzi 1, dimostrazione 2). Prove: 259 su 259 (83 nucleo, 24 API, 92 sul programma, di cui 54 su una
+  copia del demo con un solo valore cambiato, 1 documentazione, 1 architettura, 57 sugli schemi, 1 generazione della
+  prova di scala). Sabotaggio: ausilio tra i sedili che non occupa posti, ausili sempre ammessi, bagagliaio ignorato,
+  messaggio di K-CTR-047 senza filtro: tutti scoperti (prove rosse: 6, 6, 6 e 1).
 
 ## Bug e limiti noti
 - check_home_breaks non usa ancora max_home_detour_km: oggi guarda solo la distanza da casa.
@@ -85,6 +101,12 @@
 - Ora legale: nei due giorni del cambio una corsa che attraversa le 02:00-03:00 dura un'ora in piu' o in meno di
   quanto risulta dagli orari (docs/formato-dati.md).
 - Su Windows (K-009) sono da sistemare e provare gli argomenti con lettere accentate e gli a capo CR LF.
+- Con --includi-dati-personali senza --includi-dati-particolari, il nome del passeggero insieme alla sua destinazione
+  (es. il centro diurno) lascia intuire un dato sulla salute: da trattare nel mandato sulla riservatezza.
+- K-CTR-018 (fermata ambigua) puo' essere troppo severo con i dati veri: fermate con lo stesso nome sui due lati
+  della strada, "Bahnhof" in ogni paese. Da rivedere con il lettore GTFS.
+- Il codice K-CTR-047 compare anche quando il messaggio e' filtrato: chi conosce il catalogo capisce che si parla
+  dell'assistente. Il messaggio di base non lo nomina; il codice resta, perche' serve a correggere il dato.
 
 ## Idee
 - Generare scenari "gonfiati" (50-500 mezzi) dai giri reali per provare il carico.
@@ -98,6 +120,11 @@
 - Limiti delle strade (altezze, masse, strade strette) letti dalle mappe aperte.
 - Viaggi reali dalla piattaforma GPS del committente, per confrontarli con i giri pianificati.
 - Trasbordi proposti dal programma (oggi si scrivono a mano e il programma li controlla).
+- (Mauro, 13/10) Ricerca del mezzo adatto per un servizio nuovo o ipotetico: dati orario ed esigenze (posti,
+  carrozzine, ausili piegati, assistente), proporre i mezzi in ordine di convenienza (capienza, pedana,
+  bagagliaio, dove si trova il mezzo a quell'ora, km a vuoto, regole sull'orario di lavoro degli autisti, es. oltre
+  9 posti su un servizio di oltre 50 km cambiano le regole della settimana). Possibile dopo i turni (K-008), le
+  distanze e la verifica delle regole.
 
 ## Prossimi passi
 1. K-008: formato dei dati, parte 2 (autisti, abilitazioni, turni del giorno, giornata dell'autista e del mezzo,

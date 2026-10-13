@@ -92,7 +92,9 @@ Si parte da Alpinabus (3 minibus + 1 auto) e si deve poter crescere fino a 500 m
 
 ## Trappole
 - "Ibrido" non si inserisce a mano: lo ricava derive_service.
-- L'assistente occupa un posto; ogni carrozzina toglie posti a sedere.
+- L'assistente occupa un posto. Solo chi viaggia seduto sulla carrozzina toglie posti a sedere e chiede la
+  pedana; la carrozzina piegata e gli altri ausili piegati vanno nel bagagliaio, oppure tra i sedili (occupando
+  posti liberi) solo se il mezzo lo ammette. Tutto in fits(), una sola regola.
 - Pause a casa dell'autista e ricoveri esterni sono preferenze, mai obblighi.
 - I dati di esempi/demo, esempi/demo-numeri e della prova di scala sono inventati (tranne il regolamento
   R-TN, che riporta regole pubbliche con la fonte): non usarli come dati reali.

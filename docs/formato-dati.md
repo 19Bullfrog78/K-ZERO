@@ -39,6 +39,10 @@ Un file con un nome diverso da questi non viene letto (avviso K-CTR-008): di sol
 
 ### Regole comuni a tutti i file
 
+- **Codifica UTF-8.** Ogni file si salva in UTF-8, la codifica dei file JSON (con o senza il segno iniziale
+  che aggiungono alcuni programmi di Windows). Un file salvato come "ANSI" o come "Unicode" (UTF-16) dal Blocco
+  note o da un programma vecchio non viene letto (errore K-CTR-048, con riga e colonna del primo carattere
+  sbagliato): basta salvarlo di nuovo scegliendo UTF-8.
 - **Schema e versione.** Ogni file comincia con `"schema"` (es. `"luoghi"`) e `"schema_versione"` (oggi 1).
   La forma di ogni file e' descritta da uno schema JSON (draft-07) in `docs/schema/<schema>.v<versione>.schema.json`:
   e' l'unica fonte delle regole di forma, e il programma controlla i file proprio con quegli schemi
@@ -92,7 +96,7 @@ parte da quella marcatura ed e' uguale per testo e JSON.
 |---|---|---|---|
 | comune | fermate pubbliche (nome, posizione, codici), scuole e centri, grado, orari, calendari, conteggi senza esigenze, mezzi (targa compresa), aziende, committenti, contratti, regolamenti, tutti i codici | sempre visibili | - |
 | personale | nomi e cognomi, indirizzi, case, punti porta a porta (sono la casa del passeggero), ricoveri presso la casa di una persona, motivi scritti a mano | sostituiti dal **codice** dell'elemento | `--includi-dati-personali` |
-| particolare | dati sulla salute: esigenze di una persona o di un gruppo (carrozzina, assistente necessario), tipo di servizio e di gruppo ("disabili"), conteggi di carrozzine, pedana obbligatoria per un servizio, categoria ricavata della corsa | sostituiti da `"riservato"` | `--includi-dati-particolari` |
+| particolare | dati sulla salute: esigenze di una persona o di un gruppo (carrozzina, ausili piegati, assistente necessario), tipo di servizio e di gruppo ("disabili"), conteggi di carrozzine e di ausili piegati, pedana obbligatoria per un servizio, categoria ricavata della corsa | sostituiti da `"riservato"` | `--includi-dati-particolari` |
 
 Perche' i dati particolari sono nascosti anche quando al posto del nome c'e' un codice: sono dati sulla
 salute, e restano dati personali anche senza nome (GDPR, considerando 26); in un paese piccolo
@@ -111,8 +115,8 @@ Il manifesto dichiara il **livello**:
   motivo scritto. Niente luoghi privati e niente passeggeri uno per uno (errore K-CTR-019);
 - **`completo`**: anche i passeggeri uno per uno e le loro case.
 
-I conteggi di carrozzine (dati particolari aggregati) sono ammessi in entrambi i livelli, sempre filtrati
-nelle uscite.
+I conteggi di carrozzine e di ausili piegati (dati particolari aggregati) sono ammessi in entrambi i livelli,
+sempre filtrati nelle uscite.
 
 **Minimizzazione:** il formato non ha campi per codice fiscale, telefoni, mail delle famiglie, data di
 nascita. K-Zero non li conserva mai: per pianificare non servono. Un campo cosi' aggiunto a mano e' un
@@ -432,8 +436,9 @@ Gruppo di passeggeri (`servizi[].domanda.gruppi[]`):
 | `finestra` | no | comune | `dalle`, `alle`: finestra oraria di arrivo (andata) o di partenza (ritorno) |
 | `conteggi` | si' | comune | `esatti`, `stimati` oppure `non_noti` (es. gli utenti di una linea): con `non_noti` le fermate non hanno numeri |
 | `fermate[]` | si' | comune | Fermate di salita e di discesa: `luogo`, `salgono`, `scendono` |
-| `fermate[].carrozzine` | no | particolare | Persone in carrozzina tra quelle che salgono a questa fermata |
-| `assistente_richiesto` | no | particolare | Il gruppo chiede l'assistente a bordo |
+| `fermate[].carrozzine` | no | particolare | Persone che salgono a questa fermata e viaggiano **sedute sulla carrozzina** (servono pedana e posto carrozzina). Chi viaggia su un posto normale con la carrozzina piegata non conta qui, ma tra gli ausili piegati |
+| `fermate[].ausili_piegati` | no | particolare | Ausili piegati da caricare a questa fermata per chi sale qui: carrozzine piegate, deambulatori e altri ausili dichiarati |
+| `assistente_richiesto` | no | particolare | Il gruppo chiede l'assistente a bordo (obbligatorio se un passeggero del gruppo ne ha bisogno: errore K-CTR-047) |
 | `passeggeri[]` | no | | Passeggeri uno per uno, solo nel livello `completo` (sotto) |
 
 Passeggero (`passeggeri[]`):
@@ -447,10 +452,15 @@ Passeggero (`passeggeri[]`):
 | `stato.riferimento` | con `sbloccato` | comune | Riferimento dello sblocco (es. la mail del committente) |
 | `salita`, `discesa` | no | comune | `luogo` e `assegnazione`: `proposta` dal programma oppure `bloccata` (scelta a mano: un calcolo futuro non la cambia finche' qualcuno non toglie il blocco) |
 | `motivo` | no | personale | Motivo scritto a mano (es. perche' e' stato spostato di fermata) |
-| `esigenze` | no | particolare | `carrozzina`, `assistente` (vero o falso), `altro` (testo) |
+| `esigenze.carrozzina` | no | particolare | `sulla_carrozzina` (viaggia seduto sulla carrozzina: servono pedana e posto carrozzina) oppure `piegata` (viaggia su un posto normale; la carrozzina piegata e' un ausilio da caricare) |
+| `esigenze.ausili_piegati` | no | particolare | Quanti altri ausili dichiarati viaggiano piegati (es. un deambulatore), oltre alla carrozzina piegata |
+| `esigenze.assistente` | no | particolare | `true` = ha bisogno dell'assistente a bordo |
+| `esigenze.altro` | no | particolare | Altre esigenze (testo) |
 
-I conteggi del gruppo e i passeggeri uno per uno devono coincidere (errore K-CTR-031); la domanda e le
-persone caricate dalle corse possono differire (avviso K-CTR-042).
+I conteggi del gruppo e i passeggeri uno per uno devono coincidere (errore K-CTR-031): le carrozzine di una
+fermata sono i passeggeri che salgono li' con `carrozzina: sulla_carrozzina`; gli ausili piegati sono le
+carrozzine `piegata` piu' gli `ausili_piegati` dei passeggeri che salgono li'. La domanda e le persone
+caricate dalle corse possono differire (avviso K-CTR-042). Un passeggino non si dichiara e non si pianifica.
 
 ```json
 {
@@ -537,6 +547,8 @@ dei passeggeri.
 | `mezzi[].carrozzine` | no | comune | Carrozzine trasportabili al massimo |
 | `mezzi[].posti_persi_per_carrozzina` | no | comune | Posti a sedere persi per ogni carrozzina caricata |
 | `mezzi[].pedana`, `tempo_pedana_secondi` | no | comune | Pedana o sollevatore e il tempo per azionarla a ogni fermata |
+| `mezzi[].ausili_bagagliaio` | no | comune | Quanti ausili piegati entrano nel bagagliaio o nel baule (0 o assente = niente bagagliaio) |
+| `mezzi[].ausili_tra_i_sedili.posti_occupati` | no | comune | Presente = l'azienda ammette un ausilio piegato tra i sedili, legato e bloccato con cinghie o ancoraggi; ogni ausilio occupa questi posti (es. 2). Assente = non ammesso |
 | `mezzi[].rimorchio` | no | comune | Rimorchio |
 | `mezzi[].misure` | no | comune | `lunghezza_m`, `larghezza_m`, `altezza_m`, `massa_t`, `sbalzo_posteriore_m` |
 | `mezzi[].alimentazione` | no | comune | `tipo` (`gasolio`, `benzina`, `metano`, `gpl`, `ibrido`, `elettrico`, `idrogeno`, `altro` con `descrizione`); per gli elettrici `batteria_kwh`, `consumo_kwh_km`, `carica_minima_percento` |
@@ -544,6 +556,16 @@ dei passeggeri.
 | `mezzi[].costo_al_km` | no | comune | Costo per km |
 | `mezzi[].ipotetico` | no | comune | `true` = mezzo non ancora in flotta (scenari) |
 | `mezzi[].nota` | no | comune | Note |
+
+**Carrozzine e ausili piegati.** Chi viaggia **seduto sulla carrozzina** ha bisogno della pedana e di un posto
+carrozzina, e ogni carrozzina toglie i posti a sedere indicati. Chi viaggia su un posto normale con la
+carrozzina **piegata** non ha bisogno della pedana: la carrozzina piegata e' un **ausilio piegato**, come un
+deambulatore. Un ausilio piegato va prima nel bagagliaio (`ausili_bagagliaio`); se il bagagliaio non c'e' o
+e' pieno, va tra i sedili, legato e bloccato, solo se il mezzo lo ammette (`ausili_tra_i_sedili`) e se i posti
+che occupa sono liberi; altrimenti il passeggero con quell'ausilio non e' ammesso su quel mezzo.
+"Tra i sedili" e' una **scelta facoltativa dell'azienda**, che ne risponde: senza il campo il programma non
+la propone mai. Semplificazione: **si contano gli ausili, non il loro volume** (un deambulatore conta come una
+carrozzina piegata).
 
 ### rimesse.json
 

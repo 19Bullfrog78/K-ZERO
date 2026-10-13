@@ -18,9 +18,9 @@ Come si legge il resoconto:
   stesso pacchetto = stesso resoconto, byte per byte;
 - in fondo un **riepilogo**: aziende, luoghi, servizi, corse, errori, avvisi;
 - **codice di uscita 0** se non ci sono errori (gli avvisi non bloccano), **1** se c'e' almeno un errore;
-- prima si controlla la **forma** dei file (K-CTR-001 ... K-CTR-008): un file con un errore di forma non
-  viene usato, e finche' c'e' un errore di forma i controlli sul **contenuto** (K-CTR-009 ... K-CTR-046) non
-  si fanno, perche' darebbero risultati falsati. Il resoconto lo dice;
+- prima si controlla la **forma** dei file (K-CTR-001 ... K-CTR-008 e K-CTR-048): un file con un errore di
+  forma non viene usato, e finche' c'e' un errore di forma i controlli sul **contenuto** (K-CTR-009 ...
+  K-CTR-047) non si fanno, perche' darebbero risultati falsati. Il resoconto lo dice;
 - i messaggi seguono le **classi dei dati**: di base, al posto di un dato personale (es. il nome di una casa)
   c'e' il codice dell'elemento e i dati particolari non compaiono; si vedono con `--includi-dati-personali`
   e `--includi-dati-particolari`;
@@ -37,7 +37,7 @@ Errore K-CTR-017 (corse.json, /corse/3/passaggi/2): Nella corsa C-RM-1 (Ritorno 
 Avviso K-CTR-035 (luoghi.json, /luoghi/5): Il luogo F-CASTELROVO-ALTO (Castelrovo, Alto) non ha le coordinate: serviranno al calcolo delle distanze.
 Avviso K-CTR-043 (luoghi.json, /luoghi/17/trasbordo): Il punto di trasbordo L-TRASB-CROCE (Croce di Pradello, parcheggio) e' autorizzato solo a voce: manca il documento.
 Avviso K-CTR-036: Il pacchetto non ha i tempi di sosta (file tempi_sosta.json): serviranno al calcolo.
-Riepilogo: 2 aziende, 22 luoghi, 6 servizi, 9 corse; 1 errore, 3 avvisi.
+Riepilogo: 2 aziende, 23 luoghi, 7 servizi, 10 corse; 1 errore, 3 avvisi.
 ```
 
 Non sono in questo catalogo (arriveranno con la verifica delle regole, dopo il K-008): posti a bordo,
@@ -82,7 +82,7 @@ Un nuovo controllo prende il codice successivo all'ultimo.
 | K-CTR-028 | errore | Coincidenza da aspettare: partenza prima dell'arrivo | Coincidenza "aspettare l'arrivo": la corsa parte prima dell'arrivo del servizio esterno. | Posticipare la partenza o correggere l'orario della coincidenza. |
 | K-CTR-029 | errore | Coincidenza da garantire: arrivo dopo la partenza | Coincidenza "garantire la partenza": la corsa arriva dopo la partenza del servizio esterno. | Anticipare la corsa o correggere l'orario della coincidenza. |
 | K-CTR-030 | errore | Coincidenza in un luogo dove la corsa non passa | La coincidenza e' in un luogo dove la corsa non passa. | Correggere il luogo della coincidenza. |
-| K-CTR-031 | errore | Conteggi del gruppo diversi dai passeggeri | I conteggi di una fermata del gruppo (salgono, scendono, carrozzine) non corrispondono ai passeggeri uno per uno che salgono o scendono li' (i sospesi non contano), oppure un passeggero sale o scende in un luogo che non e' tra le fermate del gruppo. Senza `--includi-dati-particolari` il messaggio sulle carrozzine non nomina le carrozzine. | Allineare i conteggi e i passeggeri. |
+| K-CTR-031 | errore | Conteggi del gruppo diversi dai passeggeri | I conteggi di una fermata del gruppo (salgono, scendono, carrozzine, ausili piegati) non corrispondono ai passeggeri uno per uno che salgono o scendono li' (i sospesi non contano), oppure un passeggero sale o scende in un luogo che non e' tra le fermate del gruppo. Le carrozzine sono le persone che viaggiano sedute sulla carrozzina; gli ausili piegati sono quelli da caricare, carrozzine piegate comprese. Senza `--includi-dati-particolari` il messaggio su carrozzine e ausili non li nomina. | Allineare i conteggi e i passeggeri. |
 | K-CTR-032 | errore | Servizio di un altro contratto in un gruppo di servizi | Un gruppo di servizi contiene un servizio di un altro contratto. | Spostare il servizio nel gruppo giusto o correggere il contratto. |
 | K-CTR-033 | errore | Servizio in due gruppi di servizi | Lo stesso servizio sta in due gruppi di servizi. | Lasciarlo in un solo gruppo. |
 | K-CTR-034 | errore | Corsa che trasporta un gruppo di un servizio che non soddisfa | Una corsa fa salire o scendere un gruppo di un servizio che la corsa non soddisfa. | Aggiungere il servizio alla corsa o correggere il gruppo. |
@@ -98,3 +98,5 @@ Un nuovo controllo prende il codice successivo all'ultimo.
 | K-CTR-044 | avviso | Mezzo senza costo fisso giornaliero o senza costo al km | Al mezzo manca il costo fisso giornaliero, il costo al km o entrambi: senza, il confronto dei costi sarebbe falso. | Aggiungere i costi. |
 | K-CTR-045 | avviso | Azienda senza mezzi | Un'azienda del manifesto non ha mezzi nel pacchetto. | Aggiungere i mezzi o togliere l'azienda. |
 | K-CTR-046 | avviso | Contratto senza regolamento valido per una parte del periodo | Il regolamento del contratto non vale per una parte del periodo del contratto (dentro il periodo del pacchetto). | Indicare il regolamento valido o correggere le date. |
+| K-CTR-047 | errore | Passeggero con un'esigenza che il suo gruppo non riporta | Un passeggero che viaggia (non sospeso) ha bisogno dell'assistente a bordo, ma il suo gruppo non richiede l'assistente (`assistente_richiesto`). Senza `--includi-dati-particolari` il messaggio non nomina l'assistente. | Indicare `assistente_richiesto: true` nel gruppo, o correggere le esigenze del passeggero. |
+| K-CTR-048 | errore | File non salvato in UTF-8 | Il file non e' salvato in UTF-8, la codifica dei file JSON: di solito e' stato salvato come "ANSI" (lettere accentate scritte in un'altra codifica) o come "Unicode" (UTF-16) dal Blocco note o da un programma vecchio. Riga e colonna indicano il primo carattere sbagliato; il messaggio non riporta il testo del file. Il file non viene letto. | Aprire il file e salvarlo di nuovo scegliendo la codifica UTF-8. |
