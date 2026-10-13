@@ -65,6 +65,10 @@
   Prova di scala (600 mezzi, 5.210 luoghi di cui 5.000 fermate, 2.000 servizi, 10.000 corse, 15 MB; generatore con
   seme fisso, file identici a ogni giro): kzero controlla senza errori ne' avvisi in 1,1-1,5 secondi con 129 MB di
   memoria (macchina di prova: 4 processori Xeon a 2,1 GHz). Non e' una soglia delle prove.
+- 2026-10-13 - K-007 aggiunta 1 (regole del mestiere, salvate direttamente su main): REGOLE.md, posti a bordo.
+  La carrozzina toglie posti e chiede la pedana solo per chi viaggia seduto sulla carrozzina; la carrozzina piegata
+  e gli altri ausili dichiarati vanno nel bagagliaio, oppure tra i sedili (legati, bloccati, se i posti sono liberi)
+  solo sui mezzi per cui l'azienda lo ammette. Gli ausili si contano, non si misurano. Il passeggino non si pianifica.
 
 ## Bug e limiti noti
 - check_home_breaks non usa ancora max_home_detour_km: oggi guarda solo la distanza da casa.
