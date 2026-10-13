@@ -47,7 +47,8 @@
   del formato standard dei dati (docs/formato-dati.md): pacchetto = cartella con manifesto e 13 file JSON (aziende,
   luoghi e tratti con limiti di accesso, regolamenti con la fonte di ogni valore, calendari, scuole e centri,
   committenti, contratti, gruppi di servizi, servizi con la domanda, corse con passaggi, trasbordi e coincidenze,
-  mezzi, rimesse, tempi di sosta), uno schema per file in docs/schema, controllati con la libreria valijson 1.1.3.
+  mezzi, rimesse, tempi di sosta), uno schema per file in docs/schema, controllati con la libreria valijson 1.1.3;
+  ogni numero ha un massimo di buon senso (un errore di battitura come 3000000000 persone viene rifiutato).
   Tre classi di dati marcate negli schemi (comuni, personali, particolari) e due livelli di pacchetto ("solo numeri",
   "completo"): di base testo e JSON mostrano il codice al posto dei dati personali e "riservato" al posto dei dati
   particolari. Nuovo comando kzero controlla (46 controlli con codice K-CTR, catalogo in docs/controlli.md).
@@ -55,7 +56,7 @@
   Passenger, Destination); ricerca dei luoghi per nome o codice esterno con normalizzazione documentata.
   Pacchetti esempi/demo e esempi/demo-numeri (dati inventati, regolamento di Trento con le fonti); kzero dimostrazione
   ora legge esempi/demo, incorporato nel programma (schema dimostrazione 2; descrivi 2). Orari oltre le 24:00
-  restano tali anche in uscita. Prove: 242 su 242 (77 nucleo, 21 API, 86 sul programma, di cui 48 su una copia del demo
+  restano tali anche in uscita. Prove: 243 su 243 (77 nucleo, 21 API, 87 sul programma, di cui 49 su una copia del demo
   con un solo valore cambiato, 1 documentazione, 1 architettura, 55 sugli schemi, 1 generazione della prova di scala).
   Le 63 prove di prima ci sono ancora, con lo stesso nome; adattate perche' usano il nuovo modello e i dati del demo.
   Sabotaggio: orario che torna indietro spento, margine dei trasbordi ignorato, attesa massima scritta nel codice
