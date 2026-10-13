@@ -1,0 +1,169 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "K-Zero - file di dati scuole.json, versione 1",
+  "description": "Scuole e centri (file scuole.json): luogo, grado o tipo di centro, orari per giorno e periodo, attese concordate.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "schema_versione", "scuole"],
+  "properties": {
+    "schema": { "const": "scuole", "x-kzero-classe": "comune" },
+    "schema_versione": { "const": 1, "x-kzero-classe": "comune" },
+    "scuole": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["codice", "nome", "luogo", "tipo", "orari"],
+        "properties": {
+          "codice": { "$ref": "#/definitions/codice", "x-kzero-classe": "comune" },
+          "nome": { "$ref": "#/definitions/testo", "x-kzero-classe": "comune" },
+          "luogo": { "$ref": "#/definitions/codice", "x-kzero-classe": "comune" },
+          "codici_esterni": { "$ref": "#/definitions/codici_esterni", "x-kzero-classe": "comune" },
+          "tipo": { "enum": ["scuola", "centro"], "x-kzero-classe": "comune" },
+          "grado": {
+            "enum": ["infanzia", "primaria", "secondaria_primo_grado", "secondaria_secondo_grado"],
+            "x-kzero-classe": "comune"
+          },
+          "tipo_centro": {
+            "description": "Tipo di centro; con 'altro' serve la descrizione.",
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["valore"],
+            "properties": {
+              "valore": { "enum": ["diurno", "terapie", "socio_educativo", "altro"] },
+              "descrizione": { "$ref": "#/definitions/testo" }
+            },
+            "if": { "properties": { "valore": { "const": "altro" } } },
+            "then": { "required": ["descrizione"] },
+            "x-kzero-classe": "comune"
+          },
+          "orari": { "type": "array", "minItems": 1, "items": { "$ref": "#/definitions/orario_scuola" } },
+          "durata_massima_a_bordo_minuti": { "type": "integer", "minimum": 1, "x-kzero-classe": "comune" },
+          "salita_non_prima_di": {
+            "description": "Ora piu' presto di salita.",
+            "$ref": "#/definitions/orario",
+            "x-kzero-classe": "comune"
+          },
+          "nota": { "$ref": "#/definitions/nota", "x-kzero-classe": "comune" }
+        },
+        "if": { "properties": { "tipo": { "const": "scuola" } } },
+        "then": { "required": ["grado"], "properties": { "tipo_centro": false } },
+        "else": { "required": ["tipo_centro"], "properties": { "grado": false } }
+      }
+    }
+  },
+  "definitions": {
+    "codice": {
+      "description": "Codice K-Zero: scelto da chi scrive i dati, unico per tipo di elemento. Lettere senza accenti, cifre, '-', '_' e '.'; inizia con una lettera o una cifra; al massimo 64 caratteri.",
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+    },
+    "testo": {
+      "description": "Testo di una riga, non vuoto (al massimo 300 caratteri).",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 300,
+      "pattern": "\\S"
+    },
+    "nota": {
+      "description": "Testo libero, non vuoto (al massimo 2000 caratteri).",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2000,
+      "pattern": "\\S"
+    },
+    "data": {
+      "description": "Data AAAA-MM-GG che esiste nel calendario (es. 2026-09-14; il 29 febbraio solo negli anni bisestili).",
+      "type": "string",
+      "pattern": "^([0-9]{4}-((0[13578]|1[02])-(0[1-9]|[12][0-9]|3[01])|(0[469]|11)-(0[1-9]|[12][0-9]|30)|02-(0[1-9]|1[0-9]|2[0-8]))|([0-9]{2}(0[48]|[2468][048]|[13579][26])|([02468][048]|[13579][26])00)-02-29)$"
+    },
+    "orario": {
+      "description": "Orario HH:MM, ora locale del fuso del pacchetto. Dopo mezzanotte si continua a contare come in GTFS: 24:15 = 00:15 del giorno dopo; al massimo 47:59.",
+      "type": "string",
+      "pattern": "^([0-3][0-9]|4[0-7]):[0-5][0-9]$"
+    },
+    "coordinate": {
+      "description": "Posizione WGS84 in gradi decimali.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["lat", "lon"],
+      "properties": {
+        "lat": { "type": "number", "minimum": -90, "maximum": 90 },
+        "lon": { "type": "number", "minimum": -180, "maximum": 180 }
+      }
+    },
+    "codici_esterni": {
+      "description": "Codici dello stesso elemento in altri sistemi (committenti, orari pubblici, piattaforme).",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["sistema", "tipo", "codice"],
+        "properties": {
+          "sistema": { "$ref": "#/definitions/testo" },
+          "tipo": { "$ref": "#/definitions/testo" },
+          "codice": { "$ref": "#/definitions/testo" }
+        }
+      }
+    },
+    "orario_scuola": {
+      "description": "Orario in un periodo e in alcuni giorni della settimana.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["dal", "al", "giorni", "inizio", "fine"],
+      "properties": {
+        "dal": { "$ref": "#/definitions/data", "x-kzero-classe": "comune" },
+        "al": { "$ref": "#/definitions/data", "x-kzero-classe": "comune" },
+        "giorni": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "enum": ["lunedi", "martedi", "mercoledi", "giovedi", "venerdi", "sabato", "domenica"] },
+          "x-kzero-classe": "comune"
+        },
+        "inizio": {
+          "description": "Inizio delle lezioni o apertura.",
+          "$ref": "#/definitions/orario",
+          "x-kzero-classe": "comune"
+        },
+        "fine": {
+          "description": "Fine delle lezioni o chiusura.",
+          "$ref": "#/definitions/orario",
+          "x-kzero-classe": "comune"
+        },
+        "arrivo_entro": {
+          "description": "Ora di arrivo richiesta (es. centro: arrivo entro le 09:00).",
+          "$ref": "#/definitions/orario",
+          "x-kzero-classe": "comune"
+        },
+        "attesa_concordata": {
+          "description": "Minuti di attesa accettati dalla scuola prima e dopo le lezioni, dentro i limiti del regolamento.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["prima_minuti", "dopo_minuti", "accordo"],
+          "properties": {
+            "prima_minuti": { "type": "integer", "minimum": 0 },
+            "dopo_minuti": { "type": "integer", "minimum": 0 },
+            "accordo": { "description": "Riferimento dell'accordo con la scuola.", "$ref": "#/definitions/testo" }
+          },
+          "x-kzero-classe": "comune"
+        },
+        "orari_autorizzati": {
+          "description": "Orari di arrivo o di ripresa autorizzati, con il riferimento dell'accordo.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["tipo", "orario", "accordo"],
+            "properties": {
+              "tipo": { "enum": ["arrivo", "ripresa"] },
+              "orario": { "$ref": "#/definitions/orario" },
+              "accordo": { "$ref": "#/definitions/testo" }
+            }
+          },
+          "x-kzero-classe": "comune"
+        }
+      }
+    }
+  }
+}
