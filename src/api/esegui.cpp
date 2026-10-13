@@ -39,9 +39,10 @@ Esito esegui(const std::vector<std::string>& argomenti) {
         const DefinizioneComando& comando = comando_richiesto(argomenti);
         const std::vector<std::string> scritti(argomenti.begin() + 1, argomenti.end());
         const Parametri parametri = leggi_parametri(comando, scritti);
+        const Risultato risultato = comando.esegui(comando, parametri);
         Esito esito;
-        esito.codice = static_cast<int>(CodiceUscita::Riuscito);
-        esito.uscita = comando.esegui(comando, parametri);
+        esito.codice = risultato.codice;
+        esito.uscita = risultato.uscita;
         esito.formato = parametri.formato;
         return esito;
     } catch (const ErroreKZero& e) {

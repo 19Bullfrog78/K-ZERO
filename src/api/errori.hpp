@@ -39,6 +39,8 @@ enum class Errore {
     ParametroSenzaValore,
     ErroreInterno,
     UscitaNonScrivibile,
+    MancaArgomento,
+    CartellaNonTrovata,
 };
 
 struct DefinizioneErrore {

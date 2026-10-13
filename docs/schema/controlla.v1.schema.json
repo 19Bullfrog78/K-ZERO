@@ -1,0 +1,94 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "kzero - controlla, versione 1",
+  "description": "Uscita di 'kzero controlla <cartella> --formato json': i problemi trovati nel pacchetto dati (errori e avvisi con codice K-CTR, spiegati in docs/controlli.md) e un riepilogo. Va sull'uscita standard anche quando ci sono errori nei dati; allora il codice di uscita e' 1. I messaggi seguono le classi dei dati: di base i dati personali sono sostituiti dal codice dell'elemento e quelli particolari non compaiono.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "schema_versione",
+    "pacchetto",
+    "dati_personali_inclusi",
+    "dati_particolari_inclusi",
+    "controlli_sul_contenuto",
+    "problemi",
+    "riepilogo"
+  ],
+  "properties": {
+    "schema": { "const": "controlla" },
+    "schema_versione": { "const": 1 },
+    "pacchetto": {
+      "description": "Dati del manifesto; null se il manifesto non e' stato letto.",
+      "oneOf": [
+        { "type": "null" },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["codice", "livello"],
+          "properties": {
+            "codice": { "type": "string", "minLength": 1 },
+            "nome": { "type": "string", "minLength": 1 },
+            "livello": { "enum": ["solo_numeri", "completo"] }
+          }
+        }
+      ]
+    },
+    "dati_personali_inclusi": { "type": "boolean" },
+    "dati_particolari_inclusi": { "type": "boolean" },
+    "controlli_sul_contenuto": {
+      "description": "false se ci sono errori nella forma dei file: allora i controlli sul contenuto non sono stati fatti.",
+      "type": "boolean"
+    },
+    "problemi": {
+      "description": "Prima gli errori, poi gli avvisi; ciascuno in ordine di file (ordine del formato) e di posizione.",
+      "type": "array",
+      "items": { "$ref": "#/definitions/problema" }
+    },
+    "riepilogo": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["aziende", "luoghi", "servizi", "corse", "errori", "avvisi"],
+      "properties": {
+        "aziende": { "$ref": "#/definitions/quanti" },
+        "luoghi": { "$ref": "#/definitions/quanti" },
+        "servizi": { "$ref": "#/definitions/quanti" },
+        "corse": { "$ref": "#/definitions/quanti" },
+        "errori": { "type": "integer", "minimum": 0 },
+        "avvisi": { "type": "integer", "minimum": 0 }
+      }
+    }
+  },
+  "definitions": {
+    "quanti": {
+      "description": "Numero di elementi; null se il file c'e' ma non e' stato letto (errori di forma) o se manca il manifesto.",
+      "type": ["integer", "null"],
+      "minimum": 0
+    },
+    "problema": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["livello", "codice", "messaggio"],
+      "properties": {
+        "livello": { "enum": ["errore", "avviso"] },
+        "codice": { "type": "string", "pattern": "^K-CTR-[0-9]{3}$" },
+        "messaggio": { "description": "Spiegazione in italiano del caso preciso.", "type": "string", "minLength": 1 },
+        "posizione": {
+          "description": "Dove sta il problema; manca per i problemi dell'intero pacchetto.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["file"],
+          "properties": {
+            "file": { "type": "string", "minLength": 1 },
+            "puntatore": {
+              "description": "Percorso JSON standard (RFC 6901) nel file, es. /corse/3/passaggi/4.",
+              "type": "string",
+              "pattern": "^(/[^/]*)+$"
+            },
+            "riga": { "type": "integer", "minimum": 1 },
+            "colonna": { "type": "integer", "minimum": 1 }
+          }
+        }
+      }
+    }
+  }
+}

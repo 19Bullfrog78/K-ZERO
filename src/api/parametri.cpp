@@ -98,21 +98,34 @@ Parametri leggi_parametri(const DefinizioneComando& c, const std::vector<std::st
         throw ErroreKZero(Errore::ErroreInterno, "Errore interno nella lettura dei parametri (" + e.get_name() + ").");
     }
 
-    // Argomenti avanzati: parametri sconosciuti oppure valori scritti senza parametro.
-    const std::vector<std::string> avanzati = app.remaining();
-    if (!avanzati.empty()) {
-        const std::string& a = avanzati.front();
+    // Argomenti avanzati: parametri sconosciuti, oppure argomenti del comando (es. la cartella), oppure valori
+    // scritti senza parametro.
+    std::vector<std::string> posizionali;
+    for (const std::string& a : app.remaining()) {
         if (a.size() > 1 && a[0] == '-')
             throw ErroreKZero(Errore::ParametroSconosciuto, "Parametro sconosciuto per il comando '" + c.nome +
                                                                 "': " + tra_apici(a) + ". Parametri ammessi: " +
                                                                 nomi_parametri(c) + "." + kVediDescrivi);
+        posizionali.push_back(a);
+    }
+    if (posizionali.size() > c.argomenti.size()) {
+        const std::string& a = posizionali[c.argomenti.size()];
         const std::string un_solo = trova_comando(a) ? " Si puo' dare un solo comando alla volta." : "";
-        throw ErroreKZero(Errore::ArgomentoNonPrevisto, "Argomento non previsto: " + tra_apici(a) + "." + un_solo +
-                                                            " Il comando '" + c.nome + "' accetta solo i parametri: " +
-                                                            nomi_parametri(c) + "." + kVediDescrivi);
+        const std::string forma = c.argomenti.empty()
+                                      ? " Il comando '" + c.nome + "' accetta solo i parametri: " + nomi_parametri(c) + "."
+                                      : " Il comando '" + c.nome + "' si scrive: " + forma_comando(c) + ".";
+        throw ErroreKZero(Errore::ArgomentoNonPrevisto,
+                          "Argomento non previsto: " + tra_apici(a) + "." + un_solo + forma + kVediDescrivi);
+    }
+    if (posizionali.size() < c.argomenti.size()) {
+        const DefinizioneArgomento& manca = c.argomenti[posizionali.size()];
+        throw ErroreKZero(Errore::MancaArgomento, "Manca l'argomento <" + manca.nome + "> del comando '" + c.nome +
+                                                      "': " + manca.descrizione + " Uso: " + forma_comando(c) + "." +
+                                                      kVediDescrivi);
     }
 
     Parametri risultato;
+    risultato.argomenti = posizionali;
     for (std::size_t i = 0; i < c.parametri.size(); ++i) {
         const DefinizioneParametro& p = c.parametri[i];
         const CLI::Option& o = *opzioni[i];

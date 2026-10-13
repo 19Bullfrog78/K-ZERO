@@ -1,7 +1,9 @@
 # K-Zero - prova sulla documentazione: quello che dice "kzero descrivi" deve coincidere con
 # - docs/errori.md: una riga "| codice | uscita | descrizione |" per ogni errore, e nessuna in piu';
-# - docs/schema: un file per ogni schema elencato, con il nome docs/schema/<nome>.v<versione>.schema.json,
-#   e nessun file non elencato.
+# - docs/controlli.md: una riga "| codice | livello | descrizione |" per ogni controllo, e nessuna in piu';
+# - docs/formato-dati.md: una sezione per ogni file di un pacchetto dati;
+# - docs/schema: un file per ogni schema elencato (uscite e dati), con il nome
+#   docs/schema/<nome>.v<versione>.schema.json, e nessun file non elencato.
 # Uso: cmake -DKZERO=<programma> -DSORGENTI=<cartella del repository> -P documentazione.cmake
 cmake_minimum_required(VERSION 3.25)
 
@@ -16,6 +18,7 @@ endif()
 
 # --- docs/errori.md ------------------------------------------------------------------
 file(READ "${SORGENTI}/docs/errori.md" errori_md)
+string(REPLACE "\r\n" "\n" errori_md "${errori_md}")   # a capo di Windows
 string(JSON quanti LENGTH "${descrizione}" errori)
 string(REGEX MATCHALL "\n\\| K-ERR-[0-9][0-9][0-9] \\|" righe "${errori_md}")
 list(LENGTH righe quante_righe)
@@ -36,6 +39,54 @@ foreach(i RANGE ${ultimo})
   if(posizione EQUAL -1)
     message(FATAL_ERROR "docs/errori.md: la riga di ${codice} deve iniziare con \"| ${codice} | ${uscita} | ${testo} |\"")
   endif()
+endforeach()
+
+# --- docs/controlli.md ---------------------------------------------------------------
+file(READ "${SORGENTI}/docs/controlli.md" controlli_md)
+string(REPLACE "\r\n" "\n" controlli_md "${controlli_md}")
+string(JSON quanti LENGTH "${descrizione}" controlli)
+string(REGEX MATCHALL "\n\\| K-CTR-[0-9][0-9][0-9] \\|" righe "${controlli_md}")
+list(LENGTH righe quante_righe)
+if(NOT quante_righe EQUAL quanti)
+  message(FATAL_ERROR "docs/controlli.md ha ${quante_righe} righe di controlli, kzero descrivi ne elenca ${quanti}")
+endif()
+math(EXPR ultimo "${quanti} - 1")
+foreach(i RANGE ${ultimo})
+  string(JSON codice GET "${descrizione}" controlli ${i} codice)
+  string(JSON livello GET "${descrizione}" controlli ${i} livello)
+  string(JSON testo GET "${descrizione}" controlli ${i} descrizione)
+  string(REGEX MATCHALL "\n\\| ${codice} \\|" volte "${controlli_md}")
+  list(LENGTH volte quante)
+  if(NOT quante EQUAL 1)
+    message(FATAL_ERROR "docs/controlli.md: ${codice} compare ${quante} volte, deve comparire una volta")
+  endif()
+  string(FIND "${controlli_md}" "\n| ${codice} | ${livello} | ${testo} |" posizione)
+  if(posizione EQUAL -1)
+    message(FATAL_ERROR "docs/controlli.md: la riga di ${codice} deve iniziare con \"| ${codice} | ${livello} | ${testo} |\"")
+  endif()
+endforeach()
+
+# --- docs/formato-dati.md ------------------------------------------------------------
+file(READ "${SORGENTI}/docs/formato-dati.md" formato_md)
+string(REPLACE "\r\n" "\n" formato_md "${formato_md}")
+string(JSON quanti LENGTH "${descrizione}" formato_dati)
+math(EXPR ultimo "${quanti} - 1")
+foreach(i RANGE ${ultimo})
+  string(JSON file_dati GET "${descrizione}" formato_dati ${i} file)
+  string(JSON schema_dati GET "${descrizione}" formato_dati ${i} schema)
+  string(FIND "${formato_md}" "\n### ${file_dati}\n" posizione)
+  if(posizione EQUAL -1)
+    message(FATAL_ERROR "docs/formato-dati.md: manca la sezione \"### ${file_dati}\"")
+  endif()
+  string(JSON quante_versioni LENGTH "${descrizione}" formato_dati ${i} versioni)
+  math(EXPR ultima "${quante_versioni} - 1")
+  foreach(v RANGE ${ultima})
+    string(JSON versione GET "${descrizione}" formato_dati ${i} versioni ${v})
+    string(FIND "${formato_md}" "docs/schema/${schema_dati}.v${versione}.schema.json" posizione)
+    if(posizione EQUAL -1)
+      message(FATAL_ERROR "docs/formato-dati.md: manca il riferimento a docs/schema/${schema_dati}.v${versione}.schema.json")
+    endif()
+  endforeach()
 endforeach()
 
 # --- docs/schema ---------------------------------------------------------------------
@@ -60,4 +111,4 @@ list(SORT elencati)
 if(NOT presenti STREQUAL elencati)
   message(FATAL_ERROR "docs/schema contiene: ${presenti}\nkzero descrivi elenca: ${elencati}")
 endif()
-message(STATUS "docs/errori.md e docs/schema coincidono con kzero descrivi")
+message(STATUS "docs/errori.md, docs/controlli.md, docs/formato-dati.md e docs/schema coincidono con kzero descrivi")
