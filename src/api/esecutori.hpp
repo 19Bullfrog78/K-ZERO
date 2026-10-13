@@ -7,8 +7,9 @@
 
 namespace kzero::api {
 
-std::string esegui_descrivi(const DefinizioneComando& comando, const Parametri& parametri);
-std::string esegui_dimostrazione(const DefinizioneComando& comando, const Parametri& parametri);
-std::string esegui_versione(const DefinizioneComando& comando, const Parametri& parametri);
+Risultato esegui_controlla(const DefinizioneComando& comando, const Parametri& parametri);
+Risultato esegui_descrivi(const DefinizioneComando& comando, const Parametri& parametri);
+Risultato esegui_dimostrazione(const DefinizioneComando& comando, const Parametri& parametri);
+Risultato esegui_versione(const DefinizioneComando& comando, const Parametri& parametri);
 
 }  // namespace kzero::api

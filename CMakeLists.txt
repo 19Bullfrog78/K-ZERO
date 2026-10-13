@@ -51,38 +51,80 @@ FetchContent_Declare(
   DOWNLOAD_EXTRACT_TIMESTAMP TRUE
   SYSTEM
 )
+# valijson 1.1.3: controllo dei file di dati con gli schemi JSON (draft-07); solo file di intestazione, legge il JSON
+# di nlohmann/json con conversioni esplicite. Il progetto non pubblica file di rilascio: la versione e' fissata con
+# l'impronta del suo commit (git controlla l'impronta di ogni file scaricato). Il suo CMakeLists non serve:
+# SOURCE_SUBDIR punta a una cartella che non esiste, cosi' FetchContent scarica soltanto.
+FetchContent_Declare(
+  valijson
+  GIT_REPOSITORY https://github.com/tristanpenman/valijson.git
+  GIT_TAG 5eac4b66f20b2c189ae40281c29e71cf39a958ec   # v1.1.3
+  SOURCE_SUBDIR non-usare-il-cmake-di-valijson
+)
 set(JSON_ImplicitConversions OFF CACHE BOOL "" FORCE)   # conversioni dal JSON solo esplicite
 set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)      # Windows: stessa libreria di sistema del programma
 set(INSTALL_GTEST OFF CACHE BOOL "" FORCE)
 set(BUILD_GMOCK OFF CACHE BOOL "" FORCE)
-FetchContent_MakeAvailable(cli11 nlohmann_json googletest)
+FetchContent_MakeAvailable(cli11 nlohmann_json googletest valijson)
 
 add_library(kzero_cli11 INTERFACE)
 target_include_directories(kzero_cli11 SYSTEM INTERFACE ${cli11_SOURCE_DIR})
+add_library(kzero_valijson INTERFACE)
+target_include_directories(kzero_valijson SYSTEM INTERFACE ${valijson_SOURCE_DIR}/include)
 
 # --- Piano 1: nucleo (modello dati, regole, calcolo) -------------------------------
 # Nessuna stampa, nessuna riga di comando, nessuna libreria esterna (lo controlla una prova).
-add_library(kzero_nucleo STATIC src/nucleo/dimostrazione.cpp)
+add_library(kzero_nucleo STATIC
+  src/nucleo/controlli.cpp
+  src/nucleo/dimostrazione.cpp
+  src/nucleo/pacchetto.cpp
+  src/nucleo/ricerca.cpp
+  src/nucleo/tempo.cpp
+)
 target_include_directories(kzero_nucleo PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/nucleo)
 target_compile_options(kzero_nucleo PRIVATE ${KZERO_WARNINGS})
+
+# --- File incorporati nel programma: schemi di docs/schema e pacchetto dimostrativo esempi/demo ----
+# Cosi' kzero controlla i dati sempre con gli schemi con cui e' stato compilato, da qualunque cartella.
+file(GLOB KZERO_SCHEMI CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/docs/schema/*.schema.json)
+file(GLOB KZERO_DEMO CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/esempi/demo/*.json)
+set(KZERO_RISORSE ${KZERO_SCHEMI} ${KZERO_DEMO})
+add_custom_command(
+  OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/generato/risorse.cpp
+  COMMAND ${CMAKE_COMMAND} -DSORGENTI=${CMAKE_CURRENT_SOURCE_DIR} -DUSCITA=${CMAKE_CURRENT_BINARY_DIR}/generato/risorse.cpp
+          "-DFILE=${KZERO_RISORSE}" -P ${CMAKE_CURRENT_SOURCE_DIR}/cmake/incorpora.cmake
+  DEPENDS ${KZERO_RISORSE} ${CMAKE_CURRENT_SOURCE_DIR}/cmake/incorpora.cmake
+  COMMENT "Incorporo gli schemi e il pacchetto dimostrativo"
+  VERBATIM
+)
 
 # --- Piano 2: API = riga di comando con uscita testo/JSON, schemi ed errori K-ERR ----
 configure_file(src/api/versione.hpp.in ${CMAKE_CURRENT_BINARY_DIR}/generato/versione.hpp @ONLY)
 add_library(kzero_api STATIC
   src/api/comandi.cpp
+  src/api/comando_controlla.cpp
   src/api/comando_descrivi.cpp
   src/api/comando_dimostrazione.cpp
   src/api/comando_versione.cpp
+  src/api/controlli_catalogo.cpp
+  src/api/controllo.cpp
   src/api/errori.cpp
   src/api/esegui.cpp
+  src/api/formato_dati.cpp
+  src/api/lettore.cpp
   src/api/parametri.cpp
+  src/api/schemi_dati.cpp
   src/api/uscita.cpp
+  src/api/validazione.cpp
+  ${CMAKE_CURRENT_BINARY_DIR}/generato/risorse.cpp
 )
 target_include_directories(kzero_api
   PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/api
   PRIVATE ${CMAKE_CURRENT_BINARY_DIR}/generato
 )
-target_link_libraries(kzero_api PUBLIC kzero_nucleo nlohmann_json::nlohmann_json PRIVATE kzero_cli11)
+target_link_libraries(kzero_api
+  PUBLIC kzero_nucleo nlohmann_json::nlohmann_json
+  PRIVATE kzero_cli11 kzero_valijson)
 target_compile_options(kzero_api PRIVATE ${KZERO_WARNINGS})
 
 # --- Il programma: un solo eseguibile, kzero <comando> [parametri] -----------------

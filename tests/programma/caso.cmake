@@ -1,30 +1,38 @@
 # K-Zero - prova sul programma: lancia kzero due volte con gli stessi argomenti e controlla
 # - il codice di uscita;
 # - che le due esecuzioni diano uscite identiche byte per byte (stesso input = stesso output);
-# - risultato sull'uscita standard e niente sull'uscita di errore, oppure il contrario con il codice K-ERR atteso;
+# - risultato sull'uscita standard e niente sull'uscita di errore, oppure il contrario con il codice K-ERR atteso
+#   (con RESOCONTO il risultato c'e' anche con l'uscita 1: e' il resoconto di kzero controlla sui dati sbagliati);
 # - in formato json: JSON valido, con "schema" e "schema_versione"; per gli errori codice e uscita coerenti;
 # - in formato testo: niente JSON, errori che iniziano con "Errore K-ERR-nnn";
-# - se richiesto: uguaglianza con un file atteso, testi presenti o assenti.
+# - se richiesto: uguaglianza con un file atteso, testi presenti o assenti, problemi K-CTR nel punto giusto.
+# Con PACCHETTO_BASE prima prepara il pacchetto da controllare (pacchetto.cmake): "@PACCHETTO@" negli argomenti
+# diventa la sua cartella.
 # Uso: cmake -DKZERO=<programma> -DCASO=<file del caso, scritto da tests/CMakeLists.txt> -P caso.cmake
 cmake_minimum_required(VERSION 3.25)
 
 include("${CASO}")   # NOME, CARTELLA, USCITA, FORMATO, ARGOMENTI e, se servono, ERRORE, SCHEMA, ATTESO,
-                     # CONTIENE, NON_CONTIENE, USCITA_SU
+                     # CONTIENE, NON_CONTIENE, USCITA_SU, RESOCONTO, PROBLEMI, PACCHETTO_BASE, MODIFICA
 
 function(fallisci messaggio)
   message(FATAL_ERROR "Prova ${NOME}: ${messaggio}")
 endfunction()
+
+file(MAKE_DIRECTORY "${CARTELLA}")
+set(base "${CARTELLA}/${NOME}")
+if(DEFINED PACCHETTO_BASE)
+  set(PACCHETTO "${base}.pacchetto")
+  include("${CMAKE_CURRENT_LIST_DIR}/pacchetto.cmake")
+endif()
 
 # @FF@ = il byte 0xFF, che non e' UTF-8: serve a provare i messaggi che ricopiano un argomento.
 string(ASCII 255 byte_ff)
 set(argomenti "")
 foreach(a IN LISTS ARGOMENTI)
   string(REPLACE "@FF@" "${byte_ff}" a "${a}")
+  string(REPLACE "@PACCHETTO@" "${PACCHETTO}" a "${a}")
   list(APPEND argomenti "${a}")
 endforeach()
-
-file(MAKE_DIRECTORY "${CARTELLA}")
-set(base "${CARTELLA}/${NOME}")
 foreach(giro 1 2)
   if(DEFINED USCITA_SU)
     set(destinazione "${USCITA_SU}")
@@ -67,7 +75,7 @@ if(NOT DEFINED USCITA_SU)
 endif()
 file(READ "${base}.errori.1" testo_errori)
 
-if(USCITA EQUAL 0)
+if(USCITA EQUAL 0 OR RESOCONTO)
   if(NOT testo_errori STREQUAL "")
     fallisci("riuscito, ma l'uscita di errore non e' vuota:\n${testo_errori}")
   endif()
@@ -99,7 +107,7 @@ if(FORMATO STREQUAL "json")
   if(NOT schema STREQUAL "${SCHEMA}")
     fallisci("schema \"${schema}\", atteso \"${SCHEMA}\"")
   endif()
-  if(NOT USCITA EQUAL 0)
+  if(NOT USCITA EQUAL 0 AND NOT RESOCONTO)
     string(JSON codice ERROR_VARIABLE problema GET "${documento}" errori 0 codice)
     if(problema OR NOT codice STREQUAL "${ERRORE}")
       fallisci("codice di errore \"${codice}\", atteso \"${ERRORE}\"")
@@ -116,7 +124,7 @@ else()
   if(primo STREQUAL "{")
     fallisci("in formato testo l'uscita non deve essere JSON")
   endif()
-  if(NOT USCITA EQUAL 0)
+  if(NOT USCITA EQUAL 0 AND NOT RESOCONTO)
     string(FIND "${documento}" "Errore ${ERRORE}" posizione)
     if(NOT posizione EQUAL 0)
       fallisci("l'errore deve iniziare con \"Errore ${ERRORE}\", invece:\n${documento}")
@@ -144,5 +152,57 @@ foreach(t IN LISTS NON_CONTIENE)
   string(FIND "${documento}" "${t}" posizione)
   if(NOT posizione EQUAL -1)
     fallisci("contiene il testo \"${t}\", che qui non deve comparire")
+  endif()
+endforeach()
+
+# Problemi attesi nel resoconto di kzero controlla: "K-CTR-nnn|file|percorso JSON" (percorso vuoto = tutto il file).
+foreach(atteso IN LISTS PROBLEMI)
+  string(REPLACE "|" ";" parti "${atteso}")
+  list(GET parti 0 codice_atteso)
+  list(GET parti 1 file_atteso)
+  list(LENGTH parti n)
+  set(puntatore_atteso "")
+  if(n GREATER 2)
+    list(GET parti 2 puntatore_atteso)
+  endif()
+  set(trovato FALSE)
+  if(FORMATO STREQUAL "json")
+    string(JSON quanti LENGTH "${documento}" problemi)
+    if(quanti GREATER 0)
+      math(EXPR ultimo "${quanti} - 1")
+      foreach(i RANGE ${ultimo})
+        string(JSON codice GET "${documento}" problemi ${i} codice)
+        string(JSON file ERROR_VARIABLE senza GET "${documento}" problemi ${i} posizione file)
+        string(JSON puntatore ERROR_VARIABLE senza_puntatore GET "${documento}" problemi ${i} posizione puntatore)
+        if(senza)
+          set(file "")
+        endif()
+        if(senza_puntatore)
+          set(puntatore "")
+        endif()
+        if(codice STREQUAL codice_atteso AND file STREQUAL file_atteso AND puntatore STREQUAL puntatore_atteso)
+          set(trovato TRUE)
+        endif()
+      endforeach()
+    endif()
+  elseif(file_atteso STREQUAL "")
+    string(FIND "${documento}" " ${codice_atteso}: " posizione)   # problema dell'intero pacchetto: senza posizione
+    if(NOT posizione EQUAL -1)
+      set(trovato TRUE)
+    endif()
+  else()
+    set(dove "${file_atteso}")
+    if(NOT puntatore_atteso STREQUAL "")
+      string(APPEND dove ", ${puntatore_atteso}")
+    endif()
+    foreach(fine ")" ", riga")
+      string(FIND "${documento}" " ${codice_atteso} (${dove}${fine}" posizione)
+      if(NOT posizione EQUAL -1)
+        set(trovato TRUE)
+      endif()
+    endforeach()
+  endif()
+  if(NOT trovato)
+    fallisci("manca il problema ${codice_atteso} in ${file_atteso} ${puntatore_atteso}. Resoconto:\n${documento}")
   endif()
 endforeach()

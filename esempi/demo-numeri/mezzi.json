@@ -1,0 +1,78 @@
+{
+  "schema": "mezzi",
+  "schema_versione": 1,
+  "mezzi": [
+    {
+      "codice": "ALFA-01",
+      "azienda": "ALFA",
+      "targa": "AA 101 AA",
+      "categoria": "M2",
+      "posti": 16,
+      "posti_in_piedi": 0,
+      "misure": { "lunghezza_m": 6.2, "larghezza_m": 2.0, "altezza_m": 2.7, "massa_t": 4.5, "sbalzo_posteriore_m": 1.6 },
+      "alimentazione": { "tipo": "gasolio" },
+      "costo_fisso_giornaliero": 45.0,
+      "costo_al_km": 0.55
+    },
+    {
+      "codice": "ALFA-02",
+      "azienda": "ALFA",
+      "targa": "AA 102 AA",
+      "categoria": "M2",
+      "posti": 16,
+      "ausili_tra_i_sedili": { "posti_occupati": 2 },
+      "alimentazione": { "tipo": "gasolio" },
+      "costo_fisso_giornaliero": 45.0,
+      "costo_al_km": 0.55
+    },
+    {
+      "codice": "ALFA-03",
+      "azienda": "ALFA",
+      "targa": "AA 103 AA",
+      "categoria": "M2",
+      "posti": 12,
+      "carrozzine": 2,
+      "posti_persi_per_carrozzina": 3,
+      "pedana": true,
+      "tempo_pedana_secondi": 120,
+      "alimentazione": { "tipo": "gasolio" },
+      "costo_fisso_giornaliero": 50.0,
+      "costo_al_km": 0.55
+    },
+    {
+      "codice": "ALFA-04",
+      "azienda": "ALFA",
+      "targa": "AA 104 AA",
+      "categoria": "M1",
+      "posti": 4,
+      "ausili_bagagliaio": 1,
+      "alimentazione": { "tipo": "elettrico", "batteria_kwh": 60, "consumo_kwh_km": 0.18, "carica_minima_percento": 20 },
+      "costo_fisso_giornaliero": 20.0,
+      "costo_al_km": 0.3
+    },
+    {
+      "codice": "ALFA-X30",
+      "azienda": "ALFA",
+      "targa": "NON IMMATRICOLATO",
+      "categoria": "M3",
+      "posti": 30,
+      "posti_in_piedi": 10,
+      "misure": { "lunghezza_m": 9.5, "altezza_m": 3.3 },
+      "alimentazione": { "tipo": "gasolio" },
+      "costo_fisso_giornaliero": 90.0,
+      "costo_al_km": 0.95,
+      "ipotetico": true,
+      "nota": "Mezzo da 30 posti chiesto dal committente delle linee: non ancora in flotta."
+    },
+    {
+      "codice": "BETA-01",
+      "azienda": "BETA",
+      "targa": "BB 201 BB",
+      "categoria": "M2",
+      "posti": 19,
+      "alimentazione": { "tipo": "gasolio" },
+      "costo_fisso_giornaliero": 48.0,
+      "costo_al_km": 0.58
+    }
+  ]
+}

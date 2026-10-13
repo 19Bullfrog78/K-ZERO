@@ -43,31 +43,93 @@
   Provincia di Trento come esempio, con la fonte di ogni valore. L'attesa massima 25/20 non e' piu' una regola
   generale: e' un valore del regolamento di Trento. Due punti "da confermare": infanzia e medie insieme;
   "mezzi con piu' di 9 posti" letto come conducente compreso.
+- 2026-10-13 - K-007 (programma, proposta "K-007: formato dei dati (rete e servizi) e controllore"): prima meta'
+  del formato standard dei dati (docs/formato-dati.md): pacchetto = cartella con manifesto e 13 file JSON (aziende,
+  luoghi e tratti con limiti di accesso, regolamenti con la fonte di ogni valore, calendari, scuole e centri,
+  committenti, contratti, gruppi di servizi, servizi con la domanda, corse con passaggi, trasbordi e coincidenze,
+  mezzi, rimesse, tempi di sosta), uno schema per file in docs/schema, controllati con la libreria valijson 1.1.3;
+  ogni numero ha un massimo di buon senso (un errore di battitura come 3000000000 persone viene rifiutato).
+  Tre classi di dati marcate negli schemi (comuni, personali, particolari) e due livelli di pacchetto ("solo numeri",
+  "completo"): di base testo e JSON mostrano il codice al posto dei dati personali e "riservato" al posto dei dati
+  particolari. Nuovo comando kzero controlla (46 controlli con codice K-CTR, catalogo in docs/controlli.md).
+  Modello del nucleo esteso e riallineato (corse, passaggi, servizi e domanda al posto di Route, StopVisit,
+  Passenger, Destination); ricerca dei luoghi per nome o codice esterno con normalizzazione documentata.
+  Pacchetti esempi/demo e esempi/demo-numeri (dati inventati, regolamento di Trento con le fonti); kzero dimostrazione
+  ora legge esempi/demo, incorporato nel programma (schema dimostrazione 2; descrivi 2). Orari oltre le 24:00
+  restano tali anche in uscita. Prove: 243 su 243 (77 nucleo, 21 API, 87 sul programma, di cui 49 su una copia del demo
+  con un solo valore cambiato, 1 documentazione, 1 architettura, 55 sugli schemi, 1 generazione della prova di scala).
+  Le 63 prove di prima ci sono ancora, con lo stesso nome; adattate perche' usano il nuovo modello e i dati del demo.
+  Sabotaggio: orario che torna indietro spento, margine dei trasbordi ignorato, attesa massima scritta nel codice
+  (25 minuti), dati particolari sempre visibili: tutti scoperti (prove rosse: 3, 3, 2 e 7, piu' le prove sugli schemi
+  di quelle uscite, non eseguite).
+  Prova di scala (600 mezzi, 5.210 luoghi di cui 5.000 fermate, 2.000 servizi, 10.000 corse, 15 MB; generatore con
+  seme fisso, file identici a ogni giro): kzero controlla senza errori ne' avvisi in 1,1-1,5 secondi con 129 MB di
+  memoria (macchina di prova: 4 processori Xeon a 2,1 GHz). Non e' una soglia delle prove.
 - 2026-10-13 - K-007 aggiunta 1 (regole del mestiere, salvate direttamente su main): REGOLE.md, posti a bordo.
   La carrozzina toglie posti e chiede la pedana solo per chi viaggia seduto sulla carrozzina; la carrozzina piegata
   e gli altri ausili dichiarati vanno nel bagagliaio, oppure tra i sedili (legati, bloccati, se i posti sono liberi)
   solo sui mezzi per cui l'azienda lo ammette. Gli ausili si contano, non si misurano. Il passeggino non si pianifica.
+- 2026-10-13 - K-007 aggiunta 1 (programma, stessa proposta K-007, correzioni dopo il controllo dell'arbitro):
+  carrozzina "sulla_carrozzina" oppure "piegata"; ausili piegati dichiarati (es. deambulatore) per passeggero e per
+  fermata (dati particolari); per ogni mezzo quanti ausili entrano nel bagagliaio e se l'azienda li ammette tra i
+  sedili, con i posti occupati (dati comuni). La regola "ci sta sul mezzo" (fits) ora conta seduti, carrozzine,
+  ausili piegati e assistente: prima il bagagliaio, poi tra i sedili se ammesso e se i posti sono liberi, altrimenti
+  non ammesso. kzero dimostrazione ha la riga "Ausili piegati" (ALFA-04 auto con il baule, ALFA-02 minibus con
+  l'ausilio tra i sedili). Nuovi controlli: K-CTR-047 (passeggero che ha bisogno dell'assistente in un gruppo che
+  non lo richiede; di base il messaggio non nomina l'assistente) e K-CTR-048 (file non salvato in UTF-8: "ANSI" con
+  riga e colonna, oppure UTF-16, con il rimedio e senza riportare il testo del file); K-CTR-031 confronta anche gli
+  ausili piegati. Testo vuoto: un solo errore, senza "..". Demo: G-DIS chiede l'assistente (P-D1 ne ha bisogno),
+  servizio del giovedi' con una carrozzina piegata in auto (S-DIS-GIO, corsa C-DIS-GIO); il nome della corsa non
+  dice "carrozzina" (sarebbe un dato sulla salute in un campo comune). Schemi modificati nella versione attuale
+  (servizi 1, mezzi 1, dimostrazione 2). Prove: 259 su 259 (83 nucleo, 24 API, 92 sul programma, di cui 54 su una
+  copia del demo con un solo valore cambiato, 1 documentazione, 1 architettura, 57 sugli schemi, 1 generazione della
+  prova di scala). Sabotaggio: ausilio tra i sedili che non occupa posti, ausili sempre ammessi, bagagliaio ignorato,
+  messaggio di K-CTR-047 senza filtro: tutti scoperti (prove rosse: 6, 6, 6 e 1).
 
 ## Bug e limiti noti
 - check_home_breaks non usa ancora max_home_detour_km: oggi guarda solo la distanza da casa.
   Da completare con il calcolo vero (OR-Tools).
-- I dati di prova sono copiati sia in src/nucleo/dimostrazione.cpp sia nelle prove: da unificare quando
-  arrivera' il caricamento dei dati veri.
-- Le regole aggiunte con K-006 (attesa massima, attivi/sospesi, giorni e periodi, turni, rotazione,
-  servizi fissi, piu' committenti) non sono ancora nel modello dati: entreranno con K-007 e con il calcolo.
-- Il formato testo mostra sempre i dati personali (e' pensato per le persone): la protezione vale per il
-  JSON, che e' il formato da usare per gli assistenti AI.
+- Turni del giorno, rotazione degli autisti e servizi fissi (regole aggiunte con K-006) non sono ancora nel
+  modello dati: entreranno con K-008. Attesa massima, attivi/sospesi, giorni e periodi e corse con piu'
+  committenti ci sono dal K-007.
+- Le regole dei regolamenti (attese sulle corse, posti a bordo, assistente, passeggeri in piedi, limiti di accesso
+  dei mezzi) sono nei dati ma non sono ancora verificate sui giri: arriveranno con la verifica delle regole,
+  dopo il K-008.
+- I nomi di scuole, centri, servizi e gruppi sono dati comuni ma testi liberi: un nome come "Centro diurno" lascia
+  intuire un dato sulla salute. Chi scrive i dati deve evitare nomi che rivelano dati personali o particolari.
+- Ricerca dei luoghi: le lettere di altri alfabeti (greco, cirillico...) non vengono ricondotte all'alfabeto latino.
+- Ora legale: nei due giorni del cambio una corsa che attraversa le 02:00-03:00 dura un'ora in piu' o in meno di
+  quanto risulta dagli orari (docs/formato-dati.md).
 - Su Windows (K-009) sono da sistemare e provare gli argomenti con lettere accentate e gli a capo CR LF.
+- Con --includi-dati-personali senza --includi-dati-particolari, il nome del passeggero insieme alla sua destinazione
+  (es. il centro diurno) lascia intuire un dato sulla salute: da trattare nel mandato sulla riservatezza.
+- K-CTR-018 (fermata ambigua) puo' essere troppo severo con i dati veri: fermate con lo stesso nome sui due lati
+  della strada, "Bahnhof" in ogni paese. Da rivedere con il lettore GTFS.
+- Il codice K-CTR-047 compare anche quando il messaggio e' filtrato: chi conosce il catalogo capisce che si parla
+  dell'assistente. Il messaggio di base non lo nomina; il codice resta, perche' serve a correggere il dato.
 
 ## Idee
 - Generare scenari "gonfiati" (50-500 mezzi) dai giri reali per provare il carico.
 - Chiedere i giri ad altre aziende del consorzio come secondo banco di prova.
 - Indicatori: % km a vuoto e minuti fermi, per turno e per flotta.
-- Spostare nel contratto altre regole del committente (mezzo minimo, pedana, tempi massimi).
+- Scenari di variazione degli orari scolastici: mezzi e km risparmiati spostando l'inizio delle lezioni, come
+  materiale per la richiesta al committente (le proposte vanno presentate entro il 28 febbraio, REGOLE.md).
+- Ottimizzazione per zone: dividere il lavoro per elenchi di comuni (il comune di ogni luogo e' gia' obbligatorio).
+- Consorzio con scambio di servizi tra aziende: prima chiarire chi autorizza, come si divide il risparmio, la
+  riservatezza dei dati di ogni azienda.
+- Limiti delle strade (altezze, masse, strade strette) letti dalle mappe aperte.
+- Viaggi reali dalla piattaforma GPS del committente, per confrontarli con i giri pianificati.
+- Trasbordi proposti dal programma (oggi si scrivono a mano e il programma li controlla).
+- (Mauro, 13/10) Ricerca del mezzo adatto per un servizio nuovo o ipotetico: dati orario ed esigenze (posti,
+  carrozzine, ausili piegati, assistente), proporre i mezzi in ordine di convenienza (capienza, pedana,
+  bagagliaio, dove si trova il mezzo a quell'ora, km a vuoto, regole sull'orario di lavoro degli autisti, es. oltre
+  9 posti su un servizio di oltre 50 km cambiano le regole della settimana). Possibile dopo i turni (K-008), le
+  distanze e la verifica delle regole.
 
 ## Prossimi passi
-1. K-007: formato standard dei dati e controllore.
-2. K-008: lettore del file alunni del CTA.
+1. K-008: formato dei dati, parte 2 (autisti, abilitazioni, turni del giorno, giornata dell'autista e del mezzo,
+   rotazioni, servizi fissi, blocchi).
+2. Lettore del file alunni del CTA, che lo trasforma nel formato K-Zero.
 3. K-009: programma per Windows da scaricare (i dati veri restano sul PC di Mauro).
 4. Raccolta dati veri Alpinabus: mezzi, autisti (paese), giri di una giornata tipo.
 5. "Fotografia" dei giri attuali: km pieni, km a vuoto, tempi morti.

@@ -1,0 +1,294 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "K-Zero - file di dati regolamenti.json, versione 1",
+  "description": "Regolamenti: i parametri di un territorio o di un committente, con la fonte di ogni valore (file regolamenti.json). Ogni contratto indica il regolamento che vale per i suoi servizi.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "schema_versione", "regolamenti"],
+  "properties": {
+    "schema": { "const": "regolamenti", "x-kzero-classe": "comune" },
+    "schema_versione": { "const": 1, "x-kzero-classe": "comune" },
+    "regolamenti": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["codice", "ente", "titolo", "documento", "parametri"],
+        "properties": {
+          "codice": { "$ref": "#/definitions/codice", "x-kzero-classe": "comune" },
+          "ente": { "$ref": "#/definitions/testo", "x-kzero-classe": "comune" },
+          "titolo": { "$ref": "#/definitions/testo", "x-kzero-classe": "comune" },
+          "documento": { "$ref": "#/definitions/testo", "x-kzero-classe": "comune" },
+          "valido_dal": { "$ref": "#/definitions/data", "x-kzero-classe": "comune" },
+          "valido_al": { "$ref": "#/definitions/data", "x-kzero-classe": "comune" },
+          "parametri": { "$ref": "#/definitions/parametri", "x-kzero-classe": "comune" },
+          "nota": { "$ref": "#/definitions/nota", "x-kzero-classe": "comune" }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "codice": {
+      "description": "Codice K-Zero: scelto da chi scrive i dati, unico per tipo di elemento. Lettere senza accenti, cifre, '-', '_' e '.'; inizia con una lettera o una cifra; al massimo 64 caratteri.",
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+    },
+    "testo": {
+      "description": "Testo di una riga, non vuoto (al massimo 300 caratteri).",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 300,
+      "pattern": "\\S"
+    },
+    "nota": {
+      "description": "Testo libero, non vuoto (al massimo 2000 caratteri).",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2000,
+      "pattern": "\\S"
+    },
+    "data": {
+      "description": "Data AAAA-MM-GG che esiste nel calendario (es. 2026-09-14; il 29 febbraio solo negli anni bisestili).",
+      "type": "string",
+      "pattern": "^([0-9]{4}-((0[13578]|1[02])-(0[1-9]|[12][0-9]|3[01])|(0[469]|11)-(0[1-9]|[12][0-9]|30)|02-(0[1-9]|1[0-9]|2[0-8]))|([0-9]{2}(0[48]|[2468][048]|[13579][26])|([02468][048]|[13579][26])00)-02-29)$"
+    },
+    "orario": {
+      "description": "Orario HH:MM, ora locale del fuso del pacchetto. Dopo mezzanotte si continua a contare come in GTFS: 24:15 = 00:15 del giorno dopo; al massimo 47:59.",
+      "type": "string",
+      "pattern": "^([0-3][0-9]|4[0-7]):[0-5][0-9]$"
+    },
+    "coordinate": {
+      "description": "Posizione WGS84 in gradi decimali.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["lat", "lon"],
+      "properties": {
+        "lat": { "type": "number", "minimum": -90, "maximum": 90 },
+        "lon": { "type": "number", "minimum": -180, "maximum": 180 }
+      }
+    },
+    "codici_esterni": {
+      "description": "Codici dello stesso elemento in altri sistemi (committenti, orari pubblici, piattaforme).",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["sistema", "tipo", "codice"],
+        "properties": {
+          "sistema": { "$ref": "#/definitions/testo" },
+          "tipo": { "$ref": "#/definitions/testo" },
+          "codice": { "$ref": "#/definitions/testo" }
+        }
+      }
+    },
+    "fonte": {
+      "description": "Da dove viene il valore.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["punto"],
+      "properties": {
+        "documento": { "description": "Documento, se diverso da quello del regolamento.", "$ref": "#/definitions/testo" },
+        "punto": { "description": "Punto del documento (es. 1.B.1).", "$ref": "#/definitions/testo" },
+        "riferimenti": { "description": "Altre norme citate.", "$ref": "#/definitions/testo" }
+      }
+    },
+    "valore": {
+      "description": "Un valore con la sua fonte.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["valore", "fonte"],
+      "properties": {
+        "valore": { "type": "integer", "minimum": 0, "maximum": 1000000 },
+        "fonte": { "$ref": "#/definitions/fonte" },
+        "nota": { "$ref": "#/definitions/nota" }
+      }
+    },
+    "per_grado": {
+      "description": "Valori per grado scolastico, con la fonte.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["valori", "fonte"],
+      "properties": {
+        "valori": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["gradi", "valore"],
+            "properties": {
+              "gradi": {
+                "type": "array",
+                "minItems": 1,
+                "uniqueItems": true,
+                "items": { "enum": ["infanzia", "primaria", "secondaria_primo_grado", "secondaria_secondo_grado"] }
+              },
+              "valore": { "type": "integer", "minimum": 0, "maximum": 1000000 }
+            }
+          }
+        },
+        "fonte": { "$ref": "#/definitions/fonte" },
+        "nota": { "$ref": "#/definitions/nota" }
+      }
+    },
+    "condizione": {
+      "description": "Condizione: a bordo c'e' almeno uno dei gradi, dei tipi e delle esigenze elencati (tutti gli elenchi scritti devono valere).",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "gradi": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "enum": ["infanzia", "primaria", "secondaria_primo_grado", "secondaria_secondo_grado"] }
+        },
+        "tipi_gruppo": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "enum": ["studenti", "disabili", "utenti_linea", "adulti_autorizzati", "altro"] }
+        },
+        "esigenze": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "enum": ["carrozzina", "assistente", "altro"] }
+        },
+        "tipi_servizio": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "enum": ["linea", "scolastico", "disabili", "altro"] }
+        },
+        "tipi_centro": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "enum": ["diurno", "terapie", "socio_educativo", "altro"] }
+        },
+        "posti_passeggeri_oltre": {
+          "description": "Vale sui mezzi con piu' posti per i passeggeri di questo numero (conducente escluso).",
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 1000
+        }
+      },
+      "minProperties": 1
+    },
+    "regola": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["condizioni", "fonte"],
+      "properties": {
+        "condizioni": {
+          "description": "Basta che valga una delle condizioni.",
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/definitions/condizione" }
+        },
+        "fonte": { "$ref": "#/definitions/fonte" },
+        "nota": { "$ref": "#/definitions/nota" }
+      }
+    },
+    "insieme": {
+      "description": "Passeggeri di questi gradi o tipi.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "gradi": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "enum": ["infanzia", "primaria", "secondaria_primo_grado", "secondaria_secondo_grado"] }
+        },
+        "tipi_gruppo": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "enum": ["studenti", "disabili", "utenti_linea", "adulti_autorizzati", "altro"] }
+        }
+      },
+      "minProperties": 1
+    },
+    "parametri": {
+      "description": "Parametri del regolamento, tutti facoltativi. Il programma non conosce nessun valore: li legge da qui.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "attesa_massima_prima_minuti": {
+          "description": "Attesa massima a scuola prima dell'inizio delle lezioni.",
+          "$ref": "#/definitions/valore"
+        },
+        "attesa_massima_dopo_minuti": { "description": "Attesa massima dopo la fine delle lezioni.", "$ref": "#/definitions/valore" },
+        "distanza_massima_casa_fermata_m": { "$ref": "#/definitions/valore" },
+        "distanza_massima_fermata_scuola_m": { "$ref": "#/definitions/valore" },
+        "distanza_minima_tra_fermate_m": { "$ref": "#/definitions/valore" },
+        "distanza_minima_casa_scuola_m": { "$ref": "#/definitions/per_grado" },
+        "alunni_minimi_per_servizio": {
+          "description": "Numero minimo di alunni per attivare un servizio.",
+          "$ref": "#/definitions/per_grado"
+        },
+        "durata_massima_a_bordo_minuti": { "$ref": "#/definitions/per_grado" },
+        "assistente_a_bordo": { "description": "Quando serve l'assistente a bordo.", "$ref": "#/definitions/regola" },
+        "adulto_alla_discesa": { "description": "Quando serve un adulto alla fermata di discesa.", "$ref": "#/definitions/regola" },
+        "discesa_senza_adulto_con_autorizzazione": {
+          "description": "Gradi per cui la discesa senza adulto e' ammessa con l'autorizzazione dei genitori.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["gradi", "fonte"],
+          "properties": {
+            "gradi": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": { "enum": ["infanzia", "primaria", "secondaria_primo_grado", "secondaria_secondo_grado"] }
+            },
+            "fonte": { "$ref": "#/definitions/fonte" },
+            "nota": { "$ref": "#/definitions/nota" }
+          }
+        },
+        "passeggeri_in_piedi": {
+          "description": "Passeggeri in piedi: gradi esclusi, durata e km massimi.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["fonte"],
+          "properties": {
+            "non_ammessi_per_gradi": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": { "enum": ["infanzia", "primaria", "secondaria_primo_grado", "secondaria_secondo_grado"] }
+            },
+            "durata_massima_minuti": { "type": "integer", "minimum": 0, "maximum": 1440 },
+            "km_massimi": { "type": "number", "minimum": 0, "maximum": 10000 },
+            "fonte": { "$ref": "#/definitions/fonte" },
+            "nota": { "$ref": "#/definitions/nota" }
+          }
+        },
+        "combinazioni_vietate": {
+          "description": "Passeggeri che non possono viaggiare insieme.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["combinazioni", "fonte"],
+          "properties": {
+            "combinazioni": {
+              "type": "array",
+              "minItems": 1,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["primo", "secondo"],
+                "properties": {
+                  "primo": { "$ref": "#/definitions/insieme" },
+                  "secondo": { "$ref": "#/definitions/insieme" }
+                }
+              }
+            },
+            "fonte": { "$ref": "#/definitions/fonte" },
+            "nota": { "$ref": "#/definitions/nota" }
+          }
+        }
+      }
+    }
+  }
+}

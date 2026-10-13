@@ -1,7 +1,8 @@
 # Controllo automatico: a ogni proposta e a ogni salvataggio su main.
-# Compila senza warning (i warning del codice K-Zero diventano errori), prova i comandi,
-# esegue le prove e verifica le uscite JSON con gli schemi di docs/schema usando
-# uno strumento standard (check-jsonschema), indipendente dal codice di K-Zero.
+# Compila senza warning (i warning del codice K-Zero diventano errori), prova i comandi
+# (anche kzero controlla sui pacchetti di esempio), esegue le prove e verifica le uscite JSON
+# e i file dei pacchetti di esempio con gli schemi di docs/schema usando uno strumento standard
+# (check-jsonschema), indipendente dal codice di K-Zero.
 name: Controllo
 
 on:
@@ -29,6 +30,8 @@ jobs:
           ./build/kzero descrivi
           ./build/kzero dimostrazione
           ./build/kzero dimostrazione --formato json
+          ./build/kzero controlla esempi/demo
+          ./build/kzero controlla esempi/demo-numeri --formato json
       - name: Esegui le prove
         run: ctest --test-dir build --output-on-failure --label-exclude schemi
       - name: Verifica degli schemi JSON

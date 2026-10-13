@@ -11,7 +11,7 @@
 namespace kzero::api {
 
 inline constexpr const char* kNomeProgramma = "kzero";
-inline constexpr const char* kUso = "kzero <comando> [parametri]";
+inline constexpr const char* kUso = "kzero <comando> [argomenti] [parametri]";
 // Frase finale dei messaggi di errore sui parametri: indica dove trovare l'elenco completo.
 inline constexpr const char* kVediDescrivi = " Elenco completo di comandi e parametri: kzero descrivi.";
 
@@ -19,6 +19,14 @@ inline constexpr const char* kVediDescrivi = " Elenco completo di comandi e para
 struct Parametri {
     Formato formato = Formato::Testo;
     bool includi_dati_personali = false;
+    bool includi_dati_particolari = false;
+    std::vector<std::string> argomenti;   // argomenti del comando (es. la cartella), nell'ordine della definizione
+};
+
+// Argomento obbligatorio scritto senza nome, dopo il comando (es. kzero controlla <cartella>).
+struct DefinizioneArgomento {
+    std::string nome;          // "cartella"
+    std::string descrizione;
 };
 
 enum class TipoParametro {
@@ -40,13 +48,21 @@ struct DefinizioneParametro {
 inline constexpr const char* kParametroFormato = "--formato";
 inline constexpr const char* kFormatoJson = "json";
 
+// Risultato di un comando: l'uscita completa (testo o JSON) e il codice di uscita
+// (0 riuscito; 1 se il comando ha trovato errori nei dati, es. kzero controlla).
+struct Risultato {
+    std::string uscita;
+    int codice = 0;
+};
+
 struct DefinizioneComando;
-// Esegue il comando e restituisce l'uscita completa (testo o JSON).
-using Esecutore = std::string (*)(const DefinizioneComando&, const Parametri&);
+// Esegue il comando e restituisce il risultato.
+using Esecutore = Risultato (*)(const DefinizioneComando&, const Parametri&);
 
 struct DefinizioneComando {
     std::string nome;
     std::string descrizione;
+    std::vector<DefinizioneArgomento> argomenti;   // obbligatori, nell'ordine in cui si scrivono
     std::vector<DefinizioneParametro> parametri;   // in ordine alfabetico, --formato compreso
     Schema schema;                                 // schema della sua uscita JSON
     Esecutore esegui = nullptr;
@@ -58,10 +74,16 @@ const std::vector<DefinizioneComando>& comandi();
 // Comando con quel nome, oppure nullptr.
 const DefinizioneComando* trova_comando(const std::string& nome);
 
-// Nomi dei comandi separati da virgola: "descrivi, dimostrazione, versione".
+// Nomi dei comandi separati da virgola: "controlla, descrivi, dimostrazione, versione".
 std::string nomi_comandi();
 
-// Tutti gli schemi delle uscite JSON (comandi ed errore), in ordine alfabetico.
+// Come si scrive il comando: "kzero controlla <cartella> [parametri]".
+std::string forma_comando(const DefinizioneComando& c);
+
+// Tutti gli schemi delle uscite JSON prodotte oggi (comandi ed errore), in ordine alfabetico.
 std::vector<Schema> schemi();
+
+// Schemi di uscite non piu' prodotte, tenuti per controllare i documenti salvati prima.
+const std::vector<Schema>& schemi_ritirati();
 
 }  // namespace kzero::api

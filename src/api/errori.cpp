@@ -33,6 +33,8 @@ const std::vector<DefinizioneErrore>& catalogo_errori() {
             {Errore::ErroreInterno, "K-ERR-009", CodiceUscita::ErroreInterno, "Errore interno"},
             {Errore::UscitaNonScrivibile, "K-ERR-010", CodiceUscita::ErroreInterno,
              "Impossibile scrivere il risultato"},
+            {Errore::MancaArgomento, "K-ERR-011", CodiceUscita::ErroreParametri, "Manca un argomento"},
+            {Errore::CartellaNonTrovata, "K-ERR-012", CodiceUscita::ErroreDati, "Cartella del pacchetto non trovata"},
         };
         std::sort(c.begin(), c.end(), [](const DefinizioneErrore& a, const DefinizioneErrore& b) {
             return a.codice < b.codice;

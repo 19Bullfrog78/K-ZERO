@@ -27,10 +27,6 @@ double arrotonda(double valore, int decimali) {
     return r == 0.0 ? 0.0 : r;   // niente "-0.0" nell'uscita
 }
 
-std::string orario(Minutes m) {
-    const int h = (m / 60) % 24, mm = m % 60;
-    std::string s = std::to_string(h) + ":" + (mm < 10 ? "0" : "") + std::to_string(mm);
-    return h < 10 ? "0" + s : s;
-}
+std::string orario(Minutes m) { return kzero::text_from_minutes(m); }
 
 }  // namespace kzero::api

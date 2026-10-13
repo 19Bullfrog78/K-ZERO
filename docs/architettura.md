@@ -2,10 +2,14 @@
 
 ## In breve
 
+K-Zero e' universale: aziende, consorzi ed enti di ogni dimensione e di ogni paese; nel programma non c'e'
+nulla di specifico di un'azienda o di un territorio (le regole locali sono dati).
+
 K-Zero ha due utenti: **una persona** (chi pianifica) e **un'AI** (un assistente che lavora per lei).
 Tutti e due usano lo stesso programma, `kzero`, con gli stessi comandi. La persona legge l'uscita
 in **testo** (italiano chiaro); l'AI legge l'uscita in **JSON**, descritta da **schemi** pubblici.
-Gli errori hanno sempre un **codice fisso** (`K-ERR-nnn`).
+Gli errori del programma hanno sempre un **codice fisso** (`K-ERR-nnn`), i problemi nei dati anche
+(`K-CTR-nnn`, vedi docs/controlli.md).
 
 Il programma e' diviso in tre piani, uno sopra l'altro:
 
@@ -28,13 +32,25 @@ Il programma e' diviso in tre piani, uno sopra l'altro:
 - Contiene il modello dati, le regole del mestiere (REGOLE.md) e il calcolo (OR-Tools, quando arrivera').
 - **Non stampa nulla, non scrive file, non legge la riga di comando** e non usa le librerie dell'API
   (CLI11, nlohmann/json). Lo controlla la prova `architettura.nucleo_senza_stampa`.
-- Riceve dati gia' controllati e restituisce risultati. Per questo si prova da solo (GoogleTest),
-  senza passare dalla riga di comando.
-- Oggi: `domain_models.hpp` (modello e regole) e `dimostrazione.cpp` (scenario con dati inventati).
+- Riceve dati gia' controllati nella forma (dagli schemi, nell'API) e restituisce risultati. Per questo si
+  prova da solo (GoogleTest), senza passare dalla riga di comando.
+- **Nessun valore di regola e nessun nome di committente nel codice**: le regole di un territorio stanno
+  nei regolamenti, che sono dati (docs/formato-dati.md). Il nucleo sa *come* si applica una regola
+  (es. "assistente se a bordo c'e' l'infanzia e il mezzo ha piu' di N posti"), non *quanto* vale N.
+- Oggi:
+
+| File | Compito |
+|---|---|
+| `domain_models.hpp` | Il modello dati (luoghi, regolamenti, calendari, scuole, contratti, servizi con la domanda, corse con i passaggi, mezzi, rimesse) e le regole del mestiere sulle corse (categoria ricavata, posti, assistente). |
+| `tempo.cpp` | Date e orari (anche oltre le 24:00). |
+| `pacchetto.cpp` | Indice dei codici, calendari (eccezioni, sospensioni, calendario di base), persone a bordo. |
+| `ricerca.cpp` | Normalizzazione dei nomi e ricerca dei luoghi per nome o codice esterno. |
+| `controlli.cpp` | Controlli sul contenuto di un pacchetto: ogni problema con il suo tipo, la posizione e i valori, **senza testi** (i testi stanno nel catalogo dell'API). |
+| `dimostrazione.cpp` | Alcune regole applicate ai dati di un pacchetto: nessun dato scritto nel codice. |
 
 ## Piano 2 - API (`src/api`): il contratto ufficiale
 
-- **Oggi** l'API e' la riga di comando: `kzero <comando> [parametri]`, con uscita in testo o JSON.
+- **Oggi** l'API e' la riga di comando: `kzero <comando> [argomenti] [parametri]`, con uscita in testo o JSON.
 - **Domani**, quando ci saranno piu' utenti, la stessa API si potra' offrire via HTTP con una descrizione
   OpenAPI: stessi comandi, stessi documenti JSON. Gli schemi draft-07 di oggi si riusano con piccoli
   adattamenti (OpenAPI 3.1 usa JSON Schema).
@@ -42,15 +58,24 @@ Il programma e' diviso in tre piani, uno sopra l'altro:
 
 | File | Compito |
 |---|---|
-| `comandi.cpp` | **Tabella dei comandi**: nome, descrizione, parametri, schema dell'uscita. E' l'unico posto dove si dichiarano. Da qui nascono la lettura dei parametri e `kzero descrivi`. |
+| `comandi.cpp` | **Tabella dei comandi**: nome, descrizione, argomenti, parametri, schema dell'uscita. E' l'unico posto dove si dichiarano. Da qui nascono la lettura dei parametri e `kzero descrivi`. |
 | `parametri.cpp` | Lettura dei parametri con CLI11; i controlli e i messaggi in italiano sono di K-Zero. |
 | `errori.cpp` | Catalogo dei codici K-ERR e presentazione degli errori in testo o JSON. |
 | `uscita.cpp` | Strumenti comuni: documento JSON con "schema" e "schema_versione", arrotondamenti, orari. |
 | `comando_*.cpp` | Un file per comando: chiede i risultati al nucleo e li presenta in testo o JSON. |
 | `esegui.cpp` | Dalla riga di comando all'esito: prepara tutto in memoria (`esegui`), poi lo scrive (`consegna`). Cosi' un errore non lascia mai un risultato a meta'. |
+| `formato_dati.cpp` | Elenco dei file di un pacchetto, con lo schema e le versioni che il programma sa leggere. |
+| `lettore.cpp` | Lettura di un pacchetto: JSON valido e senza campi ripetuti, schema e versione giusti, rispetto dello schema; poi la conversione nel modello del nucleo. Un file con un errore di forma non viene usato. |
+| `validazione.cpp` | Controllo con gli schemi (libreria valijson) e messaggi della libreria tradotti in italiano. |
+| `schemi_dati.cpp` | Schemi dei file di dati incorporati nel programma e **classe di ogni campo** (comune, personale, particolare), letta dalla marcatura dello schema. |
+| `controlli_catalogo.cpp` | Catalogo dei controlli K-CTR: codice, livello, descrizione e testo dei messaggi (unico posto da tradurre). Presenta i messaggi seguendo le classi dei dati. |
+| `controllo.cpp` | Controllo completo di un pacchetto: forma, poi contenuto; ordine stabile dei problemi. |
 
-- I futuri **lettori dei file di dati** (K-007 formato standard, K-008 file del CTA) staranno in questo
-  piano: trasformano i file nel modello del nucleo e segnalano gli errori con file, riga e colonna.
+- **I file incorporati**: gli schemi di `docs/schema` e il pacchetto dimostrativo `esempi/demo` entrano
+  nel programma quando si compila (`cmake/incorpora.cmake`). Cosi' `kzero` controlla i dati sempre con
+  gli schemi con cui e' stato compilato e `kzero dimostrazione` funziona da qualunque cartella.
+- I futuri **lettori di file esterni** (es. il file alunni del CTA, i dati aperti GTFS) staranno in questo
+  piano: trasformeranno quei file nel formato K-Zero.
 
 ## Piano 3 - Adattatori
 
@@ -68,8 +93,10 @@ Il programma e' diviso in tre piani, uno sopra l'altro:
    `"schema"` e `"schema_versione"`. Lo schema e' il file `docs/schema/<schema>.v<schema_versione>.schema.json`.
 3. Se il codice di uscita non e' 0, il risultato e' vuoto e l'uscita di errore contiene un documento
    `errore`: codice `K-ERR-nnn` (spiegato in docs/errori.md), messaggio, posizione quando esiste.
-4. Di base il JSON non contiene dati personali: solo codici e conteggi. Il formato testo invece e' pensato
-   per le persone e li mostra: **un agente AI deve usare il JSON**.
+4. Di base l'uscita (testo e JSON) non contiene dati personali (al loro posto c'e' il codice
+   dell'elemento) ne' particolari (al loro posto c'e' `"riservato"`). Un agente AI deve usare il JSON.
+5. Per i dati: `kzero controlla <cartella> --formato json` controlla un pacchetto e dice cosa correggere,
+   con codice K-CTR e posizione (file + percorso JSON).
 
 ## Regole del contratto
 
@@ -77,7 +104,7 @@ Sono elencate in CLAUDE.md ("Principi uomo + AI") e valgono per ogni comando fut
 un solo eseguibile con comandi; `--formato testo|json`; schema e versione in ogni JSON; errori con codice
 fisso; codici di uscita 0 riuscito, 1 dati, 2 parametri, 3 interno; stesso input = stesso output
 (niente orologio ne' caso, date solo con `--data`); nessun file scritto senza `--scrivi`; dati personali
-solo con `--includi-dati-personali`.
+solo con `--includi-dati-personali`, dati particolari solo con `--includi-dati-particolari`.
 
 Scelte di dettaglio:
 - il comando e' sempre il primo argomento; non c'e' `--help`: la descrizione completa e' `kzero descrivi`
@@ -86,9 +113,37 @@ Scelte di dettaglio:
 - se la forma di un'uscita JSON cambia, cambia `schema_versione` e si aggiunge un nuovo file di schema;
 - gli elenchi escono in ordine fisso (alfabetico, o per codice);
 - nel JSON i valori calcolati sono arrotondati: km al metro, euro al centesimo;
-- i dati personali stanno in un unico blocco `dati_personali`, collegato al resto dai codici.
-  Nel servizio porta a porta la fermata e' la casa del passeggero: per questo anche i luoghi delle
-  fermate sono dati personali.
+- un orario oltre le 24:00 resta tale anche in uscita ("25:30").
+
+## Dati: tre classi, due livelli
+
+Ogni campo dei file di dati e' marcato nel suo schema con una **classe** (spiegazione completa in
+docs/formato-dati.md):
+- **comune**: fermate pubbliche, scuole e centri, orari, calendari, conteggi senza esigenze, mezzi,
+  aziende, committenti, contratti, regolamenti, tutti i codici;
+- **personale**: nomi, indirizzi, case, punti porta a porta (sono la casa del passeggero), ricoveri presso
+  la casa di una persona, motivi scritti a mano;
+- **particolare** (salute): esigenze di persone e gruppi, tipo di servizio e di gruppo ("disabili"),
+  conteggi di carrozzine.
+
+Il filtro delle uscite parte dalla marcatura dello schema ed e' **uguale per testo e JSON**: di base un dato
+personale e' sostituito dal codice del suo elemento, un dato particolare diventa `"riservato"`; con
+`--includi-dati-personali` e `--includi-dati-particolari` compaiono. Vale anche nei messaggi dei controlli
+(es. il nome di una casa, il valore sbagliato di un campo particolare). Un campo senza marcatura vale come
+particolare, per prudenza; una prova controlla che tutti i campi siano marcati.
+
+Il **livello** del pacchetto ("solo numeri", consigliato, oppure "completo") dice se ci possono essere
+passeggeri uno per uno e case; un pacchetto "solo numeri" che li contiene e' un errore (K-CTR-019).
+Il formato non ha campi per codice fiscale, telefoni, mail: K-Zero non li conserva mai.
+
+## Il regolamento come dato
+
+Le regole di un territorio o di un committente (attese massime, distanze, alunni minimi, assistente,
+adulto alla fermata, passeggeri in piedi...) stanno in un **regolamento**, un file di dati con la fonte di
+ogni valore. Ogni contratto indica il suo regolamento. Il pacchetto demo ne ha due: le regole pubbliche
+della Provincia di Trento e un regolamento inventato con valori diversi; le prove controllano che lo stesso
+dato dia esiti diversi con i due regolamenti. Cosi' K-Zero puo' lavorare in Sicilia come in Germania senza
+cambiare il codice.
 
 ## Come si aggiunge un comando
 
@@ -98,24 +153,39 @@ Scelte di dettaglio:
 4. Eventuali nuovi errori nel catalogo (`src/api/errori.cpp`) e in docs/errori.md.
 5. Le prove in `tests/CMakeLists.txt` (`kzero_prova(...)`).
 
-`kzero descrivi` si aggiorna da solo; le prove controllano che docs/errori.md e docs/schema coincidano.
+`kzero descrivi` si aggiorna da solo; le prove controllano che docs/errori.md, docs/controlli.md,
+docs/formato-dati.md e docs/schema coincidano con il programma.
+
+## Come si aggiunge un controllo sui dati
+
+1. Un valore nuovo in `Check` (src/nucleo/controlli.hpp) e il controllo in `controlli.cpp` (senza testi).
+2. Una voce nel catalogo (`src/api/controlli_catalogo.cpp`) con il codice K-CTR successivo, il livello e
+   il testo dei messaggi; la riga in docs/controlli.md.
+3. Una prova nel nucleo (tests/test_controlli.cpp) e, per un errore, un pacchetto rotto in
+   tests/CMakeLists.txt (`kzero_rotto(...)`: il demo con un solo valore cambiato).
 
 ## Prove
 
 | Etichetta | Cosa controlla |
 |---|---|
-| `nucleo` | Regole del mestiere e scenario di dimostrazione (GoogleTest). |
-| `api` | Tabella dei comandi, catalogo degli errori, errori con posizione, guasto in scrittura (GoogleTest). |
-| `programma` | Lanciano `kzero` due volte: codice di uscita, K-ERR con uscita 2 per i parametri sbagliati, JSON valido, uscite identiche byte per byte, nessun dato personale nel JSON di base, stampa di prova uguale a quella di sempre. |
-| `documentazione` | docs/errori.md e docs/schema coincidono con `kzero descrivi`. |
+| `nucleo` | Regole del mestiere, date e orari, ricerca e normalizzazione, calendari, persone a bordo, ogni controllo sul contenuto, dimostrazione (GoogleTest, con i dati del pacchetto demo). |
+| `api` | Tabella dei comandi, cataloghi degli errori e dei controlli, controlli sulla forma dei file, messaggi in italiano, classi dei dati e loro filtro (GoogleTest). |
+| `programma` | Lanciano `kzero` due volte: codice di uscita, K-ERR per i parametri sbagliati, JSON valido, uscite identiche byte per byte, dati personali e particolari assenti di base e presenti con il parametro, `kzero controlla` sui pacchetti di esempio e su un pacchetto rotto per ogni errore (il demo con un solo valore cambiato), due regolamenti con esiti diversi. |
+| `documentazione` | docs/errori.md, docs/controlli.md, docs/formato-dati.md e docs/schema coincidono con `kzero descrivi`; la tabella delle lettere di docs/formato-dati.md coincide con il programma. |
 | `architettura` | Il nucleo non stampa e non legge la riga di comando. |
-| `schemi` | Con lo strumento standard check-jsonschema: schemi validi per draft-07; ogni uscita JSON delle prove rispetta lo schema che dichiara. |
+| `schemi` | Con lo strumento standard check-jsonschema: schemi validi per draft-07; ogni uscita JSON delle prove e ogni file dei pacchetti di esempio rispetta lo schema che dichiara. |
+| `scala` | Un pacchetto grande generato con un seme fisso (600 mezzi, 5.000 fermate, 10.000 corse) passa `kzero controlla` senza errori. Tempo e memoria si annotano nel DIARIO, non sono una soglia della prova. |
 
 ## Limiti noti
 
-- Il formato testo mostra sempre i dati personali (e' per le persone): la protezione vale per il JSON.
-- Nessun comando di oggi legge dati: il codice di uscita 1 (errore nei dati) e le posizioni negli errori
-  saranno usati da K-007 e K-008 (il formato e' gia' pronto e provato).
+- Classi dei dati: i nomi di scuole e centri, dei servizi e dei gruppi sono dati comuni (come chiede il
+  formato) ma sono testi liberi: un nome come "Centro diurno" o un centro di tipo "terapie" lasciano intuire
+  un dato sulla salute. Chi scrive i dati deve evitare nomi che rivelano dati personali o particolari.
+- Ricerca: le lettere di altri alfabeti (greco, cirillico...) non vengono ricondotte all'alfabeto latino.
+- Ora legale: gli orari sono orari dell'orologio; nei due giorni del cambio una corsa che attraversa le
+  02:00-03:00 dura un'ora in piu' o in meno di quanto risulta (docs/formato-dati.md).
+- I messaggi della libreria di validazione sono in inglese e vengono tradotti: un messaggio che la
+  traduzione non conosce compare come "non rispetta lo schema (...)" con il testo originale.
 - Windows (K-009): argomenti con lettere accentate e a capo "CR LF" sono da sistemare e provare li'.
 - Stesso input = stesso output vale a parita' di programma e di sistema. Tra sistemi diversi i valori
   calcolati con decimali potrebbero differire all'ultima cifra: per questo il JSON li arrotonda.

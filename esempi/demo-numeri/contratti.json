@@ -1,0 +1,39 @@
+{
+  "schema": "contratti",
+  "schema_versione": 1,
+  "contratti": [
+    {
+      "codice": "CT-SCU",
+      "nome": "Trasporto scolastico e disabili, lotto 2",
+      "committente": "CVA",
+      "azienda": "ALFA",
+      "regolamento": "R-TN",
+      "valido_dal": "2026-09-01",
+      "valido_al": "2027-08-31",
+      "assistente_fornito_da": "committente",
+      "regole": { "durata_massima_a_bordo_minuti": 60, "categoria_riconosciuta": "M2" }
+    },
+    {
+      "codice": "CT-ASILO",
+      "nome": "Trasporto della scuola dell'infanzia di Lagobello",
+      "committente": "CVA",
+      "azienda": "BETA",
+      "regolamento": "R-TN",
+      "valido_dal": "2026-09-01",
+      "valido_al": "2027-08-31",
+      "assistente_fornito_da": "azienda",
+      "regole": { "durata_massima_a_bordo_minuti": 45 }
+    },
+    {
+      "codice": "CT-LIN",
+      "nome": "Linee e supporto alle linee",
+      "committente": "TPV",
+      "azienda": "ALFA",
+      "regolamento": "R-INV",
+      "valido_dal": "2026-09-01",
+      "valido_al": "2027-08-31",
+      "assistente_fornito_da": "committente",
+      "regole": { "posti_minimi": 30, "posti_massimi": 54, "categoria_riconosciuta": "M3" }
+    }
+  ]
+}

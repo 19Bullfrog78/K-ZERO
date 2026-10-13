@@ -1,171 +1,303 @@
-// K-Zero - prove automatiche delle regole del mestiere (REGOLE.md) con i dati di prova.
+// K-Zero - prove automatiche delle regole del mestiere (REGOLE.md) sui dati del pacchetto demo (esempi/demo).
 // Ogni TEST viene trovato da solo da CTest (gtest_discover_tests): non va elencato altrove.
-#include <vector>
+#include <optional>
+#include <string>
 
 #include <gtest/gtest.h>
 
 #include "domain_models.hpp"
+#include "pacchetto.hpp"
+#include "pacchetto_demo.hpp"
 
 using namespace kzero;
+using namespace kzero::prove;
 
-// --- Dati di prova (gli stessi di src/main.cpp, valori inventati) ----------
+namespace {
 
-static const std::vector<Destination> destinations = {
-    {1, "Scuola Media Cles", DestinationKind::School, {46.3650, 11.0340},
-     {7 * 60 + 40, 7 * 60 + 55}, {13 * 60, 13 * 60 + 15}},
-    {2, "Primaria Revo'", DestinationKind::School, {46.3920, 11.0610},
-     {7 * 60 + 55, 8 * 60 + 10}, {12 * 60 + 30, 12 * 60 + 45}},
-    {3, "Doposcuola Cles", DestinationKind::ExternalCenter, {46.3630, 11.0360},
-     {13 * 60 + 10, 13 * 60 + 30}, {17 * 60, 17 * 60 + 30}},
-    {4, "Scuola dell'infanzia Rumo", DestinationKind::Kindergarten, {46.4420, 11.0170},
-     {8 * 60, 8 * 60 + 30}, {15 * 60 + 30, 16 * 60}},
-};
+const Vehicle& minibus16() { return per_codice(demo().vehicles, "ALFA-01"); }    // 16 posti, senza pedana
+const Vehicle& attrezzato() { return per_codice(demo().vehicles, "ALFA-03"); }   // 12 posti, 2 carrozzine, 3 posti persi l'una
+const Vehicle& senza_bagagliaio() { return per_codice(demo().vehicles, "ALFA-02"); }  // 16 posti, ausili tra i sedili (2 posti)
+const Vehicle& auto_() { return per_codice(demo().vehicles, "ALFA-04"); }        // 4 posti, bagagliaio per 1 ausilio
 
-static const std::vector<Passenger> passengers = {
-    {101, PassengerKind::Student, "Rumo, fraz. Marcena", {46.4410, 11.0190}, 1, 7 * 60 + 55, 13 * 60, 0, false, false, 1, 0},
-    {102, PassengerKind::Student, "Livo, piazza", {46.4030, 11.0190}, 1, 7 * 60 + 55, 13 * 60, 0, false, false, 1, 0},
-    {103, PassengerKind::Disability, "Cagno', via Centrale", {46.3960, 11.0450}, 1, 7 * 60 + 55, 13 * 60, 0, true, true, 5, 45},
-    {104, PassengerKind::Student, "Cles, Scuola Media", {46.3650, 11.0340}, 3, 13 * 60 + 30, 17 * 60, 0, false, false, 1, 0},
-    // Passeggero handicap senza accompagnatore: serve per la corsa "solo handicap"
-    {105, PassengerKind::Disability, "Cles, via Roma", {46.3640, 11.0330}, 1, 7 * 60 + 55, 13 * 60, 0, false, false, 3, 0},
-};
+Load seduti(int n, bool assistente = false) { return {n, 0, 0, assistente}; }
+Load con_carrozzine(int seduti, int carrozzine) { return {seduti, carrozzine, 0, false}; }
+Load con_ausili(int seduti, int ausili) { return {seduti, 0, ausili, false}; }
 
-static const Vehicle minibus16 = {1, "MINIBUS-1", VehicleType::Minibus, Powertrain::Thermal, 16, 0, 0, false, 0, 45.0,
-                                  {46.4400, 11.0200}, {46.4400, 11.0200}, 0.55, 0.11, 900};
-static const Vehicle attrezzato = {2, "MINIBUS-2", VehicleType::Accessible, Powertrain::Thermal, 12, 2, 3, true, 6, 50.0,
-                                   {46.4400, 11.0200}, {46.4400, 11.0200}, 0.55, 0.11, 900};
-
-static const Passenger* find_p(Id id) {
-    for (const auto& p : passengers) if (p.id == id) return &p;
-    return nullptr;
-}
-static const Destination* find_d(Id id) {
-    for (const auto& d : destinations) if (d.id == id) return &d;
-    return nullptr;
+std::optional<ServiceType> categoria(const Package& p, const std::string& corsa) {
+    return Index(p).category(per_codice(p.trips, corsa));
 }
 
-static Route corsa(std::vector<Id> pass, std::vector<Id> dest, bool linea = false) {
-    Route r;
-    r.passenger_ids = std::move(pass);
-    r.destination_ids = std::move(dest);
-    r.carries_line_users = linea;
-    return r;
+const ConditionsRule* regola_assistente(const std::string& regolamento) {
+    const Regulation& r = per_codice(demo().regulations, regolamento);
+    return r.assistant ? &*r.assistant : nullptr;
 }
 
-static ServiceType categoria(const Route& r) { return derive_service(r, find_p, find_d); }
+OnBoard a_bordo_grado(Grade g) {
+    OnBoard b;
+    b.grades = {g};
+    return b;
+}
 
-// --- Prove -------------------------------------------------------------------
+}  // namespace
 
-// 38 ragazzi su un 16 posti: servono 3 giri.
+// La domanda del servizio S-SCU-AM: 38 ragazzi; su un 16 posti servono 3 giri (come le tre corse del demo).
 TEST(Regole, giri_38_su_16) {
-    EXPECT_EQ(trips_needed(minibus16, 38), 3);
-    EXPECT_EQ(trips_needed(minibus16, 16), 1);
-    EXPECT_EQ(trips_needed(minibus16, 17), 2);
+    int ragazzi = 0;
+    for (const PassengerGroup& g : per_codice(demo().services, "S-SCU-AM").groups) ragazzi += g.total_boarding();
+    EXPECT_EQ(ragazzi, 38);
+    EXPECT_EQ(minibus16().seats, 16);
+    EXPECT_EQ(trips_needed(minibus16(), ragazzi), 3);
+    EXPECT_EQ(trips_needed(minibus16(), 16), 1);
+    EXPECT_EQ(trips_needed(minibus16(), 17), 2);
 }
 
 // L'assistente occupa un posto.
 TEST(Regole, assistente_occupa_un_posto) {
-    EXPECT_TRUE(fits(minibus16, 16, 0, false));    // 16 bambini da soli: ci stanno
-    EXPECT_FALSE(fits(minibus16, 16, 0, true));    // 16 bambini + assistente: no
-    EXPECT_TRUE(fits(minibus16, 15, 0, true));     // 15 bambini + assistente: si'
+    EXPECT_TRUE(fits(minibus16(), seduti(16)));          // 16 bambini da soli: ci stanno
+    EXPECT_FALSE(fits(minibus16(), seduti(16, true)));   // 16 bambini + assistente: no
+    EXPECT_TRUE(fits(minibus16(), seduti(15, true)));    // 15 bambini + assistente: si'
 }
 
-// Ogni carrozzina toglie posti a sedere (attrezzato: 12 posti, 3 persi per carrozzina, max 2).
+// Ogni carrozzina toglie posti a sedere (ALFA-03: 12 posti, 3 persi per carrozzina, al massimo 2).
 TEST(Regole, carrozzina_toglie_posti) {
-    EXPECT_TRUE(fits(attrezzato, 12, 0));
-    EXPECT_FALSE(fits(attrezzato, 10, 1));   // 12 - 3 = 9 posti
-    EXPECT_TRUE(fits(attrezzato, 9, 1));
-    EXPECT_FALSE(fits(attrezzato, 7, 2));    // 12 - 6 = 6 posti
-    EXPECT_TRUE(fits(attrezzato, 6, 2));
-    EXPECT_FALSE(fits(attrezzato, 0, 3));    // oltre le carrozzine ammesse
+    EXPECT_TRUE(fits(attrezzato(), seduti(12)));
+    EXPECT_FALSE(fits(attrezzato(), con_carrozzine(10, 1)));   // 12 - 3 = 9 posti
+    EXPECT_TRUE(fits(attrezzato(), con_carrozzine(9, 1)));
+    EXPECT_FALSE(fits(attrezzato(), con_carrozzine(7, 2)));    // 12 - 6 = 6 posti
+    EXPECT_TRUE(fits(attrezzato(), con_carrozzine(6, 2)));
+    EXPECT_FALSE(fits(attrezzato(), con_carrozzine(0, 3)));    // oltre le carrozzine ammesse
 }
 
 // Senza pedana nessuna carrozzina.
 TEST(Regole, senza_pedana_nessuna_carrozzina) {
-    EXPECT_FALSE(fits(minibus16, 0, 1));
-    Vehicle senza_pedana = attrezzato;
+    EXPECT_FALSE(fits(minibus16(), con_carrozzine(0, 1)));
+    Vehicle senza_pedana = attrezzato();
     senza_pedana.has_ramp = false;
-    EXPECT_FALSE(fits(senza_pedana, 0, 1));
+    EXPECT_FALSE(fits(senza_pedana, con_carrozzine(0, 1)));
 }
 
-// Gruppi diversi sulla stessa corsa = Ibrido.
+// Auto con la carrozzina piegata nel bagagliaio e il passeggero dietro: ammesso, nessun posto perso.
+TEST(Regole, auto_carrozzina_piegata_nel_bagagliaio) {
+    EXPECT_EQ(auto_().aids_in_trunk, 1);
+    EXPECT_FALSE(auto_().has_ramp);
+    const Fit f = fits(auto_(), con_ausili(1, 1));
+    EXPECT_TRUE(f.admitted);
+    EXPECT_EQ(f.aids_in_trunk, 1);
+    EXPECT_EQ(f.aids_between_seats, 0);
+    EXPECT_EQ(f.free_seats, 3);
+    EXPECT_TRUE(fits(auto_(), con_ausili(4, 1)));    // auto piena: il bagagliaio non toglie posti
+    EXPECT_FALSE(fits(auto_(), con_ausili(1, 2)));   // il secondo ausilio non ha posto: tra i sedili non e' ammesso
+}
+
+// Minibus senza bagagliaio: l'ausilio va tra i sedili, legato e bloccato, e occupa 2 posti se sono liberi.
+TEST(Regole, minibus_senza_bagagliaio_ausilio_tra_i_sedili) {
+    EXPECT_EQ(senza_bagagliaio().aids_in_trunk, 0);
+    ASSERT_TRUE(senza_bagagliaio().seats_per_aid_between.has_value());
+    EXPECT_EQ(*senza_bagagliaio().seats_per_aid_between, 2);
+    const Fit f = fits(senza_bagagliaio(), con_ausili(10, 1));
+    EXPECT_TRUE(f.admitted);
+    EXPECT_EQ(f.aids_in_trunk, 0);
+    EXPECT_EQ(f.aids_between_seats, 1);
+    EXPECT_EQ(f.free_seats, 4);   // 16 - 2 - 10: due posti in meno
+    EXPECT_TRUE(fits(senza_bagagliaio(), con_ausili(14, 1)));
+    // Stesso minibus pieno: i posti per l'ausilio non ci sono, non e' ammesso.
+    EXPECT_FALSE(fits(senza_bagagliaio(), con_ausili(16, 1)));
+    EXPECT_FALSE(fits(senza_bagagliaio(), con_ausili(15, 1)));
+    // Un mezzo che non ha bagagliaio e non ammette ausili tra i sedili non porta ausili piegati.
+    EXPECT_FALSE(fits(minibus16(), con_ausili(0, 1)));
+}
+
+// Minibus con il bagagliaio: gli ausili vanno li' e non si perde nessun posto; prima il bagagliaio, poi tra i sedili.
+TEST(Regole, minibus_con_bagagliaio_nessun_posto_perso) {
+    Vehicle con_bagagliaio = minibus16();
+    con_bagagliaio.aids_in_trunk = 2;
+    const Fit f = fits(con_bagagliaio, con_ausili(16, 2));
+    EXPECT_TRUE(f.admitted);
+    EXPECT_EQ(f.aids_in_trunk, 2);
+    EXPECT_EQ(f.free_seats, 0);
+    EXPECT_FALSE(fits(con_bagagliaio, con_ausili(0, 3)));   // il terzo non entra e tra i sedili non e' ammesso
+
+    Vehicle tutti_e_due = senza_bagagliaio();
+    tutti_e_due.aids_in_trunk = 1;
+    const Fit g = fits(tutti_e_due, con_ausili(10, 2));
+    EXPECT_TRUE(g.admitted);
+    EXPECT_EQ(g.aids_in_trunk, 1);
+    EXPECT_EQ(g.aids_between_seats, 1);
+    EXPECT_EQ(g.free_seats, 4);   // solo il secondo ausilio occupa posti
+}
+
+// La carrozzina piegata non chiede la pedana: su un mezzo senza pedana e' ammessa, la persona seduta sulla
+// carrozzina no. Carrozzina, assistente e ausilio insieme si sommano.
+TEST(Regole, carrozzina_piegata_senza_pedana) {
+    Vehicle senza_pedana = minibus16();
+    senza_pedana.aids_in_trunk = 1;
+    EXPECT_FALSE(senza_pedana.has_ramp);
+    EXPECT_TRUE(fits(senza_pedana, con_ausili(1, 1)));         // seduta su un posto, carrozzina piegata nel bagagliaio
+    EXPECT_FALSE(fits(senza_pedana, con_carrozzine(0, 1)));    // seduta sulla carrozzina: serve la pedana
+
+    Vehicle tutto = attrezzato();   // 12 posti, 3 persi per carrozzina
+    tutto.seats_per_aid_between = 2;
+    EXPECT_TRUE(fits(tutto, {6, 1, 1, true}));    // 12 - 3 - 1 (assistente) - 2 (ausilio) - 6 = 0
+    EXPECT_FALSE(fits(tutto, {7, 1, 1, true}));
+}
+
+// Gruppi di tipi diversi sulla stessa corsa = Ibrido. La corsa C-AM-2 porta due gruppi di studenti
+// (medie e primaria): basta cambiare il tipo di uno dei due.
 TEST(Regole, gruppi_diversi_ibrido) {
-    EXPECT_EQ(categoria(corsa({101, 103}, {1})), ServiceType::Hybrid);        // studenti + handicap
-    EXPECT_EQ(categoria(corsa({101}, {1}, true)), ServiceType::Hybrid);       // studenti + linea
-    EXPECT_EQ(categoria(corsa({105}, {1}, true)), ServiceType::Hybrid);       // handicap + linea
+    EXPECT_EQ(categoria(demo(), "C-AM-2"), ServiceType::School);
+    const auto con_tipi = [](GroupType medie, GroupType primaria) {
+        Package p = demo();
+        gruppo(p, "G-AM-MEDIE").type = medie;
+        gruppo(p, "G-AM-PRIM").type = primaria;
+        return categoria(p, "C-AM-2");
+    };
+    EXPECT_EQ(con_tipi(GroupType::Students, GroupType::Disabled), ServiceType::Hybrid);    // studenti + disabili
+    EXPECT_EQ(con_tipi(GroupType::Students, GroupType::LineUsers), ServiceType::Hybrid);   // studenti + linea
+    EXPECT_EQ(con_tipi(GroupType::Disabled, GroupType::LineUsers), ServiceType::Hybrid);   // disabili + linea
+    EXPECT_EQ(con_tipi(GroupType::Disabled, GroupType::Disabled), ServiceType::Disability);
 }
 
-// Studenti verso un centro esterno = Ibrido.
+// Studenti verso un centro (non una scuola) = Ibrido.
 TEST(Regole, studenti_centro_esterno_ibrido) {
-    EXPECT_EQ(categoria(corsa({104}, {3})), ServiceType::Hybrid);
+    Package p = demo();
+    gruppo(p, "G-AM-PRIM").school = Ref{"SC-CENTRO", {}};
+    EXPECT_EQ(categoria(p, "C-AM-3"), ServiceType::Hybrid);
+    EXPECT_EQ(categoria(demo(), "C-AM-3"), ServiceType::School);
 }
 
 // Solo studenti verso scuola = Scolastico.
 TEST(Regole, solo_studenti_scolastico) {
-    EXPECT_EQ(categoria(corsa({101, 102}, {1})), ServiceType::School);
+    EXPECT_EQ(categoria(demo(), "C-AM-1"), ServiceType::School);
+    EXPECT_EQ(categoria(demo(), "C-ASILO-1"), ServiceType::School);
 }
 
-// Solo handicap = Handicap.
+// Solo disabili = Handicap (anche sulla corsa che consegna un trasbordo).
 TEST(Regole, solo_handicap) {
-    EXPECT_EQ(categoria(corsa({103, 105}, {1})), ServiceType::Disability);
+    EXPECT_EQ(categoria(demo(), "C-DIS-1"), ServiceType::Disability);
+    EXPECT_EQ(categoria(demo(), "C-DIS-R"), ServiceType::Disability);
 }
 
-// Solo utenti di linea = Linea.
+// Solo utenti di linea = Linea. La corsa non nomina gruppi (conteggi non noti): vale il gruppo anonimo del servizio.
 TEST(Regole, solo_linea) {
-    EXPECT_EQ(categoria(corsa({}, {}, true)), ServiceType::Line);
+    EXPECT_EQ(categoria(demo(), "C-LIN-533"), ServiceType::Line);
+    EXPECT_EQ(categoria(demo(), "C-LIN-560"), ServiceType::Line);
 }
 
-// Corsa verso la scuola dell'infanzia = assistente obbligatorio.
+// Piu' servizi sulla stessa corsa = Ibrido: C-RM-1 (superiori del contratto delle linee + medie del lotto) e,
+// come nell'esempio del mandato, utenti di linea + studenti sulla stessa corsa.
+TEST(Regole, piu_servizi_ibrido) {
+    EXPECT_EQ(categoria(demo(), "C-RM-1"), ServiceType::Hybrid);
+    Package p = demo();
+    per_codice(p.trips, "C-LIN-533").services.push_back(Ref{"S-SUP-RM", {}});
+    EXPECT_EQ(categoria(p, "C-LIN-533"), ServiceType::Hybrid);
+}
+
+// Gli adulti autorizzati viaggiano con il servizio e non cambiano la categoria; senza gruppi vale il tipo dichiarato.
+TEST(Regole, adulti_autorizzati_e_tipo_dichiarato) {
+    Package p = demo();
+    gruppo(p, "G-AM-PRIM").type = GroupType::AuthorizedAdults;
+    EXPECT_EQ(categoria(p, "C-AM-2"), ServiceType::School);
+
+    Package q = demo();
+    Trip& t = per_codice(q.trips, "C-AM-1");
+    for (Passage& x : t.passages) x.persons.clear();
+    per_codice(q.services, "S-SCU-AM").groups.clear();
+    EXPECT_EQ(categoria(q, "C-AM-1"), ServiceType::School);   // tipo dichiarato dal committente
+    per_codice(q.services, "S-SCU-AM").kind = ServiceKind::Other;
+    EXPECT_EQ(categoria(q, "C-AM-1"), ServiceType::Other);
+    t.services.clear();
+    EXPECT_EQ(categoria(q, "C-AM-1"), std::nullopt);          // ne' servizi ne' gruppi: non si sa
+}
+
+// Infanzia sui mezzi con piu' di 8 posti per i passeggeri = assistente obbligatorio (regolamento R-TN, 1.C1.9).
+// Il valore sta nel regolamento: il programma non lo conosce.
 TEST(Regole, infanzia_assistente_obbligatorio) {
-    EXPECT_TRUE(needs_escort(corsa({}, {4}), find_p, find_d));
-    EXPECT_FALSE(needs_escort(corsa({101, 102}, {1}), find_p, find_d));   // scuola media, nessuna richiesta
+    const ConditionsRule* tn = regola_assistente("R-TN");
+    ASSERT_NE(tn, nullptr);
+    EXPECT_TRUE(needs_assistant(tn, a_bordo_grado(Grade::Kindergarten), minibus16().seats));
+    EXPECT_FALSE(needs_assistant(tn, a_bordo_grado(Grade::Kindergarten), per_codice(demo().vehicles, "ALFA-04").seats));
+    EXPECT_FALSE(needs_assistant(tn, a_bordo_grado(Grade::LowerSecondary), minibus16().seats));   // medie: nessuna richiesta
+    // Regolamento R-INV (valori inventati): assistente per l'infanzia con qualunque mezzo.
+    EXPECT_TRUE(needs_assistant(regola_assistente("R-INV"), a_bordo_grado(Grade::Kindergarten),
+                                per_codice(demo().vehicles, "ALFA-04").seats));
 }
 
-// Passeggero handicap che richiede l'accompagnatore = assistente obbligatorio;
-// passeggero handicap che non lo richiede, da solo, no.
+// Passeggero disabile che chiede l'assistente (P-D1) = assistente obbligatorio con ogni regolamento;
+// un disabile che non lo chiede, da solo, no con R-TN e si' con R-INV (che lo chiede per tutti i disabili).
 TEST(Regole, handicap_con_accompagnatore_assistente_obbligatorio) {
-    EXPECT_TRUE(needs_escort(corsa({103}, {1}), find_p, find_d));    // 103: richiede l'accompagnatore
-    EXPECT_FALSE(needs_escort(corsa({105}, {1}), find_p, find_d));   // 105: non lo richiede
+    const Passenger d1 = per_codice(gruppo(demo(), "G-DIS").passengers, "P-D1");
+    const Passenger d3 = per_codice(gruppo(demo(), "G-DIS").passengers, "P-D3");
+    ASSERT_TRUE(d1.needs.assistant);
+    ASSERT_FALSE(d3.needs.assistant);
+    OnBoard con_d1;
+    con_d1.group_types = {GroupType::Disabled};
+    con_d1.assistant_requested = d1.needs.assistant;
+    OnBoard con_d3;
+    con_d3.group_types = {GroupType::Disabled};
+    con_d3.assistant_requested = d3.needs.assistant;
+    const int posti = attrezzato().seats;
+    EXPECT_TRUE(needs_assistant(regola_assistente("R-TN"), con_d1, posti));
+    EXPECT_TRUE(needs_assistant(nullptr, con_d1, posti));
+    EXPECT_FALSE(needs_assistant(regola_assistente("R-TN"), con_d3, posti));
+    EXPECT_TRUE(needs_assistant(regola_assistente("R-INV"), con_d3, posti));
 }
 
 // Pause: sotto i 60 minuti non contano; quella lunga lontano da casa viene segnalata.
-static Route tratto(Coord da, Minutes partenza, Coord a, Minutes arrivo) {
-    Route r;
-    r.stops = {{da, "partenza", partenza, 0, 0}, {a, "arrivo", arrivo, 0, 0}};
-    return r;
+// Luoghi e coordinate del demo: L-MEDIE (Valfonda) e F-LAGOBELLO, a circa 6 km.
+namespace {
+
+Trip tratto(const std::string& da, Minutes partenza, const std::string& a, Minutes arrivo) {
+    Trip t;
+    t.passages.resize(2);
+    t.passages[0].place.code = da;
+    t.passages[0].time = partenza;
+    t.passages[1].place.code = a;
+    t.passages[1].time = arrivo;
+    return t;
 }
 
-static const Coord cles = {46.3650, 11.0340};
-static const Coord rumo = {46.4400, 11.0200};   // circa 8 km da Cles
-
-static Driver autista_di_cles() {
+Driver autista_di_valfonda() {
     Driver d;
-    d.home = {46.3650, 11.0300};
-    return d;   // pausa da casa: almeno 60 min, entro 5 km
+    d.home = *per_codice(demo().places, "L-MEDIE").coord;
+    return d;   // pausa da casa: almeno 60 minuti, entro 5 km
 }
+
+BreakReport pause(const Schedule& s) {
+    const Index idx(demo());
+    return check_home_breaks(s, autista_di_valfonda(), [&](const Code& c) { return idx.place(c); });
+}
+
+}  // namespace
 
 TEST(Regole, pausa_breve_non_conta) {
     Schedule s;
-    s.routes = {tratto(cles, 7 * 60, rumo, 7 * 60 + 30),
-                tratto(rumo, 8 * 60 + 29, cles, 9 * 60)};   // 59 minuti fermo a Rumo
-    const BreakReport br = check_home_breaks(s, autista_di_cles());
+    s.routes = {tratto("L-MEDIE", ora("07:00"), "F-LAGOBELLO", ora("07:30")),
+                tratto("F-LAGOBELLO", ora("08:29"), "L-MEDIE", ora("09:00"))};   // 59 minuti fermo a Lagobello
+    const BreakReport br = pause(s);
     EXPECT_EQ(br.near_home, 0);
     EXPECT_EQ(br.far_from_home, 0);
+    EXPECT_EQ(br.unknown, 0);
 }
 
 TEST(Regole, pausa_lunga_lontano_segnalata) {
     Schedule lontano;
-    lontano.routes = {tratto(cles, 7 * 60, rumo, 7 * 60 + 30),
-                      tratto(rumo, 8 * 60 + 30, cles, 9 * 60)};   // 60 minuti fermo a Rumo
-    const BreakReport br = check_home_breaks(lontano, autista_di_cles());
+    lontano.routes = {tratto("L-MEDIE", ora("07:00"), "F-LAGOBELLO", ora("07:30")),
+                      tratto("F-LAGOBELLO", ora("08:30"), "L-MEDIE", ora("09:00"))};   // 60 minuti fermo a Lagobello
+    const BreakReport br = pause(lontano);
     EXPECT_EQ(br.far_from_home, 1);
     EXPECT_EQ(br.near_home, 0);
 
-    // Controprova: la stessa pausa a Cles (vicino a casa) non e' segnalata.
+    // Controprova: la stessa pausa a Valfonda (vicino a casa) non e' segnalata.
     Schedule vicino;
-    vicino.routes = {tratto(rumo, 7 * 60, cles, 7 * 60 + 30),
-                     tratto(cles, 9 * 60, rumo, 9 * 60 + 30)};
-    const BreakReport bv = check_home_breaks(vicino, autista_di_cles());
+    vicino.routes = {tratto("F-LAGOBELLO", ora("07:00"), "L-MEDIE", ora("07:30")),
+                     tratto("L-MEDIE", ora("09:00"), "F-LAGOBELLO", ora("09:30"))};
+    const BreakReport bv = pause(vicino);
     EXPECT_EQ(bv.far_from_home, 0);
     EXPECT_EQ(bv.near_home, 1);
+
+    // Un luogo senza coordinate (F-CASTELROVO-ALTO): la pausa non si puo' giudicare.
+    Schedule senza;
+    senza.routes = {tratto("L-MEDIE", ora("07:00"), "F-CASTELROVO-ALTO", ora("07:30")),
+                    tratto("F-CASTELROVO-ALTO", ora("09:00"), "L-MEDIE", ora("09:30"))};
+    EXPECT_EQ(pause(senza).unknown, 1);
 }

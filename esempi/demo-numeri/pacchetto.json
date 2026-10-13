@@ -1,0 +1,18 @@
+{
+  "schema": "pacchetto",
+  "schema_versione": 1,
+  "codice": "DEMO-NUMERI-2026",
+  "nome": "Pacchetto dimostrativo K-Zero, solo numeri",
+  "dati_inventati": true,
+  "aziende": [{ "codice": "ALFA", "nome": "Autoservizi Alfa" }, { "codice": "BETA", "nome": "Trasporti Beta" }],
+  "periodo": { "dal": "2026-09-01", "al": "2027-08-31" },
+  "origine": {
+    "tipo": "scenario",
+    "deriva_da": "DEMO-2026",
+    "nota": "Stessa rete del pacchetto DEMO-2026 con i soli conteggi: senza punti porta a porta e senza passeggeri uno per uno. Dati inventati."
+  },
+  "livello": "solo_numeri",
+  "fuso_orario": "Europe/Rome",
+  "valuta": "EUR",
+  "impostazioni": { "margine_trasbordo_minuti": 3 }
+}
