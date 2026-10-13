@@ -1,9 +1,13 @@
 # Codici di errore di kzero
 
+Questi sono gli errori **del programma** (riga di comando sbagliata, cartella inesistente, guasti).
+I problemi **nei dati** di un pacchetto hanno un catalogo a parte, con codici `K-CTR-nnn`: vedi
+[controlli.md](controlli.md).
+
 Ogni errore ha:
 - un **codice fisso** `K-ERR-nnn`: non cambia mai e non viene mai riusato per un altro errore;
 - un **messaggio in italiano** che spiega il caso preciso (cosa non va e come si scrive giusto);
-- la **posizione** (file, riga, colonna) quando il problema sta in un file di dati.
+- la **posizione** (file, riga, colonna) quando esiste.
 
 Il **codice di uscita** del programma dice di che tipo e' l'errore:
 
@@ -15,7 +19,9 @@ Il **codice di uscita** del programma dice di che tipo e' l'errore:
 | 3 | errore interno |
 
 Dove va l'errore:
-- il risultato va sull'uscita standard; l'errore va sull'**uscita di errore**, e il risultato resta vuoto;
+- il risultato va sull'uscita standard; l'errore va sull'**uscita di errore**, e il risultato resta vuoto
+  (`kzero controlla` su un pacchetto con errori nei dati non e' un errore del programma: il resoconto va
+  sull'uscita standard e il codice di uscita e' 1);
 - con `--formato json` anche l'errore e' un documento JSON (schema `errore`,
   file [schema/errore.v1.schema.json](schema/errore.v1.schema.json)); se `--formato json` e' scritto
   ma la riga di comando e' sbagliata, l'errore e' comunque in JSON.
@@ -37,7 +43,7 @@ Esempio in JSON (`kzero pianifica --formato json`, codice di uscita 2):
   "errori": [
     {
       "codice": "K-ERR-002",
-      "messaggio": "Comando sconosciuto: 'pianifica'. Uso: kzero <comando> [parametri]. Comandi disponibili: descrivi, dimostrazione, versione. Elenco completo di comandi e parametri: kzero descrivi."
+      "messaggio": "Comando sconosciuto: 'pianifica'. Uso: kzero <comando> [argomenti] [parametri]. Comandi disponibili: controlla, descrivi, dimostrazione, versione. Elenco completo di comandi e parametri: kzero descrivi."
     }
   ]
 }
@@ -65,3 +71,5 @@ Un nuovo errore prende il codice successivo all'ultimo.
 | K-ERR-008 | 2 | Il parametro non accetta valori | Un interruttore e' scritto con un valore (es. `--includi-dati-personali=no`). | Scrivere l'interruttore da solo, oppure toglierlo. |
 | K-ERR-009 | 3 | Errore interno | Un guasto del programma, non un errore di chi lo usa. | Segnalare il problema con la riga di comando usata. |
 | K-ERR-010 | 3 | Impossibile scrivere il risultato | Il risultato non si riesce a scrivere (es. disco pieno, uscita chiusa). | Controllare dove si sta scrivendo il risultato e riprovare. |
+| K-ERR-011 | 2 | Manca un argomento | Un comando che vuole un argomento e' scritto senza (es. `kzero controlla` senza la cartella). | Scrivere l'argomento come indicato nel messaggio (es. `kzero controlla <cartella>`). |
+| K-ERR-012 | 1 | Cartella del pacchetto non trovata | La cartella indicata a `kzero controlla` non esiste o non e' una cartella. | Indicare la cartella che contiene il manifesto `pacchetto.json`. |

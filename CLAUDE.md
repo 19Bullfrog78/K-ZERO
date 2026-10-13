@@ -1,7 +1,9 @@
 # K-Zero
 
+K-Zero e' universale: aziende, consorzi ed enti di ogni dimensione e di ogni paese; Alpinabus e' il primo caso di prova.
+
 Software di pianificazione flotta: servizi di linea, handicap, scolastici, ibridi.
-Si parte da Alpinabus (3 minibus + 1 auto) e si deve poter crescere fino a 500 mezzi.
+Si parte da Alpinabus (3 minibus + 1 auto) e si deve poter crescere fino a 500 mezzi e oltre.
 
 ## Confini
 - IMPORTANTE: questo repository riguarda SOLO K-Zero. Sullo stesso account GitHub esiste un
@@ -24,8 +26,11 @@ Si parte da Alpinabus (3 minibus + 1 auto) e si deve poter crescere fino a 500 m
 - Descrizione completa del programma (comandi, parametri, schemi, errori): `./build/kzero descrivi`
   (per i programmi e le AI: `./build/kzero descrivi --formato json`)
 - Versione: `./build/kzero versione`
-- Stampa di prova con dati inventati: `./build/kzero dimostrazione`
-  (`--formato json`; `--includi-dati-personali` per avere nel JSON nomi e indirizzi)
+- Controllo di un pacchetto dati (formato in docs/formato-dati.md, problemi K-CTR in docs/controlli.md):
+  `./build/kzero controlla <cartella>` (es. `./build/kzero controlla esempi/demo`; `--formato json`;
+  uscita 1 se ci sono errori nei dati, gli avvisi non bloccano)
+- Stampa di prova con il pacchetto dimostrativo esempi/demo (dati inventati): `./build/kzero dimostrazione`
+  (`--formato json`; `--includi-dati-personali` e `--includi-dati-particolari` per vedere i dati nascosti)
 - Eseguire le prove: `ctest --test-dir build --output-on-failure`
 - Le prove sugli schemi JSON (`schema.*`) richiedono lo strumento standard check-jsonschema (versioni e
   impronte fissate), da installare prima di configurare in un ambiente Python dedicato:
@@ -52,7 +57,11 @@ Si parte da Alpinabus (3 minibus + 1 auto) e si deve poter crescere fino a 500 m
 - Tre piani (docs/architettura.md): nucleo in src/nucleo (modello, regole, calcolo: niente stampa, niente
   riga di comando); API in src/api (il contratto: riga di comando con uscita testo/JSON); adattatori sopra l'API.
 - Librerie con versione e impronta fissate: CLI11 2.7.2 (parametri), nlohmann/json 3.12.0 (JSON),
-  GoogleTest 1.15.2 (prove).
+  GoogleTest 1.15.2 (prove), valijson 1.1.3 (controllo dei dati con gli schemi; fissata con l'impronta del commit).
+- Dati: pacchetto = cartella con manifesto e un file JSON per tipo di dato (docs/formato-dati.md); schemi in
+  docs/schema, incorporati nel programma insieme al pacchetto esempi/demo.
+- Nessun valore di regola e nessun nome di committente nel codice: le regole di un territorio o di un
+  committente stanno nei regolamenti (dati), le parole di un'azienda sono solo nomi nei dati.
 
 ### Principi uomo + AI (valgono per ogni comando)
 - Un solo eseguibile `kzero` con comandi: `kzero <comando> [parametri]`, il comando sempre per primo.
@@ -71,11 +80,21 @@ Si parte da Alpinabus (3 minibus + 1 auto) e si deve poter crescere fino a 500 m
 - Stesso input = stesso output: ordinamenti stabili, nessun uso dell'orologio o del caso.
   Ogni comando che dipende da una data la riceve come parametro (`--data AAAA-MM-GG`).
 - Di base nessun comando scrive file; per scrivere serve `--scrivi <percorso>`.
-- In JSON, di base, nessun dato personale (nomi, indirizzi; nel porta a porta anche i luoghi delle fermate):
-  solo codici e conteggi. I dettagli solo con `--includi-dati-personali`, nel blocco "dati_personali".
+- Tre classi di dati, marcate campo per campo negli schemi ("x-kzero-classe"): comuni, personali (nomi,
+  indirizzi, case, punti porta a porta, motivi scritti a mano), particolari (salute: esigenze, carrozzine,
+  assistente necessario, servizio per disabili). Nelle uscite, testo e JSON allo stesso modo: di base i
+  personali sono sostituiti dal codice e i particolari diventano "riservato"; si vedono solo con
+  `--includi-dati-personali` e `--includi-dati-particolari`. Vale anche nei messaggi.
+- Due livelli di pacchetto: "solo numeri" (consigliato: conteggi, niente nomi, case, porta a porta, motivi)
+  e "completo". Mai codice fiscale, telefoni, mail: il formato non ha campi per questi dati.
+- Problemi nei dati: codice fisso K-CTR-nnn (catalogo separato dai K-ERR, in docs/controlli.md, provato
+  contro il programma), livello errore o avviso, posizione = file + percorso JSON. Testi in un unico catalogo.
 
 ## Trappole
 - "Ibrido" non si inserisce a mano: lo ricava derive_service.
 - L'assistente occupa un posto; ogni carrozzina toglie posti a sedere.
 - Pause a casa dell'autista e ricoveri esterni sono preferenze, mai obblighi.
-- I valori in src/nucleo/dimostrazione.cpp sono inventati: non usarli come dati reali.
+- I dati di esempi/demo, esempi/demo-numeri e della prova di scala sono inventati (tranne il regolamento
+  R-TN, che riporta regole pubbliche con la fonte): non usarli come dati reali.
+- Un orario oltre le 24:00 resta tale ("24:12"), anche in uscita: non riportarlo alla mezzanotte.
+- Posti dei mezzi = posti per i passeggeri, conducente escluso (sul libretto il campo S.1 lo comprende).
