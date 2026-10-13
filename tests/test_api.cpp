@@ -345,6 +345,12 @@ TEST(Api, K_CTR_007_file_non_conforme_allo_schema) {
                       "\"coordinate\": { \"lat\": 46.452,");
     EXPECT_TRUE(problemi(manca, {{Check::SchemaViolation, 0, "luoghi.json", "/luoghi/8"}}));
     EXPECT_EQ(messaggio(manca), "Non rispetta lo schema: manca il campo obbligatorio 'comune'. Il file non e' stato usato.");
+    // Un numero assurdo (errore di battitura) non entra mai nel programma: ogni numero ha un massimo di buon senso.
+    Memoria enorme;
+    enorme.sostituisci("servizi.json", "{ \"luogo\": \"F-PRADELLO\", \"salgono\": 9 }",
+                       "{ \"luogo\": \"F-PRADELLO\", \"salgono\": 3000000000 }");
+    EXPECT_TRUE(problemi(enorme, {{Check::SchemaViolation, 0, "servizi.json", "/servizi/0/domanda/gruppi/0/fermate/0/salgono"}}));
+    EXPECT_EQ(messaggio(enorme), "Non rispetta lo schema: valore troppo grande: al massimo 10000. Il file non e' stato usato.");
 }
 
 TEST(Api, K_CTR_008_file_non_riconosciuto) {

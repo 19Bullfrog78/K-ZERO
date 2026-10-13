@@ -131,10 +131,10 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "lunghezza_massima_m": { "type": "number", "exclusiveMinimum": 0 },
-        "larghezza_massima_m": { "type": "number", "exclusiveMinimum": 0 },
-        "altezza_massima_m": { "type": "number", "exclusiveMinimum": 0 },
-        "massa_massima_t": { "type": "number", "exclusiveMinimum": 0 },
+        "lunghezza_massima_m": { "type": "number", "exclusiveMinimum": 0, "maximum": 100 },
+        "larghezza_massima_m": { "type": "number", "exclusiveMinimum": 0, "maximum": 100 },
+        "altezza_massima_m": { "type": "number", "exclusiveMinimum": 0, "maximum": 100 },
+        "massa_massima_t": { "type": "number", "exclusiveMinimum": 0, "maximum": 1000 },
         "divieti": {
           "type": "array",
           "items": {

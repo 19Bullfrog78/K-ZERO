@@ -92,7 +92,8 @@
             "soglia_da_concordare_minuti": {
               "description": "Oltre questo spostamento un cambio d'orario va concordato.",
               "type": "integer",
-              "minimum": 0
+              "minimum": 0,
+              "maximum": 1440
             }
           },
           "if": { "properties": { "tipo": { "const": "libera" } } },
@@ -120,14 +121,14 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "posti_minimi": { "type": "integer", "minimum": 1, "x-kzero-classe": "comune" },
-        "posti_massimi": { "type": "integer", "minimum": 1, "x-kzero-classe": "comune" },
+        "posti_minimi": { "type": "integer", "minimum": 1, "maximum": 1000, "x-kzero-classe": "comune" },
+        "posti_massimi": { "type": "integer", "minimum": 1, "maximum": 1000, "x-kzero-classe": "comune" },
         "pedana_obbligatoria": {
           "description": "Dato particolare: dice che sul servizio viaggia una carrozzina.",
           "type": "boolean",
           "x-kzero-classe": "particolare"
         },
-        "durata_massima_a_bordo_minuti": { "type": "integer", "minimum": 1, "x-kzero-classe": "comune" },
+        "durata_massima_a_bordo_minuti": { "type": "integer", "minimum": 1, "maximum": 1440, "x-kzero-classe": "comune" },
         "categoria_riconosciuta": { "$ref": "#/definitions/testo", "x-kzero-classe": "comune" }
       },
       "minProperties": 1
@@ -177,12 +178,13 @@
             "required": ["luogo"],
             "properties": {
               "luogo": { "$ref": "#/definitions/codice", "x-kzero-classe": "comune" },
-              "salgono": { "type": "integer", "minimum": 0, "x-kzero-classe": "comune" },
-              "scendono": { "type": "integer", "minimum": 0, "x-kzero-classe": "comune" },
+              "salgono": { "type": "integer", "minimum": 0, "maximum": 10000, "x-kzero-classe": "comune" },
+              "scendono": { "type": "integer", "minimum": 0, "maximum": 10000, "x-kzero-classe": "comune" },
               "carrozzine": {
                 "description": "Persone in carrozzina tra quelle che salgono qui.",
                 "type": "integer",
                 "minimum": 0,
+                "maximum": 10000,
                 "x-kzero-classe": "particolare"
               }
             }

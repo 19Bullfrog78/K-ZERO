@@ -144,8 +144,8 @@
             "required": ["gruppo"],
             "properties": {
               "gruppo": { "$ref": "#/definitions/codice", "x-kzero-classe": "comune" },
-              "salgono": { "type": "integer", "minimum": 0, "x-kzero-classe": "comune" },
-              "scendono": { "type": "integer", "minimum": 0, "x-kzero-classe": "comune" }
+              "salgono": { "type": "integer", "minimum": 0, "maximum": 10000, "x-kzero-classe": "comune" },
+              "scendono": { "type": "integer", "minimum": 0, "maximum": 10000, "x-kzero-classe": "comune" }
             }
           }
         },
@@ -164,7 +164,7 @@
               },
               "azione": { "enum": ["consegna", "ricezione"], "x-kzero-classe": "comune" },
               "gruppo": { "$ref": "#/definitions/codice", "x-kzero-classe": "comune" },
-              "persone": { "type": "integer", "minimum": 1, "x-kzero-classe": "comune" },
+              "persone": { "type": "integer", "minimum": 1, "maximum": 10000, "x-kzero-classe": "comune" },
               "passeggero": { "$ref": "#/definitions/codice", "x-kzero-classe": "comune" }
             },
             "if": { "required": ["passeggero"] },
@@ -184,7 +184,10 @@
     "km": {
       "type": "object",
       "additionalProperties": false,
-      "properties": { "pieni": { "type": "number", "minimum": 0 }, "vuoti": { "type": "number", "minimum": 0 } },
+      "properties": {
+        "pieni": { "type": "number", "minimum": 0, "maximum": 10000 },
+        "vuoti": { "type": "number", "minimum": 0, "maximum": 10000 }
+      },
       "minProperties": 1
     }
   }

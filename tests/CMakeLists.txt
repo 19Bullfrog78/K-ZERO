@@ -196,6 +196,8 @@ kzero_rotto(rotto_non_conforme_allo_schema FORMATO testo MODIFICA IMPOSTA mezzi.
             PROBLEMI "K-CTR-007|mezzi.json|/mezzi/0/categoria" CONTIENE "Valori ammessi: \"M1\", \"M2\", \"M3\"")
 kzero_rotto(rotto_non_conforme_allo_schema_json FORMATO json MODIFICA IMPOSTA mezzi.json /mezzi/0/categoria "\"M4\""
             PROBLEMI "K-CTR-007|mezzi.json|/mezzi/0/categoria")
+kzero_rotto(rotto_numero_assurdo FORMATO testo MODIFICA IMPOSTA mezzi.json /mezzi/0/posti 1600
+            PROBLEMI "K-CTR-007|mezzi.json|/mezzi/0/posti" CONTIENE "valore troppo grande: al massimo 1000")
 # Contenuto.
 kzero_rotto(rotto_codice_doppio FORMATO testo MODIFICA IMPOSTA corse.json /corse/2/codice "\"C-AM-1\""
             PROBLEMI "K-CTR-009|corse.json|/corse/2")

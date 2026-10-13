@@ -38,7 +38,7 @@
             "x-kzero-classe": "comune"
           },
           "orari": { "type": "array", "minItems": 1, "items": { "$ref": "#/definitions/orario_scuola" } },
-          "durata_massima_a_bordo_minuti": { "type": "integer", "minimum": 1, "x-kzero-classe": "comune" },
+          "durata_massima_a_bordo_minuti": { "type": "integer", "minimum": 1, "maximum": 1440, "x-kzero-classe": "comune" },
           "salita_non_prima_di": {
             "description": "Ora piu' presto di salita.",
             "$ref": "#/definitions/orario",
@@ -142,8 +142,8 @@
           "additionalProperties": false,
           "required": ["prima_minuti", "dopo_minuti", "accordo"],
           "properties": {
-            "prima_minuti": { "type": "integer", "minimum": 0 },
-            "dopo_minuti": { "type": "integer", "minimum": 0 },
+            "prima_minuti": { "type": "integer", "minimum": 0, "maximum": 1440 },
+            "dopo_minuti": { "type": "integer", "minimum": 0, "maximum": 1440 },
             "accordo": { "description": "Riferimento dell'accordo con la scuola.", "$ref": "#/definitions/testo" }
           },
           "x-kzero-classe": "comune"

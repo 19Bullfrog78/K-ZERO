@@ -12,7 +12,7 @@
       "type": "object",
       "additionalProperties": false,
       "properties": {
-        "fissa_per_fermata_secondi": { "type": "integer", "minimum": 0 },
+        "fissa_per_fermata_secondi": { "type": "integer", "minimum": 0, "maximum": 3600 },
         "per_passeggero": {
           "type": "array",
           "items": {
@@ -21,12 +21,12 @@
             "required": ["tipo", "salita_secondi", "discesa_secondi"],
             "properties": {
               "tipo": { "enum": ["studente", "infanzia", "disabile"] },
-              "salita_secondi": { "type": "integer", "minimum": 0 },
-              "discesa_secondi": { "type": "integer", "minimum": 0 }
+              "salita_secondi": { "type": "integer", "minimum": 0, "maximum": 3600 },
+              "discesa_secondi": { "type": "integer", "minimum": 0, "maximum": 3600 }
             }
           }
         },
-        "scarico_a_scuola_secondi": { "type": "integer", "minimum": 0 },
+        "scarico_a_scuola_secondi": { "type": "integer", "minimum": 0, "maximum": 3600 },
         "nota": { "$ref": "#/definitions/nota" }
       },
       "minProperties": 1,

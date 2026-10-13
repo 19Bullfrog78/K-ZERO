@@ -24,28 +24,30 @@
             "description": "Posti per i passeggeri, conducente escluso (sulla carta di circolazione il campo S.1 lo comprende).",
             "type": "integer",
             "minimum": 0,
+            "maximum": 1000,
             "x-kzero-classe": "comune"
           },
           "posti_in_piedi": {
             "description": "Solo se previsti dal libretto (campo S.2).",
             "type": "integer",
             "minimum": 0,
+            "maximum": 1000,
             "x-kzero-classe": "comune"
           },
-          "carrozzine": { "type": "integer", "minimum": 0, "x-kzero-classe": "comune" },
-          "posti_persi_per_carrozzina": { "type": "integer", "minimum": 0, "x-kzero-classe": "comune" },
+          "carrozzine": { "type": "integer", "minimum": 0, "maximum": 1000, "x-kzero-classe": "comune" },
+          "posti_persi_per_carrozzina": { "type": "integer", "minimum": 0, "maximum": 1000, "x-kzero-classe": "comune" },
           "pedana": { "type": "boolean", "x-kzero-classe": "comune" },
-          "tempo_pedana_secondi": { "type": "integer", "minimum": 0, "x-kzero-classe": "comune" },
+          "tempo_pedana_secondi": { "type": "integer", "minimum": 0, "maximum": 3600, "x-kzero-classe": "comune" },
           "rimorchio": { "type": "boolean", "x-kzero-classe": "comune" },
           "misure": {
             "type": "object",
             "additionalProperties": false,
             "properties": {
-              "lunghezza_m": { "type": "number", "exclusiveMinimum": 0 },
-              "larghezza_m": { "type": "number", "exclusiveMinimum": 0 },
-              "altezza_m": { "type": "number", "exclusiveMinimum": 0 },
-              "massa_t": { "type": "number", "exclusiveMinimum": 0 },
-              "sbalzo_posteriore_m": { "type": "number", "exclusiveMinimum": 0 }
+              "lunghezza_m": { "type": "number", "exclusiveMinimum": 0, "maximum": 100 },
+              "larghezza_m": { "type": "number", "exclusiveMinimum": 0, "maximum": 100 },
+              "altezza_m": { "type": "number", "exclusiveMinimum": 0, "maximum": 100 },
+              "massa_t": { "type": "number", "exclusiveMinimum": 0, "maximum": 1000 },
+              "sbalzo_posteriore_m": { "type": "number", "exclusiveMinimum": 0, "maximum": 100 }
             },
             "minProperties": 1,
             "x-kzero-classe": "comune"
@@ -55,12 +57,14 @@
             "description": "Nella valuta del pacchetto.",
             "type": "number",
             "minimum": 0,
+            "maximum": 1000000,
             "x-kzero-classe": "comune"
           },
           "costo_al_km": {
             "description": "Nella valuta del pacchetto.",
             "type": "number",
             "minimum": 0,
+            "maximum": 10000,
             "x-kzero-classe": "comune"
           },
           "ipotetico": {
@@ -135,8 +139,8 @@
       "properties": {
         "tipo": { "enum": ["gasolio", "benzina", "metano", "gpl", "ibrido", "elettrico", "idrogeno", "altro"] },
         "descrizione": { "$ref": "#/definitions/testo" },
-        "batteria_kwh": { "type": "number", "exclusiveMinimum": 0 },
-        "consumo_kwh_km": { "type": "number", "exclusiveMinimum": 0 },
+        "batteria_kwh": { "type": "number", "exclusiveMinimum": 0, "maximum": 10000 },
+        "consumo_kwh_km": { "type": "number", "exclusiveMinimum": 0, "maximum": 100 },
         "carica_minima_percento": { "type": "integer", "minimum": 0, "maximum": 100 }
       },
       "allOf": [

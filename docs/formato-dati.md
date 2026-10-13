@@ -62,6 +62,9 @@ Un file con un nome diverso da questi non viene letto (avviso K-CTR-008): di sol
 - **Distanze** in km (nei regolamenti, dove il nome del campo lo dice, in metri: `_m`); **misure** in metri,
   **masse** in tonnellate; **costi** nella valuta del manifesto.
 - **Testi**: una riga non vuota fino a 300 caratteri; le note (`nota`) fino a 2000 caratteri.
+- **Numeri**: ogni numero ha un minimo e un massimo di buon senso (es. 1.000 posti per mezzo, 10.000 persone a
+  una fermata, 1.440 minuti, 3.600 secondi, 100 m per una misura, 1.000.000 per i valori di un regolamento):
+  un valore piu' grande e' certamente un errore di scrittura e il file viene rifiutato (K-CTR-007).
 - **Elenchi aperti.** Dove un valore dipende dal paese o dal committente (tipo di servizio, tipo di gruppo,
   tipo di centro, alimentazione...) c'e' il valore `"altro"` con una descrizione. Le categorie dei mezzi
   M1, M2, M3 sono europee e restano fisse.

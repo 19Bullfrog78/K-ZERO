@@ -19,7 +19,7 @@
           "luogo": { "$ref": "#/definitions/codice", "x-kzero-classe": "comune" },
           "azienda": { "$ref": "#/definitions/codice", "x-kzero-classe": "comune" },
           "ricarica": { "description": "Ricarica per i mezzi elettrici.", "type": "boolean", "x-kzero-classe": "comune" },
-          "posti_mezzi": { "type": "integer", "minimum": 1, "x-kzero-classe": "comune" },
+          "posti_mezzi": { "type": "integer", "minimum": 1, "maximum": 10000, "x-kzero-classe": "comune" },
           "nota": { "$ref": "#/definitions/nota", "x-kzero-classe": "comune" }
         }
       }

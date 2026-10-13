@@ -98,7 +98,7 @@
       "additionalProperties": false,
       "required": ["valore", "fonte"],
       "properties": {
-        "valore": { "type": "integer", "minimum": 0 },
+        "valore": { "type": "integer", "minimum": 0, "maximum": 1000000 },
         "fonte": { "$ref": "#/definitions/fonte" },
         "nota": { "$ref": "#/definitions/nota" }
       }
@@ -123,7 +123,7 @@
                 "uniqueItems": true,
                 "items": { "enum": ["infanzia", "primaria", "secondaria_primo_grado", "secondaria_secondo_grado"] }
               },
-              "valore": { "type": "integer", "minimum": 0 }
+              "valore": { "type": "integer", "minimum": 0, "maximum": 1000000 }
             }
           }
         },
@@ -169,7 +169,8 @@
         "posti_passeggeri_oltre": {
           "description": "Vale sui mezzi con piu' posti per i passeggeri di questo numero (conducente escluso).",
           "type": "integer",
-          "minimum": 0
+          "minimum": 0,
+          "maximum": 1000
         }
       },
       "minProperties": 1
@@ -258,8 +259,8 @@
               "uniqueItems": true,
               "items": { "enum": ["infanzia", "primaria", "secondaria_primo_grado", "secondaria_secondo_grado"] }
             },
-            "durata_massima_minuti": { "type": "integer", "minimum": 0 },
-            "km_massimi": { "type": "number", "minimum": 0 },
+            "durata_massima_minuti": { "type": "integer", "minimum": 0, "maximum": 1440 },
+            "km_massimi": { "type": "number", "minimum": 0, "maximum": 10000 },
             "fonte": { "$ref": "#/definitions/fonte" },
             "nota": { "$ref": "#/definitions/nota" }
           }
