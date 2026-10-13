@@ -1,0 +1,96 @@
+#pragma once
+// K-Zero - strumenti sul pacchetto dati: indice dei codici, calendari, persone a bordo, categoria delle corse.
+
+#include <map>
+#include <optional>
+#include <string>
+#include <unordered_map>
+#include <vector>
+
+#include "domain_models.hpp"
+
+namespace kzero {
+
+// Trova gli elementi del pacchetto per codice. Con un codice doppio vale il primo (il doppione e' un errore
+// che segnalano i controlli). Il pacchetto deve restare in vita finche' si usa l'indice.
+class Index {
+public:
+    explicit Index(const Package& p);
+
+    const Package& package() const { return *package_; }
+    const Company* company(const Code& c) const { return find(companies_, c); }
+    const Place* place(const Code& c) const { return find(places_, c); }
+    const RoadSegment* segment(const Code& c) const { return find(segments_, c); }
+    const Regulation* regulation(const Code& c) const { return find(regulations_, c); }
+    const Calendar* calendar(const Code& c) const { return find(calendars_, c); }
+    const School* school(const Code& c) const { return find(schools_, c); }
+    const Client* client(const Code& c) const { return find(clients_, c); }
+    const Contract* contract(const Code& c) const { return find(contracts_, c); }
+    const ServiceLot* lot(const Code& c) const { return find(lots_, c); }
+    const Service* service(const Code& c) const { return find(services_, c); }
+    const PassengerGroup* group(const Code& c) const { return find(groups_, c); }
+    const Service* service_of_group(const Code& c) const { return find(group_service_, c); }
+    const Passenger* passenger(const Code& c) const { return find(passengers_, c); }
+    const PassengerGroup* group_of_passenger(const Code& c) const { return find(passenger_group_, c); }
+    const Trip* trip(const Code& c) const { return find(trips_, c); }
+    const Vehicle* vehicle(const Code& c) const { return find(vehicles_, c); }
+    const Depot* depot(const Code& c) const { return find(depots_, c); }
+
+    // Regolamento che vale per un servizio (quello del suo contratto), se esiste.
+    const Regulation* regulation_of(const Service& s) const;
+
+    // Categoria della corsa (vedi derive_service).
+    std::optional<ServiceType> category(const Trip& t) const;
+
+private:
+    template <class T>
+    using Map = std::unordered_map<Code, const T*>;
+
+    template <class T>
+    static const T* find(const Map<T>& m, const Code& c) {
+        const auto it = m.find(c);
+        return it == m.end() ? nullptr : it->second;
+    }
+    template <class T>
+    static void fill(Map<T>& m, const std::vector<T>& v) {
+        for (const T& x : v) m.emplace(x.code, &x);
+    }
+
+    const Package* package_;
+    Map<Company> companies_;
+    Map<Place> places_;
+    Map<RoadSegment> segments_;
+    Map<Regulation> regulations_;
+    Map<Calendar> calendars_;
+    Map<School> schools_;
+    Map<Client> clients_;
+    Map<Contract> contracts_;
+    Map<ServiceLot> lots_;
+    Map<Service> services_;
+    Map<PassengerGroup> groups_;
+    Map<Service> group_service_;
+    Map<Passenger> passengers_;
+    Map<PassengerGroup> passenger_group_;
+    Map<Trip> trips_;
+    Map<Vehicle> vehicles_;
+    Map<Depot> depots_;
+};
+
+// Il calendario vale nel giorno d? Le date tolte e le sospensioni prevalgono sulle date aggiunte;
+// le date aggiunte valgono anche fuori dai giorni della settimana e dal calendario di base.
+// Un calendario di base inesistente o una catena circolare di basi (errori segnalati dai controlli)
+// fanno valere "nessun giorno".
+bool calendar_active(const Calendar& c, Day d, const Index& index);
+
+// Primo giorno in cui il calendario vale dentro un periodo, se c'e'.
+std::optional<Day> first_active_day(const Calendar& c, DateRange within, const Index& index);
+
+// Persone a bordo di una corsa, gruppo per gruppo, dopo ogni passaggio.
+// Non contano i gruppi con conteggi non noti; l'assistente non e' un passeggero.
+struct OnBoardAfter {
+    int total = 0;                     // tutte le persone dei gruppi con conteggi noti
+    std::map<Code, int> by_group;      // in ordine di codice
+};
+std::vector<OnBoardAfter> on_board(const Trip& t, const Index& index);
+
+}  // namespace kzero

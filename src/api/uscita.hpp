@@ -32,7 +32,8 @@ std::string testo_json(const Json& j);
 // Valore calcolato arrotondato a un numero fisso di decimali (km: 3 = metri, euro: 2 = centesimi).
 double arrotonda(double valore, int decimali);
 
-// Orario "hh:mm" da minuti dalla mezzanotte (es. 465 -> "07:45").
+// Orario "HH:MM" da minuti dalla mezzanotte (es. 465 -> "07:45"). Dopo mezzanotte l'orario continua
+// come nei dati (1530 -> "25:30"): non si riporta mai alla mezzanotte.
 std::string orario(Minutes m);
 
 }  // namespace kzero::api

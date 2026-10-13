@@ -1,19 +1,29 @@
 #pragma once
-// Modelli di dominio K-Zero: trasporto scolastico provinciale.
-// Orari = minuti dalla mezzanotte (es. 7:45 -> 465). Distanze in km.
+// Modelli di dominio K-Zero: un solo modello dati per 4 o 500 mezzi, per aziende, consorzi ed enti di ogni paese.
+// Orari = minuti dalla mezzanotte del giorno di servizio, anche oltre le 24:00 (07:45 -> 465; 25:30 -> 1530).
+// Date = giorni dal 1970-01-01. Distanze in km; dove il nome dice altro vale il nome (_m = metri, _t = tonnellate).
+// Ogni elemento ha un codice testuale scelto da chi scrive i dati, unico per tipo di elemento.
+// Il nucleo riceve dati gia' controllati nella forma (dagli schemi JSON, nell'API): qui ci sono il modello
+// e le regole del mestiere. Nessun valore di regola e nessun nome di committente: stanno nei dati
+// (regolamenti e contratti).
 
+#include <algorithm>
 #include <cmath>
 #include <cstdint>
+#include <optional>
+#include <set>
 #include <string>
 #include <vector>
 
+#include "tempo.hpp"
+
 namespace kzero {
 
-using Id = std::uint32_t;
-using Minutes = int;
+using Id = std::uint32_t;   // codici numerici rimasti ad autisti, assistenti e giornate dei mezzi (K-008)
+using Code = std::string;   // codice K-Zero di un elemento
 
 struct Coord {
-    double lat = 0.0;
+    double lat = 0.0;   // WGS84, gradi decimali
     double lon = 0.0;
 };
 
@@ -31,85 +41,566 @@ struct TimeWindow {
     Minutes close = 0;  // ultimo istante ammesso
 };
 
-enum class Powertrain { Thermal, Electric };
-enum class VehicleType { Car, Minibus, Bus, Accessible };   // Accessible = con pedana
+struct DateRange {
+    Day from = 0;   // primo giorno compreso
+    Day to = 0;     // ultimo giorno compreso
+};
 
-// Macro categorie di servizio
+// Dove sta un dato nel pacchetto: file e percorso JSON standard (es. "corse.json", "/corse/3/passaggi/4").
+// Lo scrive chi legge i file (l'API); il nucleo lo usa solo per dire dove sta un problema.
+struct Source {
+    std::string file;
+    std::string pointer;
+    int line = 0;     // riga e colonna nel file (0 = non note): servono quando il file non e' un JSON valido
+    int column = 0;
+};
+
+// Riferimento a un altro elemento: il suo codice e il punto dei dati in cui e' scritto.
+struct Ref {
+    Code code;
+    Source src;
+};
+
+// Codice dello stesso elemento in un altro sistema, es. sistema "Trentino Trasporti", tipo "fermata", codice "6220PF".
+struct ExternalCode {
+    std::string system;
+    std::string type;
+    std::string code;
+};
+
+// --- Elenchi fissi ----------------------------------------------------------------
+// Dove un valore dipende dal paese o dal committente c'e' "Other" con una descrizione nei dati.
+
+enum class Grade { Kindergarten, Primary, LowerSecondary, UpperSecondary };   // infanzia ... secondaria di II grado
+
+enum class VehicleCategory { M1, M2, M3 };   // categorie europee dei veicoli per persone
+
+// Tipo di servizio dichiarato dal committente. "Ibrido" non si dichiara: lo ricava derive_service sulla corsa.
+enum class ServiceKind { Line, School, Disability, Other };
+
+// Chi viaggia: tipo di un gruppo di passeggeri della domanda.
+enum class GroupType { Students, Disabled, LineUsers, AuthorizedAdults, Other };
+
+enum class CenterType { Day, Therapy, SocioEducational, Other };   // diurno, terapie, socio-educativo, altro
+
+// Esigenze di salute di una persona o di un gruppo (dati particolari).
+enum class Need { Wheelchair, Assistant, Other };
+
+// Macro categorie di una corsa, ricavate da chi trasporta (vedi derive_service).
 enum class ServiceType {
     Line,        // Servizi di Linee
-    Disability,  // Servizi Handicap
+    Disability,  // Servizi Handicap (disabili)
     School,      // Servizi Scolastici
-    Hybrid       // Servizi Ibridi (calcolato, vedi derive_service)
+    Hybrid,      // Servizi Ibridi
+    Other        // solo gruppi di tipo "altro"
 };
 
-// Tipo di passeggero trasportato (non di corsa)
-enum class PassengerKind { Student, Disability };
+// --- Luoghi -------------------------------------------------------------------------
 
-// Dove si porta il passeggero
-enum class DestinationKind {
-    Kindergarten,    // scuola dell'infanzia (asilo): assistente sempre a bordo
-    School,          // primaria, media, superiore
-    ExternalCenter   // doposcuola, centro diurno...
+enum class PlaceType {
+    Stop,             // fermata pubblica
+    School,           // scuola
+    Center,           // centro (diurno, terapie, socio-educativo...)
+    Depot,            // rimessa
+    ExternalShelter,  // ricovero esterno
+    Parking,          // punto di sosta del mezzo
+    TransferPoint,    // punto di trasbordo
+    DoorToDoor,       // punto porta a porta: la casa del passeggero (luogo privato)
 };
 
-// --- Entita' --------------------------------------------------------------
+enum class BanReason { Sign, Experience, Other };   // cartello, esperienza dell'autista, altro
 
-struct Destination {
-    Id id = 0;
+// Divieto di accesso per un mezzo preciso oppure per una categoria di mezzi.
+struct AccessBan {
+    std::optional<Ref> vehicle;
+    std::optional<VehicleCategory> category;
+    BanReason reason = BanReason::Sign;
+    std::string note;
+    Source src;
+};
+
+struct AccessLimits {
+    std::optional<double> max_length_m, max_width_m, max_height_m, max_mass_t;
+    std::vector<AccessBan> bans;
+};
+
+// Autorizzazione di un punto di trasbordo: chi l'ha data, quando, con quale documento oppure "a voce".
+struct TransferAuthorization {
+    std::string authorized_by;
+    Day date = 0;
+    std::string document;   // vuoto = nessun documento
+    bool verbal = false;    // autorizzato a voce
+    std::string note;
+    Source src;
+};
+
+struct Place {
+    Code code;
+    PlaceType type = PlaceType::Stop;
+    bool is_private = false;   // casa di una persona: punto porta a porta o ricovero presso un'abitazione
+    std::string name;          // nome ufficiale
+    std::vector<std::string> alt_names;
+    std::string address;       // indirizzo (solo luoghi privati)
+    std::string municipality;  // comune
+    std::optional<Coord> coord;
+    std::vector<ExternalCode> external;
+    std::optional<AccessLimits> limits;
+    std::optional<TransferAuthorization> transfer;   // presente = punto di trasbordo autorizzato
+    std::string note;
+    Source src;
+};
+
+// Tratto di strada tra due luoghi con i suoi limiti (es. sottopasso, strada stretta).
+struct RoadSegment {
+    Code code;
     std::string name;
-    DestinationKind kind = DestinationKind::School;
-    Coord location;
-    TimeWindow entry;   // finestra di arrivo
-    TimeWindow exit;    // finestra di ripresa
+    Ref from, to;
+    bool both_directions = true;
+    AccessLimits limits;
+    std::string note;
+    Source src;
 };
 
-struct Passenger {
-    Id id = 0;
-    PassengerKind kind = PassengerKind::Student;
+// --- Regolamenti: i parametri di un territorio o di un committente -------------------
+// Il programma non conosce nessun valore: li legge da qui. Ogni parametro ha la sua fonte.
+
+struct RuleSource {
+    std::string document;     // vuoto = il documento del regolamento
+    std::string point;        // punto del documento (es. "1.B.1")
+    std::string references;   // altre norme citate
+};
+
+struct ValueRule {
+    int value = 0;
+    RuleSource source;
+    Source src;
+};
+
+struct GradeValue {
+    std::vector<Grade> grades;
+    int value = 0;
+};
+
+struct GradeValuesRule {
+    std::vector<GradeValue> values;
+    RuleSource source;
+    Source src;
+
+    // Valore per un grado, se il regolamento lo fissa.
+    std::optional<int> for_grade(Grade g) const {
+        for (const auto& v : values)
+            if (std::find(v.grades.begin(), v.grades.end(), g) != v.grades.end()) return v.value;
+        return std::nullopt;
+    }
+};
+
+// Una condizione vale se a bordo c'e' almeno uno dei gradi, dei tipi di gruppo e delle esigenze elencati
+// (un elenco vuoto non pone condizioni) e il mezzo ha piu' posti per i passeggeri di seats_over.
+struct PassengerCondition {
+    std::vector<Grade> grades;
+    std::vector<GroupType> group_types;
+    std::vector<Need> needs;
+    std::vector<ServiceKind> service_kinds;
+    std::vector<CenterType> center_types;
+    std::optional<int> seats_over;
+};
+
+// Regola fatta di condizioni alternative: basta che ne valga una.
+struct ConditionsRule {
+    std::vector<PassengerCondition> conditions;
+    RuleSource source;
+    Source src;
+};
+
+struct GradesRule {
+    std::vector<Grade> grades;
+    RuleSource source;
+    Source src;
+};
+
+struct StandingRule {
+    std::vector<Grade> forbidden_grades;   // gradi per cui i passeggeri in piedi non sono mai ammessi
+    std::optional<int> max_minutes;
+    std::optional<double> max_km;
+    RuleSource source;
+    Source src;
+};
+
+struct PassengerSet {
+    std::vector<Grade> grades;
+    std::vector<GroupType> group_types;
+};
+
+struct ForbiddenCombination {
+    PassengerSet first, second;   // chi sta nel primo insieme non viaggia con chi sta nel secondo
+};
+
+struct CombinationsRule {
+    std::vector<ForbiddenCombination> combinations;
+    RuleSource source;
+    Source src;
+};
+
+struct Regulation {
+    Code code;
+    std::string authority;   // ente
+    std::string title;
+    std::string document;
+    std::optional<Day> valid_from, valid_to;
+    std::optional<ValueRule> max_wait_before_min;   // attesa massima prima dell'inizio delle lezioni
+    std::optional<ValueRule> max_wait_after_min;    // attesa massima dopo la fine delle lezioni
+    std::optional<ValueRule> max_home_stop_m;
+    std::optional<ValueRule> max_stop_school_m;
+    std::optional<ValueRule> min_stop_distance_m;
+    std::optional<GradeValuesRule> min_home_school_m;
+    std::optional<GradeValuesRule> min_pupils;      // alunni minimi per attivare un servizio
+    std::optional<GradeValuesRule> max_ride_min;    // durata massima a bordo
+    std::optional<ConditionsRule> assistant;        // quando serve l'assistente a bordo
+    std::optional<ConditionsRule> adult_at_dropoff; // quando serve un adulto alla fermata di discesa
+    std::optional<GradesRule> dropoff_without_adult;  // discesa senza adulto ammessa con l'autorizzazione dei genitori
+    std::optional<StandingRule> standing;
+    std::optional<CombinationsRule> forbidden;
+    Source src;
+};
+
+// --- Calendari ----------------------------------------------------------------------
+
+struct DayEntry {
+    Day day = 0;
+    Source src;
+};
+
+struct Suspension {
+    DateRange range;
+    std::string reason;   // es. "chiusura del centro"
+    Source src;
+};
+
+struct Calendar {
+    Code code;
+    std::string name;
+    std::vector<ExternalCode> external;
+    std::optional<Ref> base;   // calendario di partenza: vale solo nei giorni in cui vale anche la base
+    DateRange range;
+    Weekdays days;
+    std::vector<DayEntry> added, removed;
+    std::vector<Suspension> suspensions;
+    Source src;
+};
+
+// --- Scuole e centri (prima "Destination") ---------------------------------------------
+
+// Attesa concordata con la scuola: minuti accettati prima e dopo le lezioni.
+struct AgreedWait {
+    int before_min = 0;
+    int after_min = 0;
+    std::string agreement;   // riferimento dell'accordo
+    Source src;
+};
+
+enum class AuthorizedTimeKind { Arrival, Pickup };   // arrivo, ripresa
+
+struct AuthorizedTime {
+    AuthorizedTimeKind kind = AuthorizedTimeKind::Arrival;
+    Minutes time = 0;
+    std::string agreement;
+};
+
+// Orario di una scuola o di un centro in un periodo e in alcuni giorni della settimana.
+struct Timetable {
+    DateRange period;
+    Weekdays days;
+    Minutes start = 0;   // inizio delle lezioni o apertura
+    Minutes end = 0;     // fine delle lezioni o chiusura
+    std::optional<Minutes> arrive_by;   // ora di arrivo richiesta (es. centro: entro le 09:00)
+    std::optional<AgreedWait> wait;
+    std::vector<AuthorizedTime> authorized;
+    Source src;
+};
+
+enum class InstituteKind { School, Center };
+
+struct School {
+    Code code;
+    std::string name;
+    Ref place;
+    InstituteKind kind = InstituteKind::School;
+    std::optional<Grade> grade;              // solo scuole
+    std::optional<CenterType> center_type;   // solo centri
+    std::string center_type_description;
+    std::vector<ExternalCode> external;
+    std::vector<Timetable> timetables;
+    std::optional<int> max_ride_min;              // durata massima a bordo
+    std::optional<Minutes> earliest_boarding;     // ora piu' presto di salita
+    Source src;
+};
+
+// --- Committenti, contratti, gruppi di servizi -----------------------------------------
+
+struct Client {
+    Code code;
+    std::string name;
+    std::vector<ExternalCode> external;
+    Source src;
+};
+
+// Regole del committente sul mezzo (nel contratto, oppure nel servizio se diverse).
+struct VehicleRules {
+    std::optional<int> min_seats;          // mezzo minimo: posti per i passeggeri
+    std::optional<int> max_seats;          // mezzo massimo ammesso
+    std::optional<bool> ramp_required;     // pedana obbligatoria
+    std::optional<int> max_ride_min;       // durata massima a bordo
+    std::string recognized_category;       // categoria riconosciuta: quella richiesta, anche con un mezzo piu' grande
+    Source src;
+};
+
+// Chi fornisce e paga l'assistente: lo stabilisce il contratto.
+enum class EscortProvider {
+    Client,     // Provincia, Comune, associazione: per l'azienda occupa solo un posto
+    Company     // l'azienda: va pianificato e pagato come l'autista
+};
+
+// Contratto con un committente: le regole che valgono per i suoi servizi.
+struct Contract {
+    Code code;
+    std::string name;
+    Ref client;
+    Ref company;
+    Ref regulation;   // regolamento che vale per i suoi servizi
+    std::optional<Day> valid_from, valid_to;
+    EscortProvider escort_provider = EscortProvider::Client;
+    VehicleRules rules;
+    std::vector<ExternalCode> external;
+    Source src;
+};
+
+// Gruppo di servizi affidati insieme (es. un "lotto").
+struct ServiceLot {
+    Code code;
+    std::string name;
+    Ref contract;
+    std::vector<Ref> services;
+    Source src;
+};
+
+// --- Servizi e domanda ------------------------------------------------------------------
+
+enum class Direction { Outbound, Return };            // andata verso la scuola o il centro; ritorno
+enum class CountKind { Exact, Estimated, Unknown };    // conteggi esatti, stimati, non noti (linee)
+
+// Persone che salgono e scendono a una fermata secondo la domanda.
+struct DemandStop {
+    Ref place;
+    int boarding = 0;
+    int alighting = 0;
+    int wheelchairs = 0;   // persone in carrozzina tra quelle che salgono qui (dato particolare)
+    Source src;
+};
+
+enum class PassengerStatus { Active, Suspended, Unlocked };   // attivo, sospeso, sbloccato dal committente
+enum class Assignment { Proposed, Locked };   // proposta dal programma; scelta a mano e bloccata
+
+struct StopAssignment {
+    Ref place;
+    Assignment mode = Assignment::Proposed;
+};
+
+struct Needs {   // dati particolari
+    bool wheelchair = false;
+    bool assistant = false;
+    std::string other;
+};
+
+struct Home {   // dati personali
     std::string address;
-    Coord home;
-    Id destination_id = 0;
-    Minutes required_arrival = 0;   // entro quando deve arrivare
-    Minutes exit_time = 0;          // ora di ripresa
-    Id stop_id = 0;                 // fermata assegnata (0 = porta a porta)
-    // Esigenze particolari (tipiche dei servizi handicap)
-    bool needs_wheelchair = false;
-    bool needs_escort = false;      // serve accompagnatore a bordo
-    Minutes boarding_time = 1;      // tempo di salita/discesa
-    Minutes max_ride_time = 0;      // tempo massimo a bordo (0 = nessun limite)
+    std::string municipality;
+    std::optional<Coord> coord;
 };
 
-// Nomi richiesti nella prima versione, mantenuti come sinonimi
-using School = Destination;
-using Student = Passenger;
+// Un passeggero della domanda (solo nel livello "completo").
+struct Passenger {
+    Code code;
+    std::string name;   // dato personale
+    Home home;
+    PassengerStatus status = PassengerStatus::Active;
+    std::string status_reference;
+    std::optional<StopAssignment> boarding, alighting;
+    std::string reason;   // motivo scritto a mano (dato personale)
+    Needs needs;
+    Source src;
+
+    bool travels() const { return status != PassengerStatus::Suspended; }
+};
+
+// Chi deve andare da dove a dove ed entro quando: un gruppo della domanda di un servizio.
+struct PassengerGroup {
+    Code code;
+    std::string name;
+    GroupType type = GroupType::Students;
+    std::string type_description;
+    Direction direction = Direction::Outbound;
+    std::optional<Ref> school;   // scuola o centro di arrivo (andata) o di partenza (ritorno)
+    std::optional<TimeWindow> window;
+    CountKind counts = CountKind::Exact;
+    std::vector<DemandStop> stops;
+    bool assistant_required = false;   // dato particolare
+    std::vector<Passenger> passengers;
+    Source src;
+
+    int total_boarding() const {
+        int n = 0;
+        for (const auto& s : stops) n += s.boarding;
+        return n;
+    }
+    int total_alighting() const {
+        int n = 0;
+        for (const auto& s : stops) n += s.alighting;
+        return n;
+    }
+};
+
+enum class TimeFreedom { Fixed, Free };   // orari del committente; liberi dentro il regolamento
+
+// Il lavoro che un committente affida con un contratto: si paga, si perde, si rinuncia, si scambia.
+struct Service {
+    Code code;
+    std::string name;
+    std::vector<ExternalCode> external;
+    ServiceKind kind = ServiceKind::School;
+    std::string kind_description;
+    Ref contract;
+    Ref calendar;
+    TimeFreedom freedom = TimeFreedom::Fixed;
+    std::optional<int> agree_threshold_min;   // oltre questo spostamento un cambio d'orario e' "da concordare"
+    VehicleRules rules;                       // proprie del servizio, se diverse dal contratto
+    std::vector<PassengerGroup> groups;       // la domanda
+    Source src;
+};
+
+// --- Corse (prima "Route") e passaggi (prima "StopVisit") --------------------------------
+
+enum class TransferAction { Deliver, Receive };   // consegna, ricezione
+
+// Meta' di un trasbordo: la consegna su una corsa o la ricezione su un'altra, con lo stesso codice.
+struct TransferHalf {
+    Code code;
+    TransferAction action = TransferAction::Deliver;
+    Ref group;
+    int persons = 0;
+    std::optional<Ref> passenger;
+    Source src;
+};
+
+// Persone di un gruppo che salgono e scendono in un passaggio (come "St. Car." e "St. Scar." sulle schede).
+struct PassageCount {
+    Ref group;
+    int boarding = 0;
+    int alighting = 0;
+    Source src;
+};
+
+enum class AssistantMove { None, Boards, Alights };
+
+struct Passage {
+    Ref place;
+    Minutes time = 0;                   // arrivo nel luogo
+    std::optional<Minutes> departure;   // partenza, se il mezzo aspetta
+    bool transit = false;               // passa senza fermarsi
+    std::vector<PassageCount> persons;
+    AssistantMove assistant = AssistantMove::None;
+    std::vector<TransferHalf> transfers;
+    std::optional<double> loaded_km, empty_km;   // km dal passaggio precedente, come li scrive il committente
+    Source src;
+
+    Minutes leaves() const { return departure ? *departure : time; }
+};
+
+enum class ConnectionKind { WaitArrival, GuaranteeDeparture };   // aspettare l'arrivo; garantire la partenza
+
+// Coincidenza con un servizio esterno (es. "treno FTM n. 3").
+struct Connection {
+    Ref place;
+    std::string external_service;
+    Minutes time = 0;   // arrivo (aspettare l'arrivo) o partenza (garantire la partenza) del servizio esterno
+    ConnectionKind kind = ConnectionKind::WaitArrival;
+    Source src;
+};
+
+// Corsa: il viaggio vero di un mezzo. Puo' soddisfare piu' servizi (allora e' ibrida).
+struct Trip {
+    Code code;
+    std::string name;
+    std::vector<ExternalCode> external;
+    std::vector<Ref> services;
+    Ref calendar;
+    std::vector<Passage> passages;
+    std::optional<double> total_loaded_km, total_empty_km;   // totali della scheda del committente
+    std::vector<Connection> connections;
+    std::string display_text;   // testo da esporre sul mezzo
+    Source src;
+
+    Minutes start() const { return passages.empty() ? 0 : passages.front().time; }
+    Minutes end() const { return passages.empty() ? 0 : passages.back().time; }
+    // Km a pieno e a vuoto: i totali della scheda; senza totali, la somma dei tratti.
+    double loaded_km() const {
+        if (total_loaded_km) return *total_loaded_km;
+        double t = 0;
+        for (const auto& p : passages) t += p.loaded_km.value_or(0.0);
+        return t;
+    }
+    double empty_km() const {
+        if (total_empty_km) return *total_empty_km;
+        double t = 0;
+        for (const auto& p : passages) t += p.empty_km.value_or(0.0);
+        return t;
+    }
+};
+
+// --- Mezzi e rimesse ---------------------------------------------------------------------
+
+enum class Fuel { Diesel, Petrol, Methane, Lpg, Hybrid, Electric, Hydrogen, Other };
+
+struct Dimensions {
+    std::optional<double> length_m, width_m, height_m, mass_t, rear_overhang_m;
+};
+
+struct Power {
+    Fuel fuel = Fuel::Diesel;
+    std::string description;
+    std::optional<double> battery_kwh;          // elettrici: capacita' della batteria
+    std::optional<double> consumption_kwh_km;   // elettrici: consumo medio
+    std::optional<int> min_charge_percent;      // elettrici: carica minima
+};
 
 struct Vehicle {
-    Id id = 0;
+    Code code;
+    Ref company;
     std::string plate;
-    VehicleType type = VehicleType::Bus;
-    Powertrain powertrain = Powertrain::Thermal;
-    int seats = 0;                  // posti a sedere senza carrozzine a bordo
-    int wheelchair_places = 0;      // carrozzine trasportabili al massimo
+    std::vector<ExternalCode> external;
+    VehicleCategory category = VehicleCategory::M2;
+    int seats = 0;                      // posti per i passeggeri, conducente escluso (sul libretto S.1 lo comprende)
+    int standing = 0;                   // posti in piedi, solo se previsti dal libretto (S.2)
+    int wheelchair_places = 0;          // carrozzine trasportabili al massimo
     int seats_lost_per_wheelchair = 0;  // posti a sedere persi per ogni carrozzina caricata
-    bool has_ramp = false;          // pedana o sollevatore
-    Minutes ramp_time = 0;          // tempo per azionare la pedana a ogni fermata
-    double daily_fixed_cost = 0.0;  // EUR/giorno: assicurazione, bollo, ammortamento
-    Coord start_depot;
-    Coord end_depot;
-    double cost_per_km = 0.0;       // EUR/km
-    double consumption_per_km = 0;  // litri/km (termico) o kWh/km (elettrico)
-    double range_km = 0.0;          // autonomia; rilevante per gli elettrici
+    bool has_ramp = false;              // pedana o sollevatore
+    int ramp_seconds = 0;               // tempo per azionare la pedana a ogni fermata
+    bool trailer = false;
+    Dimensions dims;
+    Power power;
+    std::optional<double> daily_fixed_cost;   // nella valuta del pacchetto: assicurazione, bollo, ammortamento
+    std::optional<double> cost_per_km;
+    bool hypothetical = false;          // non ancora in flotta (scenari)
+    Source src;
 };
 
-// Punto dove un mezzo passa la notte: la rimessa oppure un ricovero esterno
-// vicino a casa dell'autista, per accorciargli il tragitto casa-lavoro.
-struct ParkingSpot {
-    Id id = 0;
-    std::string name;
-    Coord location;
-    int capacity = 1;           // quanti mezzi ci stanno
-    bool is_main_depot = false; // true = rimessa aziendale
-    bool has_charger = false;   // necessario per i mezzi elettrici che ci dormono
+// Rimessa o ricovero di un'azienda (prima "ParkingSpot").
+struct Depot {
+    Code code;
+    Ref place;
+    Ref company;
+    bool charging = false;            // ricarica per i mezzi elettrici
+    std::optional<int> capacity;      // quanti mezzi ci stanno
+    Source src;
 };
 
 // Ci stanno questi passeggeri sul mezzo? L'assistente, se presente, occupa un posto.
@@ -120,18 +611,175 @@ inline bool fits(const Vehicle& v, int seated, int wheelchairs, bool with_escort
     return seated <= free_seats;
 }
 
-// Chi fornisce e paga l'assistente: lo stabilisce il contratto.
-enum class EscortProvider {
-    Client,     // Provincia, Comune, associazione: per l'azienda occupa solo un posto
-    Company     // l'azienda: va pianificato e pagato come l'autista
+// Costo di una giornata del mezzo: quota fissa + km percorsi. Nessun valore se manca uno dei due costi.
+inline std::optional<double> day_cost(const Vehicle& v, double total_km) {
+    if (!v.daily_fixed_cost || !v.cost_per_km) return std::nullopt;
+    return *v.daily_fixed_cost + total_km * *v.cost_per_km;
+}
+
+// Quanti giri servono per portare tutti con un mezzo (solo posti a sedere).
+inline int trips_needed(const Vehicle& v, int passengers) {
+    return v.seats > 0 ? (passengers + v.seats - 1) / v.seats : 0;
+}
+
+// --- Tempi di sosta (facoltativi finche' non confermati) -----------------------------------
+
+enum class DwellKind { Student, Kindergarten, Disabled };   // studente, infanzia, disabile
+
+struct PassengerDwell {
+    DwellKind kind = DwellKind::Student;
+    int boarding_s = 0;    // secondi per ogni passeggero che sale
+    int alighting_s = 0;   // secondi per ogni passeggero che scende
 };
 
-// Contratto con un committente: le regole che valgono per le sue corse.
-struct Contract {
-    Id id = 0;
-    std::string client;                 // "Provincia di Trento", "Comune di ..."
-    EscortProvider escort_provider = EscortProvider::Client;
+struct DwellTimes {
+    std::optional<int> per_stop_s;   // parte fissa per fermata
+    std::vector<PassengerDwell> per_passenger;
+    std::optional<int> school_unload_s;   // scarico a scuola
+    Source src;
 };
+
+// --- Pacchetto dati ------------------------------------------------------------------------
+
+struct Company {
+    Code code;
+    std::string name;
+    Source src;
+};
+
+enum class Level { NumbersOnly, Full };                      // "solo numeri", "completo"
+enum class Origin { Manual, Computed, Imported, Scenario };  // rilevato a mano, calcolato, importato, scenario
+
+// Manifesto del pacchetto: chi, quando, da dove viene, che livello di dati contiene.
+struct Manifest {
+    Code code;
+    std::string name;
+    bool invented = false;   // dati inventati (esempi, prove)
+    std::vector<Company> companies;
+    DateRange period;
+    Origin origin = Origin::Manual;
+    std::string derived_from;   // codice del pacchetto da cui deriva
+    std::string origin_note;
+    Level level = Level::NumbersOnly;
+    std::string timezone;   // nome IANA, es. "Europe/Rome": gli orari sono orari locali di questo fuso
+    std::string currency;   // codice ISO 4217, es. "EUR": i costi sono in questa valuta
+    int transfer_margin_min = 0;   // margine dei trasbordi: la corsa che riceve arriva prima di questo
+    Source src;
+};
+
+// Tutti i dati di un pacchetto. I luoghi privati (case) stanno insieme ai pubblici, segnati da is_private.
+struct Package {
+    Manifest manifest;
+    std::vector<Place> places;
+    std::vector<RoadSegment> segments;
+    std::vector<Regulation> regulations;
+    std::vector<Calendar> calendars;
+    std::vector<School> schools;
+    std::vector<Client> clients;
+    std::vector<Contract> contracts;
+    std::vector<ServiceLot> lots;
+    std::vector<Service> services;
+    std::vector<Trip> trips;
+    std::vector<Vehicle> vehicles;
+    std::vector<Depot> depots;
+    std::optional<DwellTimes> dwell;
+};
+
+// --- Regole del mestiere sulle corse --------------------------------------------------------
+
+// Categoria della corsa ricavata da chi trasporta e dove lo porta:
+// - piu' servizi sulla stessa corsa                    -> Ibrido
+// - gruppi di tipi diversi (studenti, disabili, utenti
+//   di linea, altro; gli adulti autorizzati non contano) -> Ibrido
+// - studenti verso un centro (non una scuola)           -> Ibrido
+// - solo utenti di linea / disabili / studenti / altro  -> Linea / Handicap / Scolastico / Altro
+// I gruppi sono quelli che salgono o scendono nei passaggi; se la corsa non ne nomina nessuno valgono
+// i gruppi del suo servizio (anche anonimi, anche con conteggi non noti), e senza gruppi il tipo dichiarato
+// dal committente. Nessun valore se la corsa non ha ne' servizi ne' gruppi.
+template <class FindService, class FindGroup, class FindSchool>
+std::optional<ServiceType> derive_service(const Trip& t, FindService find_service, FindGroup find_group,
+                                          FindSchool find_school) {
+    std::set<Code> services;
+    for (const auto& s : t.services) services.insert(s.code);
+    if (services.size() > 1) return ServiceType::Hybrid;
+
+    std::set<Code> group_codes;
+    for (const auto& p : t.passages) {
+        for (const auto& c : p.persons) group_codes.insert(c.group.code);
+        for (const auto& h : p.transfers) group_codes.insert(h.group.code);
+    }
+    std::vector<const PassengerGroup*> groups;
+    for (const auto& g : group_codes)
+        if (const PassengerGroup* pg = find_group(g)) groups.push_back(pg);
+    const Service* service = services.empty() ? nullptr : find_service(*services.begin());
+    if (groups.empty() && service)
+        for (const auto& g : service->groups) groups.push_back(&g);
+
+    bool students = false, disabled = false, line = false, other = false, students_to_center = false;
+    for (const PassengerGroup* g : groups) {
+        switch (g->type) {
+            case GroupType::Students: {
+                students = true;
+                const School* s = g->school ? find_school(g->school->code) : nullptr;
+                if (s && s->kind == InstituteKind::Center) students_to_center = true;
+                break;
+            }
+            case GroupType::Disabled: disabled = true; break;
+            case GroupType::LineUsers: line = true; break;
+            case GroupType::Other: other = true; break;
+            case GroupType::AuthorizedAdults: break;   // viaggiano con l'autorizzazione del servizio
+        }
+    }
+    const int kinds = int(students) + int(disabled) + int(line) + int(other);
+    if (kinds > 1 || students_to_center) return ServiceType::Hybrid;
+    if (disabled) return ServiceType::Disability;
+    if (students) return ServiceType::School;
+    if (line) return ServiceType::Line;
+    if (other) return ServiceType::Other;
+    if (!service) return std::nullopt;
+    switch (service->kind) {
+        case ServiceKind::Line: return ServiceType::Line;
+        case ServiceKind::School: return ServiceType::School;
+        case ServiceKind::Disability: return ServiceType::Disability;
+        case ServiceKind::Other: return ServiceType::Other;
+    }
+    return std::nullopt;
+}
+
+// Chi viaggia insieme su una corsa: serve alle regole dei regolamenti.
+struct OnBoard {
+    std::vector<Grade> grades;
+    std::vector<GroupType> group_types;
+    std::vector<Need> needs;
+    std::vector<ServiceKind> service_kinds;
+    std::vector<CenterType> center_types;
+    bool assistant_requested = false;   // un gruppo o un passeggero chiede l'assistente
+};
+
+// Vale la condizione di un regolamento per chi e' a bordo di un mezzo con quei posti per i passeggeri?
+inline bool condition_holds(const PassengerCondition& c, const OnBoard& b, int passenger_seats) {
+    const auto any = [](const auto& wanted, const auto& present) {
+        if (wanted.empty()) return true;
+        for (const auto& w : wanted)
+            if (std::find(present.begin(), present.end(), w) != present.end()) return true;
+        return false;
+    };
+    return any(c.grades, b.grades) && any(c.group_types, b.group_types) && any(c.needs, b.needs) &&
+           any(c.service_kinds, b.service_kinds) && any(c.center_types, b.center_types) &&
+           (!c.seats_over || passenger_seats > *c.seats_over);
+}
+
+// Serve l'assistente a bordo? Si' se un gruppo o un passeggero lo chiede, oppure se vale una delle
+// condizioni del regolamento (es. infanzia sui mezzi con piu' di 8 posti per i passeggeri).
+inline bool needs_assistant(const ConditionsRule* rule, const OnBoard& b, int passenger_seats) {
+    if (b.assistant_requested) return true;
+    if (!rule) return false;
+    for (const auto& c : rule->conditions)
+        if (condition_holds(c, b, passenger_seats)) return true;
+    return false;
+}
+
+// --- Persone (autisti e assistenti) e giornate: da riallineare nel K-008 --------------------
 
 // Assistente/accompagnatore a bordo: una persona con i suoi orari, come l'autista.
 struct Escort {
@@ -140,18 +788,8 @@ struct Escort {
     Coord home;                     // dove sale a bordo se non e' gia' sul mezzo
     TimeWindow availability;        // inizio e fine servizio
     EscortProvider provider = EscortProvider::Client;
-    double hourly_cost = 0.0;       // EUR/ora, conta solo se provider = Company
+    double hourly_cost = 0.0;       // costo all'ora, conta solo se provider = Company
 };
-
-// Costo di una giornata del mezzo: quota fissa + km percorsi.
-inline double day_cost(const Vehicle& v, double total_km) {
-    return v.daily_fixed_cost + total_km * v.cost_per_km;
-}
-
-// Quanti giri servono per portare tutti con un mezzo (solo posti a sedere).
-inline int trips_needed(const Vehicle& v, int passengers) {
-    return v.seats > 0 ? (passengers + v.seats - 1) / v.seats : 0;
-}
 
 struct Driver {
     Id id = 0;
@@ -159,7 +797,7 @@ struct Driver {
     Coord home;                     // abitazione
     TimeWindow availability;        // inizio e fine servizio
     Minutes max_driving = 0;        // guida massima nel turno
-    std::vector<VehicleType> allowed_types;  // patenti / abilitazioni
+    std::vector<VehicleCategory> allowed_categories;   // patenti / abilitazioni
     // Preferenza (non obbligo): pause lunghe vicino a casa
     bool wants_break_near_home = true;
     double home_radius_km = 5.0;    // entro quanti km la pausa conta "vicino a casa"
@@ -177,85 +815,18 @@ struct ObjectiveWeights {
     double per_missed_home_break = 10.0;    // pausa lunga lontano da casa
 };
 
-// --- Risultato della pianificazione ---------------------------------------
-
-struct StopVisit {
-    Coord where;
-    std::string label;          // "Deposito", "Fermata 12", "Scuola X"...
-    Minutes arrival = 0;
-    int boarding = 0;           // + saliti, - scesi
-    int load_after = 0;         // passeggeri a bordo dopo la fermata
-};
-
-// Una corsa: dal primo carico all'ultimo scarico (+ trasferimenti attorno).
-struct Route {
-    Id id = 0;
-    ServiceType service = ServiceType::School;
-    std::vector<Id> passenger_ids;      // passeggeri nominativi (studenti, handicap)
-    std::vector<Id> destination_ids;    // destinazioni servite
-    bool carries_line_users = false;    // utenti di linea anonimi a bordo
-    // Richieste del committente sul mezzo (0/false = nessuna richiesta)
-    int min_seats = 0;                  // es. "serve un 30 posti"
-    bool requires_ramp = false;
-    Id contract_id = 0;                 // contratto di riferimento
-    Id escort_id = 0;                   // assistente assegnato (0 = nessuno)
-    std::vector<StopVisit> stops;
-    double loaded_km = 0.0;     // km con almeno un passeggero
-    double empty_km = 0.0;      // km a vuoto (trasferimenti)
-    Minutes start() const { return stops.empty() ? 0 : stops.front().arrival; }
-    Minutes end() const { return stops.empty() ? 0 : stops.back().arrival; }
-};
-
-// Categoria della corsa ricavata da chi trasporta e dove lo porta:
-// - solo utenti di linea                -> Linea
-// - solo passeggeri handicap            -> Handicap
-// - solo studenti verso scuole          -> Scolastico
-// - categorie miste, oppure studenti
-//   verso un centro esterno             -> Ibrido
-template <class FindPassenger, class FindDestination>
-ServiceType derive_service(const Route& r, FindPassenger find_p, FindDestination find_d) {
-    bool students = false, disability = false, external = false;
-    for (Id pid : r.passenger_ids) {
-        if (const Passenger* p = find_p(pid)) {
-            if (p->kind == PassengerKind::Student) students = true;
-            else disability = true;
-        }
-    }
-    for (Id did : r.destination_ids)
-        if (const Destination* d = find_d(did); d && d->kind == DestinationKind::ExternalCenter)
-            external = true;
-
-    const int kinds = int(students) + int(disability) + int(r.carries_line_users);
-    if (kinds > 1) return ServiceType::Hybrid;
-    if (students && external) return ServiceType::Hybrid;
-    if (disability) return ServiceType::Disability;
-    if (students) return ServiceType::School;
-    return ServiceType::Line;
-}
-
-// Serve l'assistente su questa corsa? Si' se c'e' un bambino d'asilo
-// o un passeggero che lo richiede.
-template <class FindPassenger, class FindDestination>
-bool needs_escort(const Route& r, FindPassenger find_p, FindDestination find_d) {
-    for (Id pid : r.passenger_ids)
-        if (const Passenger* p = find_p(pid); p && p->needs_escort) return true;
-    for (Id did : r.destination_ids)
-        if (const Destination* d = find_d(did); d && d->kind == DestinationKind::Kindergarten) return true;
-    return false;
-}
-
 // Giornata tipo di un mezzo: piu' corse in sequenza con lo stesso autista.
 struct Schedule {
     Id vehicle_id = 0;
     Id driver_id = 0;
     Id parking_id = 0;          // dove il mezzo inizia e finisce la giornata
-    std::vector<Route> routes;
+    std::vector<Trip> routes;
 
     double loaded_km() const {
-        double t = 0; for (const auto& r : routes) t += r.loaded_km; return t;
+        double t = 0; for (const auto& r : routes) t += r.loaded_km(); return t;
     }
     double empty_km() const {
-        double t = 0; for (const auto& r : routes) t += r.empty_km; return t;
+        double t = 0; for (const auto& r : routes) t += r.empty_km(); return t;
     }
     Minutes idle_minutes() const {  // tempi morti tra una corsa e l'altra
         Minutes t = 0;
@@ -265,29 +836,38 @@ struct Schedule {
     }
 };
 
-// Pause lunghe del turno: quante cadono vicino a casa dell'autista e quante no.
+// Pause lunghe del turno: quante cadono vicino a casa dell'autista, quante no e quante non si possono
+// giudicare (luogo senza coordinate).
 struct BreakReport {
     int near_home = 0;
     int far_from_home = 0;
+    int unknown = 0;
 };
 
-inline BreakReport check_home_breaks(const Schedule& s, const Driver& d) {
+// find_place(codice) restituisce il luogo (const Place*) oppure nullptr.
+template <class FindPlace>
+BreakReport check_home_breaks(const Schedule& s, const Driver& d, FindPlace find_place) {
     BreakReport rep;
     for (std::size_t i = 1; i < s.routes.size(); ++i) {
         const auto& prev = s.routes[i - 1];
         const auto& next = s.routes[i];
-        if (prev.stops.empty() || next.stops.empty()) continue;
+        if (prev.passages.empty() || next.passages.empty()) continue;
         if (next.start() - prev.end() < d.min_home_break) continue;   // pausa breve: non conta
-        const bool near = air_km(prev.stops.back().where, d.home) <= d.home_radius_km &&
-                          air_km(next.stops.front().where, d.home) <= d.home_radius_km;
+        const Place* a = find_place(prev.passages.back().place.code);
+        const Place* b = find_place(next.passages.front().place.code);
+        if (!a || !b || !a->coord || !b->coord) {
+            ++rep.unknown;
+            continue;
+        }
+        const bool near = air_km(*a->coord, d.home) <= d.home_radius_km && air_km(*b->coord, d.home) <= d.home_radius_km;
         near ? ++rep.near_home : ++rep.far_from_home;
     }
     return rep;
 }
 
 // Tragitto casa -> ricovero del mezzo (andata e ritorno), in km.
-inline double driver_commute_km(const Driver& d, const ParkingSpot& p) {
-    return 2.0 * air_km(d.home, p.location);
+inline double driver_commute_km(const Driver& d, const Coord& depot) {
+    return 2.0 * air_km(d.home, depot);
 }
 
 }  // namespace kzero

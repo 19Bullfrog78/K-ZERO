@@ -2,3 +2,6 @@
 # perche' le prove li confrontano con quello che scrive il programma.
 tests/attesi/** text eol=lf
 tests/esempi/** text eol=lf
+# Schemi e pacchetti di esempio: entrano nel programma byte per byte (cmake/incorpora.cmake), uguali su ogni sistema.
+docs/schema/** text eol=lf
+esempi/** text eol=lf
