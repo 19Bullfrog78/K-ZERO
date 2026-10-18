@@ -41,11 +41,13 @@ Il programma e' diviso in tre piani, uno sopra l'altro:
 
 | File | Compito |
 |---|---|
-| `domain_models.hpp` | Il modello dati (luoghi, regolamenti, calendari, scuole, contratti, servizi con la domanda, corse con i passaggi, mezzi, rimesse) e le regole del mestiere sulle corse (categoria ricavata, posti, assistente). |
+| `domain_models.hpp` | Il modello dati (luoghi, regolamenti, festivita', calendari, scuole, contratti, servizi con la domanda, corse con i passaggi, mezzi, rimesse; dal K-008 norme del paese, elenchi e impostazioni delle aziende, persone, assenze, fermi, turni del giorno, rotazioni, servizi fissi, assegnazioni del singolo giorno, blocchi) e le regole del mestiere sulle corse (categoria ricavata, posti, assistente). |
 | `tempo.cpp` | Date e orari (anche oltre le 24:00). |
-| `pacchetto.cpp` | Indice dei codici, calendari (eccezioni, sospensioni, calendario di base), persone a bordo. |
+| `pacchetto.cpp` | Indice dei codici, calendari (eccezioni, sospensioni, calendario di base, calendari e festivita' aggiunti o tolti), persone a bordo. |
 | `ricerca.cpp` | Normalizzazione dei nomi e ricerca dei luoghi per nome o codice esterno. |
+| `turni.cpp` | Chi fa ogni turno in una data (`Planner`): assegnazione del singolo giorno, poi servizio fisso, poi rotazione; i fatti con le date (assenze, disponibilita', scadenze, fermi, distrazioni, prestiti) che lasciano un turno scoperto o senza mezzo; requisiti di guida; km e tempi fermi di un turno. Il programma non inventa assegnazioni. |
 | `controlli.cpp` | Controlli sul contenuto di un pacchetto: ogni problema con il suo tipo, la posizione e i valori, **senza testi** (i testi stanno nel catalogo dell'API). |
+| `controlli_turni.cpp` | Controlli sui turni giorno per giorno, anche a cavallo della mezzanotte (K-CTR-054 ... 087); i problemi uguali di molti giorni si raggruppano in periodi. |
 | `dimostrazione.cpp` | Alcune regole applicate ai dati di un pacchetto: nessun dato scritto nel codice. |
 
 ## Piano 2 - API (`src/api`): il contratto ufficiale
@@ -62,7 +64,8 @@ Il programma e' diviso in tre piani, uno sopra l'altro:
 | `parametri.cpp` | Lettura dei parametri con CLI11; i controlli e i messaggi in italiano sono di K-Zero. |
 | `errori.cpp` | Catalogo dei codici K-ERR e presentazione degli errori in testo o JSON. |
 | `uscita.cpp` | Strumenti comuni: documento JSON con "schema" e "schema_versione", arrotondamenti, orari. |
-| `comando_*.cpp` | Un file per comando: chiede i risultati al nucleo e li presenta in testo o JSON. |
+| `comando_*.cpp` | Un file per comando: chiede i risultati al nucleo e li presenta in testo o JSON. `comando_giornata.cpp` mostra i turni di un giorno (tutti, di una persona o di un mezzo) e non mostra nulla se il pacchetto ha errori. |
+| `vista.cpp` | Strumenti comuni ai comandi che mostrano i dati (dimostrazione, giornata): filtro delle classi dei dati, etichette, numeri e durate in italiano. |
 | `esegui.cpp` | Dalla riga di comando all'esito: prepara tutto in memoria (`esegui`), poi lo scrive (`consegna`). Cosi' un errore non lascia mai un risultato a meta'. |
 | `formato_dati.cpp` | Elenco dei file di un pacchetto, con lo schema e le versioni che il programma sa leggere. |
 | `lettore.cpp` | Lettura di un pacchetto: JSON valido e senza campi ripetuti, schema e versione giusti, rispetto dello schema; poi la conversione nel modello del nucleo. Un file con un errore di forma non viene usato. |
@@ -96,7 +99,12 @@ Il programma e' diviso in tre piani, uno sopra l'altro:
 4. Di base l'uscita (testo e JSON) non contiene dati personali (al loro posto c'e' il codice
    dell'elemento) ne' particolari (al loro posto c'e' `"riservato"`). Un agente AI deve usare il JSON.
 5. Per i dati: `kzero controlla <cartella> --formato json` controlla un pacchetto e dice cosa correggere,
-   con codice K-CTR e posizione (file + percorso JSON).
+   con codice K-CTR e posizione (file + percorso JSON); i problemi dei turni ripetuti in molti giorni hanno i
+   giorni nel campo `giorni`.
+6. Per un giorno: `kzero giornata <cartella> --data AAAA-MM-GG --formato json` (con `--persona` o `--mezzo` per
+   una sola persona o un solo mezzo) da' i turni del giorno con chi li fa, da dove viene l'assegnazione, il mezzo,
+   corse e attivita' in ordine, tempi fermi, km e i turni scoperti o senza mezzo con il motivo. Se il pacchetto ha
+   errori nei dati l'errore K-ERR-018 rimanda a `kzero controlla`.
 
 ## Regole del contratto
 
@@ -115,6 +123,19 @@ Scelte di dettaglio:
 - nel JSON i valori calcolati sono arrotondati: km al metro, euro al centesimo;
 - un orario oltre le 24:00 resta tale anche in uscita ("25:30").
 
+## Sicurezza
+
+Principio deciso da Mauro (18/10), scritto anche in CLAUDE.md:
+- il programma lavora sul PC e **oggi nessun comando usa la rete**. Quando servira' (es. le distanze da Google
+  Maps), lo fara' solo un adattatore separato, acceso con un parametro esplicito, che manda fuori il minimo
+  (coordinate, mai nomi o altri dati delle persone), con un suo mandato;
+- nessun file scritto senza `--scrivi`;
+- ogni dato in ingresso e' controllato con limiti di buon senso (un massimo per ogni numero e testo, file oltre
+  256 MB rifiutati, file malformati o in un'altra codifica rifiutati senza blocchi; una prova costruisce file
+  apposta per rompere il programma);
+- si conserva il minimo dei dati personali (nessun campo per codice fiscale, telefoni, mail, cause di assenza);
+- il mandato "privacy e sicurezza di base" viene prima di qualunque dato vero.
+
 ## Dati: tre classi, due livelli
 
 Ogni campo dei file di dati e' marcato nel suo schema con una **classe** (spiegazione completa in
@@ -122,9 +143,11 @@ docs/formato-dati.md):
 - **comune**: fermate pubbliche, scuole e centri, orari, calendari, conteggi senza esigenze, mezzi,
   aziende, committenti, contratti, regolamenti, tutti i codici;
 - **personale**: nomi, indirizzi, case, punti porta a porta (sono la casa del passeggero), ricoveri presso
-  la casa di una persona, motivi scritti a mano;
+  la casa di una persona, motivi scritti a mano; dal K-008 i dati delle persone (tranne codice, azienda, presa
+  servizio, mezzo abituale, ipotetica e prestiti), il tipo e i giorni delle assenze, le note di rotazioni, servizi
+  fissi e assegnazioni;
 - **particolare** (salute): esigenze di persone e gruppi, tipo di servizio e di gruppo ("disabili"),
-  conteggi di carrozzine.
+  conteggi di carrozzine, competenze richieste da un servizio o da un turno.
 
 Il filtro delle uscite parte dalla marcatura dello schema ed e' **uguale per testo e JSON**: di base un dato
 personale e' sostituito dal codice del suo elemento, un dato particolare diventa `"riservato"`; con
@@ -168,13 +191,13 @@ docs/formato-dati.md e docs/schema coincidano con il programma.
 
 | Etichetta | Cosa controlla |
 |---|---|
-| `nucleo` | Regole del mestiere, date e orari, ricerca e normalizzazione, calendari, persone a bordo, ogni controllo sul contenuto, dimostrazione (GoogleTest, con i dati del pacchetto demo). |
-| `api` | Tabella dei comandi, cataloghi degli errori e dei controlli, controlli sulla forma dei file, messaggi in italiano, classi dei dati e loro filtro (GoogleTest). |
+| `nucleo` | Regole del mestiere, date e orari, ricerca e normalizzazione, calendari, persone a bordo, ogni controllo sul contenuto, dimostrazione; dal K-008 chi fa il turno (rotazioni di ogni forma, servizi fissi, assegnazioni, fatti con le date, giorni del demo controllati a mano) e ogni controllo sui turni (GoogleTest, con i dati del pacchetto demo). |
+| `api` | Tabella dei comandi, cataloghi degli errori e dei controlli, controlli sulla forma dei file, file costruiti per rompere il programma, limiti di buon senso negli schemi, messaggi in italiano, classi dei dati e loro filtro, comando giornata (scheda scuola del committente ricavata dall'uscita) (GoogleTest). |
 | `programma` | Lanciano `kzero` due volte: codice di uscita, K-ERR per i parametri sbagliati, JSON valido, uscite identiche byte per byte, dati personali e particolari assenti di base e presenti con il parametro, `kzero controlla` sui pacchetti di esempio e su un pacchetto rotto per ogni errore (il demo con un solo valore cambiato), due regolamenti con esiti diversi. |
 | `documentazione` | docs/errori.md, docs/controlli.md, docs/formato-dati.md e docs/schema coincidono con `kzero descrivi`; la tabella delle lettere di docs/formato-dati.md coincide con il programma. |
 | `architettura` | Il nucleo non stampa e non legge la riga di comando. |
 | `schemi` | Con lo strumento standard check-jsonschema: schemi validi per draft-07; ogni uscita JSON delle prove e ogni file dei pacchetti di esempio rispetta lo schema che dichiara. |
-| `scala` | Un pacchetto grande generato con un seme fisso (600 mezzi, 5.000 fermate, 10.000 corse) passa `kzero controlla` senza errori. Tempo e memoria si annotano nel DIARIO, non sono una soglia della prova. |
+| `scala` | Un pacchetto grande generato con un seme fisso (600 mezzi, 5.000 fermate, 10.000 corse; dal K-008 1.320 persone, 1.200 turni, rotazioni di lunghezze diverse, un anno di festivita') passa `kzero controlla` senza errori e `kzero giornata` su una data. Tempo e memoria si annotano nel DIARIO, non sono una soglia della prova. |
 
 ## Limiti noti
 
@@ -189,3 +212,5 @@ docs/formato-dati.md e docs/schema coincidano con il programma.
 - Windows (K-009): argomenti con lettere accentate e a capo "CR LF" sono da sistemare e provare li'.
 - Stesso input = stesso output vale a parita' di programma e di sistema. Tra sistemi diversi i valori
   calcolati con decimali potrebbero differire all'ultima cifra: per questo il JSON li arrotonda.
+- `kzero giornata` rifa' tutti i controlli del pacchetto prima di mostrare un giorno (con errori non mostra
+  nulla): con 600 mezzi e 1.200 turni i controlli giorno per giorno di un anno richiedono qualche secondo (DIARIO).

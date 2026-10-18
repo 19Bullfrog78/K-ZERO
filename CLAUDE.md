@@ -31,12 +31,29 @@ Si parte da Alpinabus (3 minibus + 1 auto) e si deve poter crescere fino a 500 m
   uscita 1 se ci sono errori nei dati, gli avvisi non bloccano)
 - Stampa di prova con il pacchetto dimostrativo esempi/demo (dati inventati): `./build/kzero dimostrazione`
   (`--formato json`; `--includi-dati-personali` e `--includi-dati-particolari` per vedere i dati nascosti)
+- Giornata di un giorno (turni, chi li fa, mezzi, corse e attivita', turni scoperti o senza mezzo):
+  `./build/kzero giornata <cartella> --data AAAA-MM-GG [--persona CODICE | --mezzo CODICE]`
+  (es. `./build/kzero giornata esempi/demo --data 2026-10-22 --persona P-C`; `--formato json`; con errori nei dati
+  non mostra nulla e rimanda a kzero controlla, errore K-ERR-018)
 - Eseguire le prove: `ctest --test-dir build --output-on-failure`
 - Le prove sugli schemi JSON (`schema.*`) richiedono lo strumento standard check-jsonschema (versioni e
   impronte fissate), da installare prima di configurare in un ambiente Python dedicato:
   `python3 -m venv ~/.kzero-strumenti && ~/.kzero-strumenti/bin/pip install --require-hashes -r tests/strumenti/check-jsonschema.txt`
   e poi `export PATH=~/.kzero-strumenti/bin:$PATH`. Senza lo strumento quelle prove non vengono registrate
   (CMake lo segnala); il controllo GitHub le rende obbligatorie (`-DKZERO_SCHEMI_OBBLIGATORI=ON`).
+
+## Principi guida
+- IMPORTANTE (Mauro, 13/10): K-Zero non si calibra su un'azienda ed e' personalizzabile dall'azienda il piu'
+  possibile. L'organizzazione (rotazioni, giorni, chi fa cosa, nomi, tipi di attivita', assenze, fermi,
+  competenze, impostazioni) la scrive e la cambia l'utente nei dati; il programma la registra, la controlla e
+  piu' avanti la proporra', ma non decide niente da solo e ogni scelta dell'utente vince. Alpinabus e' solo un
+  esempio nei dati.
+- IMPORTANTE (Mauro, 18/10), sicurezza: il programma lavora sul PC e oggi nessun comando usa la rete; quando
+  servira' (es. le distanze da Google Maps) lo fara' solo un adattatore separato, acceso con un parametro
+  esplicito, che manda fuori il minimo (coordinate, mai nomi o altri dati delle persone), con un suo mandato.
+  Non scrive file senza --scrivi; controlla ogni dato in ingresso con limiti di buon senso e rifiuta i file
+  malformati senza bloccarsi; conserva il minimo dei dati personali. Il mandato "privacy e sicurezza di base"
+  viene prima di qualunque dato vero.
 
 ## Regole di lavoro
 - IMPORTANTE: K-Zero è un software professionale: stabile, solido, preciso.
@@ -95,7 +112,12 @@ Si parte da Alpinabus (3 minibus + 1 auto) e si deve poter crescere fino a 500 m
 - L'assistente occupa un posto. Solo chi viaggia seduto sulla carrozzina toglie posti a sedere e chiede la
   pedana; la carrozzina piegata e gli altri ausili piegati vanno nel bagagliaio, oppure tra i sedili (occupando
   posti liberi) solo se il mezzo lo ammette. Tutto in fits(), una sola regola.
-- Pause a casa dell'autista e ricoveri esterni sono preferenze, mai obblighi.
+- Pause a casa dell'autista e ricoveri esterni sono preferenze, mai obblighi. La regola della pausa a casa non e'
+  ancora nei dati (mandato "orari di lavoro"): senza regola il programma non giudica le pause.
+- Chi fa un turno: assegnazione del singolo giorno, poi servizio fisso, poi rotazione (vince il piu' preciso).
+  Se nessuno lo da', il turno e' scoperto: il programma non inventa assegnazioni. Un fatto con le date
+  (assenza, scadenza, fermo) su un turno ricorrente e' un avviso; sull'assegnazione del singolo giorno e' un errore.
+- Un turno ha un solo mezzo: il cambio di mezzo e il cambio dell'autista sono turni diversi.
 - I dati di esempi/demo, esempi/demo-numeri e della prova di scala sono inventati (tranne il regolamento
   R-TN, che riporta regole pubbliche con la fonte): non usarli come dati reali.
 - Un orario oltre le 24:00 resta tale ("24:12"), anche in uscita: non riportarlo alla mezzanotte.

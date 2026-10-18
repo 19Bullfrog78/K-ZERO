@@ -12,7 +12,11 @@ nomi nei dati.
 
 Per controllare un pacchetto: `kzero controlla <cartella>` (problemi spiegati in [controlli.md](controlli.md)).
 Esempi completi: `esempi/demo` (livello "completo") ed `esempi/demo-numeri` (livello "solo numeri"),
-con dati inventati.
+con dati inventati. Dal K-008 il demo ha anche persone e turni: in Alfa la rotazione di 14 giorni della forma di
+quella di Alpinabus, un servizio fisso solo il mercoledi', sostituzioni, un mezzo in revisione sostituito dal mezzo di
+scorta, un autobus di linea con la distrazione al noleggio usato per una gita, il cambio dell'autista a meta' corsa,
+turni notturni, spezzati, di riserva e di reperibilita'; in Beta una linea 7 su 7 con orario feriale e festivo e un
+ciclo di 3 giorni. La giornata di un giorno si vede con `kzero giornata esempi/demo --data 2026-10-22`.
 
 ## Il pacchetto dati
 
@@ -776,6 +780,23 @@ spezzati" con la soglia scelta dall'utente), `altro` (`descrizione`: mostrata, n
 **Ore, contratto collettivo, costo orario** sono solo dati: chi li verifica contro la legge e la filosofia
 aziendale e' il mandato "orari di lavoro".
 
+Una persona nel livello "completo" (nel livello "solo numeri" mancano `nome`, `casa` e `nota`):
+
+```json
+{
+  "codice": "P-C",
+  "azienda": "ALFA",
+  "ruoli": ["autista"],
+  "nome": "Verdi Carlo",
+  "presa_servizio": "L-RIMESSA-ALFA",
+  "rapporto": { "tipo": "titolare" },
+  "abilitazioni": [{ "tipo": "B" }, { "tipo": "D", "scadenza": "2030-01-15" }, { "tipo": "CQC-P", "scadenza": "2027-06-30" }],
+  "autorizzazioni": [{ "committente": "CVA", "riferimento": "Cartellino n. 9 (inventato)", "scadenza": "2027-08-31" }],
+  "competenze": ["PEDANA", "LINEA-B610", "ELETTRICO"],
+  "prestiti": [{ "azienda": "BETA", "accordo": "Accordo consortile n. 2/2026 (inventato)", "dal": "2026-09-01", "al": "2027-08-31" }]
+}
+```
+
 ### assenze.json
 
 Assenze programmate delle persone. **Solo il tipo, mai la causa**: il formato non ha un campo per scriverla. Schema:
@@ -788,6 +809,10 @@ Assenze programmate delle persone. **Solo il tipo, mai la causa**: il formato no
 | `assenze[].dal`, `al` | si' | personale | Primo e ultimo giorno |
 | `assenze[].dalle`, `alle` | no | personale | Solo una parte di ogni giorno del periodo (vanno scritti insieme) |
 
+```json
+{ "persona": "P-A", "tipo": "FERIE", "dal": "2026-10-22", "al": "2026-10-23" }
+```
+
 ### fermi.json
 
 Fermi programmati dei mezzi. Schema: [docs/schema/fermi.v1.schema.json](schema/fermi.v1.schema.json).
@@ -799,6 +824,10 @@ Fermi programmati dei mezzi. Schema: [docs/schema/fermi.v1.schema.json](schema/f
 | `fermi[].dal`, `al` | si' | comune | Primo e ultimo giorno |
 | `fermi[].dalle`, `alle` | no | comune | Solo una parte di ogni giorno del periodo (vanno scritti insieme) |
 | `fermi[].nota` | no | comune | Note |
+
+```json
+{ "mezzo": "ALFA-01", "tipo": "REVISIONE", "dal": "2026-10-19", "al": "2026-10-20", "nota": "Revisione annuale in officina." }
+```
 
 ### turni.json
 
@@ -848,6 +877,29 @@ impegnano.
 **Turni da assistente e da secondo autista** elencano le corse in cui la persona e' a bordo; il mezzo e' quello del
 turno dell'autista che fa quelle corse.
 
+Il secondo turno del demo: va a piedi al punto di cambio, prende l'autobus a meta' della corsa C-LIN-549 e finisce in
+rimessa (alcune attivita' tolte per brevita'):
+
+```json
+{
+  "codice": "T-SECONDO",
+  "nome": "Secondo",
+  "azienda": "ALFA",
+  "ruolo": "autista",
+  "calendario": "CAL-LV-FER",
+  "mezzo": { "modo": "preciso", "codice": "ALFA-05" },
+  "inizio": "L-RIMESSA-ALFA",
+  "fine": "L-RIMESSA-ALFA",
+  "elementi": [
+    { "attivita": "A-PIEDI", "luogo": "L-RIMESSA-ALFA", "verso": "F-VALFONDA-PIAZZA", "dalle": "16:50", "alle": "17:00" },
+    { "corsa": "C-LIN-549", "da": { "luogo": "F-VALFONDA-PIAZZA" } },
+    { "attivita": "VUOTO", "luogo": "F-STAZIONE", "verso": "L-RIMESSA-ALFA", "dalle": "17:13", "alle": "17:21", "km_vuoti": 1.0 },
+    { "corsa": "C-LIN-553" },
+    { "attivita": "FINE", "luogo": "L-RIMESSA-ALFA", "dalle": "20:22", "alle": "20:30" }
+  ]
+}
+```
+
 ### rotazioni.json
 
 Una **rotazione** e' un ciclo di passi che si ripete: per ogni passo e ogni persona, i turni che fa oppure
@@ -877,6 +929,24 @@ passo non vale (festa, vacanza della scuola) quella persona semplicemente non la
 avanti. Si conta anche prima della partenza (con `dal` precedente). Con i passi mensili, il passo e' il numero di mesi
 di calendario dalla partenza. La regola dell'azienda Alpinabus, con la tabella di 14 giorni, e' scritta in REGOLE.md.
 
+La linea 7 su 7 del demo: tre autisti, ciclo di 3 giorni, il riposo scorre; il passo con due turni vale nei giorni
+feriali per il primo e nei festivi per l'altro, secondo i loro calendari:
+
+```json
+{
+  "codice": "ROT-BETA",
+  "nome": "Linea 7 su 7, ciclo di 3 giorni",
+  "passo": "giorno",
+  "lunghezza": 3,
+  "partenza": "2026-09-01",
+  "righe": [
+    { "persona": "P-B1", "passi": [["T-B-PRIMO", "T-B-FESTIVO"], "riposo", ["T-B-ASILO", "T-B-SERA"]] },
+    { "persona": "P-B2", "passi": [["T-B-ASILO", "T-B-SERA"], ["T-B-PRIMO", "T-B-FESTIVO"], "riposo"] },
+    { "persona": "P-B3", "passi": ["riposo", ["T-B-ASILO", "T-B-SERA"], ["T-B-PRIMO", "T-B-FESTIVO"]] }
+  ]
+}
+```
+
 ### servizi_fissi.json
 
 Un **servizio fisso** e' un turno assegnato sempre alla stessa persona nei giorni di un calendario (es. il
@@ -892,6 +962,10 @@ alcune corse, le mette in un turno a parte. Schema:
 | `servizi_fissi[].calendario` | si' | comune | Giorni in cui il turno e' di questa persona; gli altri giorni il turno segue la rotazione |
 | `servizi_fissi[].nota` | no | personale | Note |
 
+```json
+{ "codice": "SF-MER", "turno": "T-SECONDO", "persona": "P-C", "calendario": "CAL-MER-FER" }
+```
+
 ### assegnazioni.json
 
 Un'**assegnazione del singolo giorno** dice chi fa un turno in una data, con quale mezzo, o tutti e due:
@@ -906,6 +980,15 @@ l'utente. Schema: [docs/schema/assegnazioni.v1.schema.json](schema/assegnazioni.
 | `assegnazioni[].persona` | no | comune | Chi fa il turno quel giorno |
 | `assegnazioni[].mezzo` | no | comune | Con quale mezzo quel giorno (almeno uno tra `persona` e `mezzo`) |
 | `assegnazioni[].nota` | no | personale | Note (mai la causa di un'assenza) |
+
+Una sostituzione e un mezzo al posto di quello in revisione:
+
+```json
+[
+  { "data": "2026-10-22", "turno": "T-SECONDO", "persona": "P-C" },
+  { "data": "2026-10-19", "turno": "T-SCUOLA-1", "mezzo": "ALFA-07" }
+]
+```
 
 **Chi fa il turno in un giorno**: l'assegnazione del singolo giorno, se c'e'; altrimenti il servizio fisso, se il
 suo calendario vale quel giorno; altrimenti la rotazione. Vince il modo piu' preciso, turno per turno. Se nessun
@@ -931,6 +1014,10 @@ controlla che le corse bloccate siano fatte con il loro mezzo (K-CTR-074) e che 
 | `blocchi[].dal`, `al` | no | comune | Date del blocco; assenti = tutto il periodo |
 | `blocchi[].forza` | si' | comune | `mezzo_fisso` (le corse restano a questo mezzo; un calcolo futuro potra' riorganizzare i giri con quel mezzo) oppure `tutto_fisso` (mezzo, corse e orari restano come sono) |
 | `blocchi[].nota` | no | comune | Note |
+
+```json
+{ "codice": "B-LINEA", "mezzo": "ALFA-05", "corse": ["C-LIN-533", "C-LIN-560"], "forza": "tutto_fisso" }
+```
 
 ## Ricerca dei luoghi per nome o codice esterno
 
