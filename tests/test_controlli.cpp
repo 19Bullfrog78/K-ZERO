@@ -781,5 +781,8 @@ TEST(Controlli, catalogo_coperto) {
     EXPECT_EQ(api::definizione_controllo(Check::DriverWithoutLicence).codice, "K-CTR-068");
     EXPECT_EQ(api::definizione_controllo(Check::ShiftUncovered).codice, "K-CTR-077");
     EXPECT_EQ(api::definizione_controllo(Check::EscortProviderDiffers).codice, "K-CTR-087");
-    EXPECT_EQ(api::catalogo_controlli().size(), 87u);
+    EXPECT_EQ(api::definizione_controllo(Check::NotRegularFile).codice, "K-CTR-088");   // K-009: lettura blindata
+    EXPECT_EQ(api::definizione_controllo(Check::LinkOutsideFolder).codice, "K-CTR-089");
+    EXPECT_EQ(api::definizione_controllo(Check::DirectoryInsteadOfFile).codice, "K-CTR-090");
+    EXPECT_EQ(api::catalogo_controlli().size(), 90u);
 }

@@ -24,7 +24,9 @@ const std::vector<DefinizioneControllo>& catalogo_controlli() {
             {Check::MissingManifest, "K-CTR-001", E, "Manca il manifesto",
              {"Manca il file pacchetto.json, il manifesto del pacchetto: senza manifesto il pacchetto non si puo' controllare."}},
             {Check::UnreadableFile, "K-CTR-002", E, "File illeggibile",
-             {"Il file non si riesce a leggere (permessi o disco): non e' stato letto."}},
+             {"Il file non si riesce a leggere (permessi o disco): non e' stato letto.",
+              "Il file e' un collegamento che non porta a nessun file (il file a cui portava e' stato spostato o cancellato): "
+              "non e' stato letto."}},
             {Check::InvalidJson, "K-CTR-003", E, "JSON non valido",
              {"Il file non e' un JSON valido: errore di scrittura alla riga {riga}, colonna {colonna}, o poco prima "
               "(es. una virgola o una parentesi mancante). Il file non e' stato letto."}},
@@ -350,6 +352,16 @@ const std::vector<DefinizioneControllo>& catalogo_controlli() {
               "fornisce l'azienda, {giorni}.",
               "Il turno da assistente {turno} copre la corsa {corsa}, ma il contratto {contratto} dice che l'assistente lo fornisce "
               "il committente, {giorni}."}},
+            // Lettura blindata (K-009)
+            {Check::NotRegularFile, "K-CTR-088", E, "Non e' un file normale",
+             {"Al posto del file c'e' qualcosa che non e' un file normale (un dispositivo del sistema, una \"pipe\" o "
+              "simili): non e' stato letto. Mettere al suo posto il file di dati."}},
+            {Check::LinkOutsideFolder, "K-CTR-089", E, "Collegamento a un file fuori dalla cartella del pacchetto",
+             {"Il file e' un collegamento a un file che sta fuori dalla cartella del pacchetto: non e' stato letto. Copiare il "
+              "file dentro la cartella del pacchetto."}},
+            {Check::DirectoryInsteadOfFile, "K-CTR-090", E, "Cartella al posto di un file del pacchetto",
+             {"C'e' una cartella che si chiama {file}, come un file del pacchetto: il file non e' stato letto. Togliere o "
+              "rinominare la cartella e mettere al suo posto il file."}},
             // Contenuto: avvisi
             {Check::PlaceWithoutCoordinates, "K-CTR-035", A, "Luogo senza coordinate",
              {"Il luogo {luogo} non ha le coordinate: serviranno al calcolo delle distanze."}},

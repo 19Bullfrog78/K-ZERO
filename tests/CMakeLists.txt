@@ -314,6 +314,35 @@ kzero_rotto(rotto_attesa_fuori_regolamento FORMATO testo
 kzero_rotto(rotto_mezzo_massimo_sotto_il_minimo FORMATO testo
             MODIFICA IMPOSTA contratti.json /contratti/2/regole/posti_massimi 20
             PROBLEMI "K-CTR-022|contratti.json|/contratti/2/regole")
+# --- Lettura blindata (K-009) ------------------------------------------------------------
+# Si legge solo un file normale dentro la cartella del pacchetto, mai piu' di 256 MB; una cartella con il nome di un
+# file del pacchetto e' un errore proprio. Nessun errore a catena: il file c'e' ma non si usa, e i controlli sul
+# contenuto non partono. TIMEOUT: se il programma restasse in attesa (una pipe, /dev/zero), la prova fallisce subito.
+kzero_rotto(rotto_cartella_al_posto_del_file FORMATO testo MODIFICA CARTELLA persone.json
+            PROBLEMI "K-CTR-090|persone.json" CONTIENE "Controlli sul contenuto non eseguiti" " 1 errore, 0 avvisi."
+            NON_CONTIENE "K-CTR-010" "K-CTR-008")
+if(NOT WIN32)
+  kzero_rotto(rotto_pipe_al_posto_del_file FORMATO testo MODIFICA PIPE persone.json
+              PROBLEMI "K-CTR-088|persone.json" CONTIENE "Controlli sul contenuto non eseguiti" NON_CONTIENE "K-CTR-010")
+  kzero_rotto(rotto_collegamento_a_dev_zero FORMATO json MODIFICA COLLEGA persone.json /dev/zero
+              PROBLEMI "K-CTR-089|persone.json" CONTIENE "\"errori\": 1,")
+  kzero_rotto(rotto_collegamento_fuori_dalla_cartella FORMATO testo MODIFICA COLLEGA persone.json @FUORI@
+              PROBLEMI "K-CTR-089|persone.json" NON_CONTIENE "K-CTR-010")
+  kzero_rotto(rotto_collegamento_che_non_porta_a_nulla FORMATO testo MODIFICA COLLEGA persone.json archivio/non-c-e.json
+              PROBLEMI "K-CTR-002|persone.json" CONTIENE "non porta a nessun file")
+  # Un collegamento a un file normale dentro la cartella si segue: il pacchetto e' quello del demo (piu' l'avviso
+  # sulla sottocartella "archivio", che non fa parte del formato).
+  kzero_prova(collegamento_dentro_la_cartella USCITA 0 FORMATO testo BASE ${KZERO_DEMO} MODIFICA COLLEGA persone.json @DENTRO@
+              PROBLEMI "K-CTR-008|archivio" CONTIENE " 0 errori, 9 avvisi."
+              ARGOMENTI controlla @PACCHETTO@)
+  kzero_prova(giornata_con_una_pipe USCITA 1 FORMATO testo ERRORE K-ERR-018 BASE ${KZERO_DEMO} MODIFICA PIPE turni.json
+              ARGOMENTI giornata @PACCHETTO@ --data 2026-10-22)
+  foreach(prova rotto_pipe_al_posto_del_file rotto_collegamento_a_dev_zero rotto_collegamento_fuori_dalla_cartella
+                rotto_collegamento_che_non_porta_a_nulla collegamento_dentro_la_cartella giornata_con_una_pipe)
+    set_tests_properties(programma.${prova} PROPERTIES TIMEOUT 60)
+  endforeach()
+endif()
+
 # --- kzero giornata (K-008) ----------------------------------------------------------
 # Le tre giornate chieste dal mandato, confrontate con le uscite attese: una persona e un mezzo in un giovedi' (il
 # giorno della sostituzione di P-A) e una persona in un giorno festivo (orario festivo della linea di Beta).

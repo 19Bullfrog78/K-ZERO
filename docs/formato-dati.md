@@ -83,7 +83,13 @@ Un file con un nome diverso da questi non viene letto (avviso K-CTR-008): di sol
   **masse** in tonnellate; **costi** nella valuta del manifesto.
 - **Testi**: una riga non vuota fino a 300 caratteri; le note (`nota`) fino a 2000 caratteri.
 - **Dimensione**: un file piu' grande di 256 MB non viene letto (errore K-CTR-053): e' certamente un errore, e
-  leggerlo potrebbe esaurire la memoria del PC.
+  leggerlo potrebbe esaurire la memoria del PC. La lettura si ferma appena passa il massimo, anche quando il sistema
+  non dice la dimensione o il file cresce mentre lo si legge.
+- **File normali dentro la cartella**: ogni file del pacchetto e' un file normale. Un dispositivo (es. `/dev/zero`),
+  una "pipe" o una cartella con il nome di un file del pacchetto non vengono letti (errori K-CTR-088 e K-CTR-090). Un
+  collegamento (link simbolico) si segue solo se porta a un file normale dentro la cartella del pacchetto, anche in una
+  sottocartella (altrimenti errore K-CTR-089); la cartella del pacchetto puo' essere a sua volta un collegamento (es.
+  una cartella sincronizzata).
 - **Numeri**: ogni numero ha un minimo e un massimo di buon senso (es. 1.000 posti per mezzo, 10.000 persone a
   una fermata, 1.440 minuti, 3.600 secondi, 100 m per una misura, 1.000.000 per i valori di un regolamento):
   un valore piu' grande e' certamente un errore di scrittura e il file viene rifiutato (K-CTR-007).

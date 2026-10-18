@@ -17,6 +17,25 @@
 
 namespace kzero::api {
 
+// Limite di buon senso per un file di dati: oltre e' certamente un errore (un file sbagliato o di un altro
+// programma), e leggerlo potrebbe esaurire la memoria del PC.
+inline constexpr std::uintmax_t kMassimoMBFile = 256;
+inline constexpr std::uintmax_t kMassimoByteFile = kMassimoMBFile * 1024 * 1024;
+
+// Esito della lettura di un file del pacchetto. Si legge solo un file normale, mai piu' del massimo di byte.
+struct FileLetto {
+    enum class Esito {
+        Letto,
+        Illeggibile,         // permessi, disco
+        CollegamentoRotto,   // collegamento che non porta a nessun file
+        NonNormale,          // dispositivo, "pipe", presa di rete, cartella...: non un file normale
+        FuoriCartella,       // collegamento a un file fuori dalla cartella del pacchetto
+        TroppoGrande,        // piu' del massimo, anche se la dimensione non si conosceva o il file cresceva
+    };
+    Esito esito = Esito::Illeggibile;
+    std::string testo;   // solo con Letto
+};
+
 // Dove stanno i file del pacchetto.
 class Sorgente {
 public:
@@ -26,22 +45,24 @@ public:
     };
     virtual ~Sorgente() = default;
     virtual std::vector<Voce> voci() const = 0;   // in ordine di nome
-    virtual std::optional<std::string> leggi(const std::string& nome) const = 0;   // nessun valore se illeggibile
-    // Dimensione del file in byte, se si conosce senza leggerlo: un file troppo grande non si legge per niente.
-    virtual std::optional<std::uintmax_t> dimensione(const std::string&) const { return std::nullopt; }
+    // Legge un file del pacchetto, al massimo "massimo" byte: oltre, l'esito e' TroppoGrande.
+    virtual FileLetto leggi(const std::string& nome, std::uintmax_t massimo) const = 0;
 };
 
-// Limite di buon senso per un file di dati: oltre e' certamente un errore (un file sbagliato o di un altro
-// programma), e leggerlo potrebbe esaurire la memoria del PC.
-inline constexpr std::uintmax_t kMassimoMBFile = 256;
+// Lettura blindata di un file della cartella del pacchetto (docs/sicurezza.md):
+// - si legge solo un file normale: non un dispositivo (es. /dev/zero), una "pipe", una cartella;
+// - un collegamento (link) si segue, ma il file a cui porta deve essere un file normale dentro la cartella del
+//   pacchetto (la cartella stessa puo' essere un collegamento, es. una cartella sincronizzata);
+// - mai piu' di "massimo" byte, anche se il sistema non dice la dimensione o il file cresce mentre lo si legge:
+//   si legge fino al massimo piu' uno e ci si ferma.
+FileLetto leggi_dal_disco(const std::filesystem::path& cartella, const std::string& nome, std::uintmax_t massimo);
 
 // Una cartella sul disco.
 class CartellaSuDisco : public Sorgente {
 public:
     explicit CartellaSuDisco(std::filesystem::path cartella) : cartella_(std::move(cartella)) {}
     std::vector<Voce> voci() const override;
-    std::optional<std::string> leggi(const std::string& nome) const override;
-    std::optional<std::uintmax_t> dimensione(const std::string& nome) const override;
+    FileLetto leggi(const std::string& nome, std::uintmax_t massimo) const override;
 
 private:
     std::filesystem::path cartella_;
@@ -52,7 +73,7 @@ class PacchettoIncorporato : public Sorgente {
 public:
     explicit PacchettoIncorporato(std::string cartella) : cartella_(std::move(cartella)) {}
     std::vector<Voce> voci() const override;
-    std::optional<std::string> leggi(const std::string& nome) const override;
+    FileLetto leggi(const std::string& nome, std::uintmax_t massimo) const override;
 
 private:
     std::string cartella_;

@@ -2,10 +2,17 @@
 #include "lettore.hpp"
 
 #include <algorithm>
+#include <cerrno>
 #include <fstream>
 #include <set>
-#include <sstream>
 #include <stdexcept>
+
+#if defined(__unix__) || defined(__APPLE__)
+#define KZERO_LETTURA_POSIX 1
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#endif
 
 #include "formato_dati.hpp"
 #include "risorse.hpp"
@@ -25,26 +32,128 @@ std::vector<Sorgente::Voce> CartellaSuDisco::voci() const {
     for (auto it = std::filesystem::directory_iterator(cartella_, ec); !ec && it != std::filesystem::directory_iterator();
          it.increment(ec)) {
         std::error_code ec_tipo;
+        // is_directory segue i collegamenti e non apre nulla: una "pipe" o un dispositivo non bloccano.
         v.push_back({it->path().filename().string(), it->is_directory(ec_tipo)});
     }
     std::sort(v.begin(), v.end(), [](const Voce& a, const Voce& b) { return a.nome < b.nome; });
     return v;
 }
 
-std::optional<std::string> CartellaSuDisco::leggi(const std::string& nome) const {
-    std::ifstream f(cartella_ / nome, std::ios::binary);
-    if (!f) return std::nullopt;
-    std::ostringstream testo;
-    testo << f.rdbuf();
-    if (f.bad()) return std::nullopt;
-    return testo.str();
+namespace {
+
+// Il percorso "dentro" (gia' risolto, senza collegamenti) sta nella cartella "base" (anche lei risolta)?
+bool dentro(const std::filesystem::path& percorso, const std::filesystem::path& base) {
+    auto p = percorso.begin();
+    for (auto b = base.begin(); b != base.end(); ++b, ++p) {
+        if (b->empty()) continue;   // "/" finale della cartella
+        if (p == percorso.end() || *p != *b) return false;
+    }
+    return true;
 }
 
-std::optional<std::uintmax_t> CartellaSuDisco::dimensione(const std::string& nome) const {
+// Legge al massimo "massimo" byte da una funzione che riempie un pezzo di memoria (read del sistema o di un
+// flusso): si chiede sempre al piu' quello che manca al massimo piu' uno, cosi' un file che cresce o che non
+// finisce mai si ferma subito dopo il massimo.
+template <class Leggi>
+FileLetto leggi_al_massimo(std::uintmax_t massimo, Leggi leggi_pezzo) {
+    FileLetto out;
+    std::string testo;
+    char pezzo[64 * 1024];
+    for (;;) {
+        const std::uintmax_t manca = massimo + 1 - testo.size();
+        const std::size_t chiesti = static_cast<std::size_t>(std::min<std::uintmax_t>(sizeof pezzo, manca));
+        const long long letti = leggi_pezzo(pezzo, chiesti);
+        if (letti < 0) return out;   // Illeggibile
+        if (letti == 0) break;
+        testo.append(pezzo, static_cast<std::size_t>(letti));
+        if (testo.size() > massimo) {
+            out.esito = FileLetto::Esito::TroppoGrande;
+            return out;
+        }
+    }
+    out.esito = FileLetto::Esito::Letto;
+    out.testo = std::move(testo);
+    return out;
+}
+
+}  // namespace
+
+FileLetto leggi_dal_disco(const std::filesystem::path& cartella, const std::string& nome, std::uintmax_t massimo) {
+    namespace fs = std::filesystem;
+    FileLetto out;
+    const fs::path percorso = cartella / nome;
     std::error_code ec;
-    const std::uintmax_t n = std::filesystem::file_size(cartella_ / nome, ec);
-    if (ec) return std::nullopt;
-    return n;
+    const fs::file_status proprio = fs::symlink_status(percorso, ec);
+    if (ec) return out;
+    fs::path vero = percorso;
+    if (fs::is_symlink(proprio)) {
+        // Un collegamento si segue fino in fondo; il file vero deve stare dentro la cartella del pacchetto, risolta
+        // anche lei (puo' essere a sua volta un collegamento, es. una cartella sincronizzata).
+        if (!fs::exists(percorso, ec)) {
+            out.esito = ec ? FileLetto::Esito::Illeggibile : FileLetto::Esito::CollegamentoRotto;
+            return out;
+        }
+        vero = fs::canonical(percorso, ec);
+        if (ec) return out;
+        const fs::path base = fs::canonical(cartella, ec);
+        if (ec) return out;
+        if (!dentro(vero, base)) {
+            out.esito = FileLetto::Esito::FuoriCartella;
+            return out;
+        }
+    }
+    const fs::file_status tipo = fs::status(vero, ec);
+    if (ec) return out;
+    if (!fs::is_regular_file(tipo)) {
+        out.esito = FileLetto::Esito::NonNormale;
+        return out;
+    }
+#if defined(KZERO_LETTURA_POSIX)
+    // O_NONBLOCK: se nel frattempo al posto del file e' comparsa una "pipe", l'apertura non resta in attesa.
+    const int fd = ::open(vero.c_str(), O_RDONLY | O_NOCTTY | O_NONBLOCK | O_CLOEXEC);
+    if (fd < 0) return out;
+    struct stat st {};
+    if (::fstat(fd, &st) != 0) {
+        ::close(fd);
+        return out;
+    }
+    if (!S_ISREG(st.st_mode)) {   // quello che e' stato aperto davvero
+        ::close(fd);
+        out.esito = FileLetto::Esito::NonNormale;
+        return out;
+    }
+    if (st.st_size > 0 && static_cast<std::uintmax_t>(st.st_size) > massimo) {   // non serve leggerlo
+        ::close(fd);
+        out.esito = FileLetto::Esito::TroppoGrande;
+        return out;
+    }
+    out = leggi_al_massimo(massimo, [fd](char* dove, std::size_t quanti) -> long long {
+        for (;;) {
+            const ssize_t n = ::read(fd, dove, quanti);
+            if (n >= 0) return static_cast<long long>(n);
+            if (errno != EINTR) return -1;
+        }
+    });
+    ::close(fd);
+    return out;
+#else
+    const std::uintmax_t dichiarata = fs::file_size(vero, ec);
+    if (!ec && dichiarata > massimo) {
+        out.esito = FileLetto::Esito::TroppoGrande;
+        return out;
+    }
+    std::ifstream f(vero, std::ios::binary);
+    if (!f) return out;
+    return leggi_al_massimo(massimo, [&f](char* dove, std::size_t quanti) -> long long {
+        f.read(dove, static_cast<std::streamsize>(quanti));
+        if (f.bad()) return -1;
+        return static_cast<long long>(f.gcount());
+    });
+#endif
+}
+
+FileLetto CartellaSuDisco::leggi(const std::string& nome, std::uintmax_t massimo) const {
+    return leggi_dal_disco(cartella_, nome, massimo);
 }
 
 std::vector<Sorgente::Voce> PacchettoIncorporato::voci() const {
@@ -58,10 +167,17 @@ std::vector<Sorgente::Voce> PacchettoIncorporato::voci() const {
     return v;
 }
 
-std::optional<std::string> PacchettoIncorporato::leggi(const std::string& nome) const {
+FileLetto PacchettoIncorporato::leggi(const std::string& nome, std::uintmax_t massimo) const {
+    FileLetto out;
     const auto testo = risorse::trova(cartella_ + "/" + nome);
-    if (!testo) return std::nullopt;
-    return std::string(*testo);
+    if (!testo) return out;
+    if (testo->size() > massimo) {
+        out.esito = FileLetto::Esito::TroppoGrande;
+        return out;
+    }
+    out.esito = FileLetto::Esito::Letto;
+    out.testo = std::string(*testo);
+    return out;
 }
 
 bool Lettura::forma_valida() const {
@@ -1336,9 +1452,16 @@ Problem problema(Check c, const std::string& file, std::string puntatore, std::v
 Lettura leggi_pacchetto(const Sorgente& sorgente) {
     Lettura out;
     std::set<std::string>& presenti = out.presenti;
+    std::set<std::string> cartelle;   // cartelle con il nome di un file del formato
     for (const auto& v : sorgente.voci()) {
-        if (!v.cartella && file_dati_per_nome(v.nome)) {
+        if (file_dati_per_nome(v.nome)) {
             presenti.insert(v.nome);
+            if (v.cartella) {
+                // Un errore proprio: il file c'e' (non mancano i suoi elementi), ma non si puo' leggere. Cosi' i
+                // controlli sul contenuto non partono e non si hanno errori a catena sui codici mancanti.
+                cartelle.insert(v.nome);
+                out.problemi.push_back(problema(Check::DirectoryInsteadOfFile, v.nome, "", {text_param("file", v.nome)}));
+            }
             continue;
         }
         out.problemi.push_back(problema(Check::UnknownFile, v.nome, "", {text_param("file", v.nome)}, v.cartella ? 1 : 0));
@@ -1346,17 +1469,19 @@ Lettura leggi_pacchetto(const Sorgente& sorgente) {
     if (!presenti.count("pacchetto.json")) out.problemi.push_back(problema(Check::MissingManifest, "pacchetto.json", ""));
 
     for (const FileDati& f : file_dati()) {
-        if (!presenti.count(f.file)) continue;
-        const std::optional<std::uintmax_t> byte = sorgente.dimensione(f.file);
-        if (byte && *byte > kMassimoMBFile * 1024 * 1024) {
-            out.problemi.push_back(problema(Check::FileTooBig, f.file, "", {number_param("massimo", static_cast<long long>(kMassimoMBFile))}));
-            continue;
+        if (!presenti.count(f.file) || cartelle.count(f.file)) continue;
+        FileLetto letto = sorgente.leggi(f.file, kMassimoByteFile);
+        switch (letto.esito) {
+            case FileLetto::Esito::Letto: break;
+            case FileLetto::Esito::TroppoGrande:
+                out.problemi.push_back(problema(Check::FileTooBig, f.file, "", {number_param("massimo", static_cast<long long>(kMassimoMBFile))}));
+                continue;
+            case FileLetto::Esito::Illeggibile: out.problemi.push_back(problema(Check::UnreadableFile, f.file, "")); continue;
+            case FileLetto::Esito::CollegamentoRotto: out.problemi.push_back(problema(Check::UnreadableFile, f.file, "", {}, 1)); continue;
+            case FileLetto::Esito::NonNormale: out.problemi.push_back(problema(Check::NotRegularFile, f.file, "")); continue;
+            case FileLetto::Esito::FuoriCartella: out.problemi.push_back(problema(Check::LinkOutsideFolder, f.file, "")); continue;
         }
-        const std::optional<std::string> testo = sorgente.leggi(f.file);
-        if (!testo) {
-            out.problemi.push_back(problema(Check::UnreadableFile, f.file, ""));
-            continue;
-        }
+        const std::optional<std::string> testo = std::move(letto.testo);
         if (const auto codifica = codifica_sbagliata(*testo)) {
             Problem p = codifica->utf16 ? problema(Check::NotUtf8, f.file, "", {}, 1)
                                         : problema(Check::NotUtf8, f.file, "",

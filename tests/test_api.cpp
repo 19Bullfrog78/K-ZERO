@@ -3,6 +3,7 @@
 // (controlli sulla forma dei file), messaggi in italiano, classi dei dati e loro filtro.
 // Le prove che lanciano il programma vero stanno in tests/programma.
 #include <algorithm>
+#include <filesystem>
 #include <functional>
 #include <fstream>
 #include <map>
@@ -14,6 +15,10 @@
 #include <vector>
 
 #include <gtest/gtest.h>
+
+#if defined(__unix__)
+#include <sys/stat.h>
+#endif
 
 #include "api.hpp"
 #include "comandi.hpp"
@@ -201,7 +206,7 @@ class Memoria : public Sorgente {
 public:
     Memoria() {
         const PacchettoIncorporato demo("esempi/demo");
-        for (const auto& v : demo.voci()) file[v.nome] = demo.leggi(v.nome);
+        for (const auto& v : demo.voci()) file[v.nome] = demo.leggi(v.nome, kMassimoByteFile).testo;
     }
     std::vector<Voce> voci() const override {
         std::vector<Voce> v;
@@ -210,9 +215,23 @@ public:
         std::sort(v.begin(), v.end(), [](const Voce& a, const Voce& b) { return a.nome < b.nome; });
         return v;
     }
-    std::optional<std::string> leggi(const std::string& nome) const override {
+    FileLetto leggi(const std::string& nome, std::uintmax_t massimo) const override {
+        FileLetto out;
+        const auto finto = esiti.find(nome);
+        if (finto != esiti.end()) {
+            out.esito = finto->second;
+            return out;
+        }
         const auto it = file.find(nome);
-        return it == file.end() ? std::nullopt : it->second;
+        if (it == file.end() || !it->second) return out;   // illeggibile
+        const auto grande = grandi.find(nome);
+        if ((grande != grandi.end() && grande->second > massimo) || it->second->size() > massimo) {
+            out.esito = FileLetto::Esito::TroppoGrande;
+            return out;
+        }
+        out.esito = FileLetto::Esito::Letto;
+        out.testo = *it->second;
+        return out;
     }
     // Sostituisce un testo che compare una volta sola nel file.
     void sostituisci(const std::string& nome, const std::string& vecchio, const std::string& nuovo) {
@@ -223,15 +242,10 @@ public:
         t.replace(i, vecchio.size(), nuovo);
     }
 
-    std::optional<std::uintmax_t> dimensione(const std::string& nome) const override {
-        const auto it = grandi.find(nome);
-        if (it != grandi.end()) return it->second;
-        return std::nullopt;
-    }
-
     std::map<std::string, std::optional<std::string>> file;   // nessun valore = illeggibile
     std::vector<std::string> cartelle;
     std::map<std::string, std::uintmax_t> grandi;   // dimensione finta (byte) di alcuni file
+    std::map<std::string, FileLetto::Esito> esiti;  // esito finto della lettura di alcuni file (es. non normale)
 };
 
 struct Atteso {
@@ -341,6 +355,115 @@ TEST(Api, K_CTR_053_file_troppo_grande) {
     Memoria n;
     n.grandi["corse.json"] = kMassimoMBFile * 1024 * 1024;   // al limite: si legge
     EXPECT_TRUE(problemi(n, {}));
+}
+
+namespace {
+
+// Cartella temporanea per le prove sul disco: <temp>/kzero-lettura-<numero>/{pacchetto,fuori}, tolta alla fine.
+class CartellaProva {
+public:
+    CartellaProva() {
+        namespace fs = std::filesystem;
+        for (int i = 0;; ++i) {
+            radice = fs::temp_directory_path() / ("kzero-lettura-" + std::to_string(i));
+            std::error_code ec;
+            if (fs::create_directory(radice, ec)) break;
+        }
+        fs::create_directories(pacchetto());
+        fs::create_directories(fuori());
+        fs::create_directories(pacchetto() / "archivio");
+    }
+    ~CartellaProva() {
+        std::error_code ec;
+        std::filesystem::remove_all(radice, ec);
+    }
+    std::filesystem::path pacchetto() const { return radice / "pacchetto"; }
+    std::filesystem::path fuori() const { return radice / "fuori"; }
+    static void scrivi(const std::filesystem::path& f, const std::string& testo) {
+        std::ofstream o(f, std::ios::binary);
+        o << testo;
+    }
+    std::filesystem::path radice;
+};
+
+}  // namespace
+
+// Lettura blindata (K-009): si legge solo un file normale e mai piu' del massimo di byte; un collegamento si segue
+// solo se porta a un file normale dentro la cartella del pacchetto.
+TEST(Api, lettura_blindata_dal_disco) {
+    namespace fs = std::filesystem;
+    using E = FileLetto::Esito;
+    const CartellaProva c;
+    const fs::path p = c.pacchetto();
+    CartellaProva::scrivi(p / "mezzi.json", "12345");
+    EXPECT_EQ(leggi_dal_disco(p, "mezzi.json", 5).esito, E::Letto);
+    EXPECT_EQ(leggi_dal_disco(p, "mezzi.json", 5).testo, "12345");
+    EXPECT_EQ(leggi_dal_disco(p, "mezzi.json", 4).esito, E::TroppoGrande);   // un byte oltre il massimo
+    CartellaProva::scrivi(p / "vuoto.json", "");
+    EXPECT_EQ(leggi_dal_disco(p, "vuoto.json", 5).esito, E::Letto);
+    EXPECT_EQ(leggi_dal_disco(p, "non-esiste.json", 5).esito, E::Illeggibile);
+    fs::create_directory(p / "persone.json");
+    EXPECT_EQ(leggi_dal_disco(p, "persone.json", 5).esito, E::NonNormale);   // una cartella
+    // Un file grande piu' del pezzo letto in una volta (64 KB): letto tutto, o fermato al massimo.
+    CartellaProva::scrivi(p / "corse.json", std::string(200000, 'x'));
+    EXPECT_EQ(leggi_dal_disco(p, "corse.json", 200000).testo.size(), 200000u);
+    EXPECT_EQ(leggi_dal_disco(p, "corse.json", 199999).esito, E::TroppoGrande);
+#if defined(__unix__)
+    // Una "pipe" al posto del file: rifiutata subito, senza restare in attesa di chi scrive.
+    ASSERT_EQ(::mkfifo((p / "turni.json").c_str(), 0600), 0);
+    EXPECT_EQ(leggi_dal_disco(p, "turni.json", 5).esito, E::NonNormale);
+    // Collegamenti: a un file fuori dalla cartella, a /dev/zero, a un file dentro, a nessun file, a una cartella.
+    CartellaProva::scrivi(c.fuori() / "luoghi.json", "{}");
+    fs::create_symlink(c.fuori() / "luoghi.json", p / "luoghi.json");
+    EXPECT_EQ(leggi_dal_disco(p, "luoghi.json", 5).esito, E::FuoriCartella);
+    fs::create_symlink("../fuori/luoghi.json", p / "tratti.json");
+    EXPECT_EQ(leggi_dal_disco(p, "tratti.json", 5).esito, E::FuoriCartella);
+    fs::create_symlink("/dev/zero", p / "rimesse.json");
+    EXPECT_EQ(leggi_dal_disco(p, "rimesse.json", 5).esito, E::FuoriCartella);
+    CartellaProva::scrivi(p / "archivio" / "fermi-2026.json", "{}");
+    fs::create_symlink("archivio/fermi-2026.json", p / "fermi.json");
+    EXPECT_EQ(leggi_dal_disco(p, "fermi.json", 5).esito, E::Letto);
+    EXPECT_EQ(leggi_dal_disco(p, "fermi.json", 5).testo, "{}");
+    fs::create_symlink("archivio/non-c-e.json", p / "blocchi.json");
+    EXPECT_EQ(leggi_dal_disco(p, "blocchi.json", 5).esito, E::CollegamentoRotto);
+    fs::create_symlink("archivio", p / "norme.json");
+    EXPECT_EQ(leggi_dal_disco(p, "norme.json", 5).esito, E::NonNormale);
+    // La cartella del pacchetto stessa puo' essere un collegamento (es. una cartella sincronizzata).
+    fs::create_directory_symlink(p, c.radice / "collegata");
+    EXPECT_EQ(leggi_dal_disco(c.radice / "collegata", "fermi.json", 5).esito, E::Letto);
+    EXPECT_EQ(leggi_dal_disco(c.radice / "collegata", "luoghi.json", 5).esito, E::FuoriCartella);
+#endif
+#if defined(__linux__)
+    // Un file che il sistema dice vuoto ma che ha un contenuto (i file di /proc, come un file che cresce mentre lo si
+    // legge): la lettura non si fida della dimensione e si ferma comunque un byte dopo il massimo.
+    EXPECT_EQ(leggi_dal_disco("/proc/self", "status", 100).esito, E::TroppoGrande);
+    const FileLetto stato = leggi_dal_disco("/proc/self", "status", 1024 * 1024);
+    EXPECT_EQ(stato.esito, E::Letto);
+    EXPECT_GT(stato.testo.size(), 100u);
+#endif
+}
+
+// Gli esiti della lettura diventano problemi di forma con il loro codice; una cartella con il nome di un file del
+// pacchetto e' un errore proprio, senza errori a catena sui codici che quel file avrebbe dato.
+TEST(Api, K_CTR_088_089_090_lettura_blindata) {
+    Memoria non_normale;
+    non_normale.esiti["persone.json"] = FileLetto::Esito::NonNormale;
+    EXPECT_TRUE(problemi(non_normale, {{Check::NotRegularFile, 0, "persone.json", ""}}));
+    Memoria fuori;
+    fuori.esiti["persone.json"] = FileLetto::Esito::FuoriCartella;
+    EXPECT_TRUE(problemi(fuori, {{Check::LinkOutsideFolder, 0, "persone.json", ""}}));
+    Memoria rotto;
+    rotto.esiti["persone.json"] = FileLetto::Esito::CollegamentoRotto;
+    EXPECT_TRUE(problemi(rotto, {{Check::UnreadableFile, 1, "persone.json", ""}}));
+    Memoria cartella;
+    cartella.file.erase("persone.json");
+    cartella.cartelle.push_back("persone.json");
+    EXPECT_TRUE(problemi(cartella, {{Check::DirectoryInsteadOfFile, 0, "persone.json", ""}}));
+    const Resoconto r = controlla_pacchetto(cartella, Visibilita{});
+    EXPECT_FALSE(r.contenuto_controllato);
+    EXPECT_EQ(r.errori, 1);   // nessun K-CTR-010 sulle persone che mancherebbero
+    EXPECT_EQ(r.problemi.front().messaggio, "C'e' una cartella che si chiama persone.json, come un file del pacchetto: il file "
+                                            "non e' stato letto. Togliere o rinominare la cartella e mettere al suo posto il file.");
 }
 
 // File costruiti apposta per rompere il programma (K-008, sui file nuovi): annidamenti profondissimi, numeri e testi
