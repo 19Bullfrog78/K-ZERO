@@ -95,13 +95,44 @@
   ammesso, mai); tolta dai "Da confermare" la domanda sulla pausa con il mezzo o con l'auto. "Mezzi e strade": un
   mezzo fa solo i servizi per cui e' omologato; per l'altro uso serve la distrazione, per singolo mezzo e con le
   date (Codice della strada artt. 82 e 87, circolare n. 27690 del 27/11/2013).
+- 2026-10-18 - K-008 (programma, proposta "K-008: formato dei dati (persone e turni)"): seconda meta' del formato
+  standard dei dati (docs/formato-dati.md), 10 file nuovi (norme, festivita, persone, assenze, fermi, turni, rotazioni,
+  servizi_fissi, assegnazioni, blocchi) e versioni nuove di 4 file (calendari 2, regolamenti 2, mezzi 2, servizi 2); la
+  versione 1 si legge ancora (provato con una copia congelata del demo del K-007). Elenchi e impostazioni di ogni azienda
+  in aziende.json (tipi di attivita', di assenza, di fermo, competenze, norme del paese, ricovero vicino a casa,
+  abbinamento autista-mezzo): nessun valore di un'azienda nel codice. Festivita' come dati e calendari che si combinano
+  (aggiungono o tolgono altri calendari e festivita'). Persone con ruoli, disponibilita', abilitazioni con scadenza,
+  autorizzazioni del committente, prestiti; requisiti di guida dalle norme del paese (nessuna patente nel codice). Turno
+  del giorno come unita' di base (un mezzo, corse intere o a pezzi con il cambio dell'autista, attivita'); chi fa il turno
+  in tre modi (assegnazione del singolo giorno, servizio fisso, rotazione: vince il piu' preciso; se la persona prevista
+  non puo', turno scoperto); uso dei mezzi, distrazioni e vincoli di destinazione; blocchi. Pause a casa senza valori nel
+  codice: senza regola nei dati la funzione non giudica. Nuovo comando kzero giornata (giornata di tutti, di una persona
+  o di un mezzo in una data: turni, corse con passaggi, carichi e scarichi, km pieni e a vuoto, giorni nel periodo; vale
+  come scheda scuola del committente); controlla 2 (giorni dei problemi raggruppati in periodi), descrivi 3, nuovi errori
+  K-ERR-013 ... K-ERR-018, 39 controlli nuovi (K-CTR-049 ... K-CTR-087). Pacchetti esempi/demo ed esempi/demo-numeri con
+  persone e turni (dati inventati). Prove: 457 su 457 (144 nucleo, 33 API, 152 sul programma, di cui 65 su una copia del
+  demo con dati cambiati apposta e 3 sulla prova di scala, 1 documentazione, 1 architettura, 125 sugli schemi,
+  1 generazione della prova di scala); nuove prove di robustezza (file costruiti per rompere il programma, ogni numero e
+  testo degli schemi con un massimo). Le 259 prove di prima ci sono ancora; adattate quelle che contano i controlli, le
+  versioni delle uscite o i dati del demo. Sabotaggio (contate anche le prove sugli schemi di quelle uscite, non
+  eseguite): sovrapposizione a cavallo della mezzanotte ignorata, autista senza abilitazione mai segnalato,
+  assegnazione del singolo giorno che non vince piu', calendari e festivita' tolti ignorati, mezzo senza l'uso richiesto
+  sempre accettato, nome delle persone sempre visibile: tutti scoperti (prove rosse: 4, 4, 39, 70, 4 e 16; per l'uso
+  dei mezzi all'inizio una sola prova, poi aggiunte due prove sul programma).
+  Prova di scala (aggiunte 1.320 persone, 1.200 turni del giorno, una rotazione per azienda da 3 a 28 giorni e una a
+  passi di un mese, un anno di festivita', assenze coperte): kzero controlla senza errori ne' avvisi in 9,2 secondi con
+  130 MB (la parte del K-007 da sola 1,7 secondi); kzero giornata di tutti in 11,1 secondi con 247 MB, di una persona
+  in 9,4 secondi con 131 MB (rifa' tutti i controlli). Macchina di prova: 4 processori Xeon a 2,8 GHz. Non e' una
+  soglia delle prove.
 
 ## Bug e limiti noti
-- check_home_breaks non usa ancora max_home_detour_km: oggi guarda solo la distanza da casa.
-  Da completare con il calcolo vero (OR-Tools).
-- Turni del giorno, rotazione degli autisti e servizi fissi (regole aggiunte con K-006) non sono ancora nel
-  modello dati: entreranno con K-008. Attesa massima, attivi/sospesi, giorni e periodi e corse con piu'
-  committenti ci sono dal K-007.
+- Pause a casa: la regola (dai quanti minuti, entro quanti km da casa, deviazione massima) non e' ancora nei dati;
+  senza regola check_home_breaks non giudica. La deviazione massima non e' ancora usata. La regola la scrivera' il
+  mandato "orari di lavoro". I pesi del calcolo (ObjectiveWeights) hanno ancora valori provvisori nel codice, non usati:
+  andranno nei dati con il mandato del calcolo.
+- Il regolamento di esempio R-TN cita il testo unico 1.B.1 come fonte dell'attesa 25/20, ma per i servizi speciali la
+  fonte e' la Carta della mobilita' 2013 (DGP 2649/2012, punto 5), che fissa anche la durata a bordo di regola entro
+  40 minuti, non ancora nel regolamento di esempio: da sistemare con il mandato sulla verifica delle regole.
 - Le regole dei regolamenti (attese sulle corse, posti a bordo, assistente, passeggeri in piedi, limiti di accesso
   dei mezzi) sono nei dati ma non sono ancora verificate sui giri: arriveranno con la verifica delle regole,
   dopo il K-008.
@@ -109,7 +140,9 @@
   intuire un dato sulla salute. Chi scrive i dati deve evitare nomi che rivelano dati personali o particolari.
 - Ricerca dei luoghi: le lettere di altri alfabeti (greco, cirillico...) non vengono ricondotte all'alfabeto latino.
 - Ora legale: nei due giorni del cambio una corsa che attraversa le 02:00-03:00 dura un'ora in piu' o in meno di
-  quanto risulta dagli orari (docs/formato-dati.md).
+  quanto risulta dagli orari (docs/formato-dati.md). Vale anche per i turni: nella notte del 25/10/2026 un turno
+  che attraversa le 02:00-03:00 (es. una reperibilita' notturna) dura un'ora in piu' di quanto dicono inizio e fine. Da tenere presente nel
+  mandato "orari di lavoro".
 - Su Windows (K-009) sono da sistemare e provare gli argomenti con lettere accentate e gli a capo CR LF.
 - Con --includi-dati-personali senza --includi-dati-particolari, il nome del passeggero insieme alla sua destinazione
   (es. il centro diurno) lascia intuire un dato sulla salute: da trattare nel mandato sulla riservatezza.
@@ -117,6 +150,15 @@
   della strada, "Bahnhof" in ogni paese. Da rivedere con il lettore GTFS.
 - Il codice K-CTR-047 compare anche quando il messaggio e' filtrato: chi conosce il catalogo capisce che si parla
   dell'assistente. Il messaggio di base non lo nomina; il codice resta, perche' serve a correggere il dato.
+- kzero giornata rifa' tutti i controlli del pacchetto a ogni richiesta, anche per una sola persona: con la prova di
+  scala servono circa 9 secondi. Accettato per ora (un risultato su dati sbagliati sarebbe peggio); da rivedere se
+  l'attesa diventa scomoda nell'uso vero.
+- Di base il messaggio di K-CTR-068 (autista senza l'abilitazione) non dice quale abilitazione serve: insieme al codice
+  della persona direbbe quale patente non ha, che e' un dato personale. Si vede con --includi-dati-personali.
+- Il fuso orario del manifesto (versione 1, gia' su main) non ha una lunghezza massima nello schema: e' l'unica eccezione
+  alla prova dei limiti di buon senso. Si sistema con la prossima versione del manifesto.
+- Le regole sugli orari di lavoro degli autisti (ore al giorno e alla settimana, riposi, pause) non sono ancora nei
+  dati ne' controllate: i turni si controllano solo per sovrapposizioni, abilitazioni, disponibilita' e assenze.
 
 ## Idee
 - Generare scenari "gonfiati" (50-500 mezzi) dai giri reali per provare il carico.
@@ -135,12 +177,15 @@
   bagagliaio, dove si trova il mezzo a quell'ora, km a vuoto, regole sull'orario di lavoro degli autisti, es. oltre
   9 posti su un servizio di oltre 50 km cambiano le regole della settimana). Possibile dopo i turni (K-008), le
   distanze e la verifica delle regole.
+- Distribuzione dei lavori extra (gite, noleggi) a rotazione o per anzianita', secondo la scelta dell'azienda.
+- Scelta dei turni da parte degli autisti (preferenze espresse, poi il programma propone e l'azienda decide).
+- Servizi a chiamata (prenotati il giorno prima o in giornata), da inserire nei turni gia' fatti.
 
 ## Prossimi passi
-1. K-008: formato dei dati, parte 2 (autisti, abilitazioni, turni del giorno, giornata dell'autista e del mezzo,
-   rotazioni, servizi fissi, blocchi).
-2. Lettore del file alunni del CTA, che lo trasforma nel formato K-Zero.
-3. K-009: programma per Windows da scaricare (i dati veri restano sul PC di Mauro).
-4. Raccolta dati veri Alpinabus: mezzi, autisti (paese), giri di una giornata tipo.
-5. "Fotografia" dei giri attuali: km pieni, km a vuoto, tempi morti.
-6. Lettura dei paper e proposta del metodo di calcolo con OR-Tools.
+1. Mandato "privacy e sicurezza di base" (deciso il 12/10), prima di qualunque dato vero.
+2. Mandato "orari di lavoro": regole degli orari degli autisti, pausa a casa, filosofia aziendale nei dati.
+3. Lettore del file alunni del CTA, che lo trasforma nel formato K-Zero.
+4. K-009: programma per Windows da scaricare (i dati veri restano sul PC di Mauro).
+5. Raccolta dati veri Alpinabus: mezzi, autisti (paese), giri di una giornata tipo.
+6. "Fotografia" dei giri attuali: km pieni, km a vuoto, tempi morti.
+7. Lettura dei paper e proposta del metodo di calcolo con OR-Tools.
