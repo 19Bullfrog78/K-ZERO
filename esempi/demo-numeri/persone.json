@@ -35,7 +35,7 @@
         { "tipo": "KB" }
       ],
       "competenze": ["PEDANA", "LINEA-B610"],
-      "preferenze": [{ "tipo": "evita_turni", "turni": ["T-SERA"] }]
+      "preferenze": [{ "tipo": "giorni_liberi", "giorni": ["domenica"] }]
     },
     {
       "codice": "P-C",

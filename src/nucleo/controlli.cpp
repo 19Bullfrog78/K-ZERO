@@ -1,6 +1,7 @@
 // K-Zero - controlli sul contenuto del pacchetto (vedi controlli.hpp e docs/controlli.md).
 #include "controlli.hpp"
 
+#include <algorithm>
 #include <map>
 #include <set>
 #include <tuple>
@@ -65,6 +66,55 @@ Param elements_param(std::string name, Element element) {
     p.kind = Param::Kind::Elements;
     p.element = element;
     return p;
+}
+
+Param days_param(std::string name, Day day) {
+    Param p;
+    p.name = std::move(name);
+    p.kind = Param::Kind::Days;
+    p.days = {day};
+    return p;
+}
+
+std::vector<Problem> group_by_days(std::vector<Problem> problems) {
+    // Chiave: tutto tranne i giorni.
+    const auto key = [](const Problem& x) {
+        std::string k = std::to_string(static_cast<int>(x.check)) + "|" + std::to_string(x.variant) + "|" + x.where.file + "|" +
+                        x.where.pointer;
+        for (const Param& p : x.params) {
+            if (p.kind == Param::Kind::Days) continue;
+            k += "|" + p.name + "=" + std::to_string(static_cast<int>(p.kind)) + ":" + p.text + ":" + std::to_string(p.number) + ":" +
+                 std::to_string(p.decimal) + ":" + std::to_string(static_cast<int>(p.element)) + ":" +
+                 std::to_string(static_cast<int>(p.sensitivity)) + ":" + p.hidden;
+        }
+        return k;
+    };
+    std::vector<Problem> out;
+    std::map<std::string, std::size_t> seen;
+    for (Problem& x : problems) {
+        const bool has_days = std::any_of(x.params.begin(), x.params.end(), [](const Param& p) { return p.kind == Param::Kind::Days; });
+        if (!has_days) {
+            out.push_back(std::move(x));
+            continue;
+        }
+        const auto [it, inserted] = seen.emplace(key(x), out.size());
+        if (inserted) {
+            out.push_back(std::move(x));
+            continue;
+        }
+        Problem& first = out[it->second];
+        for (const Param& p : x.params)
+            if (p.kind == Param::Kind::Days)
+                for (Param& q : first.params)
+                    if (q.kind == Param::Kind::Days && q.name == p.name) q.days.insert(q.days.end(), p.days.begin(), p.days.end());
+    }
+    for (Problem& x : out)
+        for (Param& p : x.params)
+            if (p.kind == Param::Kind::Days) {
+                std::sort(p.days.begin(), p.days.end());
+                p.days.erase(std::unique(p.days.begin(), p.days.end()), p.days.end());
+            }
+    return out;
 }
 
 namespace {
@@ -163,6 +213,10 @@ private:
         duplicates_in(passengers, Element::Passenger);
         // K-008: norme, impostazioni delle aziende e loro elenchi.
         duplicates_in(pointers(p_.persons), Element::Person);
+        duplicates_in(pointers(p_.shifts), Element::Shift);
+        duplicates_in(pointers(p_.rotations), Element::Rotation);
+        duplicates_in(pointers(p_.fixed), Element::FixedAssignment);
+        duplicates_in(pointers(p_.blocks), Element::Block);
         duplicates_in(pointers(p_.norms), Element::Norms);
         for (const Norms& n : p_.norms) {
             duplicates_in(pointers(n.licences), Element::Licence);
@@ -205,6 +259,10 @@ private:
             case Element::Holidays: return idx_.holidays(c) != nullptr;
             case Element::Norms: return idx_.norms(c) != nullptr;
             case Element::Person: return idx_.person(c) != nullptr;
+            case Element::Shift: return idx_.shift(c) != nullptr;
+            case Element::Rotation: return idx_.rotation(c) != nullptr;
+            case Element::FixedAssignment: return idx_.fixed(c) != nullptr;
+            case Element::Block: return idx_.block(c) != nullptr;
             case Element::CompanySettings: return idx_.settings(c) != nullptr;
             case Element::Licence:
             case Element::VehicleUse:
@@ -371,6 +429,52 @@ private:
             ref(s.vehicle, Element::Vehicle);
             if (const Vehicle* v = idx_.vehicle(s.vehicle.code)) ref_in(s.type, Element::StopType, v->company.code);
         }
+        // Turni, rotazioni, servizi fissi, assegnazioni del giorno, blocchi; turni da evitare nelle preferenze.
+        for (const Shift& s : p_.shifts) {
+            ref(s.company, Element::Company);
+            ref(s.calendar, Element::Calendar);
+            if (s.vehicle) ref(*s.vehicle, Element::Vehicle);
+            ref(s.start_place, Element::Place);
+            ref(s.end_place, Element::Place);
+            for (const ShiftItem& it : s.items) {
+                if (it.is_trip) {
+                    ref(it.trip.trip, Element::Trip);
+                    for (const auto* point : {&it.trip.from, &it.trip.to})
+                        if (*point) ref((*point)->place, Element::Place);
+                } else {
+                    ref_in(it.activity.type, Element::ActivityType, s.company.code);
+                    ref(it.activity.place, Element::Place);
+                    if (it.activity.to_place) ref(*it.activity.to_place, Element::Place);
+                    if (it.activity.calendar) ref(*it.activity.calendar, Element::Calendar);
+                }
+            }
+            for (const Ref& k : s.competences) ref_in(k, Element::Competence, s.company.code);
+        }
+        for (const Rotation& r : p_.rotations)
+            for (const RotationRow& row : r.rows) {
+                ref(row.person, Element::Person);
+                for (const RotationStep& st : row.steps)
+                    for (const Ref& s : st.shifts) ref(s, Element::Shift);
+            }
+        for (const FixedAssignment& f : p_.fixed) {
+            ref(f.shift, Element::Shift);
+            ref(f.person, Element::Person);
+            ref(f.calendar, Element::Calendar);
+        }
+        for (const DayAssignment& a : p_.day_assignments) {
+            ref(a.shift, Element::Shift);
+            if (a.person) ref(*a.person, Element::Person);
+            if (a.vehicle) ref(*a.vehicle, Element::Vehicle);
+        }
+        for (const Block& b : p_.blocks) {
+            ref(b.vehicle, Element::Vehicle);
+            for (const Ref& tr : b.trips) ref(tr, Element::Trip);
+        }
+        for (const Person& x : p_.persons)
+            for (const Preference& f : x.preferences)
+                for (const Ref& s : f.shifts)
+                    if (!idx_.shift(s.code))
+                        add(Check::UnknownReference, s.src, {code_param(s, true), elements_param("elementi", Element::Shift)});
         for (const Depot& d : p_.depots) {
             ref(d.place, Element::Place);
             ref(d.company, Element::Company);
@@ -460,6 +564,11 @@ private:
             dates(s.src, s.days.from, s.days.to);
             if (s.start && s.end) times(s.src, *s.start, *s.end);
         }
+        for (const Shift& s : p_.shifts)
+            for (const ShiftItem& it : s.items)
+                if (!it.is_trip) times(it.src, it.activity.start, it.activity.end);
+        for (const Rotation& r : p_.rotations) optional_dates(r.src, r.from, r.to, false);
+        for (const Block& b : p_.blocks) optional_dates(b.src, b.from, b.to, false);
     }
 
     // --- Calendari -----------------------------------------------------------------------------
@@ -1104,6 +1213,8 @@ private:
             for (const Vehicle& v : p_.vehicles)
                 needed = needed || (v.company.code == c.code && (v.use || !v.use_authorizations.empty()));
             for (const Person& x : p_.persons) needed = needed || (x.company.code == c.code && !x.licences.empty());
+            for (const Shift& s : p_.shifts)
+                needed = needed || (s.company.code == c.code && s.role != ShiftRole::Escort && s.vehicle_mode != ShiftVehicleMode::None);
             if (needed) add(Check::CompanyWithoutNorms, c.src, {ref_param("azienda", Element::Company, c.code)});
         }
     }
@@ -1115,6 +1226,10 @@ private:
 
 }  // namespace
 
-std::vector<Problem> check_package(const Package& p) { return Checker(p).run(); }
+std::vector<Problem> check_package(const Package& p) {
+    std::vector<Problem> out = Checker(p).run();
+    check_shifts(p, out);
+    return group_by_days(std::move(out));
+}
 
 }  // namespace kzero

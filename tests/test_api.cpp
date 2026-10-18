@@ -583,14 +583,19 @@ TEST(Api, classi_marcate_negli_schemi) {
             }
         }
     // Dati personali: luoghi privati, passeggeri, persone (tranne codice, azienda, presa servizio, mezzo abituale,
-    // ipotetica e prestiti), assenze (tranne la persona) e le note dei file che parlano di persone.
+    // ipotetica e prestiti), assenze (tranne la persona) e le note scritte a mano dei file che dicono chi fa un turno
+    // (rotazioni, servizi fissi, assegnazioni del giorno: possono spiegare il motivo di un cambio).
     const std::set<std::string> comuni_delle_persone = {"persone/persone/*/codice", "persone/persone/*/azienda",
                                                         "persone/persone/*/presa_servizio", "persone/persone/*/mezzo_abituale",
                                                         "persone/persone/*/ipotetica", "assenze/assenze/*/persona"};
     for (const std::string& p : personali)
         EXPECT_TRUE(p.rfind("luoghi/luoghi_privati/", 0) == 0 || p.find("/passeggeri/*/") != std::string::npos ||
-                    p.rfind("persone/persone/", 0) == 0 || p.rfind("assenze/assenze/", 0) == 0)
+                    p.rfind("persone/persone/", 0) == 0 || p.rfind("assenze/assenze/", 0) == 0 ||
+                    p == "rotazioni/rotazioni/*/nota" || p == "servizi_fissi/servizi_fissi/*/nota" ||
+                    p == "assegnazioni/assegnazioni/*/nota")
             << p;
+    for (const char* nota : {"rotazioni/rotazioni/*/nota", "servizi_fissi/servizi_fissi/*/nota", "assegnazioni/assegnazioni/*/nota"})
+        EXPECT_TRUE(personali.count(nota)) << nota;
     EXPECT_TRUE(personali.count("servizi/servizi/*/domanda/gruppi/*/passeggeri/*/nome"));
     EXPECT_TRUE(personali.count("servizi/servizi/*/domanda/gruppi/*/passeggeri/*/motivo"));
     for (const char* campo : {"nome", "casa/indirizzo", "ruoli/*", "rapporto/tipo", "contratto_collettivo/codice", "ore/*/previste/settimana",
@@ -615,6 +620,7 @@ TEST(Api, classi_marcate_negli_schemi) {
         "servizi/servizi/*/domanda/gruppi/*/passeggeri/*/esigenze/ausili_piegati",
         "servizi/servizi/*/domanda/gruppi/*/passeggeri/*/esigenze/assistente",
         "servizi/servizi/*/domanda/gruppi/*/passeggeri/*/esigenze/altro",
+        "turni/turni/*/competenze_richieste/*",   // come per i servizi: una competenza puo' far capire chi viaggia
     };
     EXPECT_EQ(particolari, attesi);
 }

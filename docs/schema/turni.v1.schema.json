@@ -1,0 +1,191 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "K-Zero - file di dati turni.json, versione 1",
+  "description": "Turni del giorno (file turni.json): l'unita' di base del lavoro di una persona in un giorno. Mezzo, corse intere o a pezzi (cambio dell'autista lungo la corsa) e attivita' senza passeggeri in ordine, luogo di inizio e di fine, calendario, competenze richieste. Chi fa il turno lo dicono rotazioni, servizi fissi e assegnazioni del singolo giorno. Giornata della persona e giornata del mezzo sono due viste degli stessi turni.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "schema_versione", "turni"],
+  "properties": {
+    "schema": { "const": "turni", "x-kzero-classe": "comune" },
+    "schema_versione": { "const": 1, "x-kzero-classe": "comune" },
+    "turni": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["codice", "azienda", "ruolo", "calendario", "mezzo", "inizio", "fine", "elementi"],
+        "properties": {
+          "codice": { "$ref": "#/definitions/codice", "x-kzero-classe": "comune" },
+          "nome": {
+            "description": "Nome dato dall'azienda (es. \"Primo\", \"Festivo 3\"): solo un nome.",
+            "$ref": "#/definitions/testo",
+            "x-kzero-classe": "comune"
+          },
+          "azienda": { "description": "Azienda del turno.", "$ref": "#/definitions/codice", "x-kzero-classe": "comune" },
+          "ruolo": {
+            "description": "Chi fa il turno: autista; assistente a bordo; secondo autista (viaggi lunghi, affiancamento di un autista nuovo). Il turno da assistente o da secondo autista elenca le corse in cui la persona e' a bordo; il mezzo e' quello dell'autista.",
+            "enum": ["autista", "assistente", "secondo_autista"],
+            "x-kzero-classe": "comune"
+          },
+          "calendario": {
+            "description": "Giorni in cui vale il turno (calendari.json). In un giorno il turno comprende solo le corse e le attivita' che valgono quel giorno.",
+            "$ref": "#/definitions/codice",
+            "x-kzero-classe": "comune"
+          },
+          "mezzo": {
+            "description": "Mezzo del turno: preciso (con il codice), il mezzo abituale dell'autista, da assegnare, oppure nessuno (turni di sola riserva, officina, ufficio; turni da assistente e da secondo autista).",
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["modo"],
+            "properties": {
+              "modo": { "enum": ["preciso", "abituale", "da_assegnare", "nessuno"] },
+              "codice": { "$ref": "#/definitions/codice" }
+            },
+            "allOf": [
+              {
+                "if": { "properties": { "modo": { "const": "preciso" } } },
+                "then": { "required": ["codice"] },
+                "else": { "properties": { "codice": false } }
+              }
+            ],
+            "x-kzero-classe": "comune"
+          },
+          "inizio": {
+            "description": "Luogo di inizio (rimessa, ricovero esterno o punto di sosta).",
+            "$ref": "#/definitions/codice",
+            "x-kzero-classe": "comune"
+          },
+          "fine": { "description": "Luogo di fine.", "$ref": "#/definitions/codice", "x-kzero-classe": "comune" },
+          "elementi": {
+            "description": "Corse (intere o a pezzi) e attivita' senza passeggeri, in ordine di orario. Inizio e fine del turno non si scrivono: si ricavano dalla prima e dall'ultima corsa o attivita' di ogni giorno.",
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "description": "Una corsa (intera o un pezzo) oppure un'attivita' senza passeggeri.",
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "corsa": { "description": "Codice della corsa.", "$ref": "#/definitions/codice" },
+                "da": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["luogo"],
+                  "properties": {
+                    "luogo": { "description": "Luogo di un passaggio della corsa.", "$ref": "#/definitions/codice" },
+                    "orario": {
+                      "description": "Orario del passaggio: serve solo se la corsa passa piu' volte dallo stesso luogo.",
+                      "$ref": "#/definitions/orario"
+                    }
+                  },
+                  "description": "Inizio del pezzo di corsa (cambio dell'autista lungo la corsa); assente = dall'inizio della corsa."
+                },
+                "a": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["luogo"],
+                  "properties": {
+                    "luogo": { "description": "Luogo di un passaggio della corsa.", "$ref": "#/definitions/codice" },
+                    "orario": {
+                      "description": "Orario del passaggio: serve solo se la corsa passa piu' volte dallo stesso luogo.",
+                      "$ref": "#/definitions/orario"
+                    }
+                  },
+                  "description": "Fine del pezzo di corsa; assente = fino alla fine della corsa."
+                },
+                "assistente": {
+                  "description": "Per le corse con l'assistente a bordo, chi lo fornisce: 'azienda' (una persona dell'azienda, con il suo turno da assistente) oppure 'committente' (senza nome). Assente = come dice il contratto.",
+                  "enum": ["azienda", "committente"]
+                },
+                "attivita": {
+                  "description": "Tipo di attivita' senza passeggeri (elenco dell'azienda del turno).",
+                  "$ref": "#/definitions/codice"
+                },
+                "luogo": {
+                  "description": "Luogo dell'attivita' (per un trasferimento: il luogo di partenza).",
+                  "$ref": "#/definitions/codice"
+                },
+                "verso": {
+                  "description": "Luogo di arrivo, per le attivita' che spostano il mezzo o la persona.",
+                  "$ref": "#/definitions/codice"
+                },
+                "dalle": { "$ref": "#/definitions/orario" },
+                "alle": { "$ref": "#/definitions/orario" },
+                "km_vuoti": {
+                  "description": "Km a vuoto dell'attivita', come li scrive chi pianifica (un dato, non un calcolo).",
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 10000
+                },
+                "calendario": {
+                  "description": "Giorni in cui c'e' l'attivita' (dentro quelli del turno); assente = tutti i giorni del turno.",
+                  "$ref": "#/definitions/codice"
+                },
+                "nota": { "$ref": "#/definitions/nota" }
+              },
+              "allOf": [
+                {
+                  "if": { "required": ["corsa"] },
+                  "then": {
+                    "properties": {
+                      "attivita": false,
+                      "luogo": false,
+                      "verso": false,
+                      "dalle": false,
+                      "alle": false,
+                      "km_vuoti": false,
+                      "calendario": false
+                    }
+                  }
+                },
+                {
+                  "if": { "required": ["attivita"] },
+                  "then": {
+                    "required": ["luogo", "dalle", "alle"],
+                    "properties": { "corsa": false, "da": false, "a": false, "assistente": false }
+                  },
+                  "else": { "required": ["corsa"] }
+                }
+              ]
+            },
+            "x-kzero-classe": "comune"
+          },
+          "competenze_richieste": {
+            "description": "Competenze richieste a chi fa il turno (elenco dell'azienda). Dato particolare: una competenza puo' far capire che a bordo viaggiano passeggeri con disabilita'.",
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": { "$ref": "#/definitions/codice" },
+            "x-kzero-classe": "particolare"
+          },
+          "nota": { "$ref": "#/definitions/nota", "x-kzero-classe": "comune" }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "codice": {
+      "description": "Codice K-Zero: scelto da chi scrive i dati, unico per tipo di elemento. Lettere senza accenti, cifre, '-', '_' e '.'; inizia con una lettera o una cifra; al massimo 64 caratteri.",
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+    },
+    "testo": {
+      "description": "Testo di una riga, non vuoto (al massimo 300 caratteri).",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 300,
+      "pattern": "\\S"
+    },
+    "nota": {
+      "description": "Testo libero, non vuoto (al massimo 2000 caratteri).",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2000,
+      "pattern": "\\S"
+    },
+    "orario": {
+      "description": "Orario HH:MM, ora locale del fuso del pacchetto. Dopo mezzanotte si continua a contare come in GTFS: 24:15 = 00:15 del giorno dopo; al massimo 47:59.",
+      "type": "string",
+      "pattern": "^([0-3][0-9]|4[0-7]):[0-5][0-9]$"
+    }
+  }
+}

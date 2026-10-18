@@ -1,8 +1,9 @@
-# Formato dei dati di K-Zero (parte 1: rete e servizi)
+# Formato dei dati di K-Zero
 
-Questo documento spiega come si scrivono i dati che K-Zero legge: luoghi e fermate, regolamenti,
-calendari, scuole e centri, committenti e contratti, servizi con la loro domanda, corse, mezzi e rimesse.
-La seconda parte del formato (autisti, turni, rotazioni, blocchi) arrivera' con il mandato K-008.
+Questo documento spiega come si scrivono i dati che K-Zero legge. Parte 1 (K-007): luoghi e fermate,
+regolamenti, calendari, scuole e centri, committenti e contratti, servizi con la loro domanda, corse, mezzi e
+rimesse. Parte 2 (K-008): elenchi e impostazioni delle aziende, norme del paese, festivita', persone, assenze,
+fermi, turni del giorno, rotazioni, servizi fissi, assegnazioni del singolo giorno, blocchi.
 
 Il formato vale per qualunque azienda, consorzio o ente, di qualunque dimensione e di qualunque paese:
 nel programma non c'e' nulla di specifico di un'azienda o di un territorio. Le regole di un territorio
@@ -40,6 +41,11 @@ Solo il manifesto e' obbligatorio; un file che manca vuol dire "nessun elemento 
 | `persone.json` | no | Persone delle aziende: autisti e assistenti, ruoli, rapporto, ore, disponibilita', abilitazioni, competenze, preferenze |
 | `assenze.json` | no | Assenze programmate delle persone: periodo e tipo, mai la causa |
 | `fermi.json` | no | Fermi programmati dei mezzi (es. revisione) |
+| `turni.json` | no | Turni del giorno: corse intere o a pezzi e attivita' in ordine, mezzo, luoghi di inizio e fine, calendario |
+| `rotazioni.json` | no | Rotazioni: cicli di passi (giorni o mesi) con i turni di ogni persona |
+| `servizi_fissi.json` | no | Turni assegnati sempre alla stessa persona nei giorni di un calendario |
+| `assegnazioni.json` | no | Assegnazioni del singolo giorno: sostituzioni, scambi, un mezzo al posto di un altro, lavori occasionali |
+| `blocchi.json` | no | Blocchi: corse fissate su un mezzo, per il calcolo futuro |
 
 Un file con un nome diverso da questi non viene letto (avviso K-CTR-008): di solito e' un nome scritto male.
 
@@ -794,6 +800,138 @@ Fermi programmati dei mezzi. Schema: [docs/schema/fermi.v1.schema.json](schema/f
 | `fermi[].dalle`, `alle` | no | comune | Solo una parte di ogni giorno del periodo (vanno scritti insieme) |
 | `fermi[].nota` | no | comune | Note |
 
+### turni.json
+
+Il **turno del giorno** e' l'unita' di base del lavoro di una persona in un giorno: un elenco ordinato di corse
+(intere o a pezzi) e di attivita' senza passeggeri, con il mezzo, il luogo di inizio e di fine e il calendario dei
+giorni in cui vale. Il turno non dice chi lo fa: lo dicono le rotazioni, i servizi fissi e le assegnazioni del
+singolo giorno (sotto). La **giornata della persona** (i turni che fa in un giorno) e la **giornata del mezzo** (i
+turni che lo usano) sono due viste degli stessi turni: non si scrivono due volte. Schema:
+[docs/schema/turni.v1.schema.json](schema/turni.v1.schema.json).
+
+| Campo | Obbl. | Classe | Significato |
+|---|---|---|---|
+| `turni[].codice` | si' | comune | Codice del turno |
+| `turni[].nome` | no | comune | Nome dato dall'azienda (es. "Primo", "Festivo 3"): solo un nome |
+| `turni[].azienda` | si' | comune | Azienda del turno |
+| `turni[].ruolo` | si' | comune | `autista`, `assistente` (a bordo) o `secondo_autista` (viaggi lunghi, affiancamento di un autista nuovo) |
+| `turni[].calendario` | si' | comune | Giorni in cui vale il turno (calendari.json) |
+| `turni[].mezzo` | si' | comune | `modo`: `preciso` (con il `codice` del mezzo), `abituale` (il mezzo abituale di chi fa il turno), `da_assegnare`, `nessuno` (riserva, officina, ufficio; turni da assistente e da secondo autista) |
+| `turni[].inizio`, `fine` | si' | comune | Luogo di inizio e di fine (rimessa, ricovero esterno o punto di sosta) |
+| `turni[].elementi[]` | si' | comune | Corse e attivita' in ordine di orario (sotto) |
+| `turni[].competenze_richieste[]` | no | particolare | Competenze richieste a chi fa il turno (elenco dell'azienda): possono far capire chi viaggia |
+| `turni[].nota` | no | comune | Note |
+
+Un **elemento** e' una corsa oppure un'attivita':
+
+| Campo | Obbl. | Significato |
+|---|---|---|
+| `corsa` | si' (corsa) | Codice della corsa |
+| `da`, `a` | no | Solo un pezzo della corsa (cambio dell'autista lungo la corsa): `luogo` di un passaggio e, se la corsa ci passa piu' volte, `orario`. Senza `da`: dall'inizio della corsa; senza `a`: fino alla fine |
+| `assistente` | no | Per le corse con l'assistente a bordo, chi lo fornisce: `azienda` (una persona con il suo turno da assistente) o `committente` (senza nome). Assente = come dice il contratto |
+| `attivita` | si' (attivita') | Tipo di attivita' dall'elenco dell'azienda del turno (es. presa servizio, pulizia, rifornimento, ricarica, attesa, pausa, trasferimento a vuoto, riserva, reperibilita') |
+| `luogo`, `verso` | si' / no | Luogo dell'attivita'; `verso` = luogo di arrivo per le attivita' che spostano il mezzo o la persona |
+| `dalle`, `alle` | si' | Orari dell'attivita' (anche oltre le 24:00) |
+| `km_vuoti` | no | Km a vuoto dell'attivita', come li scrive chi pianifica (un dato, non un calcolo) |
+| `calendario` | no | Giorni in cui c'e' l'attivita' (dentro quelli del turno); assente = tutti i giorni del turno |
+| `nota` | no | Note |
+
+**Inizio e fine del turno** non si scrivono: si ricavano dalla prima e dall'ultima corsa o attivita' di ogni giorno
+(in un giorno valgono solo le corse e le attivita' il cui calendario vale quel giorno). Un turno che finisce dopo
+la mezzanotte resta del giorno in cui comincia ("24:12"). **Turno spezzato**: due parti con una pausa in mezzo
+(l'attivita' "pausa" e' facoltativa). **Turno notturno**: orari oltre le 24:00. **Cambio di mezzo** a meta'
+giornata: due turni (uno per mezzo), fatti dalla stessa persona. **Cambio dell'autista a meta' corsa**: la corsa
+compare in due turni, ognuno con il suo pezzo; il luogo del cambio e' il **punto di cambio**. Se l'attivita' del
+turno impegna il mezzo lo dice l'elenco dell'azienda (`usa_il_mezzo` in aziende.json): una pausa o una riserva non lo
+impegnano.
+
+**Turni da assistente e da secondo autista** elencano le corse in cui la persona e' a bordo; il mezzo e' quello del
+turno dell'autista che fa quelle corse.
+
+### rotazioni.json
+
+Una **rotazione** e' un ciclo di passi che si ripete: per ogni passo e ogni persona, i turni che fa oppure
+"riposo". Ogni azienda fa la sua: nessuna lunghezza e nessuna forma e' fissa nel programma (cicli di 3, 8, 14
+giorni; passi di un mese per le aziende che cambiano a mesi). Piu' rotazioni possono valere nello stesso anno (es.
+invernale ed estiva) e nello stesso periodo per gruppi diversi di persone. Schema:
+[docs/schema/rotazioni.v1.schema.json](schema/rotazioni.v1.schema.json).
+
+| Campo | Obbl. | Classe | Significato |
+|---|---|---|---|
+| `rotazioni[].codice` | si' | comune | Codice della rotazione |
+| `rotazioni[].nome` | no | comune | Nome (es. "Rotazione invernale") |
+| `rotazioni[].passo` | si' | comune | `giorno` oppure `mese` (mese di calendario) |
+| `rotazioni[].lunghezza` | si' | comune | Quanti passi ha il ciclo (da 1 a 1000) |
+| `rotazioni[].partenza` | si' | comune | Giorno del primo passo (con i passi mensili: il primo giorno di un mese) |
+| `rotazioni[].dal`, `al` | no | comune | Date in cui vale la rotazione; assenti = dalla partenza alla fine del periodo del pacchetto |
+| `rotazioni[].righe[]` | si' | comune | Una riga per persona: `persona` e `passi` (uno per ogni passo del ciclo) |
+| `rotazioni[].nota` | no | personale | Note (possono parlare delle persone) |
+
+Un **passo** e' `"riposo"` oppure l'elenco dei turni della persona in quel passo, es. `["T-PRIMO", "T-SABATO"]`:
+in un giorno valgono quelli il cui calendario vale quel giorno (cosi' un passo puo' avere il turno del lunedi'-venerdi'
+e quello del sabato insieme).
+
+**Come si conta.** Il passo di un giorno si conta dalla `partenza`: passo = (giorni dalla partenza) diviso la
+lunghezza, resto. Il ciclo **non si ferma** nelle vacanze ne' nei giorni senza turni: un giorno in cui il turno del
+passo non vale (festa, vacanza della scuola) quella persona semplicemente non lavora, e il giorno dopo il ciclo va
+avanti. Si conta anche prima della partenza (con `dal` precedente). Con i passi mensili, il passo e' il numero di mesi
+di calendario dalla partenza. La regola dell'azienda Alpinabus, con la tabella di 14 giorni, e' scritta in REGOLE.md.
+
+### servizi_fissi.json
+
+Un **servizio fisso** e' un turno assegnato sempre alla stessa persona nei giorni di un calendario (es. il
+mercoledi'). Vale piu' della rotazione e meno di un'assegnazione del singolo giorno. Se un'azienda tiene fisse solo
+alcune corse, le mette in un turno a parte. Schema:
+[docs/schema/servizi_fissi.v1.schema.json](schema/servizi_fissi.v1.schema.json).
+
+| Campo | Obbl. | Classe | Significato |
+|---|---|---|---|
+| `servizi_fissi[].codice` | si' | comune | Codice |
+| `servizi_fissi[].turno` | si' | comune | Turno |
+| `servizi_fissi[].persona` | si' | comune | Persona |
+| `servizi_fissi[].calendario` | si' | comune | Giorni in cui il turno e' di questa persona; gli altri giorni il turno segue la rotazione |
+| `servizi_fissi[].nota` | no | personale | Note |
+
+### assegnazioni.json
+
+Un'**assegnazione del singolo giorno** dice chi fa un turno in una data, con quale mezzo, o tutti e due:
+sostituzioni, scambi tra colleghi, un mezzo al posto di quello in revisione, lavori occasionali (una gita, un
+noleggio). Vale piu' dei servizi fissi e delle rotazioni. Il programma non le inventa: le registra se le scrive
+l'utente. Schema: [docs/schema/assegnazioni.v1.schema.json](schema/assegnazioni.v1.schema.json).
+
+| Campo | Obbl. | Classe | Significato |
+|---|---|---|---|
+| `assegnazioni[].data` | si' | comune | Il giorno |
+| `assegnazioni[].turno` | si' | comune | Il turno |
+| `assegnazioni[].persona` | no | comune | Chi fa il turno quel giorno |
+| `assegnazioni[].mezzo` | no | comune | Con quale mezzo quel giorno (almeno uno tra `persona` e `mezzo`) |
+| `assegnazioni[].nota` | no | personale | Note (mai la causa di un'assenza) |
+
+**Chi fa il turno in un giorno**: l'assegnazione del singolo giorno, se c'e'; altrimenti il servizio fisso, se il
+suo calendario vale quel giorno; altrimenti la rotazione. Vince il modo piu' preciso, turno per turno. Se nessun
+modo da' una persona, il turno quel giorno e' **scoperto** (K-CTR-077): il programma non inventa assegnazioni.
+Il **mezzo** in un giorno: quello dell'assegnazione del singolo giorno, se c'e'; altrimenti quello del turno
+(preciso, oppure il mezzo abituale di chi fa il turno). Se la persona prevista quel giorno non puo' (assente, fuori
+dalla disponibilita', abilitazione scaduta, prestito non valido), il turno e' scoperto; se il mezzo non puo' (fermo,
+autorizzazione all'uso scaduta, prestito non valido), il turno e' senza mezzo. Il rimedio e' un'assegnazione del
+singolo giorno (controlli.md, "Controlli sui turni").
+
+### blocchi.json
+
+Un **blocco** fissa delle corse su un mezzo, con le date e la forza: e' un vincolo per il calcolo futuro. Oggi si
+controlla che le corse bloccate siano fatte con il loro mezzo (K-CTR-074) e che due blocchi non si contraddicano
+(K-CTR-075). Per le persone l'equivalente e' il servizio fisso. Schema:
+[docs/schema/blocchi.v1.schema.json](schema/blocchi.v1.schema.json).
+
+| Campo | Obbl. | Classe | Significato |
+|---|---|---|---|
+| `blocchi[].codice` | si' | comune | Codice |
+| `blocchi[].mezzo` | si' | comune | Mezzo |
+| `blocchi[].corse[]` | si' | comune | Corse del blocco (scelte per servizio, per fascia oraria o una per una: alla fine sono sempre corse) |
+| `blocchi[].dal`, `al` | no | comune | Date del blocco; assenti = tutto il periodo |
+| `blocchi[].forza` | si' | comune | `mezzo_fisso` (le corse restano a questo mezzo; un calcolo futuro potra' riorganizzare i giri con quel mezzo) oppure `tutto_fisso` (mezzo, corse e orari restano come sono) |
+| `blocchi[].nota` | no | comune | Note |
+
 ## Ricerca dei luoghi per nome o codice esterno
 
 Una fermata si trova per **nome ufficiale**, **nome alternativo** oppure **codice esterno**
@@ -1060,7 +1198,25 @@ nel formato K-Zero senza riscrivere nulla. Il codice GTFS di un elemento va tra 
 | trasbordi | nessuno | |
 | regolamenti, contratti, committenti, gruppi di servizi | nessuno | |
 | `aziende.json`, `norme.json`, `persone.json`, `assenze.json`, `fermi.json` | nessuno | GTFS non descrive il personale ne' i mezzi |
+| giornata del mezzo (i turni da autista dello stesso mezzo in un giorno) | `trips.txt` `block_id` | In GTFS un `block_id` raggruppa le corse fatte di seguito dallo stesso mezzo; K-Zero lo ricava dai turni |
+| `turni.json`, rotazioni, servizi fissi, assegnazioni | nessuno | GTFS non descrive chi guida |
 | mezzi, rimesse, tratti con i limiti, tempi di sosta | nessuno | |
+
+## Corrispondenza con Transmodel
+
+Transmodel e' il modello europeo dei dati del trasporto pubblico (norma EN 12896; NeTEx ne e' il formato di
+scambio). I nomi di K-Zero sono italiani semplici, ma i concetti dei turni corrispondono:
+
+| K-Zero | Transmodel | Note |
+|---|---|---|
+| corsa | Vehicle Journey (Service Journey) | |
+| giornata del mezzo | Block (Vehicle Block) | Le corse di un mezzo in un giorno, dall'uscita al rientro in rimessa |
+| turno del giorno (ruolo autista) | Duty | Il lavoro di un autista in un giorno |
+| pezzo di corsa (`da`, `a`) | Run / Stretch | Parte di un Block fatta da un autista |
+| luogo del cambio dell'autista | Relief Point (Relief Opportunity) | |
+| attivita' senza passeggeri | Dead Run, Layover, Break... | In K-Zero l'elenco e' dell'azienda (aziende.json) |
+| rotazione | Rostering (Roster) | Transmodel non fissa la forma del ciclo |
+| calendario | Day Type / Operating Day | |
 
 ## Glossario
 
@@ -1103,3 +1259,15 @@ nel formato K-Zero senza riscrivere nulla. Il codice GTFS di un elemento va tra 
 - **Livello del pacchetto** - "solo numeri" oppure "completo" (vedi sopra).
 - **Classe di un dato** - comune, personale o particolare (vedi sopra).
 - **Pacchetto** - la cartella con il manifesto e i file dei dati.
+- **Turno del giorno** - il lavoro di una persona in un giorno: corse (intere o a pezzi) e attivita' in ordine, con
+  il mezzo. Chi lo fa lo dicono rotazione, servizio fisso o assegnazione del singolo giorno.
+- **Giornata della persona / del mezzo** - i turni di una persona, o quelli che usano un mezzo, in un giorno: due
+  viste degli stessi turni.
+- **Rotazione** - ciclo di passi (giorni o mesi) che si ripete, con i turni di ogni persona.
+- **Servizio fisso** - un turno sempre alla stessa persona nei giorni di un calendario.
+- **Assegnazione del singolo giorno** - chi fa un turno, o con quale mezzo, in una data precisa.
+- **Turno scoperto** - un turno che in un giorno non ha nessuna persona.
+- **Punto di cambio** - il luogo dove un autista lascia la corsa a un altro.
+- **Blocco** - corse fissate su un mezzo, per il calcolo futuro.
+- **Distrazione** - autorizzazione di un mezzo a un uso diverso da quello della carta di circolazione (es. un bus
+  di linea usato per una gita), con l'autorita', il riferimento, le date e le prescrizioni.

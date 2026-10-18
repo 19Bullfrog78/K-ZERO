@@ -41,6 +41,11 @@ const DefinizioneControllo& definizione_controllo(kzero::Check c);
 
 const char* nome_livello(Livello l);   // "errore", "avviso"
 
+// Giorni di un problema raggruppati in periodi di giorni consecutivi: (primo, ultimo).
+std::vector<std::pair<kzero::Day, kzero::Day>> periodi_di_giorni(const std::vector<kzero::Day>& giorni);
+// Giorni di un problema in italiano: "il 2026-10-20", "dal 2026-10-20 al 2026-10-24 (5 giorni)", ...
+std::string testo_giorni(const std::vector<kzero::Day>& giorni);
+
 // Scrive i messaggi dei problemi. I riferimenti agli elementi mostrano il codice e, se le classi dei dati
 // lo permettono, il nome: il nome di un punto porta a porta (dato personale) compare solo con
 // --includi-dati-personali. pacchetto e versioni possono mancare (pacchetto non letto).

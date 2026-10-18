@@ -42,6 +42,10 @@ public:
     const Vehicle* vehicle(const Code& c) const { return find(vehicles_, c); }
     const Depot* depot(const Code& c) const { return find(depots_, c); }
     const Person* person(const Code& c) const { return find(persons_, c); }
+    const Shift* shift(const Code& c) const { return find(shifts_, c); }
+    const Rotation* rotation(const Code& c) const { return find(rotations_, c); }
+    const FixedAssignment* fixed(const Code& c) const { return find(fixed_, c); }
+    const Block* block(const Code& c) const { return find(blocks_, c); }
 
     // Regolamento che vale per un servizio (quello del suo contratto), se esiste.
     const Regulation* regulation_of(const Service& s) const;
@@ -85,6 +89,10 @@ private:
     Map<Vehicle> vehicles_;
     Map<Depot> depots_;
     Map<Person> persons_;
+    Map<Shift> shifts_;
+    Map<Rotation> rotations_;
+    Map<FixedAssignment> fixed_;
+    Map<Block> blocks_;
 };
 
 // Il calendario vale nel giorno d? (Regola completa accanto a Calendar, in domain_models.hpp.)

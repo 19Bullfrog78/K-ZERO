@@ -76,10 +76,12 @@ target_include_directories(kzero_valijson SYSTEM INTERFACE ${valijson_SOURCE_DIR
 # Nessuna stampa, nessuna riga di comando, nessuna libreria esterna (lo controlla una prova).
 add_library(kzero_nucleo STATIC
   src/nucleo/controlli.cpp
+  src/nucleo/controlli_turni.cpp
   src/nucleo/dimostrazione.cpp
   src/nucleo/pacchetto.cpp
   src/nucleo/ricerca.cpp
   src/nucleo/tempo.cpp
+  src/nucleo/turni.cpp
 )
 target_include_directories(kzero_nucleo PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/nucleo)
 target_compile_options(kzero_nucleo PRIVATE ${KZERO_WARNINGS})

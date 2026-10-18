@@ -1172,6 +1172,146 @@ void fermi(const JsonDati& d, Package& pk) {
     }
 }
 
+std::optional<TripPoint> punto_corsa(const JsonDati& o, const char* k, const std::string& p, const Conversione& c) {
+    if (!o.contains(k)) return std::nullopt;
+    const std::string pk = p + "/" + k;
+    return TripPoint{c.ref(o.at(k), "luogo", pk), c.orario_opz(o.at(k), "orario"), c.src(pk)};
+}
+
+void turni(const JsonDati& d, Package& pk) {
+    const Conversione c("turni.json");
+    const auto& v = d.at("turni");
+    for (std::size_t i = 0; i < v.size(); ++i) {
+        const auto& s = v[i];
+        const std::string p = indice("/turni", i);
+        Shift x;
+        x.code = s.at("codice").get<std::string>();
+        x.name = c.testo(s, "nome");
+        x.company = c.ref(s, "azienda", p);
+        x.role = valore_di<ShiftRole>({{"autista", ShiftRole::Driver}, {"assistente", ShiftRole::Escort},
+                                       {"secondo_autista", ShiftRole::SecondDriver}},
+                                      s.at("ruolo").get<std::string>());
+        x.calendar = c.ref(s, "calendario", p);
+        const auto& m = s.at("mezzo");
+        x.vehicle_mode = valore_di<ShiftVehicleMode>({{"preciso", ShiftVehicleMode::Specific}, {"abituale", ShiftVehicleMode::Usual},
+                                                      {"da_assegnare", ShiftVehicleMode::ToAssign}, {"nessuno", ShiftVehicleMode::None}},
+                                                     m.at("modo").get<std::string>());
+        x.vehicle = c.ref_opz(m, "codice", p + "/mezzo");
+        x.vehicle_src = c.src(p + "/mezzo");
+        x.start_place = c.ref(s, "inizio", p);
+        x.end_place = c.ref(s, "fine", p);
+        const auto& el = s.at("elementi");
+        for (std::size_t k = 0; k < el.size(); ++k) {
+            const auto& e = el[k];
+            const std::string pe = indice(p + "/elementi", k);
+            ShiftItem y;
+            y.src = c.src(pe);
+            if (e.contains("corsa")) {
+                y.is_trip = true;
+                y.trip.trip = c.ref(e, "corsa", pe);
+                y.trip.from = punto_corsa(e, "da", pe, c);
+                y.trip.to = punto_corsa(e, "a", pe, c);
+                if (e.contains("assistente"))
+                    y.trip.escort = e.at("assistente").get<std::string>() == "azienda" ? EscortProvider::Company : EscortProvider::Client;
+            } else {
+                y.is_trip = false;
+                y.activity.type = c.ref(e, "attivita", pe);
+                y.activity.place = c.ref(e, "luogo", pe);
+                y.activity.to_place = c.ref_opz(e, "verso", pe);
+                y.activity.start = c.orario(e.at("dalle"));
+                y.activity.end = c.orario(e.at("alle"));
+                y.activity.empty_km = c.decimale(e, "km_vuoti");
+                y.activity.calendar = c.ref_opz(e, "calendario", pe);
+                y.activity.note = c.testo(e, "nota");
+            }
+            x.items.push_back(y);
+        }
+        x.competences = riferimenti(s, "competenze_richieste", p, c);
+        x.note = c.testo(s, "nota");
+        x.src = c.src(p);
+        pk.shifts.push_back(std::move(x));
+    }
+}
+
+void rotazioni(const JsonDati& d, Package& pk) {
+    const Conversione c("rotazioni.json");
+    const auto& v = d.at("rotazioni");
+    for (std::size_t i = 0; i < v.size(); ++i) {
+        const auto& r = v[i];
+        const std::string p = indice("/rotazioni", i);
+        Rotation x;
+        x.code = r.at("codice").get<std::string>();
+        x.name = c.testo(r, "nome");
+        x.unit = r.at("passo").get<std::string>() == "mese" ? RotationUnit::Month : RotationUnit::Day;
+        x.length = r.at("lunghezza").get<int>();
+        x.start = c.data(r.at("partenza"));
+        x.from = c.data_opz(r, "dal");
+        x.to = c.data_opz(r, "al");
+        const auto& righe = r.at("righe");
+        for (std::size_t k = 0; k < righe.size(); ++k) {
+            const std::string pr = indice(p + "/righe", k);
+            RotationRow row;
+            row.person = c.ref(righe[k], "persona", pr);
+            const auto& passi = righe[k].at("passi");
+            for (std::size_t q = 0; q < passi.size(); ++q) {
+                const std::string pp = indice(pr + "/passi", q);
+                RotationStep st;
+                st.src = c.src(pp);
+                if (passi[q].is_string()) {
+                    st.rest = true;
+                } else {
+                    for (std::size_t z = 0; z < passi[q].size(); ++z)
+                        st.shifts.push_back({passi[q][z].get<std::string>(), c.src(indice(pp, z))});
+                }
+                row.steps.push_back(st);
+            }
+            row.src = c.src(pr);
+            x.rows.push_back(row);
+        }
+        x.note = c.testo(r, "nota");
+        x.src = c.src(p);
+        pk.rotations.push_back(std::move(x));
+    }
+}
+
+void servizi_fissi(const JsonDati& d, Package& pk) {
+    const Conversione c("servizi_fissi.json");
+    const auto& v = d.at("servizi_fissi");
+    for (std::size_t i = 0; i < v.size(); ++i) {
+        const std::string p = indice("/servizi_fissi", i);
+        pk.fixed.push_back({v[i].at("codice").get<std::string>(), c.ref(v[i], "turno", p), c.ref(v[i], "persona", p),
+                            c.ref(v[i], "calendario", p), c.testo(v[i], "nota"), c.src(p)});
+    }
+}
+
+void assegnazioni(const JsonDati& d, Package& pk) {
+    const Conversione c("assegnazioni.json");
+    const auto& v = d.at("assegnazioni");
+    for (std::size_t i = 0; i < v.size(); ++i) {
+        const std::string p = indice("/assegnazioni", i);
+        pk.day_assignments.push_back({c.data(v[i].at("data")), c.ref(v[i], "turno", p), c.ref_opz(v[i], "persona", p),
+                                      c.ref_opz(v[i], "mezzo", p), c.testo(v[i], "nota"), c.src(p)});
+    }
+}
+
+void blocchi(const JsonDati& d, Package& pk) {
+    const Conversione c("blocchi.json");
+    const auto& v = d.at("blocchi");
+    for (std::size_t i = 0; i < v.size(); ++i) {
+        const std::string p = indice("/blocchi", i);
+        Block x;
+        x.code = v[i].at("codice").get<std::string>();
+        x.vehicle = c.ref(v[i], "mezzo", p);
+        x.trips = riferimenti(v[i], "corse", p, c);
+        x.from = c.data_opz(v[i], "dal");
+        x.to = c.data_opz(v[i], "al");
+        x.strength = v[i].at("forza").get<std::string>() == "tutto_fisso" ? BlockStrength::AllFixed : BlockStrength::VehicleFixed;
+        x.note = c.testo(v[i], "nota");
+        x.src = c.src(p);
+        pk.blocks.push_back(x);
+    }
+}
+
 void converti(const std::string& file, const JsonDati& d, Package& pk) {
     using Funzione = void (*)(const JsonDati&, Package&);
     static const std::vector<std::pair<const char*, Funzione>> conversioni = {
@@ -1179,7 +1319,9 @@ void converti(const std::string& file, const JsonDati& d, Package& pk) {
         {"regolamenti.json", regolamenti}, {"festivita.json", festivita}, {"calendari.json", calendari}, {"scuole.json", scuole},
         {"committenti.json", committenti}, {"contratti.json", contratti}, {"gruppi_servizi.json", gruppi_servizi},
         {"servizi.json", servizi}, {"corse.json", corse}, {"mezzi.json", mezzi}, {"rimesse.json", rimesse},
-        {"tempi_sosta.json", tempi_sosta}, {"persone.json", persone}, {"assenze.json", assenze}, {"fermi.json", fermi}};
+        {"tempi_sosta.json", tempi_sosta}, {"persone.json", persone}, {"assenze.json", assenze}, {"fermi.json", fermi},
+        {"turni.json", turni}, {"rotazioni.json", rotazioni}, {"servizi_fissi.json", servizi_fissi},
+        {"assegnazioni.json", assegnazioni}, {"blocchi.json", blocchi}};
     for (const auto& [nome, f] : conversioni)
         if (file == nome) return f(d, pk);
     throw std::logic_error("file del formato senza conversione: " + file);

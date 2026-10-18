@@ -755,5 +755,10 @@ TEST(Controlli, catalogo_coperto) {
     EXPECT_EQ(api::definizione_controllo(Check::CalendarCombinationCycle).codice, "K-CTR-049");
     EXPECT_EQ(api::definizione_controllo(Check::CompanyWithoutNorms).codice, "K-CTR-052");
     EXPECT_EQ(api::definizione_controllo(Check::FileTooBig).codice, "K-CTR-053");
-    EXPECT_EQ(api::catalogo_controlli().size(), 53u);
+    EXPECT_EQ(api::definizione_controllo(Check::ShiftPartInvalid).codice, "K-CTR-054");
+    EXPECT_EQ(api::definizione_controllo(Check::PersonOverlap).codice, "K-CTR-063");
+    EXPECT_EQ(api::definizione_controllo(Check::DriverWithoutLicence).codice, "K-CTR-068");
+    EXPECT_EQ(api::definizione_controllo(Check::ShiftUncovered).codice, "K-CTR-077");
+    EXPECT_EQ(api::definizione_controllo(Check::EscortProviderDiffers).codice, "K-CTR-087");
+    EXPECT_EQ(api::catalogo_controlli().size(), 87u);
 }

@@ -172,6 +172,178 @@ const std::vector<DefinizioneControllo>& catalogo_controlli() {
             {Check::CompanyWithoutNorms, "K-CTR-052", A, "Azienda senza le norme del paese",
              {"L'azienda {azienda} non indica le norme del paese (aziende.json): usi dei mezzi, abilitazioni e requisiti di guida "
               "dei suoi dati non si possono controllare."}},
+            // Turni (K-008)
+            {Check::ShiftPartInvalid, "K-CTR-054", E, "Pezzo di corsa che non si trova nella corsa",
+             {"Nel turno {turno} il pezzo della corsa {corsa} comincia o finisce a {luogo}, dove la corsa non passa.",
+              "Nel turno {turno} il pezzo della corsa {corsa} comincia o finisce a {luogo}, dove la corsa passa piu' volte: "
+              "scrivere anche l'orario del passaggio.",
+              "Nel turno {turno} il pezzo della corsa {corsa} finisce a {luogo} prima di cominciare (o nello stesso passaggio)."}},
+            {Check::ShiftItemsOrder, "K-CTR-055", E, "Corse e attivita' di un turno fuori ordine o sovrapposte",
+             {"Nel turno {turno} un elemento comincia alle {orario}, prima dell'elemento precedente ({precedente}): corse e "
+              "attivita' vanno scritte in ordine di orario.",
+              "Nel turno {turno} un elemento comincia alle {orario}, prima che finisca il precedente ({fine}), {giorni}."}},
+            {Check::ShiftVehicleInconsistent, "K-CTR-056", E, "Mezzo del turno che non va con il suo ruolo",
+             {"Il turno {turno} e' da autista e ha delle corse, ma il mezzo e' \"nessuno\".",
+              "Il turno {turno} e' da assistente o da secondo autista: il mezzo deve essere \"nessuno\" (e' quello del turno "
+              "dell'autista).",
+              "Il turno {turno} usa il mezzo abituale della persona, ma {persona} non ha un mezzo abituale, {giorni}."}},
+            {Check::RotationMalformed, "K-CTR-057", E, "Rotazione scritta in modo incoerente",
+             {"Nella rotazione {rotazione} la riga di {persona} ha {passi} passi, ma il ciclo ne ha {lunghezza}.",
+              "Nella rotazione {rotazione} la persona {persona} compare in piu' righe.",
+              "La rotazione {rotazione} ha i passi di un mese, ma parte il {partenza}: deve partire il primo giorno di un mese."}},
+            {Check::AssignmentOnDayWithoutShift, "K-CTR-058", E, "Assegnazione in un giorno in cui il turno non c'e'",
+             {"L'assegnazione del turno {turno} il {data} e' fuori dal periodo del pacchetto.",
+              "L'assegnazione del turno {turno} il {data} e' in un giorno in cui il turno non c'e' (calendario del turno, o nessuna "
+              "corsa e attivita' quel giorno)."}},
+            {Check::ShiftAtShelterNever, "K-CTR-059", E, "Turno in un ricovero esterno con l'impostazione \"mai\"",
+             {"Il turno {turno} comincia o finisce a {luogo}, un ricovero esterno, ma l'azienda {azienda} vuole i mezzi sempre in "
+              "rimessa (ricovero vicino a casa: mai)."}},
+            {Check::PeriodTooLongForShifts, "K-CTR-060", E, "Periodo del pacchetto troppo lungo per i turni",
+             {"Il periodo del pacchetto dura {giorni} giorni: con i turni al massimo {massimo} (tre anni). I controlli giorno per "
+              "giorno sui turni non sono stati fatti."}},
+            {Check::TripPartsGap, "K-CTR-061", E, "Corsa divisa in pezzi con un buco",
+             {"La corsa {corsa} e' divisa in pezzi tra i turni, ma nessun turno la fa da {da} a {a}, {giorni}."}},
+            {Check::TripInTwoShifts, "K-CTR-062", E, "Stessa corsa o pezzo di corsa in due turni nello stesso giorno",
+             {"La corsa {corsa} (o una sua parte) e' sia nel turno {turno} sia nel turno {altro}, {giorni}."}},
+            {Check::PersonOverlap, "K-CTR-063", E, "Persona in due turni che si sovrappongono",
+             {"La persona {persona} e' nel turno {turno} e nel turno {altro}, che si sovrappongono, {giorni}.",
+              "La persona {persona} e' nel turno {turno}, che si sovrappone al turno {altro} del giorno prima ({giorno_altro}), "
+              "a cavallo della mezzanotte, {giorni}."}},
+            {Check::VehicleOverlap, "K-CTR-064", E, "Mezzo in due turni che si sovrappongono",
+             {"Il mezzo {mezzo} e' nel turno {turno} e nel turno {altro}, che si sovrappongono, {giorni}.",
+              "Il mezzo {mezzo} e' nel turno {turno}, che si sovrappone al turno {altro} del giorno prima ({giorno_altro}), a "
+              "cavallo della mezzanotte, {giorni}."}},
+            {Check::RotationTwoPersons, "K-CTR-065", E, "Due persone nello stesso turno nello stesso giorno",
+             {"Le rotazioni danno il turno {turno} sia a {persona} sia a {altra}, {giorni}."}},
+            {Check::TwoAssignmentsSameShift, "K-CTR-066", E, "Due servizi fissi o due assegnazioni del giorno sullo stesso turno",
+             {"Il turno {turno} ha due servizi fissi nello stesso giorno (l'altro e' {altro}), {giorni}.",
+              "Il turno {turno} ha due assegnazioni il {data}: va scritta una sola, con la persona, il mezzo o tutti e due."}},
+            {Check::DayAssignmentAgainstFact, "K-CTR-067", E, "Assegnazione del singolo giorno contro un fatto",
+             {"L'assegnazione del {data} da' il turno {turno} a {persona}, che quel giorno e' assente ({tipo}).",
+              "L'assegnazione del {data} da' il turno {turno} a {persona}, che non e' disponibile in quegli orari ({orari}).",
+              "L'assegnazione del {data} da' il turno {turno} a {persona}, ma il suo prestito all'azienda {azienda} non vale quel "
+              "giorno.",
+              "L'assegnazione del {data} da' il turno {turno} a {persona}, ma quel giorno l'abilitazione {tipo} e' scaduta.",
+              "L'assegnazione del {data} da' il turno {turno} a {persona}, ma quel giorno l'autorizzazione del committente {tipo} "
+              "e' scaduta.",
+              "L'assegnazione del {data} mette il mezzo {mezzo} nel turno {turno}, ma quel giorno il mezzo e' in fermo ({tipo}).",
+              "L'assegnazione del {data} mette il mezzo {mezzo} nel turno {turno}, ma quel giorno non vale la sua autorizzazione "
+              "all'uso {tipo} (distrazione) che i servizi del turno chiedono.",
+              "L'assegnazione del {data} mette il mezzo {mezzo} nel turno {turno}, ma quel giorno non vale il suo prestito "
+              "all'azienda {tipo}."},
+             {},
+             {{0, "L'assegnazione del {data} da' il turno {turno} a {persona}, che quel giorno non puo' farlo (dati personali: "
+                  "riservati)."},
+              {1, "L'assegnazione del {data} da' il turno {turno} a {persona}, che quel giorno non puo' farlo (dati personali: "
+                  "riservati)."},
+              {3, "L'assegnazione del {data} da' il turno {turno} a {persona}, che quel giorno non puo' farlo (dati personali: "
+                  "riservati)."},
+              {4, "L'assegnazione del {data} da' il turno {turno} a {persona}, che quel giorno non puo' farlo (dati personali: "
+                  "riservati)."}}},
+            {Check::DriverWithoutLicence, "K-CTR-068", E, "Autista senza l'abilitazione o l'autorizzazione richiesta",
+             {"Nel turno {turno} la persona {persona} guida il mezzo {mezzo}, ma non ha le abilitazioni richieste dalle norme "
+              "(serve una di: {alternative}), {giorni}.",
+              "Nel turno {turno} la persona {persona} guida per il servizio {servizio}, che chiede un'autorizzazione del "
+              "committente {committente}, ma non ce l'ha, {giorni}."},
+             {},
+             {{0, "Nel turno {turno} la persona {persona} guida il mezzo {mezzo} senza un'abilitazione richiesta dalle norme "
+                  "(dati personali: riservati), {giorni}."},
+              {1, "Nel turno {turno} la persona {persona} guida per il servizio {servizio} senza l'autorizzazione del committente "
+                  "{committente}, {giorni}."}}},
+            {Check::VehicleWithoutUseForService, "K-CTR-069", E, "Mezzo senza l'uso richiesto dal servizio",
+             {"Nel turno {turno} il mezzo {mezzo} (uso {uso}) fa il servizio {servizio}, che chiede l'uso {usi}, e non ha "
+              "un'autorizzazione a quell'uso (distrazione), {giorni}."}},
+            {Check::PairingFixedViolated, "K-CTR-070", E, "Turno ricorrente contro l'abbinamento autista-mezzo fisso",
+             {"Nel turno {turno} la persona {persona} guida il mezzo {mezzo}, ma l'azienda ha l'abbinamento fisso e il suo mezzo "
+              "e' un altro, {giorni}.",
+              "Nel turno {turno} la persona {persona} guida il mezzo {mezzo}, ma l'azienda ha l'abbinamento fisso e la persona non "
+              "ha un mezzo abituale, {giorni}."}},
+            {Check::PersonWithoutCompetence, "K-CTR-071", E, "Persona senza una competenza richiesta",
+             {"Nel turno {turno} la persona {persona} non ha la competenza {competenza}, richiesta dal turno o dal servizio, {giorni}."},
+             {{0, "Nel turno {turno} la persona {persona} non ha una competenza richiesta dal turno o dal servizio (dati riservati), "
+                  "{giorni}."}},
+             {{0, "Nel turno {turno} la persona {persona} non ha una competenza richiesta dal turno o dal servizio (dati riservati), "
+                  "{giorni}."}}},
+            {Check::VehicleAgainstConstraint, "K-CTR-072", E, "Mezzo usato contro il suo vincolo di destinazione",
+             {"Nel turno {turno} il mezzo {mezzo} fa il servizio {servizio}, che il suo vincolo di destinazione non ammette, {giorni}."}},
+            {Check::OtherCompanyWithoutLoan, "K-CTR-073", E, "Persona o mezzo di un'altra azienda senza prestito dichiarato",
+             {"Il turno {turno} e' dell'azienda {azienda}, ma la persona {persona} e' di un'altra azienda e non ha un prestito a "
+              "{azienda}, {giorni}.",
+              "Il turno {turno} e' dell'azienda {azienda}, ma il mezzo {mezzo} e' di un'altra azienda e non ha un prestito a "
+              "{azienda}, {giorni}."}},
+            {Check::BlockedTripOtherVehicle, "K-CTR-074", E, "Corsa bloccata su un mezzo e fatta con un altro",
+             {"La corsa {corsa} e' bloccata sul mezzo {mezzo} (blocco {blocco}), ma il turno {turno} la fa con il mezzo {altro}, "
+              "{giorni}."}},
+            {Check::IncompatibleBlocks, "K-CTR-075", E, "Due blocchi incompatibili sulla stessa corsa",
+             {"La corsa {corsa} e' bloccata sul mezzo {mezzo} (blocco {blocco}) e sul mezzo {altro_mezzo} (blocco {altro}) in "
+              "periodi che si sovrappongono."}},
+            {Check::PersonRoleMismatch, "K-CTR-076", E, "Persona con un ruolo diverso da quello del turno",
+             {"Il turno {turno} e' da autista, ma la persona {persona} non e' autista, {giorni}.",
+              "Il turno {turno} e' da assistente, ma la persona {persona} non e' assistente, {giorni}."},
+             {},
+             {{0, "Il turno {turno} chiede un ruolo che la persona {persona} non ha (dati personali: riservati), {giorni}."},
+              {1, "Il turno {turno} chiede un ruolo che la persona {persona} non ha (dati personali: riservati), {giorni}."}}},
+            {Check::ShiftUncovered, "K-CTR-077", A, "Turno scoperto",
+             {"Il turno {turno} e' scoperto {giorni}: nessuna rotazione, servizio fisso o assegnazione del singolo giorno lo "
+              "assegna a una persona."}},
+            {Check::RecurringShiftPersonFact, "K-CTR-078", A, "Turno ricorrente scoperto per un fatto con le date",
+             {"Il turno {turno} e' scoperto {giorni}: la persona prevista {persona} e' assente ({tipo}). Rimedio: un'assegnazione "
+              "del singolo giorno.",
+              "Il turno {turno} e' scoperto {giorni}: la persona prevista {persona} non e' disponibile in quegli orari ({orari}). "
+              "Rimedio: un'assegnazione del singolo giorno.",
+              "Il turno {turno} e' scoperto {giorni}: il prestito della persona prevista {persona} all'azienda {azienda} non vale. "
+              "Rimedio: un'assegnazione del singolo giorno.",
+              "Il turno {turno} e' scoperto {giorni}: l'abilitazione {tipo} della persona prevista {persona} e' scaduta. Rimedio: "
+              "un'assegnazione del singolo giorno.",
+              "Il turno {turno} e' scoperto {giorni}: l'autorizzazione del committente {tipo} della persona prevista {persona} e' "
+              "scaduta. Rimedio: un'assegnazione del singolo giorno."},
+             {},
+             {{0, "Il turno {turno} e' scoperto {giorni}: la persona prevista {persona} non puo' farlo (dati personali: riservati). "
+                  "Rimedio: un'assegnazione del singolo giorno."},
+              {1, "Il turno {turno} e' scoperto {giorni}: la persona prevista {persona} non puo' farlo (dati personali: riservati). "
+                  "Rimedio: un'assegnazione del singolo giorno."},
+              {3, "Il turno {turno} e' scoperto {giorni}: la persona prevista {persona} non puo' farlo (dati personali: riservati). "
+                  "Rimedio: un'assegnazione del singolo giorno."},
+              {4, "Il turno {turno} e' scoperto {giorni}: la persona prevista {persona} non puo' farlo (dati personali: riservati). "
+                  "Rimedio: un'assegnazione del singolo giorno."}}},
+            {Check::RecurringShiftVehicleFact, "K-CTR-079", A, "Turno ricorrente senza mezzo per un fatto con le date",
+             {"Il turno {turno} e' senza mezzo {giorni}: il mezzo {mezzo} e' in fermo ({tipo}). Rimedio: un'assegnazione del "
+              "singolo giorno con un altro mezzo.",
+              "Il turno {turno} e' senza mezzo {giorni}: l'autorizzazione del mezzo {mezzo} all'uso {tipo} (distrazione) non vale. "
+              "Rimedio: un'assegnazione del singolo giorno con un altro mezzo.",
+              "Il turno {turno} e' senza mezzo {giorni}: il prestito del mezzo {mezzo} all'azienda {tipo} non vale. Rimedio: "
+              "un'assegnazione del singolo giorno con un altro mezzo."}},
+            {Check::TripWithoutShift, "K-CTR-080", A, "Corsa senza turno",
+             {"La corsa {corsa} non e' in nessun turno da autista {giorni}."}},
+            {Check::PreferenceNotRespected, "K-CTR-081", A, "Preferenza di una persona non rispettata",
+             {"Il turno {turno} non rispetta una preferenza della persona {persona}, {giorni}.",
+              "L'assegnazione del singolo giorno del turno {turno} non rispetta una preferenza della persona {persona}, {giorni} "
+              "(la scelta dell'utente vince)."}},
+            {Check::PairingNotRespected, "K-CTR-082", A, "Abbinamento autista-mezzo non rispettato",
+             {"Nel turno {turno} la persona {persona} guida il mezzo {mezzo}, non il suo mezzo abituale (abbinamento preferito), "
+              "{giorni}.",
+              "Nel turno {turno} la persona {persona} guida il mezzo {mezzo} e non ha un mezzo abituale (abbinamento preferito), "
+              "{giorni}.",
+              "Un'assegnazione del singolo giorno mette la persona {persona} sul mezzo {mezzo} nel turno {turno}, contro "
+              "l'abbinamento fisso dell'azienda (la scelta dell'utente vince), {giorni}.",
+              "Un'assegnazione del singolo giorno mette la persona {persona}, che non ha un mezzo abituale, sul mezzo {mezzo} nel "
+              "turno {turno}, contro l'abbinamento fisso dell'azienda (la scelta dell'utente vince), {giorni}."}},
+            {Check::ShiftVehicleToAssign, "K-CTR-083", A, "Turno con il mezzo da assegnare",
+             {"Il turno {turno} ha il mezzo da assegnare {giorni}."}},
+            {Check::PersonWithoutShifts, "K-CTR-084", A, "Persona senza turni",
+             {"La persona {persona} non fa nessun turno nel periodo del pacchetto."}},
+            {Check::VehicleNeverUsed, "K-CTR-085", A, "Mezzo mai usato che non e' di scorta",
+             {"Il mezzo {mezzo} non e' in nessun turno nel periodo del pacchetto e non e' segnato come mezzo di scorta."}},
+            {Check::EscortWithoutPerson, "K-CTR-086", A, "Corsa con l'assistente dell'azienda senza persona assegnata",
+             {"Nel turno {turno} la corsa {corsa} ha l'assistente fornito dall'azienda, ma nessun turno da assistente con una "
+              "persona la copre, {giorni}."}},
+            {Check::EscortProviderDiffers, "K-CTR-087", A, "Assistente fornito da chi il contratto non dice",
+             {"Nel turno {turno} l'assistente della corsa {corsa} e' dell'azienda, ma il contratto {contratto} dice che lo fornisce "
+              "il committente, {giorni}.",
+              "Nel turno {turno} l'assistente della corsa {corsa} e' del committente, ma il contratto {contratto} dice che lo "
+              "fornisce l'azienda, {giorni}.",
+              "Il turno da assistente {turno} copre la corsa {corsa}, ma il contratto {contratto} dice che l'assistente lo fornisce "
+              "il committente, {giorni}."}},
             // Contenuto: avvisi
             {Check::PlaceWithoutCoordinates, "K-CTR-035", A, "Luogo senza coordinate",
              {"Il luogo {luogo} non ha le coordinate: serviranno al calcolo delle distanze."}},
@@ -251,6 +423,10 @@ const char* nome_elementi(kzero::Element e) {
         case kzero::Element::StopType: return "i tipi di fermo";
         case kzero::Element::Competence: return "le competenze";
         case kzero::Element::Person: return "le persone";
+        case kzero::Element::Shift: return "i turni";
+        case kzero::Element::Rotation: return "le rotazioni";
+        case kzero::Element::FixedAssignment: return "i servizi fissi";
+        case kzero::Element::Block: return "i blocchi";
     }
     return "gli elementi";
 }
@@ -271,6 +447,33 @@ std::string decimale(double x) {
 }
 
 }  // namespace
+
+std::vector<std::pair<kzero::Day, kzero::Day>> periodi_di_giorni(const std::vector<kzero::Day>& giorni) {
+    std::vector<std::pair<kzero::Day, kzero::Day>> out;
+    for (const kzero::Day d : giorni) {
+        if (!out.empty() && d == out.back().second + 1) out.back().second = d;
+        else if (out.empty() || d > out.back().second) out.push_back({d, d});
+    }
+    return out;
+}
+
+std::string testo_giorni(const std::vector<kzero::Day>& giorni) {
+    const auto periodi = periodi_di_giorni(giorni);
+    const auto data = [](kzero::Day d) { return kzero::text_from_day(d); };
+    const auto uno = [&](const std::pair<kzero::Day, kzero::Day>& p) {
+        return p.first == p.second ? data(p.first) : "dal " + data(p.first) + " al " + data(p.second);
+    };
+    if (periodi.empty()) return "";
+    const std::size_t n = giorni.size();
+    if (n == 1) return "il " + data(giorni.front());
+    if (periodi.size() == 1) return "dal " + data(periodi[0].first) + " al " + data(periodi[0].second) + " (" + std::to_string(n) + " giorni)";
+    constexpr std::size_t kMassimo = 6;   // oltre, si mostrano i primi periodi; l'elenco completo e' nel JSON
+    std::string elenco;
+    for (std::size_t i = 0; i < periodi.size() && i < kMassimo; ++i) elenco += (i ? ", " : "") + uno(periodi[i]);
+    if (periodi.size() <= kMassimo) return "in " + std::to_string(n) + " giorni (" + elenco + ")";
+    return "in " + std::to_string(n) + " giorni tra il " + data(giorni.front()) + " e il " + data(giorni.back()) + " (i primi: " +
+           elenco + "...)";
+}
 
 struct Presentatore::Dati {
     const kzero::Package* pacchetto = nullptr;
@@ -308,6 +511,7 @@ std::string Presentatore::riferimento(kzero::Element e, const std::string& codic
         case kzero::Element::Holidays: da(idx.holidays(codice)); break;
         case kzero::Element::Norms: da(idx.norms(codice)); break;
         case kzero::Element::Person: da(idx.person(codice)); break;
+        case kzero::Element::Shift: da(idx.shift(codice)); break;
         case kzero::Element::School: da(idx.school(codice)); break;
         case kzero::Element::Client: da(idx.client(codice)); break;
         case kzero::Element::Contract: da(idx.contract(codice)); break;
@@ -338,7 +542,10 @@ std::string Presentatore::riferimento(kzero::Element e, const std::string& codic
         case kzero::Element::ActivityType:
         case kzero::Element::AbsenceType:
         case kzero::Element::StopType:
-        case kzero::Element::Competence: break;
+        case kzero::Element::Competence:
+        case kzero::Element::Rotation:
+        case kzero::Element::FixedAssignment:
+        case kzero::Element::Block: break;
     }
     if (!src || nome.empty() || !dati_->versioni) return codice;
     // La classe del nome viene dalla marcatura dello schema del file da cui viene l'elemento.
@@ -385,6 +592,7 @@ std::string Presentatore::messaggio(const kzero::Problem& p) const {
                 case kzero::Param::Kind::Date: valore = kzero::text_from_day(static_cast<kzero::Day>(it->number)); break;
                 case kzero::Param::Kind::Ref: valore = riferimento(it->element, it->text); break;
                 case kzero::Param::Kind::Elements: valore = nome_elementi(it->element); break;
+                case kzero::Param::Kind::Days: valore = testo_giorni(it->days); break;
             }
         }
         // Un valore che finisce con il punto, seguito dal punto della frase: un punto solo.

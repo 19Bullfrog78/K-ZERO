@@ -9,6 +9,7 @@
 #include "dimostrazione.hpp"
 #include "pacchetto.hpp"
 #include "pacchetto_demo.hpp"
+#include "turni.hpp"
 
 using namespace kzero;
 using namespace kzero::prove;
@@ -49,17 +50,35 @@ TEST(Dimostrazione, totali_e_pause) {
     EXPECT_NEAR(pieni, 131.8, 1e-9);
     EXPECT_NEAR(vuoti, 61.7, 1e-9);
 
-    Schedule giornata;
-    giornata.routes = {per_codice(demo().trips, "C-AM-1"), per_codice(demo().trips, "C-RM-1")};
-    EXPECT_NEAR(giornata.loaded_km(), 29.9, 1e-9);
-    EXPECT_NEAR(giornata.empty_km(), 12.8, 1e-9);
-    EXPECT_EQ(giornata.idle_minutes(), 263);
-    Driver autista;
-    autista.home = *per_codice(demo().places, "L-RIMESSA-ALFA").coord;
-    const Index idx(demo());
-    const BreakReport br = check_home_breaks(giornata, autista, [&](const Code& c) { return idx.place(c); });
-    EXPECT_EQ(br.near_home, 1);
-    EXPECT_EQ(br.far_from_home, 0);
+    // Un turno con l'andata del mattino e il ritorno di mezzogiorno (K-008: il turno del giorno al posto della
+    // vecchia "giornata del mezzo"): km dei dati e minuti fermi tra le due corse.
+    Package p = demo();
+    Shift s;
+    s.code = "T-PROVA";
+    s.company = Ref{"ALFA", {}};
+    s.calendar = Ref{"CAL-SCUOLA-LV", {}};
+    s.vehicle_mode = ShiftVehicleMode::Specific;
+    s.vehicle = Ref{"ALFA-01", {}};
+    for (const char* c : {"C-AM-1", "C-RM-1"}) {
+        ShiftItem it;
+        it.trip.trip = Ref{c, {}};
+        s.items.push_back(it);
+    }
+    p.shifts.push_back(s);
+    const Planner piano(p);
+    const auto giornata = piano.day(giorno("2026-10-15"));
+    ASSERT_EQ(giornata.size(), 1u);
+    EXPECT_NEAR(loaded_km(giornata[0]), 29.9, 1e-9);
+    EXPECT_NEAR(empty_km(giornata[0]), 12.8, 1e-9);
+    EXPECT_EQ(idle_minutes(giornata[0]), 263);
+    Person autista;
+    autista.home = Home{"", "", per_codice(p.places, "L-RIMESSA-ALFA").coord};
+    const auto luogo = [&piano](const Code& c) { return piano.index().place(c); };
+    const auto br = check_home_breaks(giornata[0], autista, HomeBreakRule{60, 5.0, std::nullopt}, luogo);
+    ASSERT_TRUE(br.has_value());
+    EXPECT_EQ(br->near_home, 1);
+    EXPECT_EQ(br->far_from_home, 0);
+    EXPECT_FALSE(check_home_breaks(giornata[0], autista, std::nullopt, luogo).has_value());   // senza regola non giudica
 }
 
 // Posti, carrozzine, costi e assistente, con i valori del pacchetto demo.

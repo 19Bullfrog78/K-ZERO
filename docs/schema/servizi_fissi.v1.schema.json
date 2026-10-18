@@ -1,0 +1,49 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "K-Zero - file di dati servizi_fissi.json, versione 1",
+  "description": "Servizi fissi (file servizi_fissi.json): un turno assegnato sempre alla stessa persona nei giorni del suo calendario. Vale piu' della rotazione e meno di un'assegnazione del singolo giorno. Se un'azienda tiene fisse solo alcune corse, le mette in un turno a parte.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "schema_versione", "servizi_fissi"],
+  "properties": {
+    "schema": { "const": "servizi_fissi", "x-kzero-classe": "comune" },
+    "schema_versione": { "const": 1, "x-kzero-classe": "comune" },
+    "servizi_fissi": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["codice", "turno", "persona", "calendario"],
+        "properties": {
+          "codice": { "$ref": "#/definitions/codice", "x-kzero-classe": "comune" },
+          "turno": { "$ref": "#/definitions/codice", "x-kzero-classe": "comune" },
+          "persona": { "$ref": "#/definitions/codice", "x-kzero-classe": "comune" },
+          "calendario": {
+            "description": "Giorni in cui il turno e' di questa persona (es. solo il mercoledi'); gli altri giorni il turno segue la rotazione.",
+            "$ref": "#/definitions/codice",
+            "x-kzero-classe": "comune"
+          },
+          "nota": {
+            "description": "Note (dato personale: puo' parlare delle persone).",
+            "$ref": "#/definitions/nota",
+            "x-kzero-classe": "personale"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "codice": {
+      "description": "Codice K-Zero: scelto da chi scrive i dati, unico per tipo di elemento. Lettere senza accenti, cifre, '-', '_' e '.'; inizia con una lettera o una cifra; al massimo 64 caratteri.",
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+    },
+    "nota": {
+      "description": "Testo libero, non vuoto (al massimo 2000 caratteri).",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2000,
+      "pattern": "\\S"
+    }
+  }
+}

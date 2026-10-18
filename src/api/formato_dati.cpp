@@ -31,6 +31,12 @@ const std::vector<FileDati>& file_dati() {
          "Persone (autisti e assistenti): ruoli, rapporto, ore, disponibilita', abilitazioni, competenze, preferenze."},
         {"assenze.json", "assenze", {1}, false, "Assenze programmate delle persone: periodo e tipo, mai la causa."},
         {"fermi.json", "fermi", {1}, false, "Fermi programmati dei mezzi (es. revisione)."},
+        {"turni.json", "turni", {1}, false,
+         "Turni del giorno: mezzo, corse intere o a pezzi, attivita' senza passeggeri, calendario, competenze."},
+        {"rotazioni.json", "rotazioni", {1}, false, "Rotazioni: cicli di passi (giorni o mesi) con i turni di ogni persona."},
+        {"servizi_fissi.json", "servizi_fissi", {1}, false, "Servizi fissi: un turno sempre alla stessa persona, con i suoi giorni."},
+        {"assegnazioni.json", "assegnazioni", {1}, false, "Assegnazioni del singolo giorno: persona, mezzo o tutti e due."},
+        {"blocchi.json", "blocchi", {1}, false, "Blocchi: corse legate a un mezzo (mezzo fisso o tutto fisso), per il calcolo."},
     };
     return elenco;
 }
