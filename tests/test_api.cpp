@@ -222,8 +222,15 @@ public:
         t.replace(i, vecchio.size(), nuovo);
     }
 
+    std::optional<std::uintmax_t> dimensione(const std::string& nome) const override {
+        const auto it = grandi.find(nome);
+        if (it != grandi.end()) return it->second;
+        return std::nullopt;
+    }
+
     std::map<std::string, std::optional<std::string>> file;   // nessun valore = illeggibile
     std::vector<std::string> cartelle;
+    std::map<std::string, std::uintmax_t> grandi;   // dimensione finta (byte) di alcuni file
 };
 
 struct Atteso {
@@ -261,7 +268,7 @@ TEST(Api, pacchetto_demo_letto) {
     const Lettura l = leggi_pacchetto(m);
     EXPECT_TRUE(l.problemi.empty());
     EXPECT_TRUE(l.forma_valida());
-    EXPECT_EQ(l.versioni.size(), 16u);   // tutti i file del formato tranne tempi_sosta.json
+    EXPECT_EQ(l.versioni.size(), 19u);   // tutti i file del formato tranne tempi_sosta.json
     for (const char* f : {"calendari.json", "regolamenti.json", "servizi.json", "mezzi.json"}) EXPECT_EQ(l.versioni.at(f), 2) << f;
     EXPECT_EQ(l.pacchetto.trips.size(), 10u);
 }
@@ -320,6 +327,19 @@ TEST(Api, K_CTR_006_versione_non_supportata) {
     Memoria n;
     n.sostituisci("corse.json", "\"schema_versione\": 1,", "\"schema_versione\": \"1\",");
     EXPECT_TRUE(problemi(n, {{Check::UnsupportedVersion, 1, "corse.json", "/schema_versione"}}));
+}
+
+// Un file troppo grande non si legge per niente: leggerlo potrebbe esaurire la memoria.
+TEST(Api, K_CTR_053_file_troppo_grande) {
+    Memoria m;
+    m.grandi["corse.json"] = kMassimoMBFile * 1024 * 1024 + 1;
+    EXPECT_TRUE(problemi(m, {{Check::FileTooBig, 0, "corse.json", ""}}));
+    EXPECT_FALSE(leggi_pacchetto(m).usato("corse.json"));
+    EXPECT_EQ(messaggio(m), "Il file e' piu' grande di 256 MB: e' certamente un errore (un file sbagliato o di un altro "
+                            "programma) e non e' stato letto.");
+    Memoria n;
+    n.grandi["corse.json"] = kMassimoMBFile * 1024 * 1024;   // al limite: si legge
+    EXPECT_TRUE(problemi(n, {}));
 }
 
 // Il rispetto dello schema lo controlla la libreria (valijson); i messaggi diventano italiani.
@@ -562,10 +582,25 @@ TEST(Api, classi_marcate_negli_schemi) {
                 if (classe == "particolare") particolari.insert(f.schema + percorso);
             }
         }
+    // Dati personali: luoghi privati, passeggeri, persone (tranne codice, azienda, presa servizio, mezzo abituale,
+    // ipotetica e prestiti), assenze (tranne la persona) e le note dei file che parlano di persone.
+    const std::set<std::string> comuni_delle_persone = {"persone/persone/*/codice", "persone/persone/*/azienda",
+                                                        "persone/persone/*/presa_servizio", "persone/persone/*/mezzo_abituale",
+                                                        "persone/persone/*/ipotetica", "assenze/assenze/*/persona"};
     for (const std::string& p : personali)
-        EXPECT_TRUE(p.rfind("luoghi/luoghi_privati/", 0) == 0 || p.find("/passeggeri/*/") != std::string::npos) << p;
+        EXPECT_TRUE(p.rfind("luoghi/luoghi_privati/", 0) == 0 || p.find("/passeggeri/*/") != std::string::npos ||
+                    p.rfind("persone/persone/", 0) == 0 || p.rfind("assenze/assenze/", 0) == 0)
+            << p;
     EXPECT_TRUE(personali.count("servizi/servizi/*/domanda/gruppi/*/passeggeri/*/nome"));
     EXPECT_TRUE(personali.count("servizi/servizi/*/domanda/gruppi/*/passeggeri/*/motivo"));
+    for (const char* campo : {"nome", "casa/indirizzo", "ruoli/*", "rapporto/tipo", "contratto_collettivo/codice", "ore/*/previste/settimana",
+                              "disponibilita/*/dalle", "costo_orario/*/valore", "abilitazioni/*/tipo", "autorizzazioni/*/scadenza",
+                              "competenze/*", "preferenze/*/tipo", "nota"})
+        EXPECT_TRUE(personali.count(std::string("persone/persone/*/") + campo)) << campo;
+    for (const char* campo : {"tipo", "dal", "al", "dalle", "alle"})
+        EXPECT_TRUE(personali.count(std::string("assenze/assenze/*/") + campo)) << campo;
+    for (const std::string& c : comuni_delle_persone) EXPECT_FALSE(personali.count(c)) << c;
+    EXPECT_FALSE(personali.count("persone/persone/*/prestiti/*/accordo"));
     const std::set<std::string> attesi = {
         "servizi/servizi/*/competenze_richieste/*",   // versione 2: una competenza puo' far capire chi viaggia
         "servizi/servizi/*/tipo",

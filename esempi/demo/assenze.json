@@ -1,0 +1,5 @@
+{
+  "schema": "assenze",
+  "schema_versione": 1,
+  "assenze": [{ "persona": "P-A", "tipo": "FERIE", "dal": "2026-10-22", "al": "2026-10-23" }]
+}

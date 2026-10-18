@@ -20,6 +20,7 @@ Index::Index(const Package& p) : package_(&p) {
     fill(trips_, p.trips);
     fill(vehicles_, p.vehicles);
     fill(depots_, p.depots);
+    fill(persons_, p.persons);
     for (const Service& s : p.services)
         for (const PassengerGroup& g : s.groups) {
             groups_.emplace(g.code, &g);

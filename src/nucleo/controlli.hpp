@@ -22,6 +22,7 @@ enum class Check {
     SchemaViolation,
     UnknownFile,
     NotUtf8,
+    FileTooBig,
     // Contenuto: errori.
     DuplicateCode,
     UnknownReference,
@@ -75,7 +76,7 @@ enum class Element {
     Company, Place, Segment, Regulation, Calendar, School, Client, Contract, Lot, Service, Group, Passenger, Trip,
     Vehicle, Depot, Transfer, Holidays,
     // K-008
-    Norms, CompanySettings, Licence, VehicleUse, ActivityType, AbsenceType, StopType, Competence,
+    Norms, CompanySettings, Licence, VehicleUse, ActivityType, AbsenceType, StopType, Competence, Person,
 };
 
 // Un valore da mettere nel messaggio, al posto di {nome}.

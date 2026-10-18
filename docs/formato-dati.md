@@ -37,6 +37,9 @@ Solo il manifesto e' obbligatorio; un file che manca vuol dire "nessun elemento 
 | `mezzi.json` | no | Mezzi: posti, attrezzature, costi, uso della carta di circolazione, distrazioni, vincolo di destinazione, scorta, prestiti |
 | `rimesse.json` | no | Rimesse e ricoveri dei mezzi |
 | `tempi_sosta.json` | no | Tempi di sosta alle fermate (facoltativi finche' non confermati) |
+| `persone.json` | no | Persone delle aziende: autisti e assistenti, ruoli, rapporto, ore, disponibilita', abilitazioni, competenze, preferenze |
+| `assenze.json` | no | Assenze programmate delle persone: periodo e tipo, mai la causa |
+| `fermi.json` | no | Fermi programmati dei mezzi (es. revisione) |
 
 Un file con un nome diverso da questi non viene letto (avviso K-CTR-008): di solito e' un nome scritto male.
 
@@ -69,6 +72,8 @@ Un file con un nome diverso da questi non viene letto (avviso K-CTR-008): di sol
 - **Distanze** in km (nei regolamenti, dove il nome del campo lo dice, in metri: `_m`); **misure** in metri,
   **masse** in tonnellate; **costi** nella valuta del manifesto.
 - **Testi**: una riga non vuota fino a 300 caratteri; le note (`nota`) fino a 2000 caratteri.
+- **Dimensione**: un file piu' grande di 256 MB non viene letto (errore K-CTR-053): e' certamente un errore, e
+  leggerlo potrebbe esaurire la memoria del PC.
 - **Numeri**: ogni numero ha un minimo e un massimo di buon senso (es. 1.000 posti per mezzo, 10.000 persone a
   una fermata, 1.440 minuti, 3.600 secondi, 100 m per una misura, 1.000.000 per i valori di un regolamento):
   un valore piu' grande e' certamente un errore di scrittura e il file viene rifiutato (K-CTR-007).
@@ -98,7 +103,7 @@ parte da quella marcatura ed e' uguale per testo e JSON.
 | Classe | Cosa comprende | Nelle uscite, di base | Per vederli |
 |---|---|---|---|
 | comune | fermate pubbliche (nome, posizione, codici), scuole e centri, grado, orari, calendari, conteggi senza esigenze, mezzi (targa compresa), aziende, committenti, contratti, regolamenti, tutti i codici | sempre visibili | - |
-| personale | nomi e cognomi, indirizzi, case, punti porta a porta (sono la casa del passeggero), ricoveri presso la casa di una persona, motivi scritti a mano | sostituiti dal **codice** dell'elemento | `--includi-dati-personali` |
+| personale | nomi e cognomi, indirizzi, case, punti porta a porta (sono la casa del passeggero), ricoveri presso la casa di una persona, motivi scritti a mano; delle persone (autisti e assistenti): ruoli, nome, casa, rapporto di lavoro, contratto collettivo, ore, disponibilita', costo orario, abilitazioni, autorizzazioni, competenze, preferenze, note; le assenze; le note dei file che parlano di persone | sostituiti dal **codice** dell'elemento (o da `"riservato"`, se non c'e' un codice da mostrare) | `--includi-dati-personali` |
 | particolare | dati sulla salute: esigenze di una persona o di un gruppo (carrozzina, ausili piegati, assistente necessario), tipo di servizio e di gruppo ("disabili"), conteggi di carrozzine e di ausili piegati, pedana obbligatoria per un servizio, competenze richieste da un servizio o da un turno, categoria ricavata della corsa | sostituiti da `"riservato"` | `--includi-dati-particolari` |
 
 Perche' i dati particolari sono nascosti anche quando al posto del nome c'e' un codice: sono dati sulla
@@ -121,9 +126,16 @@ Il manifesto dichiara il **livello**:
 I conteggi di carrozzine e di ausili piegati (dati particolari aggregati) sono ammessi in entrambi i livelli,
 sempre filtrati nelle uscite.
 
+**Persone (autisti e assistenti) nei due livelli.** Anche un pacchetto "solo numeri" ha le persone: senza di loro
+non si possono controllare ne' pianificare i turni. Restano i dati che servono al calcolo (codice, azienda, ruolo,
+abilitazioni, competenze, disponibilita', ore, preferenze, mezzo abituale), che sono comunque nascosti nelle uscite
+di base; non ci sono invece il nome, la casa e le note scritte a mano (errore K-CTR-019), che per controllare e
+pianificare non servono. Le assenze restano: dicono solo quando una persona manca e il tipo, mai la causa.
+
 **Minimizzazione:** il formato non ha campi per codice fiscale, telefoni, mail delle famiglie, data di
-nascita. K-Zero non li conserva mai: per pianificare non servono. Un campo cosi' aggiunto a mano e' un
-errore ("campo non previsto").
+nascita; per le persone delle aziende nemmeno idoneita' medica e cause delle assenze (una malattia e' un dato sulla
+salute e per pianificare non serve). K-Zero non li conserva mai. Un campo cosi' aggiunto a mano e' un errore
+("campo non previsto").
 
 ### Come si legge la tabella dei campi
 
@@ -721,6 +733,67 @@ pedana resta sul mezzo. Schema: [docs/schema/tempi_sosta.v1.schema.json](schema/
 | `tempi.scarico_a_scuola_secondi` | no | comune | Tempo di scarico a scuola |
 | `tempi.nota` | no | comune | Note |
 
+### persone.json
+
+Le persone delle aziende: autisti, assistenti a bordo o tutti e due. Schema:
+[docs/schema/persone.v1.schema.json](schema/persone.v1.schema.json).
+
+| Campo | Obbl. | Classe | Significato |
+|---|---|---|---|
+| `persone[].codice` | si' | comune | Codice della persona: compare al posto del nome nelle uscite di base |
+| `persone[].azienda` | si' | comune | Azienda della persona |
+| `persone[].ruoli[]` | si' | personale | `autista`, `assistente` (o tutti e due) |
+| `persone[].nome` | no | personale | Nome e cognome (non nel livello "solo numeri") |
+| `persone[].casa` | no | personale | `indirizzo`, `comune`, `coordinate` (non nel livello "solo numeri"): servira' per i ricoveri vicini a casa e per le pause |
+| `persone[].presa_servizio` | no | comune | Rimessa o luogo abituale di presa servizio (codice di un luogo) |
+| `persone[].mezzo_abituale` | no | comune | Mezzo abituale (abbinamento autista-mezzo, turni con il "mezzo abituale") |
+| `persone[].ipotetica` | no | comune | `true` = persona non ancora assunta (scenari) |
+| `persone[].rapporto` | si' | personale | `tipo`: `titolare`, `collaboratore_familiare`, `socio`, `dipendente_tempo_pieno`, `dipendente_part_time`, `a_chiamata`, `tempo_determinato`, `stagionale`, `autonomo`, `volontario` (es. accompagnatori autorizzati dal committente), `altro` con `descrizione` |
+| `persone[].contratto_collettivo` | no | personale | `codice` (es. il codice CNEL) e `nome` |
+| `persone[].ore[]` | no | personale | Ore `previste` e `massime` per `giorno`, `settimana`, `mese` (ore con decimali), con `dal` e `al` facoltativi |
+| `persone[].disponibilita[]` | no | personale | Giorni e fasce di disponibilita' (rigida): `giorni`, `dalle`, `alle`, con `dal` e `al` facoltativi |
+| `persone[].costo_orario[]` | no | personale | `valore` nella valuta del pacchetto, con `dal` e `al` facoltativi |
+| `persone[].abilitazioni[]` | no | personale | `tipo` (codice delle norme dell'azienda), `scadenza`, `riferimento` |
+| `persone[].autorizzazioni[]` | no | personale | Autorizzazioni del committente: `committente`, `riferimento`, `scadenza` (es. il cartellino per i servizi speciali) |
+| `persone[].competenze[]` | no | personale | Competenze (codici dell'elenco dell'azienda della persona) |
+| `persone[].preferenze[]` | no | personale | Preferenze (dati morbidi, sotto), con `dal` e `al` facoltativi |
+| `persone[].prestiti[]` | no | comune | Prestiti ad altre aziende: `azienda`, `accordo`, `dal`, `al` |
+| `persone[].nota` | no | personale | Note (non nel livello "solo numeri"; mai cause di assenza o dati sulla salute) |
+
+**Disponibilita' e preferenze.** La disponibilita' e' rigida: se per un giorno vale almeno una riga (per le date),
+la persona e' disponibile solo dentro le fasce di quel giorno della settimana; un turno fuori e' un fatto che la
+rende non disponibile. Senza righe per quel giorno, nessun limite. Le preferenze sono morbide: un turno che non le
+rispetta e' un avviso, mai un errore. Tipi: `giorni_liberi` (`giorni`), `fascia_oraria` (`dalle`, `alle`),
+`evita_turni` (`turni`), `pausa_massima` (`minuti`: nessuna pausa piu' lunga dentro un turno, es. "niente turni
+spezzati" con la soglia scelta dall'utente), `altro` (`descrizione`: mostrata, non controllata).
+
+**Ore, contratto collettivo, costo orario** sono solo dati: chi li verifica contro la legge e la filosofia
+aziendale e' il mandato "orari di lavoro".
+
+### assenze.json
+
+Assenze programmate delle persone. **Solo il tipo, mai la causa**: il formato non ha un campo per scriverla. Schema:
+[docs/schema/assenze.v1.schema.json](schema/assenze.v1.schema.json).
+
+| Campo | Obbl. | Classe | Significato |
+|---|---|---|---|
+| `assenze[].persona` | si' | comune | Codice della persona |
+| `assenze[].tipo` | si' | personale | Tipo dall'elenco dell'azienda della persona (es. ferie, permesso, formazione) |
+| `assenze[].dal`, `al` | si' | personale | Primo e ultimo giorno |
+| `assenze[].dalle`, `alle` | no | personale | Solo una parte di ogni giorno del periodo (vanno scritti insieme) |
+
+### fermi.json
+
+Fermi programmati dei mezzi. Schema: [docs/schema/fermi.v1.schema.json](schema/fermi.v1.schema.json).
+
+| Campo | Obbl. | Classe | Significato |
+|---|---|---|---|
+| `fermi[].mezzo` | si' | comune | Codice del mezzo |
+| `fermi[].tipo` | si' | comune | Tipo dall'elenco dell'azienda del mezzo (es. revisione, manutenzione) |
+| `fermi[].dal`, `al` | si' | comune | Primo e ultimo giorno |
+| `fermi[].dalle`, `alle` | no | comune | Solo una parte di ogni giorno del periodo (vanno scritti insieme) |
+| `fermi[].nota` | no | comune | Note |
+
 ## Ricerca dei luoghi per nome o codice esterno
 
 Una fermata si trova per **nome ufficiale**, **nome alternativo** oppure **codice esterno**
@@ -986,7 +1059,7 @@ nel formato K-Zero senza riscrivere nulla. Il codice GTFS di un elemento va tra 
 | servizi, domanda, gruppi, passeggeri | nessuno | GTFS descrive l'offerta pubblica, non il lavoro affidato a un'azienda ne' chi deve viaggiare |
 | trasbordi | nessuno | |
 | regolamenti, contratti, committenti, gruppi di servizi | nessuno | |
-| `aziende.json`, `norme.json` | nessuno | |
+| `aziende.json`, `norme.json`, `persone.json`, `assenze.json`, `fermi.json` | nessuno | GTFS non descrive il personale ne' i mezzi |
 | mezzi, rimesse, tratti con i limiti, tempi di sosta | nessuno | |
 
 ## Glossario

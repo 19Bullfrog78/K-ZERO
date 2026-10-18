@@ -266,6 +266,20 @@ kzero_rotto(rotto_distrazione_rovesciata FORMATO testo
             MODIFICA IMPOSTA mezzi.json /mezzi/4/autorizzazioni_uso
                      "[{\"uso\": \"NCC\", \"ente\": \"Provincia\", \"riferimento\": \"n. 1\", \"dal\": \"2027-02-28\", \"al\": \"2026-03-01\"}]"
             PROBLEMI "K-CTR-012|mezzi.json|/mezzi/4/autorizzazioni_uso/0")
+# K-008: persone, assenze, fermi.
+kzero_rotto(rotto_persona_doppia FORMATO testo MODIFICA IMPOSTA persone.json /persone/1/codice "\"P-A\""
+            PROBLEMI "K-CTR-009|persone.json|/persone/1")
+kzero_rotto(rotto_abilitazione_della_persona_inesistente FORMATO testo
+            MODIFICA IMPOSTA persone.json /persone/0/abilitazioni/1/tipo "\"D2\""
+            PROBLEMI "K-CTR-010|persone.json|/persone/0/abilitazioni/1/tipo"
+            CONTIENE "Il codice scritto in un dato personale (riservato) non esiste tra le abilitazioni delle norme N-IT"
+            NON_CONTIENE "D2" "Rossi Mario")
+kzero_rotto(rotto_tipo_di_assenza_inesistente FORMATO json MODIFICA IMPOSTA assenze.json /assenze/0/tipo "\"MALATTIA\""
+            PROBLEMI "K-CTR-010|assenze.json|/assenze/0/tipo" NON_CONTIENE "MALATTIA")
+kzero_rotto(rotto_tipo_di_fermo_inesistente FORMATO testo MODIFICA IMPOSTA fermi.json /fermi/0/tipo "\"OFFICINA\""
+            PROBLEMI "K-CTR-010|fermi.json|/fermi/0/tipo" CONTIENE "Il codice OFFICINA non esiste tra i tipi di fermo dell'azienda ALFA")
+kzero_rotto(rotto_assenza_rovesciata FORMATO testo MODIFICA IMPOSTA assenze.json /assenze/0/al "\"2026-10-21\""
+            PROBLEMI "K-CTR-012|assenze.json|/assenze/0" NON_CONTIENE "2026-10-2")
 # Caso reale: "16.08" scritto tra 12.05 e 12.19.
 kzero_rotto(rotto_orario_indietro FORMATO testo MODIFICA IMPOSTA corse.json /corse/3/passaggi/2/orario "\"16:08\""
             PROBLEMI "K-CTR-017|corse.json|/corse/3/passaggi/2"
@@ -349,6 +363,17 @@ kzero_prova(avviso_mezzo_senza_uso USCITA 0 FORMATO json SCHEMA controlla BASE $
 kzero_prova(avviso_azienda_senza_norme USCITA 0 FORMATO testo BASE ${KZERO_DEMO}
             MODIFICA TOGLI aziende.json /aziende/0/norme PROBLEMI "K-CTR-052|pacchetto.json|/aziende/0"
             ARGOMENTI controlla @PACCHETTO@)
+kzero_prova(avviso_abilitazione_che_scade USCITA 0 FORMATO testo BASE ${KZERO_DEMO}
+            MODIFICA IMPOSTA persone.json /persone/2/abilitazioni/2/scadenza "\"2027-06-30\""
+            PROBLEMI "K-CTR-050|persone.json|/persone/2/abilitazioni/2"
+            CONTIENE "Un'abilitazione o un'autorizzazione della persona P-C scade dentro il periodo del pacchetto"
+            NON_CONTIENE "CQC" "2027-06-30" "Verdi Carlo"
+            ARGOMENTI controlla @PACCHETTO@)
+kzero_prova(avviso_abilitazione_che_scade_dati_personali USCITA 0 FORMATO json SCHEMA controlla BASE ${KZERO_DEMO}
+            MODIFICA IMPOSTA persone.json /persone/2/abilitazioni/2/scadenza "\"2027-06-30\""
+            PROBLEMI "K-CTR-050|persone.json|/persone/2/abilitazioni/2"
+            CONTIENE "L'abilitazione CQC-P della persona P-C (Verdi Carlo) scade il 2027-06-30"
+            ARGOMENTI controlla @PACCHETTO@ --includi-dati-personali --formato json)
 kzero_prova(avviso_file_non_riconosciuto USCITA 0 FORMATO testo BASE ${KZERO_DEMO}
             MODIFICA AGGIUNGI fermate.json "{}" PROBLEMI "K-CTR-008|fermate.json"
             ARGOMENTI controlla @PACCHETTO@)

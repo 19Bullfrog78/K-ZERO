@@ -77,7 +77,11 @@ const std::vector<DefinizioneControllo>& catalogo_controlli() {
             {Check::NumbersOnlyPersonalData, "K-CTR-019", E, "Dati personali in un pacchetto \"solo numeri\"",
              {"Il pacchetto e' di livello \"solo numeri\": il luogo privato {luogo} (casa di una persona) non e' ammesso.",
               "Il pacchetto e' di livello \"solo numeri\": il gruppo {gruppo} elenca i passeggeri uno per uno "
-              "({passeggeri}), cosa ammessa solo nel livello \"completo\"."}},
+              "({passeggeri}), cosa ammessa solo nel livello \"completo\".",
+              "Il pacchetto e' di livello \"solo numeri\": la persona {persona} ha il nome, ammesso solo nel livello \"completo\".",
+              "Il pacchetto e' di livello \"solo numeri\": la persona {persona} ha la casa, ammessa solo nel livello \"completo\".",
+              "Il pacchetto e' di livello \"solo numeri\": la persona {persona} ha una nota scritta a mano, ammessa solo nel "
+              "livello \"completo\"."}},
             {Check::NegativeOnBoard, "K-CTR-020", E, "Persone a bordo sotto zero",
              {"Nella corsa {corsa} le persone del gruppo {gruppo} che scendono ({scendono}) sono piu' di quelle a bordo "
               "({a_bordo})."}},
@@ -149,7 +153,19 @@ const std::vector<DefinizioneControllo>& catalogo_controlli() {
               "calendari: non si puo' sapere in quali giorni vale."}},
             {Check::ExpiresInPeriod, "K-CTR-050", A, "Scadenza dentro il periodo del pacchetto",
              {"L'autorizzazione del mezzo {mezzo} all'uso {uso} (distrazione) scade il {data}, dentro il periodo del pacchetto: "
-              "dopo quella data il mezzo non puo' fare i servizi che chiedono quell'uso."}},
+              "dopo quella data il mezzo non puo' fare i servizi che chiedono quell'uso.",
+              "L'abilitazione {tipo} della persona {persona} scade il {data}, dentro il periodo del pacchetto: dopo quella data "
+              "non puo' guidare i mezzi che la richiedono.",
+              "L'autorizzazione del committente {committente} della persona {persona} scade il {data}, dentro il periodo del "
+              "pacchetto: dopo quella data non puo' guidare nei servizi che la richiedono."},
+             {},
+             {{1, "Un'abilitazione o un'autorizzazione della persona {persona} scade dentro il periodo del pacchetto (dati "
+                  "personali: riservati)."},
+              {2, "Un'abilitazione o un'autorizzazione della persona {persona} scade dentro il periodo del pacchetto (dati "
+                  "personali: riservati)."}}},
+            {Check::FileTooBig, "K-CTR-053", E, "File troppo grande",
+             {"Il file e' piu' grande di {massimo} MB: e' certamente un errore (un file sbagliato o di un altro programma) e "
+              "non e' stato letto."}},
             {Check::VehicleWithoutUse, "K-CTR-051", A, "Mezzo senza l'uso della carta di circolazione",
              {"Il mezzo {mezzo} non ha l'uso della carta di circolazione: con le norme {norme} l'uso richiesto dai servizi e i "
               "requisiti di guida che dipendono dall'uso non si possono controllare."}},
@@ -234,6 +250,7 @@ const char* nome_elementi(kzero::Element e) {
         case kzero::Element::AbsenceType: return "i tipi di assenza";
         case kzero::Element::StopType: return "i tipi di fermo";
         case kzero::Element::Competence: return "le competenze";
+        case kzero::Element::Person: return "le persone";
     }
     return "gli elementi";
 }
@@ -290,6 +307,7 @@ std::string Presentatore::riferimento(kzero::Element e, const std::string& codic
         case kzero::Element::Calendar: da(idx.calendar(codice)); break;
         case kzero::Element::Holidays: da(idx.holidays(codice)); break;
         case kzero::Element::Norms: da(idx.norms(codice)); break;
+        case kzero::Element::Person: da(idx.person(codice)); break;
         case kzero::Element::School: da(idx.school(codice)); break;
         case kzero::Element::Client: da(idx.client(codice)); break;
         case kzero::Element::Contract: da(idx.contract(codice)); break;
@@ -336,8 +354,11 @@ std::string Presentatore::messaggio(const kzero::Problem& p) const {
     if (p.variant < 0 || static_cast<std::size_t>(p.variant) >= d.messaggi.size())
         throw std::logic_error(d.codice + ": variante del messaggio inesistente");
     const auto riservato = d.riservati.find(p.variant);
+    const auto personale = d.personali.find(p.variant);
     const std::string& modello = riservato != d.riservati.end() && !visibile(Classe::Particolare, dati_->visibilita)
                                      ? riservato->second
+                                 : personale != d.personali.end() && !visibile(Classe::Personale, dati_->visibilita)
+                                     ? personale->second
                                      : d.messaggi[static_cast<std::size_t>(p.variant)];
     std::string out;
     for (std::size_t i = 0; i < modello.size(); ++i) {

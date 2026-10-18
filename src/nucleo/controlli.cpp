@@ -162,6 +162,7 @@ private:
         duplicates_in(groups, Element::Group);
         duplicates_in(passengers, Element::Passenger);
         // K-008: norme, impostazioni delle aziende e loro elenchi.
+        duplicates_in(pointers(p_.persons), Element::Person);
         duplicates_in(pointers(p_.norms), Element::Norms);
         for (const Norms& n : p_.norms) {
             duplicates_in(pointers(n.licences), Element::Licence);
@@ -203,6 +204,7 @@ private:
             case Element::Transfer: return true;
             case Element::Holidays: return idx_.holidays(c) != nullptr;
             case Element::Norms: return idx_.norms(c) != nullptr;
+            case Element::Person: return idx_.person(c) != nullptr;
             case Element::CompanySettings: return idx_.settings(c) != nullptr;
             case Element::Licence:
             case Element::VehicleUse:
@@ -219,17 +221,28 @@ private:
             add(Check::UnknownReference, r.src, {text_param("codice", r.code), elements_param("elementi", e)});
     }
 
+    // Codice da mettere nel messaggio: un codice scritto in un dato personale (es. il tipo di un'assenza o
+    // un'abilitazione di una persona) compare solo con --includi-dati-personali.
+    static Param code_param(const Ref& r, bool personal) {
+        Param p = text_param("codice", r.code);
+        if (personal) {
+            p.sensitivity = Param::Sensitivity::Personal;
+            p.hidden = "scritto in un dato personale (riservato)";
+        }
+        return p;
+    }
+
     // Riferimento a una voce dell'elenco di un insieme di norme (abilitazioni, usi).
-    void ref_in(const Ref& r, Element e, const Norms& n) {
+    void ref_in(const Ref& r, Element e, const Norms& n, bool personal = false) {
         const bool found = e == Element::Licence ? n.licence(r.code) != nullptr : n.use(r.code) != nullptr;
         if (!found)
             add(Check::UnknownReference, r.src,
-                {text_param("codice", r.code), elements_param("elementi", e), ref_param("norme", Element::Norms, n.code)}, 1);
+                {code_param(r, personal), elements_param("elementi", e), ref_param("norme", Element::Norms, n.code)}, 1);
     }
 
     // Riferimento a una voce di un elenco dell'azienda (attivita', assenze, fermi, competenze). Senza impostazioni
     // dell'azienda l'elenco e' vuoto.
-    void ref_in(const Ref& r, Element e, const Code& company) {
+    void ref_in(const Ref& r, Element e, const Code& company, bool personal = false) {
         const CompanySettings* s = idx_.settings(company);
         bool found = false;
         if (s) {
@@ -243,7 +256,7 @@ private:
         }
         if (!found)
             add(Check::UnknownReference, r.src,
-                {text_param("codice", r.code), elements_param("elementi", e), ref_param("azienda", Element::Company, company)}, 2);
+                {code_param(r, personal), elements_param("elementi", e), ref_param("azienda", Element::Company, company)}, 2);
     }
 
     void references() {
@@ -336,6 +349,28 @@ private:
             if (c)
                 for (const Ref& k : s.competences) ref_in(k, Element::Competence, c->company.code);
         }
+        // Persone, assenze, fermi.
+        for (const Person& x : p_.persons) {
+            ref(x.company, Element::Company);
+            if (x.base_place) ref(*x.base_place, Element::Place);
+            if (x.usual_vehicle) ref(*x.usual_vehicle, Element::Vehicle);
+            if (const Norms* n = idx_.norms_of(x.company.code))
+                for (const Licence& l : x.licences) ref_in(l.type, Element::Licence, *n, true);
+            for (const ClientAuthorization& a : x.authorizations)
+                if (!idx_.client(a.client.code))
+                    add(Check::UnknownReference, a.client.src,
+                        {code_param(a.client, true), elements_param("elementi", Element::Client)});
+            for (const Ref& k : x.competences) ref_in(k, Element::Competence, x.company.code, true);
+            for (const Loan& l : x.loans) ref(l.company, Element::Company);
+        }
+        for (const Absence& a : p_.absences) {
+            ref(a.person, Element::Person);
+            if (const Person* x = idx_.person(a.person.code)) ref_in(a.type, Element::AbsenceType, x->company.code, true);
+        }
+        for (const VehicleStop& s : p_.stops) {
+            ref(s.vehicle, Element::Vehicle);
+            if (const Vehicle* v = idx_.vehicle(s.vehicle.code)) ref_in(s.type, Element::StopType, v->company.code);
+        }
         for (const Depot& d : p_.depots) {
             ref(d.place, Element::Place);
             ref(d.company, Element::Company);
@@ -357,12 +392,25 @@ private:
 
     // --- Periodi rovesciati ----------------------------------------------------------------
 
-    void dates(const Source& where, Day from, Day to) {
-        if (to < from) add(Check::InvertedPeriod, where, {date_param("dal", from), date_param("al", to)}, 0);
+    // Un valore di un dato personale (es. le date di un'assenza) compare solo con --includi-dati-personali.
+    static Param personal(Param p, bool is_personal) {
+        if (is_personal) {
+            p.sensitivity = Param::Sensitivity::Personal;
+            p.hidden = "riservato";
+        }
+        return p;
     }
 
-    void times(const Source& where, Minutes from, Minutes to) {
-        if (to < from) add(Check::InvertedPeriod, where, {time_param("dalle", from), time_param("alle", to)}, 1);
+    void dates(const Source& where, Day from, Day to, bool is_personal = false) {
+        if (to < from)
+            add(Check::InvertedPeriod, where,
+                {personal(date_param("dal", from), is_personal), personal(date_param("al", to), is_personal)}, 0);
+    }
+
+    void times(const Source& where, Minutes from, Minutes to, bool is_personal = false) {
+        if (to < from)
+            add(Check::InvertedPeriod, where,
+                {personal(time_param("dalle", from), is_personal), personal(time_param("alle", to), is_personal)}, 1);
     }
 
     void periods() {
@@ -383,10 +431,34 @@ private:
         for (const Service& s : p_.services)
             for (const PassengerGroup& g : s.groups)
                 if (g.window) times(g.src, g.window->open, g.window->close);
+        const auto optional_dates = [this](const Source& where, const std::optional<Day>& from, const std::optional<Day>& to,
+                                           bool is_personal) {
+            if (from && to) dates(where, *from, *to, is_personal);
+        };
         for (const Vehicle& v : p_.vehicles) {
             for (const UseAuthorization& a : v.use_authorizations) dates(a.src, a.period.from, a.period.to);
-            for (const Loan& l : v.loans)
-                if (l.from && l.to) dates(l.src, *l.from, *l.to);
+            for (const Loan& l : v.loans) optional_dates(l.src, l.from, l.to, false);
+        }
+        for (const Person& x : p_.persons) {   // ore, disponibilita', costi e preferenze sono dati personali
+            for (const DatedHours& h : x.hours) optional_dates(h.src, h.from, h.to, true);
+            for (const Availability& a : x.availability) {
+                optional_dates(a.src, a.from, a.to, true);
+                times(a.src, a.start, a.end, true);
+            }
+            for (const HourlyCost& c : x.hourly_cost) optional_dates(c.src, c.from, c.to, true);
+            for (const Preference& f : x.preferences) {
+                optional_dates(f.src, f.from, f.to, true);
+                if (f.kind == PreferenceKind::TimeWindow) times(f.src, f.start, f.end, true);
+            }
+            for (const Loan& l : x.loans) optional_dates(l.src, l.from, l.to, false);
+        }
+        for (const Absence& a : p_.absences) {   // le assenze sono dati personali
+            dates(a.src, a.days.from, a.days.to, true);
+            if (a.start && a.end) times(a.src, *a.start, *a.end, true);
+        }
+        for (const VehicleStop& s : p_.stops) {
+            dates(s.src, s.days.from, s.days.to);
+            if (s.start && s.end) times(s.src, *s.start, *s.end);
         }
     }
 
@@ -533,6 +605,13 @@ private:
                         {ref_param("gruppo", Element::Group, g.code),
                          number_param("passeggeri", static_cast<long long>(g.passengers.size()))},
                         1);
+        // Persone: nel livello "solo numeri" restano i dati che servono al calcolo, non nomi, case e note.
+        for (const Person& x : p_.persons) {
+            const Param who = ref_param("persona", Element::Person, x.code);
+            if (!x.name.empty()) add(Check::NumbersOnlyPersonalData, Source{x.src.file, x.src.pointer + "/nome", 0, 0}, {who}, 2);
+            if (x.home) add(Check::NumbersOnlyPersonalData, Source{x.src.file, x.src.pointer + "/casa", 0, 0}, {who}, 3);
+            if (!x.note.empty()) add(Check::NumbersOnlyPersonalData, Source{x.src.file, x.src.pointer + "/nota", 0, 0}, {who}, 4);
+        }
     }
 
     // --- Persone a bordo ----------------------------------------------------------------------
@@ -987,6 +1066,16 @@ private:
                 if (expires_in_period(a.period.to))
                     add(Check::ExpiresInPeriod, a.src,
                         {ref_param("mezzo", Element::Vehicle, v.code), text_param("uso", a.use.code), date_param("data", a.period.to)}, 0);
+        for (const Person& x : p_.persons) {
+            const Param who = ref_param("persona", Element::Person, x.code);
+            for (const Licence& l : x.licences)
+                if (l.expiry && expires_in_period(*l.expiry))
+                    add(Check::ExpiresInPeriod, l.src, {who, text_param("tipo", l.type.code), date_param("data", *l.expiry)}, 1);
+            for (const ClientAuthorization& a : x.authorizations)
+                if (a.expiry && expires_in_period(*a.expiry))
+                    add(Check::ExpiresInPeriod, a.src,
+                        {who, ref_param("committente", Element::Client, a.client.code), date_param("data", *a.expiry)}, 2);
+        }
     }
 
     // --- Mezzi senza uso e aziende senza norme (K-008) ----------------------------------------------------------
@@ -1014,6 +1103,7 @@ private:
             bool needed = false;
             for (const Vehicle& v : p_.vehicles)
                 needed = needed || (v.company.code == c.code && (v.use || !v.use_authorizations.empty()));
+            for (const Person& x : p_.persons) needed = needed || (x.company.code == c.code && !x.licences.empty());
             if (needed) add(Check::CompanyWithoutNorms, c.src, {ref_param("azienda", Element::Company, c.code)});
         }
     }

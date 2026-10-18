@@ -19,9 +19,9 @@ enum class Livello { Errore, Avviso };
 
 struct DefinizioneControllo {
     DefinizioneControllo(kzero::Check c, std::string cod, Livello l, std::string descr, std::vector<std::string> mess,
-                         std::map<int, std::string> ris = {})
+                         std::map<int, std::string> ris = {}, std::map<int, std::string> pers = {})
         : controllo(c), codice(std::move(cod)), livello(l), descrizione(std::move(descr)), messaggi(std::move(mess)),
-          riservati(std::move(ris)) {}
+          riservati(std::move(ris)), personali(std::move(pers)) {}
 
     kzero::Check controllo;
     std::string codice;                  // "K-CTR-001": fisso, mai riusato per altro
@@ -30,6 +30,9 @@ struct DefinizioneControllo {
     std::vector<std::string> messaggi;   // un modello per variante; {nome} = valore del problema
     // Varianti che parlano di dati particolari: il modello da usare senza --includi-dati-particolari.
     std::map<int, std::string> riservati;
+    // Varianti che parlano di dati personali (es. un'abilitazione o un'assenza di una persona): il modello da usare
+    // senza --includi-dati-personali.
+    std::map<int, std::string> personali;
 };
 
 // Catalogo completo, in ordine di codice.

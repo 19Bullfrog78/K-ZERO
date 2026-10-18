@@ -27,6 +27,10 @@ const std::vector<FileDati>& file_dati() {
          "Mezzi delle aziende: posti, attrezzature, costi, uso della carta di circolazione, distrazioni, prestiti."},
         {"rimesse.json", "rimesse", {1}, false, "Rimesse e ricoveri."},
         {"tempi_sosta.json", "tempi_sosta", {1}, false, "Tempi di sosta alle fermate."},
+        {"persone.json", "persone", {1}, false,
+         "Persone (autisti e assistenti): ruoli, rapporto, ore, disponibilita', abilitazioni, competenze, preferenze."},
+        {"assenze.json", "assenze", {1}, false, "Assenze programmate delle persone: periodo e tipo, mai la causa."},
+        {"fermi.json", "fermi", {1}, false, "Fermi programmati dei mezzi (es. revisione)."},
     };
     return elenco;
 }

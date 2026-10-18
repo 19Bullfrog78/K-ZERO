@@ -290,6 +290,87 @@ TEST(Controlli, K_CTR_052_azienda_senza_norme) {
     EXPECT_TRUE(segnala(q, Check::CompanyWithoutNorms, 0, "pacchetto.json", "/aziende/1"));
 }
 
+// --- Persone, assenze, fermi (K-008) -----------------------------------------------------------------------
+
+TEST(Controlli, K_CTR_009_persona_doppia) {
+    Package p = demo();
+    p.persons[1].code = "P-A";
+    EXPECT_TRUE(segnala(p, Check::DuplicateCode, 0, "persone.json", "/persone/1"));
+}
+
+TEST(Controlli, K_CTR_010_riferimenti_delle_persone) {
+    Package p = demo();
+    Person& x = per_codice(p.persons, "P-A");
+    x.licences[1].type = Ref{"D2", dove("persone.json", "/persone/0/abilitazioni/1/tipo")};
+    x.competences[0] = Ref{"PEDALE", dove("persone.json", "/persone/0/competenze/0")};
+    x.usual_vehicle = Ref{"ALFA-99", dove("persone.json", "/persone/0/mezzo_abituale")};
+    x.base_place = Ref{"L-NON-ESISTE", dove("persone.json", "/persone/0/presa_servizio")};
+    EXPECT_TRUE(segnala(p, Check::UnknownReference, 1, "persone.json", "/persone/0/abilitazioni/1/tipo"));
+    EXPECT_TRUE(segnala(p, Check::UnknownReference, 2, "persone.json", "/persone/0/competenze/0"));
+    EXPECT_TRUE(segnala(p, Check::UnknownReference, 0, "persone.json", "/persone/0/mezzo_abituale"));
+    EXPECT_TRUE(segnala(p, Check::UnknownReference, 0, "persone.json", "/persone/0/presa_servizio"));
+    // Il codice scritto in un dato personale e' segnato come personale: compare solo con il parametro.
+    for (const Problem& q : check_package(p))
+        if (q.where.pointer == "/persone/0/abilitazioni/1/tipo") {
+            const Param* c = parametro(q, "codice");
+            ASSERT_NE(c, nullptr);
+            EXPECT_EQ(c->sensitivity, Param::Sensitivity::Personal);
+        }
+    Package q = demo();
+    q.absences[0].type = Ref{"MALATTIA", dove("assenze.json", "/assenze/0/tipo")};
+    EXPECT_TRUE(segnala(q, Check::UnknownReference, 2, "assenze.json", "/assenze/0/tipo"));
+    q.absences[0].person = Ref{"P-ZZ", dove("assenze.json", "/assenze/0/persona")};
+    EXPECT_TRUE(segnala(q, Check::UnknownReference, 0, "assenze.json", "/assenze/0/persona"));
+    Package r = demo();
+    r.stops[0].type = Ref{"OFFICINA", dove("fermi.json", "/fermi/0/tipo")};   // tipo di Beta, non di Alfa
+    EXPECT_TRUE(segnala(r, Check::UnknownReference, 2, "fermi.json", "/fermi/0/tipo"));
+    Package s = demo();
+    per_codice(s.persons, "P-D").authorizations[0].client = Ref{"XYZ", dove("persone.json", "/persone/3/autorizzazioni/0/committente")};
+    EXPECT_TRUE(segnala(s, Check::UnknownReference, 0, "persone.json", "/persone/3/autorizzazioni/0/committente"));
+}
+
+TEST(Controlli, K_CTR_012_periodi_rovesciati_di_persone_assenze_fermi) {
+    Package p = demo();
+    p.absences[0].days = {giorno("2026-10-23"), giorno("2026-10-22")};
+    p.stops[0].start = ora("12:00");
+    p.stops[0].end = ora("08:00");
+    per_codice(p.persons, "P-D").availability[0].end = ora("06:00");
+    EXPECT_TRUE(segnala(p, Check::InvertedPeriod, 0, "assenze.json", "/assenze/0"));
+    EXPECT_TRUE(segnala(p, Check::InvertedPeriod, 1, "fermi.json", "/fermi/0"));
+    EXPECT_TRUE(segnala(p, Check::InvertedPeriod, 1, "persone.json", "/persone/3/disponibilita/0"));
+}
+
+// "Solo numeri": restano ruolo, abilitazioni, competenze, disponibilita'; non nomi, case e note delle persone.
+TEST(Controlli, K_CTR_019_persone_in_solo_numeri) {
+    Package p = demo();
+    p.manifest.level = Level::NumbersOnly;
+    EXPECT_TRUE(segnala(p, Check::NumbersOnlyPersonalData, 2, "persone.json", "/persone/0/nome"));
+    EXPECT_TRUE(segnala(p, Check::NumbersOnlyPersonalData, 3, "persone.json", "/persone/0/casa"));
+    per_codice(p.persons, "P-NUOVO").note = "Da assumere";
+    EXPECT_TRUE(segnala(p, Check::NumbersOnlyPersonalData, 4, "persone.json", "/persone/4/nota"));
+    EXPECT_FALSE(segnala(p, Check::NumbersOnlyPersonalData, 2, "persone.json", "/persone/4/nome"));   // senza nome
+}
+
+TEST(Controlli, K_CTR_050_abilitazione_o_autorizzazione_che_scade) {
+    Package p = demo();
+    per_codice(p.persons, "P-C").licences[2].expiry = giorno("2027-06-30");
+    per_codice(p.persons, "P-D").authorizations[0].expiry = giorno("2027-01-31");
+    EXPECT_TRUE(segnala(p, Check::ExpiresInPeriod, 1, "persone.json", "/persone/2/abilitazioni/2"));
+    EXPECT_TRUE(segnala(p, Check::ExpiresInPeriod, 2, "persone.json", "/persone/3/autorizzazioni/0"));
+    EXPECT_EQ(quanti(p, Check::ExpiresInPeriod), 2);   // le altre scadenze sono dopo il periodo
+}
+
+TEST(Controlli, K_CTR_052_abilitazioni_senza_norme) {
+    Package p = demo();
+    p.company_settings[1].norms.reset();   // Beta: mezzi con l'uso e persone con le abilitazioni
+    for (Vehicle& v : p.vehicles)
+        if (v.company.code == "BETA") v.use.reset();
+    EXPECT_TRUE(segnala(p, Check::CompanyWithoutNorms, 0, "pacchetto.json", "/aziende/1"));
+    for (Person& x : p.persons)
+        if (x.company.code == "BETA") x.licences.clear();
+    EXPECT_EQ(quanti(p, Check::CompanyWithoutNorms), 0);
+}
+
 TEST(Controlli, K_CTR_017_orario_che_torna_indietro) {
     Package p = demo();
     p.trips[3].passages[2].time = ora("16:08");
@@ -330,7 +411,8 @@ TEST(Controlli, K_CTR_019_dati_personali_in_solo_numeri) {
     p.manifest.level = Level::NumbersOnly;
     EXPECT_TRUE(segnala(p, Check::NumbersOnlyPersonalData, 0, "luoghi.json", "/luoghi_privati/0"));
     EXPECT_TRUE(segnala(p, Check::NumbersOnlyPersonalData, 1, "servizi.json", "/servizi/3/domanda/gruppi/0/passeggeri/0"));
-    EXPECT_EQ(quanti(p, Check::NumbersOnlyPersonalData), 8);   // 5 luoghi privati, 3 gruppi con passeggeri
+    // 5 luoghi privati, 3 gruppi con passeggeri; dal K-008 anche 8 nomi e 4 case di persone.
+    EXPECT_EQ(quanti(p, Check::NumbersOnlyPersonalData), 20);
 }
 
 TEST(Controlli, K_CTR_020_persone_a_bordo_sotto_zero) {
@@ -672,5 +754,6 @@ TEST(Controlli, catalogo_coperto) {
     EXPECT_EQ(api::definizione_controllo(Check::NotUtf8).codice, "K-CTR-048");
     EXPECT_EQ(api::definizione_controllo(Check::CalendarCombinationCycle).codice, "K-CTR-049");
     EXPECT_EQ(api::definizione_controllo(Check::CompanyWithoutNorms).codice, "K-CTR-052");
-    EXPECT_EQ(api::catalogo_controlli().size(), 52u);
+    EXPECT_EQ(api::definizione_controllo(Check::FileTooBig).codice, "K-CTR-053");
+    EXPECT_EQ(api::catalogo_controlli().size(), 53u);
 }

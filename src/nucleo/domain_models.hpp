@@ -857,6 +857,128 @@ struct DwellTimes {
     Source src;
 };
 
+// --- Persone (autisti e assistenti a bordo) -------------------------------------------------------------
+// Codice, azienda, presa servizio, mezzo abituale, ipotetica e prestiti sono dati comuni; il resto e' personale.
+// Minimizzazione: nessun campo per codice fiscale, telefoni, mail, data di nascita, idoneita' medica.
+
+enum class PersonRole { Driver, Escort };   // autista, assistente a bordo
+
+enum class EmploymentKind {
+    Owner, FamilyHelper, Partner, FullTime, PartTime, OnCall, FixedTerm, Seasonal, SelfEmployed, Volunteer, Other
+};
+
+struct HoursLimits {   // ore (con decimali) per giorno, settimana, mese
+    std::optional<double> day, week, month;
+};
+
+struct DatedHours {
+    std::optional<Day> from, to;
+    std::optional<HoursLimits> planned, max;
+    Source src;
+};
+
+// Fascia di disponibilita': nei giorni indicati, dalle alle.
+struct Availability {
+    std::optional<Day> from, to;
+    Weekdays days;
+    Minutes start = 0, end = 0;
+    Source src;
+
+    bool covers_date(Day d) const { return (!from || d >= *from) && (!to || d <= *to); }
+};
+
+struct HourlyCost {
+    std::optional<Day> from, to;
+    double value = 0.0;
+    Source src;
+};
+
+// Abilitazione (patente, CQC...): il tipo e' un codice delle norme del paese.
+struct Licence {
+    Ref type;
+    std::optional<Day> expiry;   // ultimo giorno di validita'
+    std::string reference;
+    Source src;
+
+    bool valid_on(Day d) const { return !expiry || d <= *expiry; }
+};
+
+// Autorizzazione del committente (es. cartellino di riconoscimento per i servizi speciali).
+struct ClientAuthorization {
+    Ref client;
+    std::string reference;
+    std::optional<Day> expiry;
+    Source src;
+
+    bool valid_on(Day d) const { return !expiry || d <= *expiry; }
+};
+
+// Preferenza della persona: dato morbido (avviso se non rispettata), distinto dalla disponibilita' (rigida).
+enum class PreferenceKind { FreeDays, TimeWindow, AvoidShifts, MaxBreak, Other };
+
+struct Preference {
+    PreferenceKind kind = PreferenceKind::Other;
+    std::optional<Day> from, to;
+    Weekdays days;                 // giorni liberi
+    Minutes start = 0, end = 0;    // fascia oraria
+    std::vector<Ref> shifts;       // turni da evitare
+    int max_break_min = 0;         // pausa massima dentro un turno
+    std::string description;
+    Source src;
+
+    bool covers_date(Day d) const { return (!from || d >= *from) && (!to || d <= *to); }
+};
+
+struct Person {
+    Code code;
+    Ref company;
+    std::vector<PersonRole> roles;
+    std::string name;                 // personale
+    std::optional<Home> home;         // personale
+    std::optional<Ref> base_place;    // rimessa o luogo abituale di presa servizio
+    std::optional<Ref> usual_vehicle; // mezzo abituale
+    bool hypothetical = false;        // non ancora assunta (scenari)
+    EmploymentKind employment = EmploymentKind::Other;
+    std::string employment_description;
+    std::string agreement_code, agreement_name;   // contratto collettivo
+    std::vector<DatedHours> hours;
+    std::vector<Availability> availability;
+    std::vector<HourlyCost> hourly_cost;
+    std::vector<Licence> licences;
+    std::vector<ClientAuthorization> authorizations;
+    std::vector<Ref> competences;
+    std::vector<Preference> preferences;
+    std::vector<Loan> loans;
+    std::string note;                 // personale
+    Source src;
+
+    bool has_role(PersonRole r) const { return std::find(roles.begin(), roles.end(), r) != roles.end(); }
+    bool has_competence(const Code& c) const {
+        for (const auto& k : competences)
+            if (k.code == c) return true;
+        return false;
+    }
+};
+
+// Assenza programmata: solo il tipo (elenco dell'azienda), mai la causa.
+struct Absence {
+    Ref person;
+    Ref type;
+    DateRange days;
+    std::optional<Minutes> start, end;   // solo una parte di ogni giorno
+    Source src;
+};
+
+// Fermo programmato di un mezzo (es. revisione).
+struct VehicleStop {
+    Ref vehicle;
+    Ref type;
+    DateRange days;
+    std::optional<Minutes> start, end;
+    std::string note;
+    Source src;
+};
+
 // --- Pacchetto dati ------------------------------------------------------------------------
 
 struct Company {
@@ -944,6 +1066,9 @@ struct Package {
     std::vector<Vehicle> vehicles;
     std::vector<Depot> depots;
     std::optional<DwellTimes> dwell;
+    std::vector<Person> persons;
+    std::vector<Absence> absences;
+    std::vector<VehicleStop> stops;
 };
 
 // --- Regole del mestiere sulle corse --------------------------------------------------------
