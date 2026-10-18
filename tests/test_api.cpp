@@ -268,9 +268,9 @@ TEST(Api, pacchetto_demo_letto) {
     const Lettura l = leggi_pacchetto(m);
     EXPECT_TRUE(l.problemi.empty());
     EXPECT_TRUE(l.forma_valida());
-    EXPECT_EQ(l.versioni.size(), 19u);   // tutti i file del formato tranne tempi_sosta.json
+    EXPECT_EQ(l.versioni.size(), 24u);   // tutti i file del formato tranne tempi_sosta.json
     for (const char* f : {"calendari.json", "regolamenti.json", "servizi.json", "mezzi.json"}) EXPECT_EQ(l.versioni.at(f), 2) << f;
-    EXPECT_EQ(l.pacchetto.trips.size(), 10u);
+    EXPECT_EQ(l.pacchetto.trips.size(), 26u);
 }
 
 TEST(Api, K_CTR_001_manca_il_manifesto) {
@@ -295,7 +295,7 @@ TEST(Api, K_CTR_003_json_non_valido) {
     ASSERT_EQ(l.problemi.size(), 1u);
     EXPECT_EQ(l.problemi[0].check, Check::InvalidJson);
     EXPECT_EQ(l.problemi[0].where.file, "mezzi.json");
-    EXPECT_EQ(l.problemi[0].where.line, 79);     // la riga dopo la virgola mancante: "alimentazione"...
+    EXPECT_EQ(l.problemi[0].where.line, 84);     // la riga dopo la virgola mancante: "alimentazione"...
     EXPECT_EQ(l.problemi[0].where.column, 21);   // ...letto fino in fondo prima di accorgersi dell'errore
     EXPECT_FALSE(l.usato("mezzi.json"));   // mai letto a meta'
 }

@@ -81,7 +81,13 @@ const std::vector<DefinizioneControllo>& catalogo_controlli() {
               "Il pacchetto e' di livello \"solo numeri\": la persona {persona} ha il nome, ammesso solo nel livello \"completo\".",
               "Il pacchetto e' di livello \"solo numeri\": la persona {persona} ha la casa, ammessa solo nel livello \"completo\".",
               "Il pacchetto e' di livello \"solo numeri\": la persona {persona} ha una nota scritta a mano, ammessa solo nel "
-              "livello \"completo\"."}},
+              "livello \"completo\".",
+              "Il pacchetto e' di livello \"solo numeri\": la rotazione {rotazione} ha una nota scritta a mano (puo' parlare delle "
+              "persone), ammessa solo nel livello \"completo\".",
+              "Il pacchetto e' di livello \"solo numeri\": il servizio fisso {servizio_fisso} ha una nota scritta a mano (puo' "
+              "parlare delle persone), ammessa solo nel livello \"completo\".",
+              "Il pacchetto e' di livello \"solo numeri\": l'assegnazione del {data} del turno {turno} ha una nota scritta a mano "
+              "(puo' dire il motivo di un cambio), ammessa solo nel livello \"completo\"."}},
             {Check::NegativeOnBoard, "K-CTR-020", E, "Persone a bordo sotto zero",
              {"Nella corsa {corsa} le persone del gruppo {gruppo} che scendono ({scendono}) sono piu' di quelle a bordo "
               "({a_bordo})."}},
@@ -207,11 +213,11 @@ const std::vector<DefinizioneControllo>& catalogo_controlli() {
              {"La corsa {corsa} (o una sua parte) e' sia nel turno {turno} sia nel turno {altro}, {giorni}."}},
             {Check::PersonOverlap, "K-CTR-063", E, "Persona in due turni che si sovrappongono",
              {"La persona {persona} e' nel turno {turno} e nel turno {altro}, che si sovrappongono, {giorni}.",
-              "La persona {persona} e' nel turno {turno}, che si sovrappone al turno {altro} del giorno prima ({giorno_altro}), "
+              "La persona {persona} e' nel turno {turno}, che si sovrappone al turno {altro} del giorno prima, "
               "a cavallo della mezzanotte, {giorni}."}},
             {Check::VehicleOverlap, "K-CTR-064", E, "Mezzo in due turni che si sovrappongono",
              {"Il mezzo {mezzo} e' nel turno {turno} e nel turno {altro}, che si sovrappongono, {giorni}.",
-              "Il mezzo {mezzo} e' nel turno {turno}, che si sovrappone al turno {altro} del giorno prima ({giorno_altro}), a "
+              "Il mezzo {mezzo} e' nel turno {turno}, che si sovrappone al turno {altro} del giorno prima, a "
               "cavallo della mezzanotte, {giorni}."}},
             {Check::RotationTwoPersons, "K-CTR-065", E, "Due persone nello stesso turno nello stesso giorno",
              {"Le rotazioni danno il turno {turno} sia a {persona} sia a {altra}, {giorni}."}},

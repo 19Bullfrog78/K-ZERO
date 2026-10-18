@@ -1,0 +1,379 @@
+{
+  "schema": "turni",
+  "schema_versione": 1,
+  "turni": [
+    {
+      "codice": "T-PRIMO",
+      "nome": "Primo",
+      "azienda": "ALFA",
+      "ruolo": "autista",
+      "calendario": "CAL-LV-FER",
+      "mezzo": { "modo": "preciso", "codice": "ALFA-05" },
+      "inizio": "L-RIMESSA-ALFA",
+      "fine": "L-RIMESSA-ALFA",
+      "elementi": [
+        { "attivita": "PRESA", "luogo": "L-RIMESSA-ALFA", "dalle": "07:15", "alle": "07:30" },
+        { "attivita": "VUOTO", "luogo": "L-RIMESSA-ALFA", "verso": "F-STAZIONE", "dalle": "07:35", "alle": "07:45", "km_vuoti": 1.0 },
+        { "corsa": "C-LIN-533" },
+        { "attivita": "ATTESA", "luogo": "F-PRADELLO", "dalle": "08:15", "alle": "08:25" },
+        { "corsa": "C-LIN-537" },
+        { "attivita": "VUOTO", "luogo": "F-STAZIONE", "verso": "L-RIMESSA-ALFA", "dalle": "08:58", "alle": "09:06", "km_vuoti": 1.0 },
+        { "attivita": "PAUSA", "luogo": "L-RIMESSA-ALFA", "dalle": "09:10", "alle": "11:30" },
+        {
+          "attivita": "VUOTO",
+          "luogo": "L-RIMESSA-ALFA",
+          "verso": "L-SUP",
+          "dalle": "11:40",
+          "alle": "11:50",
+          "km_vuoti": 1.2,
+          "calendario": "CAL-SCUOLA-LV"
+        },
+        { "corsa": "C-RM-1" },
+        { "attivita": "VUOTO", "luogo": "L-RIMESSA-ALFA", "verso": "F-STAZIONE", "dalle": "13:15", "alle": "13:25", "km_vuoti": 1.0 },
+        { "corsa": "C-LIN-545" },
+        { "attivita": "VUOTO", "luogo": "F-PRADELLO", "verso": "L-RIMESSA-ALFA", "dalle": "13:55", "alle": "14:07", "km_vuoti": 6.4 },
+        { "attivita": "PAUSA", "luogo": "L-RIMESSA-ALFA", "dalle": "14:10", "alle": "16:10" },
+        { "attivita": "VUOTO", "luogo": "L-RIMESSA-ALFA", "verso": "F-PRADELLO", "dalle": "16:20", "alle": "16:35", "km_vuoti": 6.4 },
+        { "corsa": "C-LIN-549", "a": { "luogo": "F-VALFONDA-PIAZZA" } },
+        { "attivita": "A-PIEDI", "luogo": "F-VALFONDA-PIAZZA", "verso": "L-RIMESSA-ALFA", "dalle": "17:05", "alle": "17:15" }
+      ],
+      "nota": "Linea B610 e, nei giorni di scuola, il ritorno di mezzogiorno. Alle 17:04 lascia l'autobus al secondo a Valfonda, Piazza."
+    },
+    {
+      "codice": "T-SECONDO",
+      "nome": "Secondo",
+      "azienda": "ALFA",
+      "ruolo": "autista",
+      "calendario": "CAL-LV-FER",
+      "mezzo": { "modo": "preciso", "codice": "ALFA-05" },
+      "inizio": "L-RIMESSA-ALFA",
+      "fine": "L-RIMESSA-ALFA",
+      "elementi": [
+        { "attivita": "A-PIEDI", "luogo": "L-RIMESSA-ALFA", "verso": "F-VALFONDA-PIAZZA", "dalle": "16:50", "alle": "17:00" },
+        { "corsa": "C-LIN-549", "da": { "luogo": "F-VALFONDA-PIAZZA" } },
+        { "attivita": "VUOTO", "luogo": "F-STAZIONE", "verso": "L-RIMESSA-ALFA", "dalle": "17:13", "alle": "17:21", "km_vuoti": 1.0 },
+        { "attivita": "RIFORNIMENTO", "luogo": "L-RIMESSA-ALFA", "dalle": "17:25", "alle": "17:40" },
+        { "attivita": "PAUSA", "luogo": "L-RIMESSA-ALFA", "dalle": "17:40", "alle": "19:20" },
+        { "attivita": "VUOTO", "luogo": "L-RIMESSA-ALFA", "verso": "F-STAZIONE", "dalle": "19:30", "alle": "19:40", "km_vuoti": 1.0 },
+        { "corsa": "C-LIN-553" },
+        { "attivita": "VUOTO", "luogo": "F-PRADELLO", "verso": "L-RIMESSA-ALFA", "dalle": "20:10", "alle": "20:22", "km_vuoti": 6.4 },
+        { "attivita": "FINE", "luogo": "L-RIMESSA-ALFA", "dalle": "20:22", "alle": "20:30" }
+      ],
+      "nota": "Prende l'autobus dal primo a Valfonda, Piazza, alle 17:04."
+    },
+    {
+      "codice": "T-DIS",
+      "nome": "Centro diurno",
+      "azienda": "ALFA",
+      "ruolo": "autista",
+      "calendario": "CAL-CENTRO",
+      "mezzo": { "modo": "preciso", "codice": "ALFA-03" },
+      "inizio": "L-RIMESSA-ALFA",
+      "fine": "L-RIMESSA-ALFA",
+      "elementi": [
+        { "attivita": "PRESA", "luogo": "L-RIMESSA-ALFA", "dalle": "07:25", "alle": "07:38" },
+        { "corsa": "C-DIS-1", "assistente": "committente" },
+        { "attivita": "VUOTO", "luogo": "L-CENTRO", "verso": "L-RIMESSA-ALFA", "dalle": "08:55", "alle": "09:05", "km_vuoti": 1.0 },
+        { "attivita": "PULIZIA", "luogo": "L-RIMESSA-ALFA", "dalle": "09:05", "alle": "09:35" }
+      ],
+      "competenze_richieste": ["PEDANA"],
+      "nota": "Il mattino del secondo, con il mezzo attrezzato: poi il secondo cambia mezzo."
+    },
+    {
+      "codice": "T-SABATO",
+      "nome": "Sabato",
+      "azienda": "ALFA",
+      "ruolo": "autista",
+      "calendario": "CAL-SAB-FER",
+      "mezzo": { "modo": "preciso", "codice": "ALFA-05" },
+      "inizio": "L-RIMESSA-ALFA",
+      "fine": "L-RIMESSA-ALFA",
+      "elementi": [
+        { "attivita": "PRESA", "luogo": "L-RIMESSA-ALFA", "dalle": "07:15", "alle": "07:30" },
+        { "attivita": "VUOTO", "luogo": "L-RIMESSA-ALFA", "verso": "F-STAZIONE", "dalle": "07:35", "alle": "07:45", "km_vuoti": 1.0 },
+        { "corsa": "C-LIN-533" },
+        { "attivita": "ATTESA", "luogo": "F-PRADELLO", "dalle": "08:15", "alle": "08:25" },
+        { "corsa": "C-LIN-537" },
+        { "attivita": "VUOTO", "luogo": "F-STAZIONE", "verso": "L-RIMESSA-ALFA", "dalle": "08:58", "alle": "09:06", "km_vuoti": 1.0 },
+        { "attivita": "PULIZIA", "luogo": "L-RIMESSA-ALFA", "dalle": "09:10", "alle": "10:40" },
+        { "attivita": "PAUSA", "luogo": "L-RIMESSA-ALFA", "dalle": "10:40", "alle": "13:00" },
+        { "attivita": "VUOTO", "luogo": "L-RIMESSA-ALFA", "verso": "F-STAZIONE", "dalle": "13:15", "alle": "13:25", "km_vuoti": 1.0 },
+        { "corsa": "C-LIN-545" },
+        { "attivita": "VUOTO", "luogo": "F-PRADELLO", "verso": "L-RIMESSA-ALFA", "dalle": "13:55", "alle": "14:07", "km_vuoti": 6.4 },
+        { "attivita": "PAUSA", "luogo": "L-RIMESSA-ALFA", "dalle": "14:10", "alle": "16:10" },
+        { "attivita": "VUOTO", "luogo": "L-RIMESSA-ALFA", "verso": "F-PRADELLO", "dalle": "16:20", "alle": "16:35", "km_vuoti": 6.4 },
+        { "corsa": "C-LIN-549" },
+        { "attivita": "VUOTO", "luogo": "F-STAZIONE", "verso": "L-RIMESSA-ALFA", "dalle": "17:13", "alle": "17:21", "km_vuoti": 1.0 },
+        { "attivita": "PAUSA", "luogo": "L-RIMESSA-ALFA", "dalle": "17:25", "alle": "19:20" },
+        { "attivita": "VUOTO", "luogo": "L-RIMESSA-ALFA", "verso": "F-STAZIONE", "dalle": "19:30", "alle": "19:40", "km_vuoti": 1.0 },
+        { "corsa": "C-LIN-553" },
+        { "attivita": "VUOTO", "luogo": "F-PRADELLO", "verso": "L-RIMESSA-ALFA", "dalle": "20:10", "alle": "20:22", "km_vuoti": 6.4 },
+        { "attivita": "FINE", "luogo": "L-RIMESSA-ALFA", "dalle": "20:22", "alle": "20:30" }
+      ],
+      "nota": "Il sabato un solo autista fa tutta la linea, con un'ora e mezza di pulizia dell'autobus."
+    },
+    {
+      "codice": "T-NOTTE",
+      "nome": "Notte",
+      "azienda": "ALFA",
+      "ruolo": "autista",
+      "calendario": "CAL-FERIALI",
+      "mezzo": { "modo": "preciso", "codice": "ALFA-05" },
+      "inizio": "L-RIMESSA-ALFA",
+      "fine": "L-RIMESSA-ALFA",
+      "elementi": [
+        { "attivita": "PRESA", "luogo": "L-RIMESSA-ALFA", "dalle": "23:00", "alle": "23:15" },
+        { "attivita": "VUOTO", "luogo": "L-RIMESSA-ALFA", "verso": "F-PRADELLO", "dalle": "23:18", "alle": "23:35", "km_vuoti": 6.4 },
+        { "corsa": "C-LIN-560" },
+        { "attivita": "VUOTO", "luogo": "F-STAZIONE", "verso": "L-RIMESSA-ALFA", "dalle": "24:14", "alle": "24:22", "km_vuoti": 1.0 },
+        { "attivita": "FINE", "luogo": "L-RIMESSA-ALFA", "dalle": "24:22", "alle": "24:30" }
+      ],
+      "nota": "Turno notturno: finisce dopo la mezzanotte e resta del giorno in cui comincia."
+    },
+    {
+      "codice": "T-SCUOLA-1",
+      "nome": "Scuola 1",
+      "azienda": "ALFA",
+      "ruolo": "autista",
+      "calendario": "CAL-SCUOLA-LV",
+      "mezzo": { "modo": "preciso", "codice": "ALFA-01" },
+      "inizio": "L-RIMESSA-ALFA",
+      "fine": "L-RIMESSA-ALFA",
+      "elementi": [
+        { "attivita": "PRESA", "luogo": "L-RIMESSA-ALFA", "dalle": "06:40", "alle": "06:52" },
+        { "corsa": "C-AM-1" },
+        { "attivita": "VUOTO", "luogo": "L-MEDIE", "verso": "L-RIMESSA-ALFA", "dalle": "07:37", "alle": "07:47", "km_vuoti": 1.0 }
+      ]
+    },
+    {
+      "codice": "T-DIS-GIO",
+      "nome": "Centro diurno del giovedi'",
+      "azienda": "ALFA",
+      "ruolo": "autista",
+      "calendario": "CAL-CENTRO-GIO",
+      "mezzo": { "modo": "preciso", "codice": "ALFA-01" },
+      "inizio": "L-RIMESSA-ALFA",
+      "fine": "L-RIMESSA-ALFA",
+      "elementi": [
+        { "corsa": "C-DIS-GIO" },
+        { "attivita": "VUOTO", "luogo": "L-CENTRO", "verso": "L-RIMESSA-ALFA", "dalle": "08:47", "alle": "08:55", "km_vuoti": 1.0 },
+        { "attivita": "FINE", "luogo": "L-RIMESSA-ALFA", "dalle": "08:55", "alle": "09:05" }
+      ]
+    },
+    {
+      "codice": "T-SCUOLA-2",
+      "nome": "Scuola 2",
+      "azienda": "ALFA",
+      "ruolo": "autista",
+      "calendario": "CAL-SCUOLA-LV",
+      "mezzo": { "modo": "preciso", "codice": "ALFA-02" },
+      "inizio": "L-RIMESSA-ALFA",
+      "fine": "L-RIMESSA-ALFA",
+      "elementi": [
+        { "attivita": "PRESA", "luogo": "L-RIMESSA-ALFA", "dalle": "06:35", "alle": "06:47" },
+        { "corsa": "C-AM-2" },
+        { "attivita": "VUOTO", "luogo": "L-PRIM", "verso": "L-RIMESSA-ALFA", "dalle": "07:44", "alle": "07:52", "km_vuoti": 1.0 },
+        { "attivita": "FINE", "luogo": "L-RIMESSA-ALFA", "dalle": "07:52", "alle": "08:00" }
+      ]
+    },
+    {
+      "codice": "T-SCUOLA-3",
+      "nome": "Scuola 3",
+      "azienda": "ALFA",
+      "ruolo": "autista",
+      "calendario": "CAL-SCUOLA-LV",
+      "mezzo": { "modo": "preciso", "codice": "ALFA-06" },
+      "inizio": "L-RIMESSA-ALFA",
+      "fine": "L-RIMESSA-ALFA",
+      "elementi": [
+        { "attivita": "PRESA", "luogo": "L-RIMESSA-ALFA", "dalle": "06:50", "alle": "07:02" },
+        { "attivita": "VUOTO", "luogo": "L-RIMESSA-ALFA", "verso": "L-SOSTA-VALFONDA", "dalle": "07:05", "alle": "07:15", "km_vuoti": 0.8 },
+        { "corsa": "C-AM-3" },
+        { "attivita": "VUOTO", "luogo": "L-PRIM", "verso": "L-RIMESSA-ALFA", "dalle": "07:54", "alle": "08:02", "km_vuoti": 1.0 },
+        { "attivita": "FINE", "luogo": "L-RIMESSA-ALFA", "dalle": "08:02", "alle": "08:10" }
+      ]
+    },
+    {
+      "codice": "T-AUTO",
+      "nome": "Auto elettrica",
+      "azienda": "ALFA",
+      "ruolo": "autista",
+      "calendario": "CAL-CENTRO",
+      "mezzo": { "modo": "preciso", "codice": "ALFA-04" },
+      "inizio": "L-RIMESSA-ALFA",
+      "fine": "L-RIMESSA-ALFA",
+      "elementi": [
+        { "attivita": "PRESA", "luogo": "L-RIMESSA-ALFA", "dalle": "07:35", "alle": "07:47" },
+        { "corsa": "C-DIS-R" },
+        { "attivita": "RICARICA", "luogo": "L-RIMESSA-ALFA", "dalle": "08:45", "alle": "09:30" }
+      ],
+      "competenze_richieste": ["ELETTRICO"]
+    },
+    {
+      "codice": "T-RISERVA",
+      "nome": "Riserva",
+      "azienda": "ALFA",
+      "ruolo": "autista",
+      "calendario": "CAL-MAR-VEN",
+      "mezzo": { "modo": "nessuno" },
+      "inizio": "L-RIMESSA-ALFA",
+      "fine": "L-RIMESSA-ALFA",
+      "elementi": [{ "attivita": "RISERVA", "luogo": "L-RIMESSA-ALFA", "dalle": "07:00", "alle": "11:00" }],
+      "nota": "A disposizione in rimessa, senza mezzo."
+    },
+    {
+      "codice": "T-GITA",
+      "nome": "Gita",
+      "azienda": "ALFA",
+      "ruolo": "autista",
+      "calendario": "CAL-GITA",
+      "mezzo": { "modo": "preciso", "codice": "ALFA-05" },
+      "inizio": "L-RIMESSA-ALFA",
+      "fine": "L-RIMESSA-ALFA",
+      "elementi": [
+        { "attivita": "PRESA", "luogo": "L-RIMESSA-ALFA", "dalle": "07:40", "alle": "07:55" },
+        { "corsa": "C-GITA-A" },
+        { "attivita": "ATTESA", "luogo": "F-LAGOBELLO", "dalle": "08:45", "alle": "17:00" },
+        { "corsa": "C-GITA-R" },
+        { "attivita": "FINE", "luogo": "L-RIMESSA-ALFA", "dalle": "17:45", "alle": "17:55" }
+      ]
+    },
+    {
+      "codice": "T-B-PRIMO",
+      "nome": "Primo",
+      "azienda": "BETA",
+      "ruolo": "autista",
+      "calendario": "CAL-FERIALI",
+      "mezzo": { "modo": "preciso", "codice": "BETA-02" },
+      "inizio": "L-RIMESSA-BETA",
+      "fine": "L-RIMESSA-BETA",
+      "elementi": [
+        {
+          "attivita": "PRESA-SERVIZIO",
+          "luogo": "L-RIMESSA-BETA",
+          "verso": "F-SORGENTA",
+          "dalle": "06:20",
+          "alle": "06:38",
+          "km_vuoti": 2.5
+        },
+        { "corsa": "C-B620-01" },
+        { "attivita": "SOSTA", "luogo": "F-MONTEBRINO", "dalle": "07:10", "alle": "07:20" },
+        { "corsa": "C-B620-02" },
+        { "attivita": "RIENTRO", "luogo": "F-SORGENTA", "verso": "L-RIMESSA-BETA", "dalle": "07:52", "alle": "08:00", "km_vuoti": 2.5 },
+        {
+          "attivita": "PRESA-SERVIZIO",
+          "luogo": "L-RIMESSA-BETA",
+          "verso": "F-SORGENTA",
+          "dalle": "12:12",
+          "alle": "12:28",
+          "km_vuoti": 2.5
+        },
+        { "corsa": "C-B620-03" },
+        { "attivita": "SOSTA", "luogo": "F-MONTEBRINO", "dalle": "13:00", "alle": "13:10" },
+        { "corsa": "C-B620-04" },
+        { "attivita": "RIENTRO", "luogo": "F-SORGENTA", "verso": "L-RIMESSA-BETA", "dalle": "13:42", "alle": "13:50", "km_vuoti": 2.5 }
+      ],
+      "nota": "Turno spezzato: mattino e mezzogiorno."
+    },
+    {
+      "codice": "T-B-ASILO",
+      "nome": "Asilo",
+      "azienda": "BETA",
+      "ruolo": "autista",
+      "calendario": "CAL-INFANZIA",
+      "mezzo": { "modo": "preciso", "codice": "BETA-01" },
+      "inizio": "L-RIMESSA-BETA",
+      "fine": "L-RIMESSA-BETA",
+      "elementi": [
+        { "attivita": "PRESA-SERVIZIO", "luogo": "L-RIMESSA-BETA", "dalle": "07:15", "alle": "07:28" },
+        { "corsa": "C-ASILO-1" },
+        { "attivita": "RIENTRO", "luogo": "L-INFANZIA", "verso": "L-RIMESSA-BETA", "dalle": "08:00", "alle": "08:12", "km_vuoti": 4.0 }
+      ]
+    },
+    {
+      "codice": "T-B-SERA",
+      "nome": "Sera",
+      "azienda": "BETA",
+      "ruolo": "autista",
+      "calendario": "CAL-FERIALI",
+      "mezzo": { "modo": "preciso", "codice": "BETA-02" },
+      "inizio": "L-RIMESSA-BETA",
+      "fine": "L-RIMESSA-BETA",
+      "elementi": [
+        {
+          "attivita": "PRESA-SERVIZIO",
+          "luogo": "L-RIMESSA-BETA",
+          "verso": "F-SORGENTA",
+          "dalle": "17:10",
+          "alle": "17:28",
+          "km_vuoti": 2.5
+        },
+        { "corsa": "C-B620-05" },
+        { "attivita": "SOSTA", "luogo": "F-MONTEBRINO", "dalle": "18:00", "alle": "18:10" },
+        { "corsa": "C-B620-06" },
+        { "attivita": "RIENTRO", "luogo": "F-SORGENTA", "verso": "L-RIMESSA-BETA", "dalle": "18:42", "alle": "18:50", "km_vuoti": 2.5 }
+      ]
+    },
+    {
+      "codice": "T-B-FESTIVO",
+      "nome": "Festivo",
+      "azienda": "BETA",
+      "ruolo": "autista",
+      "calendario": "CAL-FESTIVI",
+      "mezzo": { "modo": "preciso", "codice": "BETA-02" },
+      "inizio": "L-RIMESSA-BETA",
+      "fine": "L-RIMESSA-BETA",
+      "elementi": [
+        {
+          "attivita": "PRESA-SERVIZIO",
+          "luogo": "L-RIMESSA-BETA",
+          "verso": "F-SORGENTA",
+          "dalle": "08:40",
+          "alle": "08:58",
+          "km_vuoti": 2.5
+        },
+        { "corsa": "C-B620-11" },
+        { "attivita": "SOSTA", "luogo": "F-MONTEBRINO", "dalle": "09:30", "alle": "09:40" },
+        { "corsa": "C-B620-12" },
+        { "attivita": "RIENTRO", "luogo": "F-SORGENTA", "verso": "L-RIMESSA-BETA", "dalle": "10:12", "alle": "10:20", "km_vuoti": 2.5 },
+        {
+          "attivita": "PRESA-SERVIZIO",
+          "luogo": "L-RIMESSA-BETA",
+          "verso": "F-SORGENTA",
+          "dalle": "16:40",
+          "alle": "16:58",
+          "km_vuoti": 2.5
+        },
+        { "corsa": "C-B620-13" },
+        { "attivita": "SOSTA", "luogo": "F-MONTEBRINO", "dalle": "17:30", "alle": "17:40" },
+        { "corsa": "C-B620-14" },
+        { "attivita": "RIENTRO", "luogo": "F-SORGENTA", "verso": "L-RIMESSA-BETA", "dalle": "18:12", "alle": "18:20", "km_vuoti": 2.5 }
+      ],
+      "nota": "Orario festivo della linea: domeniche e festivita' nazionali."
+    },
+    {
+      "codice": "T-B-ACCOMP",
+      "nome": "Accompagnatrice dell'asilo",
+      "azienda": "BETA",
+      "ruolo": "assistente",
+      "calendario": "CAL-INFANZIA",
+      "mezzo": { "modo": "nessuno" },
+      "inizio": "F-SORGENTA",
+      "fine": "L-INFANZIA",
+      "elementi": [{ "corsa": "C-ASILO-1", "da": { "luogo": "F-SORGENTA" } }],
+      "competenze_richieste": ["INFANZIA"]
+    },
+    {
+      "codice": "T-REPERIBILE",
+      "nome": "Reperibilita' notturna",
+      "azienda": "ALFA",
+      "ruolo": "autista",
+      "calendario": "CAL-MER-FER",
+      "mezzo": { "modo": "nessuno" },
+      "inizio": "L-RIMESSA-ALFA",
+      "fine": "L-RIMESSA-ALFA",
+      "elementi": [{ "attivita": "REPERIBILE", "luogo": "L-RIMESSA-ALFA", "dalle": "20:30", "alle": "30:30" }],
+      "nota": "Raggiungibile per i guasti della notte, fino alle 06:30 del giorno dopo."
+    }
+  ]
+}

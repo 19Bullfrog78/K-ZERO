@@ -614,6 +614,31 @@ private:
         return nullptr;
     }
 
+    // Il calendario usa (come base, o aggiungendone o togliendone i giorni) un calendario che sta in un giro? Allora i
+    // suoi giorni non si possono sapere: il problema da correggere e' il giro (K-CTR-016 o K-CTR-049), gia' segnalato
+    // sul calendario del giro, non un calendario senza giorni.
+    bool uses_cycle(const Calendar& c) const {
+        std::set<Code> seen{c.code};
+        std::vector<Code> todo;
+        const auto push = [&todo](const Calendar& x) {
+            if (x.base) todo.push_back(x.base->code);
+            for (const auto* links : {&x.adds, &x.removes})
+                for (const CalendarLink& l : *links)
+                    if (l.kind == CalendarLinkKind::Calendar) todo.push_back(l.ref.code);
+        };
+        push(c);
+        while (!todo.empty()) {
+            const Code cur = todo.back();
+            todo.pop_back();
+            if (!seen.insert(cur).second) continue;
+            const Calendar* x = idx_.calendar(cur);
+            if (!x) continue;
+            if (in_cycle(*x) || combination_cycle(*x)) return true;
+            push(*x);
+        }
+        return false;
+    }
+
     void calendars() {
         const DateRange period = p_.manifest.period;
         for (const Calendar& c : p_.calendars) {
@@ -652,7 +677,7 @@ private:
             if (cycle) add(Check::CalendarCycle, c.base->src, {cal});
             const Source* combined = cycle ? nullptr : combination_cycle(c);
             if (combined) add(Check::CalendarCombinationCycle, *combined, {cal});
-            if (!inverted && !cycle && !combined && period.from <= period.to && !first_active_day(c, period, idx_))
+            if (!inverted && !cycle && !combined && period.from <= period.to && !uses_cycle(c) && !first_active_day(c, period, idx_))
                 add(Check::CalendarWithoutDays, c.src, {cal, date_param("dal", period.from), date_param("al", period.to)});
         }
     }
@@ -721,6 +746,17 @@ private:
             if (x.home) add(Check::NumbersOnlyPersonalData, Source{x.src.file, x.src.pointer + "/casa", 0, 0}, {who}, 3);
             if (!x.note.empty()) add(Check::NumbersOnlyPersonalData, Source{x.src.file, x.src.pointer + "/nota", 0, 0}, {who}, 4);
         }
+        // Note scritte a mano di chi fa i turni: possono dire il motivo di un cambio (un dato personale).
+        const auto nota = [](const Source& s) { return Source{s.file, s.pointer + "/nota", 0, 0}; };
+        for (const Rotation& r : p_.rotations)
+            if (!r.note.empty()) add(Check::NumbersOnlyPersonalData, nota(r.src), {ref_param("rotazione", Element::Rotation, r.code)}, 5);
+        for (const FixedAssignment& f : p_.fixed)
+            if (!f.note.empty())
+                add(Check::NumbersOnlyPersonalData, nota(f.src), {ref_param("servizio_fisso", Element::FixedAssignment, f.code)}, 6);
+        for (const DayAssignment& a : p_.day_assignments)
+            if (!a.note.empty())
+                add(Check::NumbersOnlyPersonalData, nota(a.src),
+                    {date_param("data", a.date), ref_param("turno", Element::Shift, a.shift.code)}, 7);
     }
 
     // --- Persone a bordo ----------------------------------------------------------------------

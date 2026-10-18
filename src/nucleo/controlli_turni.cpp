@@ -533,7 +533,9 @@ private:
         }
     }
 
-    // Persone o mezzi in due turni che si sovrappongono, anche a cavallo della mezzanotte.
+    // Persone o mezzi in due turni che si sovrappongono, anche a cavallo della mezzanotte (un orario arriva al massimo a
+    // 47:59: il turno sovrapposto e' dello stesso giorno o del giorno prima). Il messaggio non scrive la data dell'altro
+    // turno: e' il giorno prima di ogni giorno elencato, e cosi' lo stesso problema di molti giorni si raggruppa.
     void overlaps(std::map<Code, std::vector<Interval>>& all, Check c, Element e) {
         for (auto& [code, v] : all) {
             std::sort(v.begin(), v.end(), [](const Interval& a, const Interval& b) { return std::tie(a.a, a.b) < std::tie(b.a, b.b); });
@@ -542,8 +544,7 @@ private:
                 if (longest && x.a < longest->b)
                     add(c, x.where,
                         {ref_param(e == Element::Person ? "persona" : "mezzo", e, code), shift_param(*x.shift),
-                         ref_param("altro", Element::Shift, longest->shift->code), date_param("giorno_altro", longest->day),
-                         days_param("giorni", x.day)},
+                         ref_param("altro", Element::Shift, longest->shift->code), days_param("giorni", x.day)},
                         longest->day == x.day ? 0 : 1);
                 if (!longest || x.b > longest->b) longest = &x;
             }

@@ -9,7 +9,6 @@
       "nome": "Rossi Mario",
       "casa": { "indirizzo": "Via dei Prati 4", "comune": "Valfonda", "coordinate": { "lat": 46.4105, "lon": 11.0921 } },
       "presa_servizio": "L-RIMESSA-ALFA",
-      "mezzo_abituale": "ALFA-01",
       "rapporto": { "tipo": "dipendente_tempo_pieno" },
       "contratto_collettivo": { "codice": "ESEMPIO-01", "nome": "Contratto collettivo di esempio (inventato)" },
       "ore": [{ "dal": "2026-09-01", "previste": { "settimana": 39 }, "massime": { "giorno": 10, "settimana": 48 } }],
@@ -20,6 +19,7 @@
         { "tipo": "CQC-P", "scadenza": "2028-03-02" },
         { "tipo": "KB" }
       ],
+      "autorizzazioni": [{ "committente": "CVA", "riferimento": "Cartellino n. 12 (inventato)", "scadenza": "2027-08-31" }],
       "competenze": ["PEDANA", "LINEA-B610"],
       "preferenze": [{ "tipo": "fascia_oraria", "dalle": "06:00", "alle": "21:30" }]
     },
@@ -30,9 +30,9 @@
       "nome": "Bianco Anna",
       "casa": { "indirizzo": "Via del Lago 12", "comune": "Lagobello", "coordinate": { "lat": 46.3972, "lon": 11.0519 } },
       "presa_servizio": "L-RIMESSA-ALFA",
-      "mezzo_abituale": "ALFA-02",
       "rapporto": { "tipo": "socio" },
       "abilitazioni": [{ "tipo": "B" }, { "tipo": "D", "scadenza": "2029-11-20" }, { "tipo": "CQC-P", "scadenza": "2029-11-20" }, { "tipo": "KB" }],
+      "autorizzazioni": [{ "committente": "CVA", "riferimento": "Cartellino n. 14 (inventato)", "scadenza": "2027-08-31" }],
       "competenze": ["PEDANA", "LINEA-B610"],
       "preferenze": [{ "tipo": "giorni_liberi", "giorni": ["domenica"] }]
     },
@@ -44,7 +44,8 @@
       "casa": { "indirizzo": "Piazza Grande 1", "comune": "Valfonda" },
       "presa_servizio": "L-RIMESSA-ALFA",
       "rapporto": { "tipo": "titolare" },
-      "abilitazioni": [{ "tipo": "B" }, { "tipo": "D", "scadenza": "2030-01-15" }, { "tipo": "CQC-P", "scadenza": "2030-01-15" }, { "tipo": "KB" }],
+      "abilitazioni": [{ "tipo": "B" }, { "tipo": "D", "scadenza": "2030-01-15" }, { "tipo": "CQC-P", "scadenza": "2027-06-30" }, { "tipo": "KB" }],
+      "autorizzazioni": [{ "committente": "CVA", "riferimento": "Cartellino n. 9 (inventato)", "scadenza": "2027-08-31" }],
       "competenze": ["PEDANA", "LINEA-B610", "ELETTRICO"],
       "prestiti": [{ "azienda": "BETA", "accordo": "Accordo consortile n. 2/2026 tra Alfa e Beta (inventato)", "dal": "2026-09-01", "al": "2027-08-31" }]
     },
@@ -106,6 +107,40 @@
       "presa_servizio": "F-SORGENTA",
       "rapporto": { "tipo": "dipendente_part_time" },
       "competenze": ["INFANZIA"]
+    },
+    {
+      "codice": "P-E",
+      "azienda": "ALFA",
+      "ruoli": ["autista"],
+      "nome": "Galli Sara",
+      "casa": { "indirizzo": "Via del Mulino 8", "comune": "Valfonda", "coordinate": { "lat": 46.4121, "lon": 11.0897 } },
+      "presa_servizio": "L-RIMESSA-ALFA",
+      "mezzo_abituale": "ALFA-01",
+      "rapporto": { "tipo": "dipendente_part_time" },
+      "ore": [{ "previste": { "settimana": 20 } }],
+      "abilitazioni": [{ "tipo": "B" }, { "tipo": "D1", "scadenza": "2029-04-18" }, { "tipo": "CQC-P", "scadenza": "2029-04-18" }],
+      "autorizzazioni": [{ "committente": "CVA", "riferimento": "Cartellino n. 21 (inventato)", "scadenza": "2027-08-31" }],
+      "competenze": ["PEDANA"]
+    },
+    {
+      "codice": "P-F",
+      "azienda": "ALFA",
+      "ruoli": ["autista"],
+      "nome": "Moretti Luca",
+      "presa_servizio": "L-RIMESSA-ALFA",
+      "mezzo_abituale": "ALFA-02",
+      "rapporto": { "tipo": "collaboratore_familiare" },
+      "abilitazioni": [{ "tipo": "B" }, { "tipo": "D", "scadenza": "2032-10-02" }, { "tipo": "CQC-P", "scadenza": "2032-10-02" }]
+    },
+    {
+      "codice": "P-G",
+      "azienda": "ALFA",
+      "ruoli": ["autista"],
+      "nome": "Fontana Rita",
+      "presa_servizio": "L-RIMESSA-ALFA",
+      "mezzo_abituale": "ALFA-06",
+      "rapporto": { "tipo": "a_chiamata" },
+      "abilitazioni": [{ "tipo": "B" }, { "tipo": "D", "scadenza": "2030-12-12" }, { "tipo": "CQC-P", "scadenza": "2030-12-12" }]
     }
   ]
 }

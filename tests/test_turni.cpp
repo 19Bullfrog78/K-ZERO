@@ -222,10 +222,15 @@ std::vector<Day> giorni_di(const Problem& x) {
     return {};
 }
 
-// Pacchetto di prova: il demo con un calendario di tutti i giorni (CAL-TUTTI), uno da lunedi' a venerdi'
-// (CAL-LV), uno del sabato (CAL-SAB) e uno del mercoledi' (CAL-MER).
+// Pacchetto di prova: il demo senza i suoi turni (ogni prova scrive i suoi), con un calendario di tutti i giorni
+// (CAL-TUTTI), uno da lunedi' a venerdi' (CAL-LV), uno del sabato (CAL-SAB) e uno del mercoledi' (CAL-MER).
 Package base() {
     Package p = demo();
+    p.shifts.clear();
+    p.rotations.clear();
+    p.fixed.clear();
+    p.day_assignments.clear();
+    p.blocks.clear();
     calendario(p, "CAL-TUTTI", kTutti);
     calendario(p, "CAL-LV", kLV);
     calendario(p, "CAL-SAB", {Weekday::Saturday});
@@ -234,6 +239,66 @@ Package base() {
 }
 
 }  // namespace
+
+// --- Il pacchetto demo: giorni controllati a mano ----------------------------------------------------------------
+
+// Con quale mezzo si fa il turno quel giorno: il codice del mezzo, "-" se senza mezzo, "assente" se il turno non c'e'.
+std::string mezzo_di(const Package& p, const std::string& turno, const std::string& data) {
+    const Planner piano(p);
+    const auto giornata = piano.day(giorno(data));
+    const ShiftDay* sd = turno_del_giorno(giornata, turno);
+    if (!sd) return "assente";
+    return sd->vehicle ? sd->vehicle->code : "-";
+}
+
+// Rotazione di Alfa (14 giorni dal lunedi' 2026-08-31, la tabella di REGOLE.md), rotazione di Beta (3 giorni dal
+// 2026-09-01), servizi fissi e assegnazioni del singolo giorno del demo, giorno per giorno.
+TEST(Turni, demo_giorni_controllati_a_mano) {
+    const Package& p = demo();
+    // Giovedi' 2026-10-15, giorno 4 del ciclo: P-A primo, P-B secondo (mattino al centro diurno, sera sulla linea).
+    EXPECT_EQ(chi(p, "T-PRIMO", "2026-10-15"), "P-A");
+    EXPECT_EQ(chi(p, "T-DIS", "2026-10-15"), "P-B");
+    EXPECT_EQ(chi(p, "T-SECONDO", "2026-10-15"), "P-B");
+    EXPECT_EQ(chi(p, "T-DIS-GIO", "2026-10-15"), "P-E");
+    EXPECT_EQ(chi(p, "T-NOTTE", "2026-10-15"), "P-NUOVO");   // autista ipotetico
+    EXPECT_EQ(chi(p, "T-RISERVA", "2026-10-15"), "assente");  // solo martedi' e venerdi'
+    // Mercoledi' 2026-10-21, giorno 10: il secondo e' del titolare P-C (servizio fisso), il mattino resta a P-B.
+    EXPECT_EQ(chi(p, "T-PRIMO", "2026-10-21"), "P-A");
+    EXPECT_EQ(chi(p, "T-DIS", "2026-10-21"), "P-B");
+    EXPECT_EQ(chi(p, "T-SECONDO", "2026-10-21"), "P-C");
+    // Giovedi' 2026-10-22, giorno 11: P-A (secondo) e' in ferie, lo sostituisce P-C con due assegnazioni del giorno.
+    EXPECT_EQ(chi(p, "T-PRIMO", "2026-10-22"), "P-B");
+    EXPECT_EQ(chi(p, "T-DIS", "2026-10-22"), "P-C");
+    EXPECT_EQ(chi(p, "T-SECONDO", "2026-10-22"), "P-C");
+    // Sabato 2026-10-24, giorno 13: tutta la linea a P-A.
+    EXPECT_EQ(chi(p, "T-SABATO", "2026-10-24"), "P-A");
+    EXPECT_EQ(chi(p, "T-PRIMO", "2026-10-24"), "assente");
+    // Revisione di ALFA-01 (lunedi' e martedi'): la scuola delle 06:55 va con il mezzo di scorta.
+    EXPECT_EQ(mezzo_di(p, "T-SCUOLA-1", "2026-10-19"), "ALFA-07");
+    EXPECT_EQ(mezzo_di(p, "T-SCUOLA-1", "2026-10-21"), "ALFA-01");
+    // Venerdi' 2026-11-20, giorno 12: P-B (primo) in formazione e nessuna sostituzione: il primo e' scoperto.
+    EXPECT_EQ(chi(p, "T-PRIMO", "2026-11-20"), "-");
+    EXPECT_EQ(chi(p, "T-SECONDO", "2026-11-20"), "P-A");
+    // Mercoledi' 2026-11-11, patrono di Valfonda: niente scuola, la linea si'.
+    EXPECT_EQ(chi(p, "T-SCUOLA-1", "2026-11-11"), "assente");
+    EXPECT_EQ(chi(p, "T-SECONDO", "2026-11-11"), "P-C");
+    // Beta, martedi' 2026-11-03 (primo passo del ciclo): P-B2 in ferie, al suo posto P-C prestato da Alfa.
+    EXPECT_EQ(chi(p, "T-B-PRIMO", "2026-11-03"), "P-B1");
+    EXPECT_EQ(chi(p, "T-B-ASILO", "2026-11-03"), "P-C");
+    EXPECT_EQ(chi(p, "T-B-SERA", "2026-11-03"), "P-C");
+    EXPECT_EQ(chi(p, "T-B-ACCOMP", "2026-11-03"), "P-B4");
+    // Domenica 2026-11-15: la gita con l'autobus di linea (P-A, giorno di riposo) e la linea festiva di Beta.
+    EXPECT_EQ(chi(p, "T-GITA", "2026-11-15"), "P-A");
+    EXPECT_EQ(mezzo_di(p, "T-GITA", "2026-11-15"), "ALFA-05");
+    EXPECT_EQ(chi(p, "T-B-FESTIVO", "2026-11-15"), "P-B1");
+    // Martedi' 2026-12-08, festa nazionale: orario festivo (terzo passo del ciclo di Beta: P-B3), Alfa ferma.
+    EXPECT_EQ(chi(p, "T-B-FESTIVO", "2026-12-08"), "P-B3");
+    EXPECT_EQ(chi(p, "T-B-PRIMO", "2026-12-08"), "assente");
+    EXPECT_EQ(chi(p, "T-PRIMO", "2026-12-08"), "assente");
+    EXPECT_EQ(chi(p, "T-NOTTE", "2026-12-08"), "assente");
+    // Mercoledi' 2027-07-07: la CQC di P-C e' scaduta il 2027-06-30, il secondo del mercoledi' e' scoperto.
+    EXPECT_EQ(chi(p, "T-SECONDO", "2027-07-07"), "-");
+}
 
 // --- Rotazioni di ogni forma: lunghezza e passi li sceglie l'azienda ------------------------------------------------
 
@@ -541,6 +606,8 @@ TEST(Turni, assegnazione_del_giorno_su_una_persona_assente_errore) {
 TEST(Turni, assegnazione_contro_l_abbinamento_fisso_avviso) {
     Package p = base();
     p.company_settings[0].pairing = DriverVehiclePairing::Fixed;
+    per_codice(p.persons, "P-A").usual_vehicle = Ref{"ALFA-01", {}};
+    per_codice(p.persons, "P-B").usual_vehicle = Ref{"ALFA-02", {}};
     turno(p, "SCUOLA", "ALFA", "CAL-SCUOLA-LV", {corsa("C-AM-1")}, ShiftVehicleMode::Specific, "ALFA-01");
     rotazione(p, "ROT", 1, "2026-10-12", {{"P-A", {"SCUOLA"}}});   // ALFA-01 e' il mezzo abituale di P-A
     del_giorno(p, "2026-10-15", "SCUOLA", "P-B");                  // P-B ha ALFA-02: la scelta dell'utente vince
@@ -718,10 +785,10 @@ TEST(Turni, K_CTR_068_autista_senza_abilitazione_o_autorizzazione) {
     per_codice(q.persons, "P-A").licences[1].expiry = giorno("2027-05-31");
     EXPECT_TRUE(segnala(q, Check::RecurringShiftPersonFact, 3, "persone.json", "/persone/0/abilitazioni/1"));
     EXPECT_EQ(quanti(q, Check::DriverWithoutLicence), 0);
-    // Servizio disabili (R-TN): serve l'autorizzazione del committente.
+    // Servizio disabili (R-TN): serve l'autorizzazione del committente (P-F non ha il cartellino).
     Package r = base();
     turno(r, "DIS", "ALFA", "CAL-CENTRO", {corsa("C-DIS-1")}, ShiftVehicleMode::Specific, "ALFA-03");
-    rotazione(r, "ROT", 1, "2026-09-01", {{"P-A", {"DIS"}}});
+    rotazione(r, "ROT", 1, "2026-09-01", {{"P-F", {"DIS"}}});
     EXPECT_TRUE(segnala(r, Check::DriverWithoutLicence, 1, "rotazioni.json", "/rotazioni/0/righe/0"));
     r.rotations[0].rows[0].person = Ref{"P-D", {}};   // P-D ha il cartellino
     EXPECT_EQ(quanti(r, Check::DriverWithoutLicence), 0);

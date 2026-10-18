@@ -60,6 +60,55 @@
       "dal": "2026-09-01",
       "al": "2027-07-30",
       "giorni": ["giovedi"]
-    }
+    },
+    {
+      "codice": "CAL-LV-FER",
+      "nome": "Giorni feriali da lunedi' a venerdi'",
+      "base": "CAL-FERIALI",
+      "dal": "2026-09-01",
+      "al": "2027-08-31",
+      "giorni": ["lunedi", "martedi", "mercoledi", "giovedi", "venerdi"]
+    },
+    {
+      "codice": "CAL-SAB-FER",
+      "nome": "Sabati feriali",
+      "base": "CAL-FERIALI",
+      "dal": "2026-09-01",
+      "al": "2027-08-31",
+      "giorni": ["sabato"]
+    },
+    {
+      "codice": "CAL-MER-FER",
+      "nome": "Mercoledi' feriali",
+      "base": "CAL-FERIALI",
+      "dal": "2026-09-01",
+      "al": "2027-08-31",
+      "giorni": ["mercoledi"]
+    },
+    {
+      "codice": "CAL-MAR-VEN",
+      "nome": "Martedi' e venerdi' di scuola, senza i giorni del centro diurno",
+      "base": "CAL-SCUOLA-LV",
+      "dal": "2026-09-14",
+      "al": "2027-06-12",
+      "giorni": ["martedi", "venerdi"],
+      "toglie": { "calendari": ["CAL-CENTRO"] }
+    },
+    {
+      "codice": "CAL-FESTIVI",
+      "nome": "Domeniche e festivita' nazionali",
+      "dal": "2026-09-01",
+      "al": "2027-08-31",
+      "giorni": ["domenica"],
+      "aggiunge": { "festivita": ["FEST-IT"] }
+    },
+    {
+      "codice": "CAL-SEMPRE",
+      "nome": "Tutti i giorni",
+      "dal": "2026-09-01",
+      "al": "2027-08-31",
+      "giorni": ["lunedi", "martedi", "mercoledi", "giovedi", "venerdi", "sabato", "domenica"]
+    },
+    { "codice": "CAL-GITA", "nome": "Giorno della gita della Pro Loco", "dal": "2026-11-15", "al": "2026-11-15", "giorni": ["domenica"] }
   ]
 }

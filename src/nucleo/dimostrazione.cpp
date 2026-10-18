@@ -39,16 +39,19 @@ Dimostrazione calcola_dimostrazione(const Package& p) {
     const Index idx(p);
     Dimostrazione d;
 
-    // Giri: servizi con la domanda in numeri esatti che non sta sul mezzo piu' grande dell'azienda in flotta.
+    // Giri: servizi con la domanda in numeri esatti che non sta sul mezzo piu' grande dell'azienda in flotta. Le persone
+    // dell'andata e quelle del ritorno di solito sono le stesse: si contano i gruppi di ogni verso e vale il verso con
+    // piu' persone (es. una gita di 30 persone, andata e ritorno, e' di 30 persone, non di 60).
     for (const Service& s : p.services) {
         const Contract* c = idx.contract(s.contract.code);
         if (!c || s.groups.empty()) continue;
-        int persone = 0;
+        int andata = 0, ritorno = 0;
         bool esatti = true;
         for (const PassengerGroup& g : s.groups) {
             esatti = esatti && g.counts == CountKind::Exact;
-            persone += g.total_boarding();
+            (g.direction == Direction::Outbound ? andata : ritorno) += g.total_boarding();
         }
+        const int persone = std::max(andata, ritorno);
         if (!esatti || persone == 0) continue;
         GiriServizio giri{s.code, persone, {}};
         int posti_massimi = 0;

@@ -320,6 +320,64 @@
           }
         ]
       }
+    },
+    {
+      "codice": "S-LIN-B620",
+      "nome": "Linea B620 Sorgenta - Montebrino, tutti i giorni",
+      "codici_esterni": [{ "sistema": "Trasporti Provinciali Valfonda", "tipo": "linea", "codice": "B620" }],
+      "tipo": "linea",
+      "contratto": "CT-LIN-BETA",
+      "calendario": "CAL-SEMPRE",
+      "liberta_oraria": { "tipo": "fissa" },
+      "domanda": {
+        "gruppi": [
+          {
+            "codice": "G-LIN-B620",
+            "nome": "Utenti della linea B620",
+            "tipo": "utenti_linea",
+            "verso": "andata",
+            "conteggi": "non_noti",
+            "fermate": [{ "luogo": "F-SORGENTA" }, { "luogo": "F-LAGOBELLO" }, { "luogo": "F-MONTEBRINO" }]
+          }
+        ]
+      }
+    },
+    {
+      "codice": "S-GITA",
+      "nome": "Gita della Pro Loco al lago di Lagobello",
+      "tipo": "altro",
+      "tipo_descrizione": "Gita (noleggio con conducente)",
+      "contratto": "CT-GITA",
+      "calendario": "CAL-GITA",
+      "liberta_oraria": { "tipo": "fissa" },
+      "domanda": {
+        "gruppi": [
+          {
+            "codice": "G-GITA-A",
+            "nome": "Soci della Pro Loco, andata",
+            "tipo": "altro",
+            "tipo_descrizione": "Soci della Pro Loco",
+            "verso": "andata",
+            "conteggi": "esatti",
+            "fermate": [
+              { "luogo": "F-VALFONDA-PIAZZA", "salgono": 30 },
+              { "luogo": "F-LAGOBELLO", "scendono": 30 }
+            ]
+          },
+          {
+            "codice": "G-GITA-R",
+            "nome": "Soci della Pro Loco, ritorno",
+            "tipo": "altro",
+            "tipo_descrizione": "Soci della Pro Loco",
+            "verso": "ritorno",
+            "conteggi": "esatti",
+            "fermate": [
+              { "luogo": "F-LAGOBELLO", "salgono": 30 },
+              { "luogo": "F-VALFONDA-PIAZZA", "scendono": 30 }
+            ]
+          }
+        ]
+      }
     }
   ]
 }
