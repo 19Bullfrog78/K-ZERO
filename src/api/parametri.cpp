@@ -7,6 +7,7 @@
 #include <CLI11.hpp>
 
 #include "errori.hpp"
+#include "tempo.hpp"
 
 namespace kzero::api {
 
@@ -27,6 +28,32 @@ std::string nomi_parametri(const DefinizioneComando& c) {
 }
 
 std::string valori_ammessi(const DefinizioneParametro& p) { return "Valori ammessi: " + unisci(p.valori) + "."; }
+
+// Forma di un valore libero, per i messaggi.
+std::string forma_valore(const DefinizioneParametro& p) {
+    return p.forma == FormaValore::Data
+               ? "Va scritto come una data AAAA-MM-GG che esiste nel calendario (es. 2026-10-15)."
+               : "Va scritto come un codice: lettere senza accenti, cifre, '-', '_' e '.', al massimo 64 caratteri (es. P-A).";
+}
+
+// Valore ricopiato in un messaggio: al massimo 64 caratteri (un valore piu' lungo e' certamente sbagliato).
+std::string mostra(const std::string& valore) {
+    return tra_apici(valore.size() > 64 ? valore.substr(0, 64) + "..." : valore);
+}
+
+bool codice_valido(const std::string& s) {
+    if (s.empty() || s.size() > 64) return false;
+    for (std::size_t i = 0; i < s.size(); ++i) {
+        const char c = s[i];
+        const bool alfanumerico = (c >= 'A' && c <= 'Z') || (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9');
+        if (!alfanumerico && (i == 0 || (c != '-' && c != '_' && c != '.'))) return false;
+    }
+    return true;
+}
+
+bool valore_valido(const DefinizioneParametro& p, const std::string& valore) {
+    return p.forma == FormaValore::Data ? kzero::day_from_text(valore).has_value() : codice_valido(valore);
+}
 
 const DefinizioneParametro* trova_parametro(const DefinizioneComando& c, const std::string& nome) {
     for (const auto& p : c.parametri)
@@ -57,6 +84,9 @@ void controlla_forma(const DefinizioneComando& c, const std::vector<std::string>
         if (p->tipo == TipoParametro::Scelta && (vuoto || ultimo))
             throw ErroreKZero(Errore::ValoreMancante,
                               "Manca il valore del parametro " + p->nome + ". " + valori_ammessi(*p) + kVediDescrivi);
+        if (p->tipo == TipoParametro::Valore && (vuoto || ultimo))
+            throw ErroreKZero(Errore::ValoreMancante,
+                              "Manca il valore del parametro " + p->nome + ". " + forma_valore(*p) + kVediDescrivi);
     }
 }
 
@@ -136,12 +166,38 @@ Parametri leggi_parametri(const DefinizioneComando& c, const std::vector<std::st
             if (o.count() == 1) p.applica(risultato, "");
             continue;
         }
+        if (p.tipo == TipoParametro::Valore) {
+            if (o.count() == 0) continue;   // i parametri obbligatori si controllano dopo, tutti insieme
+            const std::string valore = o.results().front();
+            if (!valore_valido(p, valore))
+                throw ErroreKZero(Errore::ValoreScrittoMale, "Il valore " + mostra(valore) + " del parametro " + p.nome +
+                                                                 " e' scritto nella forma sbagliata. " + forma_valore(p) +
+                                                                 kVediDescrivi);
+            p.applica(risultato, valore);
+            continue;
+        }
         const std::string valore = o.count() == 1 ? o.results().front() : p.predefinito;
         if (std::find(p.valori.begin(), p.valori.end(), valore) == p.valori.end())
             throw ErroreKZero(Errore::ValoreNonAmmesso, "Valore non ammesso per " + p.nome + ": " + tra_apici(valore) +
                                                             ". " + valori_ammessi(p) + kVediDescrivi);
         p.applica(risultato, valore);
     }
+    // Parametri obbligatori e parametri che non si possono scrivere insieme.
+    const auto scritto = [&](const std::string& nome) {
+        for (std::size_t i = 0; i < c.parametri.size(); ++i)
+            if (c.parametri[i].nome == nome) return opzioni[i]->count() > 0;
+        return false;
+    };
+    for (const DefinizioneParametro& p : c.parametri)
+        if (p.obbligatorio && !scritto(p.nome))
+            throw ErroreKZero(Errore::ParametroObbligatorio, "Manca il parametro " + p.nome + " del comando '" + c.nome +
+                                                                 "': " + p.descrizione + " " + forma_valore(p) + kVediDescrivi);
+    for (const DefinizioneParametro& p : c.parametri)
+        for (const std::string& altro : p.incompatibili)
+            if (scritto(p.nome) && scritto(altro))
+                throw ErroreKZero(Errore::ParametriIncompatibili, "I parametri " + p.nome + " e " + altro +
+                                                                      " non si possono scrivere insieme: scegliere uno dei due." +
+                                                                      kVediDescrivi);
     return risultato;
 }
 

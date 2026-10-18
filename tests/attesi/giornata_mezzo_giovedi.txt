@@ -1,0 +1,131 @@
+Giornata del 2026-10-22, giovedi' - pacchetto DEMO-2026 "Pacchetto dimostrativo K-Zero" (dati inventati)
+Mezzo ALFA-05 (AA 105 AA, M3, 35 posti + 20 in piedi, uso LINEA), azienda ALFA
+Festivita': nessuna.
+Controllo del pacchetto: nessun errore, 8 avvisi (dettagli con kzero controlla).
+Dati personali: sostituiti dal codice; dati particolari: riservati.
+
+T-PRIMO "Primo"  07:15-17:15 (10 ore)  azienda ALFA, autista
+   Persona: P-B, rotazione ROT-ALFA, passo 11 (rotazioni.json /rotazioni/0/righe/1)
+   Mezzo: ALFA-05 (AA 105 AA, M3, 35 posti + 20 in piedi, uso LINEA), scritto nel turno
+   Calendario CAL-LV-FER "Giorni feriali da lunedi' a venerdi'"; il turno c'e' in 255 giorni del periodo
+   Comincia a L-RIMESSA-ALFA (Valfonda, rimessa Autoservizi Alfa), finisce a L-RIMESSA-ALFA (Valfonda, rimessa Autoservizi Alfa)
+   Nota: Linea B610 e, nei giorni di scuola, il ritorno di mezzogiorno. Alle 17:04 lascia l'autobus al secondo a Valfonda, Piazza.
+   07:15-07:30  Presa servizio con il controllo del mezzo (PRESA), a L-RIMESSA-ALFA (Valfonda, rimessa Autoservizi Alfa)
+                (fermo 5 minuti)
+   07:35-07:45  Trasferimento a vuoto (VUOTO), da L-RIMESSA-ALFA (Valfonda, rimessa Autoservizi Alfa) a F-STAZIONE (Valfonda, Stazione FVV), km a vuoto 1
+                (fermo 7 minuti)
+   07:52-08:15  corsa C-LIN-533 "Linea B610, corsa delle 07:52"
+                servizi S-LIN-B610 (tipo riservato, contratto CT-LIN, committente TPV)
+                calendario CAL-FERIALI "Giorni feriali (da lunedi' a sabato, festivi esclusi)", 305 giorni nel periodo; km a pieno 15,1, a vuoto 0
+      07:52  F-STAZIONE  Valfonda, Stazione FVV  a bordo non noto
+      07:56  F-VALFONDA-PIAZZA  Valfonda, Piazza Grande  km a pieno 1,2  a bordo non noto
+      08:08  F-CASTELROVO-ALTO  Castelrovo, Alto  km a pieno 8,8  a bordo non noto
+      08:15  F-PRADELLO  Pradello, Piazza  km a pieno 5,1  a bordo non noto
+   08:15-08:25  Attesa con il mezzo (ATTESA), a F-PRADELLO (Pradello, Piazza)
+   08:25-08:56  corsa C-LIN-537 "Linea B610, corsa delle 08:25"
+                servizi S-LIN-B610 (tipo riservato, contratto CT-LIN, committente TPV)
+                calendario CAL-FERIALI "Giorni feriali (da lunedi' a sabato, festivi esclusi)", 305 giorni nel periodo; km a pieno 15,1, a vuoto 0
+      08:25  F-PRADELLO  Pradello, Piazza  a bordo non noto
+      08:32  F-CASTELROVO-ALTO  Castelrovo, Alto  km a pieno 5,1  a bordo non noto
+      08:49  F-VALFONDA-PIAZZA  Valfonda, Piazza Grande  km a pieno 8,8  a bordo non noto
+      08:56  F-STAZIONE  Valfonda, Stazione FVV  km a pieno 1,2  a bordo non noto
+                (fermo 2 minuti)
+   08:58-09:06  Trasferimento a vuoto (VUOTO), da F-STAZIONE (Valfonda, Stazione FVV) a L-RIMESSA-ALFA (Valfonda, rimessa Autoservizi Alfa), km a vuoto 1
+                (fermo 4 minuti)
+   09:10-11:30  Pausa (PAUSA), a L-RIMESSA-ALFA (Valfonda, rimessa Autoservizi Alfa), senza il mezzo
+                (fermo 10 minuti)
+   11:40-11:50  Trasferimento a vuoto (VUOTO), da L-RIMESSA-ALFA (Valfonda, rimessa Autoservizi Alfa) a L-SUP (Valfonda, Istituto superiore), km a vuoto 1,2
+                (fermo 8 minuti)
+   11:58-12:47  corsa C-RM-1 "Ritorno mezzogiorno superiori e medie"
+                servizi S-SUP-RM (tipo riservato, contratto CT-LIN, committente TPV); S-SCU-RM (tipo riservato, contratto CT-SCU, committente CVA)
+                calendario CAL-SCUOLA-LV "Giorni di scuola escluso il sabato", 175 giorni nel periodo; km a pieno 17,9, a vuoto 6,4
+      11:58  L-SUP  Valfonda, Istituto superiore  salgono 5  a bordo 5
+      12:05  L-MEDIE  Valfonda, Scuola media  salgono 11  km a pieno 0,6  a bordo 16
+      12:07  F-VALFONDA-PIAZZA  Valfonda, Piazza Grande  transito  km a pieno 0,5  a bordo 16
+      12:19  F-CASTELROVO  Castelrovo, Bivio  scendono 6  km a pieno 7,6  a bordo 10
+      12:26  F-MONTEBRINO  Montebrino, Centro  scendono 5  km a pieno 4,2  a bordo 5
+      12:35  F-PRADELLO  Pradello, Piazza  scendono 5  km a pieno 5  a bordo 0
+      12:47  L-RIMESSA-ALFA  Valfonda, rimessa Autoservizi Alfa  km a vuoto 6,4  a bordo 0
+                (fermo 28 minuti)
+   13:15-13:25  Trasferimento a vuoto (VUOTO), da L-RIMESSA-ALFA (Valfonda, rimessa Autoservizi Alfa) a F-STAZIONE (Valfonda, Stazione FVV), km a vuoto 1
+                (fermo 5 minuti)
+   13:30-13:53  corsa C-LIN-545 "Linea B610, corsa delle 13:30"
+                servizi S-LIN-B610 (tipo riservato, contratto CT-LIN, committente TPV)
+                calendario CAL-FERIALI "Giorni feriali (da lunedi' a sabato, festivi esclusi)", 305 giorni nel periodo; km a pieno 15,1, a vuoto 0
+      13:30  F-STAZIONE  Valfonda, Stazione FVV  a bordo non noto
+      13:34  F-VALFONDA-PIAZZA  Valfonda, Piazza Grande  km a pieno 1,2  a bordo non noto
+      13:46  F-CASTELROVO-ALTO  Castelrovo, Alto  km a pieno 8,8  a bordo non noto
+      13:53  F-PRADELLO  Pradello, Piazza  km a pieno 5,1  a bordo non noto
+                (fermo 2 minuti)
+   13:55-14:07  Trasferimento a vuoto (VUOTO), da F-PRADELLO (Pradello, Piazza) a L-RIMESSA-ALFA (Valfonda, rimessa Autoservizi Alfa), km a vuoto 6,4
+                (fermo 3 minuti)
+   14:10-16:10  Pausa (PAUSA), a L-RIMESSA-ALFA (Valfonda, rimessa Autoservizi Alfa), senza il mezzo
+                (fermo 10 minuti)
+   16:20-16:35  Trasferimento a vuoto (VUOTO), da L-RIMESSA-ALFA (Valfonda, rimessa Autoservizi Alfa) a F-PRADELLO (Pradello, Piazza), km a vuoto 6,4
+                (fermo 5 minuti)
+   16:40-17:04  corsa C-LIN-549 "Linea B610, corsa delle 16:40 (cambio dell'autista a Valfonda, Piazza)", solo un pezzo (cambio dell'autista)
+                servizi S-LIN-B610 (tipo riservato, contratto CT-LIN, committente TPV)
+                calendario CAL-FERIALI "Giorni feriali (da lunedi' a sabato, festivi esclusi)", 305 giorni nel periodo; km a pieno 13,9, a vuoto 0
+      16:40  F-PRADELLO  Pradello, Piazza  a bordo non noto
+      16:47  F-CASTELROVO-ALTO  Castelrovo, Alto  km a pieno 5,1  a bordo non noto
+      17:04  F-VALFONDA-PIAZZA  Valfonda, Piazza Grande  km a pieno 8,8  a bordo non noto
+                (fermo 1 minuto)
+   17:05-17:15  Spostamento della persona senza il mezzo (A-PIEDI), da F-VALFONDA-PIAZZA (Valfonda, Piazza Grande) a L-RIMESSA-ALFA (Valfonda, rimessa Autoservizi Alfa), senza il mezzo
+   Totale del turno: km a pieno 77,1, a vuoto 23,4; fermo 1 ora e 30 minuti.
+
+T-SECONDO "Secondo"  16:50-20:30 (3 ore e 40 minuti)  azienda ALFA, autista
+   Persona: P-C, assegnazione del singolo giorno (assegnazioni.json /assegnazioni/3)
+   Mezzo: ALFA-05 (AA 105 AA, M3, 35 posti + 20 in piedi, uso LINEA), scritto nel turno
+   Calendario CAL-LV-FER "Giorni feriali da lunedi' a venerdi'"; il turno c'e' in 255 giorni del periodo
+   Comincia a L-RIMESSA-ALFA (Valfonda, rimessa Autoservizi Alfa), finisce a L-RIMESSA-ALFA (Valfonda, rimessa Autoservizi Alfa)
+   Nota: Prende l'autobus dal primo a Valfonda, Piazza, alle 17:04.
+   16:50-17:00  Spostamento della persona senza il mezzo (A-PIEDI), da L-RIMESSA-ALFA (Valfonda, rimessa Autoservizi Alfa) a F-VALFONDA-PIAZZA (Valfonda, Piazza Grande), senza il mezzo
+                (fermo 4 minuti)
+   17:04-17:11  corsa C-LIN-549 "Linea B610, corsa delle 16:40 (cambio dell'autista a Valfonda, Piazza)", solo un pezzo (cambio dell'autista)
+                servizi S-LIN-B610 (tipo riservato, contratto CT-LIN, committente TPV)
+                calendario CAL-FERIALI "Giorni feriali (da lunedi' a sabato, festivi esclusi)", 305 giorni nel periodo; km a pieno 1,2, a vuoto 0
+      17:04  F-VALFONDA-PIAZZA  Valfonda, Piazza Grande  a bordo non noto
+      17:11  F-STAZIONE  Valfonda, Stazione FVV  km a pieno 1,2  a bordo non noto
+                (fermo 2 minuti)
+   17:13-17:21  Trasferimento a vuoto (VUOTO), da F-STAZIONE (Valfonda, Stazione FVV) a L-RIMESSA-ALFA (Valfonda, rimessa Autoservizi Alfa), km a vuoto 1
+                (fermo 4 minuti)
+   17:25-17:40  Rifornimento (RIFORNIMENTO), a L-RIMESSA-ALFA (Valfonda, rimessa Autoservizi Alfa)
+   17:40-19:20  Pausa (PAUSA), a L-RIMESSA-ALFA (Valfonda, rimessa Autoservizi Alfa), senza il mezzo
+                (fermo 10 minuti)
+   19:30-19:40  Trasferimento a vuoto (VUOTO), da L-RIMESSA-ALFA (Valfonda, rimessa Autoservizi Alfa) a F-STAZIONE (Valfonda, Stazione FVV), km a vuoto 1
+                (fermo 5 minuti)
+   19:45-20:08  corsa C-LIN-553 "Linea B610, corsa delle 19:45"
+                servizi S-LIN-B610 (tipo riservato, contratto CT-LIN, committente TPV)
+                calendario CAL-FERIALI "Giorni feriali (da lunedi' a sabato, festivi esclusi)", 305 giorni nel periodo; km a pieno 15,1, a vuoto 0
+      19:45  F-STAZIONE  Valfonda, Stazione FVV  a bordo non noto
+      19:49  F-VALFONDA-PIAZZA  Valfonda, Piazza Grande  km a pieno 1,2  a bordo non noto
+      20:01  F-CASTELROVO-ALTO  Castelrovo, Alto  km a pieno 8,8  a bordo non noto
+      20:08  F-PRADELLO  Pradello, Piazza  km a pieno 5,1  a bordo non noto
+                (fermo 2 minuti)
+   20:10-20:22  Trasferimento a vuoto (VUOTO), da F-PRADELLO (Pradello, Piazza) a L-RIMESSA-ALFA (Valfonda, rimessa Autoservizi Alfa), km a vuoto 6,4
+   20:22-20:30  Fine servizio con il controllo del mezzo (FINE), a L-RIMESSA-ALFA (Valfonda, rimessa Autoservizi Alfa)
+   Totale del turno: km a pieno 16,3, a vuoto 8,4; fermo 27 minuti.
+
+T-NOTTE "Notte"  23:00-24:30 (1 ora e 30 minuti)  azienda ALFA, autista
+   Persona: P-NUOVO (ipotetica), servizio fisso SF-NOTTE (servizi_fissi.json /servizi_fissi/1)
+   Mezzo: ALFA-05 (AA 105 AA, M3, 35 posti + 20 in piedi, uso LINEA), scritto nel turno
+   Calendario CAL-FERIALI "Giorni feriali (da lunedi' a sabato, festivi esclusi)"; il turno c'e' in 305 giorni del periodo
+   Comincia a L-RIMESSA-ALFA (Valfonda, rimessa Autoservizi Alfa), finisce a L-RIMESSA-ALFA (Valfonda, rimessa Autoservizi Alfa)
+   Nota: Turno notturno: finisce dopo la mezzanotte e resta del giorno in cui comincia.
+   23:00-23:15  Presa servizio con il controllo del mezzo (PRESA), a L-RIMESSA-ALFA (Valfonda, rimessa Autoservizi Alfa)
+                (fermo 3 minuti)
+   23:18-23:35  Trasferimento a vuoto (VUOTO), da L-RIMESSA-ALFA (Valfonda, rimessa Autoservizi Alfa) a F-PRADELLO (Pradello, Piazza), km a vuoto 6,4
+                (fermo 5 minuti)
+   23:40-24:12  corsa C-LIN-560 "Linea B610, corsa della sera (finisce dopo mezzanotte)"
+                servizi S-LIN-B610 (tipo riservato, contratto CT-LIN, committente TPV)
+                calendario CAL-FERIALI "Giorni feriali (da lunedi' a sabato, festivi esclusi)", 305 giorni nel periodo; km a pieno 15,1, a vuoto 0
+      23:40  F-PRADELLO  Pradello, Piazza  a bordo non noto
+      23:48  F-CASTELROVO-ALTO  Castelrovo, Alto  km a pieno 5,1  a bordo non noto
+      24:05  F-VALFONDA-PIAZZA  Valfonda, Piazza Grande  km a pieno 8,8  a bordo non noto
+      24:12  F-STAZIONE  Valfonda, Stazione FVV  km a pieno 1,2  a bordo non noto
+                (fermo 2 minuti)
+   24:14-24:22  Trasferimento a vuoto (VUOTO), da F-STAZIONE (Valfonda, Stazione FVV) a L-RIMESSA-ALFA (Valfonda, rimessa Autoservizi Alfa), km a vuoto 1
+   24:22-24:30  Fine servizio con il controllo del mezzo (FINE), a L-RIMESSA-ALFA (Valfonda, rimessa Autoservizi Alfa)
+   Totale del turno: km a pieno 15,1, a vuoto 7,4; fermo 10 minuti.
+
+Totali: 3 turni (nessuno scoperto, nessuno senza mezzo), 3 persone, 1 mezzo; km a pieno 108,5, a vuoto 39,2 (dei mezzi guidati: solo questo mezzo); fermi 2 ore e 7 minuti.

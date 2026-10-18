@@ -16,6 +16,8 @@ struct ProblemaPresentato {
     std::string codice;       // K-CTR-nnn
     std::string messaggio;    // gia' filtrato secondo le classi dei dati
     kzero::Source posizione;  // file vuoto = problema dell'intero pacchetto
+    // Problemi dei turni uguali in molti giorni: i giorni, raggruppati in periodi di giorni consecutivi (dal, al).
+    std::vector<std::pair<kzero::Day, kzero::Day>> giorni;
 };
 
 struct Resoconto {

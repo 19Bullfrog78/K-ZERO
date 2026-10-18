@@ -179,8 +179,12 @@ std::string traduci_messaggio(const std::string& m, const JsonDati* s, const Jso
     if (inizia(m, "Object should have no more than")) return "troppi campi";
     if (inizia(m, "Failed to validate item #")) return "elemento non valido";
     if (inizia(m, "Failed to validate against any schemas allowed by anyOf") ||
-        inizia(m, "Failed to validate against any child schemas allowed by oneOf"))
-        return "nessuna delle forme ammesse e' rispettata";
+        inizia(m, "Failed to validate against any child schemas allowed by oneOf")) {
+        // La descrizione dello schema dice quali sono le forme ammesse (es. "riposo" oppure l'elenco dei turni).
+        std::string forme = s && s->is_object() && s->contains("description") ? s->at("description").get<std::string>() : "";
+        if (!forme.empty() && forme.back() == '.') forme.pop_back();
+        return "nessuna delle forme ammesse e' rispettata" + (forme.empty() ? std::string() : ": " + forme);
+    }
     if (inizia(m, "Failed to validate against exactly one child schema"))
         return "il valore rispetta piu' forme alternative: ne e' ammessa una sola";
     return "non rispetta lo schema (" + m + ")";

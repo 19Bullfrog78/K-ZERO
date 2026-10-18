@@ -1,0 +1,95 @@
+{
+  "schema": "norme",
+  "schema_versione": 1,
+  "norme": [
+    {
+      "codice": "N-IT",
+      "nome": "Italia: abilitazioni per guidare, usi dei mezzi, requisiti",
+      "paese": "IT",
+      "abilitazioni": [
+        { "codice": "B", "nome": "Patente B", "fonte": { "documento": "Codice della strada", "punto": "art. 116, comma 3" } },
+        { "codice": "D1", "nome": "Patente D1", "fonte": { "documento": "Codice della strada", "punto": "art. 116, comma 3" } },
+        { "codice": "D", "nome": "Patente D", "fonte": { "documento": "Codice della strada", "punto": "art. 116, comma 3" } },
+        {
+          "codice": "DE",
+          "nome": "Patente DE (D con rimorchio)",
+          "fonte": { "documento": "Codice della strada", "punto": "art. 116, comma 3" }
+        },
+        {
+          "codice": "CQC-P",
+          "nome": "Carta di qualificazione del conducente (CQC) per il trasporto di persone",
+          "fonte": { "documento": "D.Lgs. 21 novembre 2005, n. 286", "riferimenti": "Direttiva 2003/59/CE" }
+        },
+        {
+          "codice": "KB",
+          "nome": "Certificato di abilitazione professionale di tipo KB",
+          "fonte": { "documento": "Codice della strada", "punto": "art. 116" }
+        },
+        {
+          "codice": "CARTA-COND",
+          "nome": "Carta del conducente (cronotachigrafo digitale)",
+          "fonte": { "documento": "Regolamento (UE) n. 165/2014" },
+          "nota": "Serve sui mezzi con il cronotachigrafo: quando, lo dira' il mandato sugli orari di lavoro (non e' tra i requisiti qui sotto)."
+        }
+      ],
+      "usi": [
+        { "codice": "LINEA", "nome": "Uso di terzi: servizio di linea", "fonte": { "documento": "Codice della strada", "punto": "art. 82" } },
+        { "codice": "NCC", "nome": "Uso di terzi: noleggio con conducente", "fonte": { "documento": "Codice della strada", "punto": "art. 82" } },
+        { "codice": "PROPRIO", "nome": "Uso proprio", "fonte": { "documento": "Codice della strada", "punto": "art. 82" } }
+      ],
+      "requisiti_guida": [
+        {
+          "categorie": ["M1"],
+          "alternative": [{ "abilitazioni": ["B"] }],
+          "fonte": { "documento": "Codice della strada", "punto": "art. 116, comma 3" },
+          "nota": "Autovetture fino a 8 posti oltre al conducente."
+        },
+        {
+          "categorie": ["M1"],
+          "usi": ["NCC"],
+          "alternative": [{ "abilitazioni": ["KB"] }],
+          "fonte": { "documento": "Codice della strada", "punto": "art. 116" },
+          "da_confermare": true,
+          "nota": "Certificato KB per guidare un'autovettura in servizio di noleggio con conducente o di piazza: comma dell'articolo da verificare."
+        },
+        {
+          "categorie": ["M2", "M3"],
+          "alternative": [{ "abilitazioni": ["D"] }, { "abilitazioni": ["D1"], "posti_fino_a": 16, "lunghezza_fino_a_m": 8 }],
+          "fonte": { "documento": "Codice della strada", "punto": "art. 116, comma 3" },
+          "nota": "La patente D1 vale per i mezzi fino a 16 posti oltre al conducente e lunghi al massimo 8 metri; oltre serve la D."
+        },
+        {
+          "categorie": ["M2", "M3"],
+          "rimorchio": true,
+          "alternative": [{ "abilitazioni": ["DE"] }],
+          "fonte": { "documento": "Codice della strada", "punto": "art. 116, comma 3" },
+          "da_confermare": true,
+          "nota": "Rimorchio oltre 750 kg. La D1E per i mezzi piccoli con rimorchio non e' ancora scritta."
+        },
+        {
+          "categorie": ["M2", "M3"],
+          "usi": ["LINEA", "NCC"],
+          "alternative": [{ "abilitazioni": ["CQC-P"] }],
+          "fonte": { "documento": "D.Lgs. 21 novembre 2005, n. 286", "riferimenti": "Direttiva 2003/59/CE" },
+          "nota": "Trasporto di persone per professione con le patenti D1 e D."
+        }
+      ],
+      "usi_per_servizio": [
+        {
+          "tipi_servizio": ["linea"],
+          "usi": ["LINEA"],
+          "fonte": { "documento": "Codice della strada", "punto": "artt. 82 e 87" },
+          "nota": "Un mezzo da noleggio puo' fare servizio di linea solo con la distrazione (art. 87, comma 4; circolare del Ministero dei trasporti n. 27690 del 27/11/2013)."
+        },
+        {
+          "tipi_servizio": ["altro"],
+          "usi": ["NCC"],
+          "fonte": { "documento": "Codice della strada", "punto": "art. 82" },
+          "da_confermare": true,
+          "nota": "Gite e noleggi occasionali. Un servizio 'altro' di genere diverso va scritto nel regolamento del suo contratto."
+        }
+      ],
+      "nota": "Riassunto per il pacchetto dimostrativo: i valori segnati 'da confermare' vanno verificati sul testo delle norme."
+    }
+  ]
+}

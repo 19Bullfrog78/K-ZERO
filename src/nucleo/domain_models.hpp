@@ -19,7 +19,6 @@
 
 namespace kzero {
 
-using Id = std::uint32_t;   // codici numerici rimasti ad autisti, assistenti e giornate dei mezzi (K-008)
 using Code = std::string;   // codice K-Zero di un elemento
 
 struct Coord {
@@ -241,6 +240,28 @@ struct CombinationsRule {
     Source src;
 };
 
+// Usi dei mezzi (carta di circolazione) ammessi per alcuni tipi di servizio, es. scolastico e disabili: linea o
+// noleggio con conducente. Sta nelle norme di un paese e, se un territorio decide diversamente, nel regolamento.
+struct ServiceUses {
+    std::vector<ServiceKind> kinds;
+    std::vector<Ref> uses;   // codici degli usi (norme del paese)
+    Source src;
+};
+
+struct ServiceUsesRule {
+    std::vector<ServiceUses> values;
+    RuleSource source;
+    Source src;
+};
+
+// Per alcuni tipi di servizio l'autista ha bisogno di un'autorizzazione del committente (es. un cartellino di
+// riconoscimento per i servizi speciali).
+struct ClientAuthorizationRule {
+    std::vector<ServiceKind> kinds;
+    RuleSource source;
+    Source src;
+};
+
 struct Regulation {
     Code code;
     std::string authority;   // ente
@@ -260,7 +281,77 @@ struct Regulation {
     std::optional<GradesRule> dropoff_without_adult;  // discesa senza adulto ammessa con l'autorizzazione dei genitori
     std::optional<StandingRule> standing;
     std::optional<CombinationsRule> forbidden;
+    std::optional<ServiceUsesRule> vehicle_uses;                 // usi dei mezzi per tipo di servizio (versione 2)
+    std::optional<ClientAuthorizationRule> client_authorization; // autorizzazione del committente (versione 2)
     Source src;
+};
+
+// --- Norme di un paese: abilitazioni, usi dei mezzi, requisiti per guidare ----------------------------------
+// Tutto e' un dato con la fonte: nessuna patente, nessun uso e nessun requisito e' scritto nel codice.
+
+// Una voce di un elenco delle norme: un'abilitazione (es. patente D1, CQC persone) o un uso dei mezzi (es. servizio
+// di linea, noleggio con conducente, uso proprio).
+struct NormEntry {
+    Code code;
+    std::string name;
+    std::optional<RuleSource> source;
+    std::string note;
+    Source src;
+};
+
+// Un modo per soddisfare un requisito: tutte queste abilitazioni insieme, se il mezzo rispetta i limiti indicati
+// (es. patente D1 solo fino a 16 posti e 8 m di lunghezza).
+struct LicenceAlternative {
+    std::vector<Ref> licences;
+    std::optional<int> max_seats;          // posti per i passeggeri
+    std::optional<double> max_length_m;    // un mezzo senza lunghezza non rispetta il limite (prudenza)
+    Source src;
+};
+
+// Requisito per guidare i mezzi di alcune categorie: vale se il mezzo e' di una delle categorie, ha i posti
+// indicati, il rimorchio indicato e (se ci sono usi) uno degli usi. L'autista deve soddisfare una delle alternative.
+// Valgono tutti i requisiti che corrispondono al mezzo (es. la patente per le dimensioni e la CQC per l'uso).
+struct DrivingRequirement {
+    std::vector<VehicleCategory> categories;
+    std::optional<int> min_seats, max_seats;
+    std::optional<bool> trailer;
+    std::vector<Ref> uses;
+    std::vector<LicenceAlternative> alternatives;
+    RuleSource source;
+    bool to_confirm = false;
+    std::string note;
+    Source src;
+};
+
+struct ServiceUsesNorm {
+    ServiceUses value;
+    RuleSource source;
+    bool to_confirm = false;
+    std::string note;
+    Source src;
+};
+
+struct Norms {
+    Code code;
+    std::string name;
+    std::string country;   // ISO 3166-1, es. "IT"
+    std::vector<NormEntry> licences;
+    std::vector<NormEntry> uses;
+    std::vector<DrivingRequirement> requirements;
+    std::vector<ServiceUsesNorm> service_uses;
+    std::string note;
+    Source src;
+
+    const NormEntry* licence(const Code& c) const {
+        for (const auto& e : licences)
+            if (e.code == c) return &e;
+        return nullptr;
+    }
+    const NormEntry* use(const Code& c) const {
+        for (const auto& e : uses)
+            if (e.code == c) return &e;
+        return nullptr;
+    }
 };
 
 // --- Calendari ----------------------------------------------------------------------
@@ -276,6 +367,49 @@ struct Suspension {
     Source src;
 };
 
+// Calendario delle festivita' di un paese o di un territorio (es. le feste nazionali, il santo patrono di un
+// comune), con la fonte. Nessuna festivita' e' scritta nel codice, nemmeno quelle mobili come Pasqua: le date
+// sono dati.
+struct Holiday {
+    Day day = 0;
+    std::string name;          // es. "Natale"
+    bool to_confirm = false;   // da confermare
+    std::string note;
+    Source src;
+};
+
+struct HolidayCalendar {
+    Code code;
+    std::string name;
+    std::string country;     // codice ISO 3166-1 del paese, es. "IT"
+    std::string territory;   // vuoto = tutto il paese
+    RuleSource source;       // documento, punto, riferimenti
+    std::vector<Holiday> days;
+    std::string note;
+    Source src;
+
+    bool contains(Day d) const {
+        for (const auto& h : days)
+            if (h.day == d) return true;
+        return false;
+    }
+};
+
+// Un calendario puo' aggiungere o togliere i giorni di altri calendari o di calendari delle festivita'.
+enum class CalendarLinkKind { Calendar, Holidays };
+
+struct CalendarLink {
+    CalendarLinkKind kind = CalendarLinkKind::Calendar;
+    Ref ref;
+};
+
+// Un calendario vale in un giorno se (in quest'ordine, il primo che decide vince):
+// - il giorno non e' una data tolta e non cade in una sospensione (altrimenti no);
+// - il giorno e' una data aggiunta (allora si');
+// - il giorno sta nel periodo (altrimenti no);
+// - il giorno non e' un giorno di un calendario tolto (removes; altrimenti no);
+// - il giorno e' un giorno di un calendario aggiunto (adds; allora si');
+// - il giorno e' uno dei giorni della settimana e, se c'e' una base, vale anche la base.
 struct Calendar {
     Code code;
     std::string name;
@@ -285,6 +419,7 @@ struct Calendar {
     Weekdays days;
     std::vector<DayEntry> added, removed;
     std::vector<Suspension> suspensions;
+    std::vector<CalendarLink> adds, removes;   // giorni di altri calendari aggiunti e tolti
     Source src;
 };
 
@@ -483,6 +618,7 @@ struct Service {
     std::optional<int> agree_threshold_min;   // oltre questo spostamento un cambio d'orario e' "da concordare"
     VehicleRules rules;                       // proprie del servizio, se diverse dal contratto
     std::vector<PassengerGroup> groups;       // la domanda
+    std::vector<Ref> competences;             // competenze richieste a chi lo fa (versione 2; dato particolare)
     Source src;
 };
 
@@ -581,6 +717,38 @@ struct Power {
     std::optional<int> min_charge_percent;      // elettrici: carica minima
 };
 
+// Persona o mezzo prestato a un'altra azienda (subaffidamento, consorzio, noleggio con conducente): ammesso nei
+// turni di quell'azienda solo se dichiarato, con il riferimento dell'accordo.
+struct Loan {
+    Ref company;             // azienda che lo riceve
+    std::string agreement;   // riferimento dell'accordo
+    std::optional<Day> from, to;
+    Source src;
+
+    bool covers(Day d) const { return (!from || d >= *from) && (!to || d <= *to); }
+};
+
+// Autorizzazione a un uso in piu' rispetto alla carta di circolazione (in Italia la "distrazione": es. un mezzo di
+// linea che fa noleggio), per singolo mezzo e con le date. Chi la rilascia e' un dato.
+struct UseAuthorization {
+    Ref use;                  // l'uso autorizzato
+    std::string authority;    // ente che la rilascia
+    std::string reference;    // riferimento del documento
+    DateRange period;
+    std::string prescriptions;
+    Source src;
+};
+
+// Vincolo di destinazione: il mezzo fa solo certi servizi (per tipo o per contratto), fino a una data.
+struct DestinationConstraint {
+    std::vector<ServiceKind> kinds;
+    std::vector<Ref> contracts;
+    std::optional<Day> until;
+    std::string source;   // da dove viene il vincolo (es. il contributo pubblico)
+    std::string note;
+    Source src;
+};
+
 struct Vehicle {
     Code code;
     Ref company;
@@ -603,6 +771,12 @@ struct Vehicle {
     std::optional<double> daily_fixed_cost;   // nella valuta del pacchetto: assicurazione, bollo, ammortamento
     std::optional<double> cost_per_km;
     bool hypothetical = false;          // non ancora in flotta (scenari)
+    // Versione 2 di mezzi.json.
+    std::optional<Ref> use;                       // uso della carta di circolazione (norme del paese)
+    std::vector<UseAuthorization> use_authorizations;
+    std::optional<DestinationConstraint> constraint;
+    bool spare = false;                           // mezzo di scorta: non usarlo non e' un avviso
+    std::vector<Loan> loans;
     Source src;
 };
 
@@ -682,12 +856,308 @@ struct DwellTimes {
     Source src;
 };
 
+// --- Persone (autisti e assistenti a bordo) -------------------------------------------------------------
+// Codice, azienda, presa servizio, mezzo abituale, ipotetica e prestiti sono dati comuni; il resto e' personale.
+// Minimizzazione: nessun campo per codice fiscale, telefoni, mail, data di nascita, idoneita' medica.
+
+enum class PersonRole { Driver, Escort };   // autista, assistente a bordo
+
+enum class EmploymentKind {
+    Owner, FamilyHelper, Partner, FullTime, PartTime, OnCall, FixedTerm, Seasonal, SelfEmployed, Volunteer, Other
+};
+
+struct HoursLimits {   // ore (con decimali) per giorno, settimana, mese
+    std::optional<double> day, week, month;
+};
+
+struct DatedHours {
+    std::optional<Day> from, to;
+    std::optional<HoursLimits> planned, max;
+    Source src;
+};
+
+// Fascia di disponibilita': nei giorni indicati, dalle alle.
+struct Availability {
+    std::optional<Day> from, to;
+    Weekdays days;
+    Minutes start = 0, end = 0;
+    Source src;
+
+    bool covers_date(Day d) const { return (!from || d >= *from) && (!to || d <= *to); }
+};
+
+struct HourlyCost {
+    std::optional<Day> from, to;
+    double value = 0.0;
+    Source src;
+};
+
+// Abilitazione (patente, CQC...): il tipo e' un codice delle norme del paese.
+struct Licence {
+    Ref type;
+    std::optional<Day> expiry;   // ultimo giorno di validita'
+    std::string reference;
+    Source src;
+
+    bool valid_on(Day d) const { return !expiry || d <= *expiry; }
+};
+
+// Autorizzazione del committente (es. cartellino di riconoscimento per i servizi speciali).
+struct ClientAuthorization {
+    Ref client;
+    std::string reference;
+    std::optional<Day> expiry;
+    Source src;
+
+    bool valid_on(Day d) const { return !expiry || d <= *expiry; }
+};
+
+// Preferenza della persona: dato morbido (avviso se non rispettata), distinto dalla disponibilita' (rigida).
+enum class PreferenceKind { FreeDays, TimeWindow, AvoidShifts, MaxBreak, Other };
+
+struct Preference {
+    PreferenceKind kind = PreferenceKind::Other;
+    std::optional<Day> from, to;
+    Weekdays days;                 // giorni liberi
+    Minutes start = 0, end = 0;    // fascia oraria
+    std::vector<Ref> shifts;       // turni da evitare
+    int max_break_min = 0;         // pausa massima dentro un turno
+    std::string description;
+    Source src;
+
+    bool covers_date(Day d) const { return (!from || d >= *from) && (!to || d <= *to); }
+};
+
+struct Person {
+    Code code;
+    Ref company;
+    std::vector<PersonRole> roles;
+    std::string name;                 // personale
+    std::optional<Home> home;         // personale
+    std::optional<Ref> base_place;    // rimessa o luogo abituale di presa servizio
+    std::optional<Ref> usual_vehicle; // mezzo abituale
+    bool hypothetical = false;        // non ancora assunta (scenari)
+    EmploymentKind employment = EmploymentKind::Other;
+    std::string employment_description;
+    std::string agreement_code, agreement_name;   // contratto collettivo
+    std::vector<DatedHours> hours;
+    std::vector<Availability> availability;
+    std::vector<HourlyCost> hourly_cost;
+    std::vector<Licence> licences;
+    std::vector<ClientAuthorization> authorizations;
+    std::vector<Ref> competences;
+    std::vector<Preference> preferences;
+    std::vector<Loan> loans;
+    std::string note;                 // personale
+    Source src;
+
+    bool has_role(PersonRole r) const { return std::find(roles.begin(), roles.end(), r) != roles.end(); }
+    bool has_competence(const Code& c) const {
+        for (const auto& k : competences)
+            if (k.code == c) return true;
+        return false;
+    }
+};
+
+// Assenza programmata: solo il tipo (elenco dell'azienda), mai la causa.
+struct Absence {
+    Ref person;
+    Ref type;
+    DateRange days;
+    std::optional<Minutes> start, end;   // solo una parte di ogni giorno
+    Source src;
+};
+
+// Fermo programmato di un mezzo (es. revisione).
+struct VehicleStop {
+    Ref vehicle;
+    Ref type;
+    DateRange days;
+    std::optional<Minutes> start, end;
+    std::string note;
+    Source src;
+};
+
+// --- Turni del giorno, rotazioni, servizi fissi, assegnazioni del singolo giorno, blocchi -----------------
+// Il turno del giorno e' l'unita' di base: il lavoro di una persona in un giorno. Chi lo fa lo dicono tre modi, dal
+// piu' generale al piu' preciso (vince il piu' preciso, turno per turno): rotazione, servizio fisso, assegnazione del
+// singolo giorno. Se nessuno da' una persona il turno e' scoperto: il programma non inventa assegnazioni.
+
+enum class ShiftRole { Driver, Escort, SecondDriver };   // autista, assistente a bordo, secondo autista
+
+// Mezzo del turno: preciso, il mezzo abituale dell'autista, da assegnare, nessuno.
+enum class ShiftVehicleMode { Specific, Usual, ToAssign, None };
+
+// Passaggio di una corsa che segna l'inizio o la fine di un pezzo: luogo e, se la corsa ci passa piu' volte, orario.
+struct TripPoint {
+    Ref place;
+    std::optional<Minutes> time;
+    Source src;
+};
+
+// Una corsa del turno, intera o un pezzo (cambio dell'autista lungo la corsa in un punto di cambio).
+struct ShiftTrip {
+    Ref trip;
+    std::optional<TripPoint> from, to;
+    std::optional<EscortProvider> escort;   // chi fornisce l'assistente su questa corsa, se diverso dal contratto
+};
+
+// Attivita' senza passeggeri (tipo dall'elenco dell'azienda): luogo, orari, eventuali km a vuoto scritti a mano.
+struct ShiftActivity {
+    Ref type;
+    Ref place;
+    std::optional<Ref> to_place;
+    Minutes start = 0, end = 0;
+    std::optional<double> empty_km;
+    std::optional<Ref> calendar;   // giorni in cui c'e' l'attivita' (dentro quelli del turno)
+    std::string note;
+};
+
+struct ShiftItem {
+    bool is_trip = true;
+    ShiftTrip trip;
+    ShiftActivity activity;
+    Source src;
+};
+
+struct Shift {
+    Code code;
+    std::string name;   // nome dato dall'azienda (es. "Primo")
+    Ref company;
+    ShiftRole role = ShiftRole::Driver;
+    Ref calendar;
+    ShiftVehicleMode vehicle_mode = ShiftVehicleMode::None;
+    std::optional<Ref> vehicle;   // solo con il mezzo preciso
+    Source vehicle_src;           // dove e' scritto il mezzo del turno
+    Ref start_place, end_place;
+    std::vector<ShiftItem> items;
+    std::vector<Ref> competences;   // competenze richieste (dato particolare)
+    std::string note;
+    Source src;
+};
+
+enum class RotationUnit { Day, Month };   // passi di un giorno o di un mese di calendario
+
+struct RotationStep {
+    bool rest = false;            // "riposo"
+    std::vector<Ref> shifts;      // turni del passo
+    Source src;
+};
+
+struct RotationRow {
+    Ref person;
+    std::vector<RotationStep> steps;
+    Source src;
+};
+
+struct Rotation {
+    Code code;
+    std::string name;
+    RotationUnit unit = RotationUnit::Day;
+    int length = 1;                 // passi del ciclo
+    Day start = 0;                  // giorno del primo passo
+    std::optional<Day> from, to;    // validita' (senza dal: dalla partenza; senza al: fino alla fine del pacchetto)
+    std::vector<RotationRow> rows;
+    std::string note;
+    Source src;
+
+    // Passo del ciclo (da 0 a length - 1) nel giorno d: il ciclo si conta dalla partenza anche prima e dopo.
+    int step_index(Day d) const {
+        long long k = 0;
+        if (unit == RotationUnit::Day) {
+            k = static_cast<long long>(d) - start;
+        } else {
+            int y1 = 0, m1 = 0, d1 = 0, y2 = 0, m2 = 0, d2 = 0;
+            ymd_from_day(start, y1, m1, d1);
+            ymd_from_day(d, y2, m2, d2);
+            k = (static_cast<long long>(y2) * 12 + m2) - (static_cast<long long>(y1) * 12 + m1);
+        }
+        const long long n = length > 0 ? length : 1;
+        return static_cast<int>(((k % n) + n) % n);
+    }
+    bool valid_on(Day d, Day package_end) const { return d >= from.value_or(start) && d <= to.value_or(package_end); }
+};
+
+// Servizio fisso: un turno sempre alla stessa persona, nei giorni del suo calendario.
+struct FixedAssignment {
+    Code code;
+    Ref shift;
+    Ref person;
+    Ref calendar;
+    std::string note;   // dato personale
+    Source src;
+};
+
+// Assegnazione del singolo giorno: la persona, il mezzo o tutti e due.
+struct DayAssignment {
+    Day date = 0;
+    Ref shift;
+    std::optional<Ref> person, vehicle;
+    std::string note;   // dato personale
+    Source src;
+};
+
+enum class BlockStrength { VehicleFixed, AllFixed };   // mezzo fisso, tutto fisso
+
+// Blocco: vincolo per il calcolo futuro (le corse restano a quel mezzo).
+struct Block {
+    Code code;
+    Ref vehicle;
+    std::vector<Ref> trips;
+    std::optional<Day> from, to;
+    BlockStrength strength = BlockStrength::VehicleFixed;
+    std::string note;
+    Source src;
+
+    bool valid_on(Day d) const { return (!from || d >= *from) && (!to || d <= *to); }
+};
+
 // --- Pacchetto dati ------------------------------------------------------------------------
 
 struct Company {
     Code code;
     std::string name;
     Source src;
+};
+
+// --- Elenchi e impostazioni di un'azienda ---------------------------------------------------------------------
+// L'organizzazione la sceglie l'azienda: i tipi di attivita', di assenza, di fermo dei mezzi e le competenze sono
+// elenchi nei dati, con i nomi dell'azienda. Nel codice c'e' solo cio' che serve a un controllo.
+
+enum class ShelterNearHome { Preferred, Allowed, Never };     // ricovero dei mezzi vicino a casa dell'autista
+enum class DriverVehiclePairing { None, Preferred, Fixed };   // abbinamento autista-mezzo
+
+struct ActivityType {
+    Code code;
+    std::string name;
+    bool uses_vehicle = true;   // l'attivita' impegna il mezzo del turno (es. pulizia si', spostamento a piedi no)
+    std::string note;
+    Source src;
+};
+
+struct ListEntry {
+    Code code;
+    std::string name;
+    std::string note;
+    Source src;
+};
+
+struct CompanySettings {
+    Ref company;
+    std::optional<Ref> norms;   // norme del paese che valgono per l'azienda
+    ShelterNearHome shelter = ShelterNearHome::Allowed;
+    DriverVehiclePairing pairing = DriverVehiclePairing::None;
+    std::vector<ActivityType> activities;
+    std::vector<ListEntry> absence_types, stop_types, competences;
+    std::string note;
+    Source src;
+
+    template <class T>
+    static const T* find_in(const std::vector<T>& v, const Code& c) {
+        for (const auto& e : v)
+            if (e.code == c) return &e;
+        return nullptr;
+    }
 };
 
 enum class Level { NumbersOnly, Full };                      // "solo numeri", "completo"
@@ -713,9 +1183,12 @@ struct Manifest {
 // Tutti i dati di un pacchetto. I luoghi privati (case) stanno insieme ai pubblici, segnati da is_private.
 struct Package {
     Manifest manifest;
+    std::vector<CompanySettings> company_settings;
+    std::vector<Norms> norms;
     std::vector<Place> places;
     std::vector<RoadSegment> segments;
     std::vector<Regulation> regulations;
+    std::vector<HolidayCalendar> holidays;
     std::vector<Calendar> calendars;
     std::vector<School> schools;
     std::vector<Client> clients;
@@ -726,6 +1199,14 @@ struct Package {
     std::vector<Vehicle> vehicles;
     std::vector<Depot> depots;
     std::optional<DwellTimes> dwell;
+    std::vector<Person> persons;
+    std::vector<Absence> absences;
+    std::vector<VehicleStop> stops;
+    std::vector<Shift> shifts;
+    std::vector<Rotation> rotations;
+    std::vector<FixedAssignment> fixed;
+    std::vector<DayAssignment> day_assignments;
+    std::vector<Block> blocks;
 };
 
 // --- Regole del mestiere sulle corse --------------------------------------------------------
@@ -822,34 +1303,9 @@ inline bool needs_assistant(const ConditionsRule* rule, const OnBoard& b, int pa
     return false;
 }
 
-// --- Persone (autisti e assistenti) e giornate: da riallineare nel K-008 --------------------
+// --- Pesi del calcolo ----------------------------------------------------------------------------------------
 
-// Assistente/accompagnatore a bordo: una persona con i suoi orari, come l'autista.
-struct Escort {
-    Id id = 0;
-    std::string name;
-    Coord home;                     // dove sale a bordo se non e' gia' sul mezzo
-    TimeWindow availability;        // inizio e fine servizio
-    EscortProvider provider = EscortProvider::Client;
-    double hourly_cost = 0.0;       // costo all'ora, conta solo se provider = Company
-};
-
-struct Driver {
-    Id id = 0;
-    std::string name;
-    Coord home;                     // abitazione
-    TimeWindow availability;        // inizio e fine servizio
-    Minutes max_driving = 0;        // guida massima nel turno
-    std::vector<VehicleCategory> allowed_categories;   // patenti / abilitazioni
-    // Preferenza (non obbligo): pause lunghe vicino a casa
-    bool wants_break_near_home = true;
-    double home_radius_km = 5.0;    // entro quanti km la pausa conta "vicino a casa"
-    Minutes min_home_break = 60;    // sotto questa durata non vale la pena andare a casa
-    double max_home_detour_km = 10.0;   // km in piu' accettati per andare verso casa;
-                                        // oltre, l'autista aspetta alla fermata
-};
-
-// Quanto pesa ogni voce nel calcolo. I valori sono DA DECIDERE con l'azienda:
+// Quanto pesa ogni voce nel calcolo. I valori sono DA DECIDERE con l'azienda (mandato del calcolo):
 // dicono al programma, ad esempio, quanti km a vuoto vale una pausa vicino a casa.
 struct ObjectiveWeights {
     double per_empty_km = 1.0;              // ogni km a vuoto
@@ -857,60 +1313,5 @@ struct ObjectiveWeights {
     double per_commute_km = 0.5;            // ogni km casa-ricovero dell'autista
     double per_missed_home_break = 10.0;    // pausa lunga lontano da casa
 };
-
-// Giornata tipo di un mezzo: piu' corse in sequenza con lo stesso autista.
-struct Schedule {
-    Id vehicle_id = 0;
-    Id driver_id = 0;
-    Id parking_id = 0;          // dove il mezzo inizia e finisce la giornata
-    std::vector<Trip> routes;
-
-    double loaded_km() const {
-        double t = 0; for (const auto& r : routes) t += r.loaded_km(); return t;
-    }
-    double empty_km() const {
-        double t = 0; for (const auto& r : routes) t += r.empty_km(); return t;
-    }
-    Minutes idle_minutes() const {  // tempi morti tra una corsa e l'altra
-        Minutes t = 0;
-        for (std::size_t i = 1; i < routes.size(); ++i)
-            t += routes[i].start() - routes[i - 1].end();
-        return t;
-    }
-};
-
-// Pause lunghe del turno: quante cadono vicino a casa dell'autista, quante no e quante non si possono
-// giudicare (luogo senza coordinate).
-struct BreakReport {
-    int near_home = 0;
-    int far_from_home = 0;
-    int unknown = 0;
-};
-
-// find_place(codice) restituisce il luogo (const Place*) oppure nullptr.
-template <class FindPlace>
-BreakReport check_home_breaks(const Schedule& s, const Driver& d, FindPlace find_place) {
-    BreakReport rep;
-    for (std::size_t i = 1; i < s.routes.size(); ++i) {
-        const auto& prev = s.routes[i - 1];
-        const auto& next = s.routes[i];
-        if (prev.passages.empty() || next.passages.empty()) continue;
-        if (next.start() - prev.end() < d.min_home_break) continue;   // pausa breve: non conta
-        const Place* a = find_place(prev.passages.back().place.code);
-        const Place* b = find_place(next.passages.front().place.code);
-        if (!a || !b || !a->coord || !b->coord) {
-            ++rep.unknown;
-            continue;
-        }
-        const bool near = air_km(*a->coord, d.home) <= d.home_radius_km && air_km(*b->coord, d.home) <= d.home_radius_km;
-        near ? ++rep.near_home : ++rep.far_from_home;
-    }
-    return rep;
-}
-
-// Tragitto casa -> ricovero del mezzo (andata e ritorno), in km.
-inline double driver_commute_km(const Driver& d, const Coord& depot) {
-    return 2.0 * air_km(d.home, depot);
-}
 
 }  // namespace kzero

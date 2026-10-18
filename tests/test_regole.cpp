@@ -8,6 +8,7 @@
 #include "domain_models.hpp"
 #include "pacchetto.hpp"
 #include "pacchetto_demo.hpp"
+#include "turni.hpp"
 
 using namespace kzero;
 using namespace kzero::prove;
@@ -242,7 +243,8 @@ TEST(Regole, handicap_con_accompagnatore_assistente_obbligatorio) {
     EXPECT_TRUE(needs_assistant(regola_assistente("R-INV"), con_d3, posti));
 }
 
-// Pause: sotto i 60 minuti non contano; quella lunga lontano da casa viene segnalata.
+// Pause a casa (K-008): la regola (minuti e km) non e' ancora nei dati e non e' scritta nel codice; qui la scrive la
+// prova (60 minuti, 5 km). Senza regola, o senza le coordinate di casa, la funzione non giudica.
 // Luoghi e coordinate del demo: L-MEDIE (Valfonda) e F-LAGOBELLO, a circa 6 km.
 namespace {
 
@@ -256,48 +258,73 @@ Trip tratto(const std::string& da, Minutes partenza, const std::string& a, Minut
     return t;
 }
 
-Driver autista_di_valfonda() {
-    Driver d;
-    d.home = *per_codice(demo().places, "L-MEDIE").coord;
-    return d;   // pausa da casa: almeno 60 minuti, entro 5 km
+// Turno del giorno fatto di corse gia' pronte (le corse devono restare in vita finche' si usa il turno).
+ShiftDay turno_con(const std::vector<Trip>& corse) {
+    ShiftDay sd;
+    for (const Trip& t : corse) {
+        PlannedItem it;
+        it.trip = &t;
+        it.from = 0;
+        it.to = t.passages.size() - 1;
+        it.start = t.start();
+        it.end = t.end();
+        sd.items.push_back(it);
+    }
+    return sd;
 }
 
-BreakReport pause(const Schedule& s) {
+Person autista_di_valfonda() {
+    Person p;
+    p.home = Home{"", "", per_codice(demo().places, "L-MEDIE").coord};
+    return p;
+}
+
+const HomeBreakRule kRegolaDiProva{60, 5.0, std::nullopt};   // scritta dalla prova, non dal programma
+
+BreakReport pause(const std::vector<Trip>& corse) {
     const Index idx(demo());
-    return check_home_breaks(s, autista_di_valfonda(), [&](const Code& c) { return idx.place(c); });
+    const auto r = check_home_breaks(turno_con(corse), autista_di_valfonda(), kRegolaDiProva, [&](const Code& c) { return idx.place(c); });
+    return r ? *r : BreakReport{-1, -1, -1};
 }
 
 }  // namespace
 
 TEST(Regole, pausa_breve_non_conta) {
-    Schedule s;
-    s.routes = {tratto("L-MEDIE", ora("07:00"), "F-LAGOBELLO", ora("07:30")),
-                tratto("F-LAGOBELLO", ora("08:29"), "L-MEDIE", ora("09:00"))};   // 59 minuti fermo a Lagobello
-    const BreakReport br = pause(s);
+    const BreakReport br = pause({tratto("L-MEDIE", ora("07:00"), "F-LAGOBELLO", ora("07:30")),
+                                  tratto("F-LAGOBELLO", ora("08:29"), "L-MEDIE", ora("09:00"))});   // 59 minuti fermo a Lagobello
     EXPECT_EQ(br.near_home, 0);
     EXPECT_EQ(br.far_from_home, 0);
     EXPECT_EQ(br.unknown, 0);
 }
 
 TEST(Regole, pausa_lunga_lontano_segnalata) {
-    Schedule lontano;
-    lontano.routes = {tratto("L-MEDIE", ora("07:00"), "F-LAGOBELLO", ora("07:30")),
-                      tratto("F-LAGOBELLO", ora("08:30"), "L-MEDIE", ora("09:00"))};   // 60 minuti fermo a Lagobello
-    const BreakReport br = pause(lontano);
+    const BreakReport br = pause({tratto("L-MEDIE", ora("07:00"), "F-LAGOBELLO", ora("07:30")),
+                                  tratto("F-LAGOBELLO", ora("08:30"), "L-MEDIE", ora("09:00"))});   // 60 minuti fermo a Lagobello
     EXPECT_EQ(br.far_from_home, 1);
     EXPECT_EQ(br.near_home, 0);
 
     // Controprova: la stessa pausa a Valfonda (vicino a casa) non e' segnalata.
-    Schedule vicino;
-    vicino.routes = {tratto("F-LAGOBELLO", ora("07:00"), "L-MEDIE", ora("07:30")),
-                     tratto("L-MEDIE", ora("09:00"), "F-LAGOBELLO", ora("09:30"))};
-    const BreakReport bv = pause(vicino);
+    const BreakReport bv = pause({tratto("F-LAGOBELLO", ora("07:00"), "L-MEDIE", ora("07:30")),
+                                  tratto("L-MEDIE", ora("09:00"), "F-LAGOBELLO", ora("09:30"))});
     EXPECT_EQ(bv.far_from_home, 0);
     EXPECT_EQ(bv.near_home, 1);
 
     // Un luogo senza coordinate (F-CASTELROVO-ALTO): la pausa non si puo' giudicare.
-    Schedule senza;
-    senza.routes = {tratto("L-MEDIE", ora("07:00"), "F-CASTELROVO-ALTO", ora("07:30")),
-                    tratto("F-CASTELROVO-ALTO", ora("09:00"), "L-MEDIE", ora("09:30"))};
-    EXPECT_EQ(pause(senza).unknown, 1);
+    EXPECT_EQ(pause({tratto("L-MEDIE", ora("07:00"), "F-CASTELROVO-ALTO", ora("07:30")),
+                     tratto("F-CASTELROVO-ALTO", ora("09:00"), "L-MEDIE", ora("09:30"))})
+                  .unknown,
+              1);
+}
+
+// Senza regola della pausa (non ancora nei dati) o senza le coordinate di casa la funzione non giudica: nessun valore
+// di 5 km, 60 minuti o 10 km e' scritto nel codice.
+TEST(Regole, pausa_senza_dati_non_giudica) {
+    const std::vector<Trip> corse = {tratto("L-MEDIE", ora("07:00"), "F-LAGOBELLO", ora("07:30")),
+                                     tratto("F-LAGOBELLO", ora("09:00"), "L-MEDIE", ora("09:30"))};
+    const Index idx(demo());
+    const auto luogo = [&](const Code& c) { return idx.place(c); };
+    EXPECT_FALSE(check_home_breaks(turno_con(corse), autista_di_valfonda(), std::nullopt, luogo).has_value());
+    EXPECT_FALSE(check_home_breaks(turno_con(corse), Person{}, kRegolaDiProva, luogo).has_value());
+    EXPECT_FALSE(commute_km(Person{}, Coord{46.4, 11.0}).has_value());
+    EXPECT_GT(*commute_km(autista_di_valfonda(), *per_codice(demo().places, "F-LAGOBELLO").coord), 10.0);
 }

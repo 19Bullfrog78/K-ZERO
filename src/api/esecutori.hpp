@@ -10,6 +10,7 @@ namespace kzero::api {
 Risultato esegui_controlla(const DefinizioneComando& comando, const Parametri& parametri);
 Risultato esegui_descrivi(const DefinizioneComando& comando, const Parametri& parametri);
 Risultato esegui_dimostrazione(const DefinizioneComando& comando, const Parametri& parametri);
+Risultato esegui_giornata(const DefinizioneComando& comando, const Parametri& parametri);
 Risultato esegui_versione(const DefinizioneComando& comando, const Parametri& parametri);
 
 }  // namespace kzero::api

@@ -1,0 +1,65 @@
+{
+  "schema": "rotazioni",
+  "schema_versione": 1,
+  "rotazioni": [
+    {
+      "codice": "ROT-ALFA",
+      "nome": "Primo e secondo, ciclo di 14 giorni",
+      "passo": "giorno",
+      "lunghezza": 14,
+      "partenza": "2026-08-31",
+      "righe": [
+        {
+          "persona": "P-A",
+          "passi": [
+            ["T-PRIMO"],
+            ["T-DIS", "T-SECONDO"],
+            ["T-DIS", "T-SECONDO"],
+            ["T-PRIMO"],
+            ["T-PRIMO"],
+            "riposo",
+            "riposo",
+            ["T-DIS", "T-SECONDO"],
+            ["T-PRIMO"],
+            ["T-PRIMO"],
+            ["T-DIS", "T-SECONDO"],
+            ["T-DIS", "T-SECONDO"],
+            ["T-SABATO"],
+            "riposo"
+          ]
+        },
+        {
+          "persona": "P-B",
+          "passi": [
+            ["T-DIS", "T-SECONDO"],
+            ["T-PRIMO"],
+            ["T-PRIMO"],
+            ["T-DIS", "T-SECONDO"],
+            ["T-DIS", "T-SECONDO"],
+            ["T-SABATO"],
+            "riposo",
+            ["T-PRIMO"],
+            ["T-DIS", "T-SECONDO"],
+            ["T-DIS", "T-SECONDO"],
+            ["T-PRIMO"],
+            ["T-PRIMO"],
+            "riposo",
+            "riposo"
+          ]
+        }
+      ]
+    },
+    {
+      "codice": "ROT-BETA",
+      "nome": "Linea 7 su 7, ciclo di 3 giorni",
+      "passo": "giorno",
+      "lunghezza": 3,
+      "partenza": "2026-09-01",
+      "righe": [
+        { "persona": "P-B1", "passi": [["T-B-PRIMO", "T-B-FESTIVO"], "riposo", ["T-B-ASILO", "T-B-SERA"]] },
+        { "persona": "P-B2", "passi": [["T-B-ASILO", "T-B-SERA"], ["T-B-PRIMO", "T-B-FESTIVO"], "riposo"] },
+        { "persona": "P-B3", "passi": ["riposo", ["T-B-ASILO", "T-B-SERA"], ["T-B-PRIMO", "T-B-FESTIVO"]] }
+      ]
+    }
+  ]
+}

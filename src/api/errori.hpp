@@ -41,6 +41,12 @@ enum class Errore {
     UscitaNonScrivibile,
     MancaArgomento,
     CartellaNonTrovata,
+    ParametroObbligatorio,
+    ValoreScrittoMale,
+    ParametriIncompatibili,
+    DataFuoriPeriodo,
+    ElementoNonTrovato,
+    PacchettoConErrori,
 };
 
 struct DefinizioneErrore {

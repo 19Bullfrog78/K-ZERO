@@ -1,0 +1,303 @@
+{
+  "schema": "corse",
+  "schema_versione": 1,
+  "corse": [
+    {
+      "codice": "C-AM-1",
+      "nome": "Andata mattina, giro 1",
+      "codici_esterni": [{ "sistema": "Consorzio Valle Alta", "tipo": "giro", "codice": "2050001/1-G1" }],
+      "servizi": ["S-SCU-AM"],
+      "calendario": "CAL-SCUOLA-LV",
+      "passaggi": [
+        { "luogo": "L-RIMESSA-ALFA", "orario": "06:55" },
+        {
+          "luogo": "F-PRADELLO",
+          "orario": "07:10",
+          "persone": [{ "gruppo": "G-AM-MEDIE", "salgono": 9 }],
+          "km": { "vuoti": 6.4 }
+        },
+        {
+          "luogo": "F-CASTELROVO",
+          "orario": "07:18",
+          "persone": [{ "gruppo": "G-AM-MEDIE", "salgono": 7 }],
+          "km": { "pieni": 3.9 }
+        },
+        {
+          "luogo": "L-MEDIE",
+          "orario": "07:35",
+          "persone": [{ "gruppo": "G-AM-MEDIE", "scendono": 16 }],
+          "km": { "pieni": 8.1 }
+        }
+      ],
+      "km_totali": { "pieni": 12.0, "vuoti": 6.4 },
+      "testo_esposto": "SCUOLABUS"
+    },
+    {
+      "codice": "C-AM-2",
+      "nome": "Andata mattina, giro 2",
+      "codici_esterni": [{ "sistema": "Consorzio Valle Alta", "tipo": "giro", "codice": "2050001/1-G2" }],
+      "servizi": ["S-SCU-AM"],
+      "calendario": "CAL-SCUOLA-LV",
+      "passaggi": [
+        { "luogo": "L-RIMESSA-ALFA", "orario": "06:50" },
+        {
+          "luogo": "F-CASTELROVO",
+          "orario": "07:12",
+          "persone": [{ "gruppo": "G-AM-MEDIE", "salgono": 1 }],
+          "km": { "vuoti": 8.0 }
+        },
+        {
+          "luogo": "F-MONTEBRINO",
+          "orario": "07:20",
+          "persone": [{ "gruppo": "G-AM-MEDIE", "salgono": 7 }],
+          "km": { "pieni": 4.2 }
+        },
+        {
+          "luogo": "F-SORGENTA",
+          "orario": "07:28",
+          "persone": [{ "gruppo": "G-AM-PRIM", "salgono": 6 }],
+          "km": { "pieni": 3.6 }
+        },
+        {
+          "luogo": "L-MEDIE",
+          "orario": "07:38",
+          "persone": [{ "gruppo": "G-AM-MEDIE", "scendono": 8 }],
+          "km": { "pieni": 6.9 }
+        },
+        {
+          "luogo": "L-PRIM",
+          "orario": "07:42",
+          "persone": [{ "gruppo": "G-AM-PRIM", "scendono": 6 }],
+          "km": { "pieni": 0.8 }
+        }
+      ],
+      "km_totali": { "pieni": 15.5, "vuoti": 8.0 },
+      "testo_esposto": "SCUOLABUS"
+    },
+    {
+      "codice": "C-AM-3",
+      "nome": "Andata mattina, giro 3",
+      "codici_esterni": [{ "sistema": "Consorzio Valle Alta", "tipo": "giro", "codice": "2050001/1-G3" }],
+      "servizi": ["S-SCU-AM"],
+      "calendario": "CAL-SCUOLA-LV",
+      "passaggi": [
+        { "luogo": "L-SOSTA-VALFONDA", "orario": "07:20" },
+        {
+          "luogo": "F-LAGOBELLO",
+          "orario": "07:38",
+          "persone": [{ "gruppo": "G-AM-PRIM", "salgono": 8 }],
+          "km": { "vuoti": 7.5 }
+        },
+        {
+          "luogo": "L-PRIM",
+          "orario": "07:52",
+          "persone": [{ "gruppo": "G-AM-PRIM", "scendono": 8 }],
+          "km": { "pieni": 7.9 }
+        }
+      ],
+      "km_totali": { "pieni": 7.9, "vuoti": 7.5 },
+      "testo_esposto": "SCUOLABUS"
+    },
+    {
+      "codice": "C-RM-1",
+      "nome": "Ritorno mezzogiorno superiori e medie",
+      "servizi": ["S-SUP-RM", "S-SCU-RM"],
+      "calendario": "CAL-SCUOLA-LV",
+      "passaggi": [
+        { "luogo": "L-SUP", "orario": "11:58", "persone": [{ "gruppo": "G-RM-SUP", "salgono": 5 }] },
+        {
+          "luogo": "L-MEDIE",
+          "orario": "12:05",
+          "persone": [{ "gruppo": "G-RM-MEDIE", "salgono": 11 }],
+          "km": { "pieni": 0.6 }
+        },
+        { "luogo": "F-VALFONDA-PIAZZA", "orario": "12:07", "transito": true, "km": { "pieni": 0.5 } },
+        {
+          "luogo": "F-CASTELROVO",
+          "orario": "12:19",
+          "persone": [{ "gruppo": "G-RM-MEDIE", "scendono": 4 }, { "gruppo": "G-RM-SUP", "scendono": 2 }],
+          "km": { "pieni": 7.6 }
+        },
+        {
+          "luogo": "F-MONTEBRINO",
+          "orario": "12:26",
+          "persone": [{ "gruppo": "G-RM-MEDIE", "scendono": 4 }, { "gruppo": "G-RM-SUP", "scendono": 1 }],
+          "km": { "pieni": 4.2 }
+        },
+        {
+          "luogo": "F-PRADELLO",
+          "orario": "12:35",
+          "persone": [{ "gruppo": "G-RM-MEDIE", "scendono": 3 }, { "gruppo": "G-RM-SUP", "scendono": 2 }],
+          "km": { "pieni": 5.0 }
+        },
+        { "luogo": "L-RIMESSA-ALFA", "orario": "12:47", "km": { "vuoti": 6.4 } }
+      ],
+      "km_totali": { "pieni": 17.9, "vuoti": 6.4 },
+      "testo_esposto": "SCUOLABUS"
+    },
+    {
+      "codice": "C-DIS-R",
+      "nome": "Centro diurno, ramo di Montebrino",
+      "servizi": ["S-DIS"],
+      "calendario": "CAL-CENTRO",
+      "passaggi": [
+        { "luogo": "L-RIMESSA-ALFA", "orario": "07:50" },
+        {
+          "luogo": "PP-03",
+          "orario": "08:05",
+          "persone": [{ "gruppo": "G-DIS", "salgono": 1 }],
+          "km": { "vuoti": 9.0 }
+        },
+        {
+          "luogo": "L-TRASB-PONTE",
+          "orario": "08:25",
+          "trasbordi": [{ "codice": "T-01", "azione": "consegna", "gruppo": "G-DIS", "persone": 1, "passeggero": "P-D3" }],
+          "km": { "pieni": 11.2 }
+        },
+        { "luogo": "L-RIMESSA-ALFA", "orario": "08:45", "km": { "vuoti": 10.0 } }
+      ],
+      "km_totali": { "pieni": 11.2, "vuoti": 19.0 }
+    },
+    {
+      "codice": "C-DIS-1",
+      "nome": "Centro diurno, giro principale",
+      "servizi": ["S-DIS"],
+      "calendario": "CAL-CENTRO",
+      "passaggi": [
+        { "luogo": "L-RIMESSA-ALFA", "orario": "07:40", "assistente": "sale" },
+        {
+          "luogo": "PP-01",
+          "orario": "07:52",
+          "persone": [{ "gruppo": "G-DIS", "salgono": 1 }],
+          "km": { "vuoti": 5.5 }
+        },
+        {
+          "luogo": "PP-02",
+          "orario": "08:05",
+          "persone": [{ "gruppo": "G-DIS", "salgono": 1 }],
+          "km": { "pieni": 4.8 }
+        },
+        {
+          "luogo": "L-TRASB-PONTE",
+          "orario": "08:20",
+          "partenza": "08:30",
+          "trasbordi": [{ "codice": "T-01", "azione": "ricezione", "gruppo": "G-DIS", "persone": 1, "passeggero": "P-D3" }],
+          "km": { "pieni": 6.1 }
+        },
+        {
+          "luogo": "L-CENTRO",
+          "orario": "08:52",
+          "assistente": "scende",
+          "persone": [{ "gruppo": "G-DIS", "scendono": 3 }],
+          "km": { "pieni": 9.4 }
+        }
+      ],
+      "km_totali": { "pieni": 20.3, "vuoti": 5.5 }
+    },
+    {
+      "codice": "C-ASILO-1",
+      "nome": "Infanzia di Lagobello, andata",
+      "servizi": ["S-ASILO"],
+      "calendario": "CAL-INFANZIA",
+      "passaggi": [
+        { "luogo": "L-RIMESSA-BETA", "orario": "07:30" },
+        {
+          "luogo": "F-SORGENTA",
+          "orario": "07:40",
+          "assistente": "sale",
+          "persone": [{ "gruppo": "G-ASILO", "salgono": 4 }],
+          "km": { "vuoti": 2.5 }
+        },
+        {
+          "luogo": "F-LAGOBELLO",
+          "orario": "07:52",
+          "persone": [{ "gruppo": "G-ASILO", "salgono": 3 }],
+          "km": { "pieni": 6.2 }
+        },
+        {
+          "luogo": "L-INFANZIA",
+          "orario": "07:58",
+          "assistente": "scende",
+          "persone": [{ "gruppo": "G-ASILO", "scendono": 7 }],
+          "km": { "pieni": 1.5 }
+        }
+      ],
+      "km_totali": { "pieni": 7.7, "vuoti": 2.5 },
+      "testo_esposto": "SCUOLABUS"
+    },
+    {
+      "codice": "C-LIN-533",
+      "nome": "Linea B610, corsa delle 07:52",
+      "codici_esterni": [
+        { "sistema": "Trasporti Provinciali Valfonda", "tipo": "linea", "codice": "B610" },
+        { "sistema": "Trasporti Provinciali Valfonda", "tipo": "corsa", "codice": "533" }
+      ],
+      "servizi": ["S-LIN-B610"],
+      "calendario": "CAL-FERIALI",
+      "passaggi": [
+        { "luogo": "F-STAZIONE", "orario": "07:52" },
+        { "luogo": "F-VALFONDA-PIAZZA", "orario": "07:56", "km": { "pieni": 1.2 } },
+        { "luogo": "F-CASTELROVO-ALTO", "orario": "08:08", "km": { "pieni": 8.8 } },
+        { "luogo": "F-PRADELLO", "orario": "08:15", "km": { "pieni": 5.1 } }
+      ],
+      "km_totali": { "pieni": 15.1, "vuoti": 0 },
+      "coincidenze": [
+        {
+          "luogo": "F-STAZIONE",
+          "servizio_esterno": "treno FVV n. 3",
+          "orario": "07:48",
+          "tipo": "aspettare_arrivo"
+        }
+      ],
+      "testo_esposto": "B610 PRADELLO"
+    },
+    {
+      "codice": "C-LIN-560",
+      "nome": "Linea B610, corsa della sera (finisce dopo mezzanotte)",
+      "codici_esterni": [
+        { "sistema": "Trasporti Provinciali Valfonda", "tipo": "linea", "codice": "B610" },
+        { "sistema": "Trasporti Provinciali Valfonda", "tipo": "corsa", "codice": "560" }
+      ],
+      "servizi": ["S-LIN-B610"],
+      "calendario": "CAL-FERIALI",
+      "passaggi": [
+        { "luogo": "F-PRADELLO", "orario": "23:40" },
+        { "luogo": "F-CASTELROVO-ALTO", "orario": "23:48", "km": { "pieni": 5.1 } },
+        { "luogo": "F-VALFONDA-PIAZZA", "orario": "24:05", "km": { "pieni": 8.8 } },
+        { "luogo": "F-STAZIONE", "orario": "24:12", "km": { "pieni": 1.2 } }
+      ],
+      "km_totali": { "pieni": 15.1, "vuoti": 0 },
+      "coincidenze": [
+        {
+          "luogo": "F-STAZIONE",
+          "servizio_esterno": "treno FVV n. 28",
+          "orario": "24:20",
+          "tipo": "garantire_partenza"
+        }
+      ],
+      "testo_esposto": "B610 STAZIONE"
+    },
+    {
+      "codice": "C-DIS-GIO",
+      "nome": "Centro diurno, giovedi'",
+      "servizi": ["S-DIS-GIO"],
+      "calendario": "CAL-CENTRO-GIO",
+      "passaggi": [
+        { "luogo": "L-RIMESSA-ALFA", "orario": "08:05" },
+        {
+          "luogo": "PP-04",
+          "orario": "08:20",
+          "persone": [{ "gruppo": "G-DIS-GIO", "salgono": 1 }],
+          "km": { "vuoti": 6.4 }
+        },
+        {
+          "luogo": "L-CENTRO",
+          "orario": "08:45",
+          "persone": [{ "gruppo": "G-DIS-GIO", "scendono": 1 }],
+          "km": { "pieni": 9.1 }
+        }
+      ],
+      "km_totali": { "pieni": 9.1, "vuoti": 6.4 }
+    }
+  ]
+}

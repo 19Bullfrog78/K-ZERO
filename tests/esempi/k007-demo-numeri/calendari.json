@@ -1,0 +1,73 @@
+{
+  "schema": "calendari",
+  "schema_versione": 1,
+  "calendari": [
+    {
+      "codice": "CAL-SCUOLA",
+      "nome": "Giorni di scuola 2026/27 (da lunedi' a sabato)",
+      "codici_esterni": [{ "sistema": "Consorzio Valle Alta", "tipo": "periodo", "codice": "o" }],
+      "dal": "2026-09-14",
+      "al": "2027-06-12",
+      "giorni": ["lunedi", "martedi", "mercoledi", "giovedi", "venerdi", "sabato"],
+      "date_tolte": ["2026-12-08", "2027-06-02"],
+      "sospensioni": [
+        { "dal": "2026-12-23", "al": "2027-01-06", "motivo": "Vacanze di Natale" },
+        { "dal": "2027-02-08", "al": "2027-02-09", "motivo": "Carnevale" },
+        { "dal": "2027-03-25", "al": "2027-03-30", "motivo": "Vacanze di Pasqua" }
+      ]
+    },
+    {
+      "codice": "CAL-SCUOLA-LV",
+      "nome": "Giorni di scuola escluso il sabato",
+      "codici_esterni": [{ "sistema": "Consorzio Valle Alta", "tipo": "periodo", "codice": "f1" }],
+      "base": "CAL-SCUOLA",
+      "dal": "2026-09-14",
+      "al": "2027-06-12",
+      "giorni": ["lunedi", "martedi", "mercoledi", "giovedi", "venerdi"]
+    },
+    {
+      "codice": "CAL-INFANZIA",
+      "nome": "Scuola dell'infanzia: attiva dal 21 settembre",
+      "base": "CAL-SCUOLA-LV",
+      "dal": "2026-09-21",
+      "al": "2027-06-12",
+      "giorni": ["lunedi", "martedi", "mercoledi", "giovedi", "venerdi"]
+    },
+    {
+      "codice": "CAL-CENTRO",
+      "nome": "Centro diurno: lunedi', mercoledi' e giovedi'",
+      "dal": "2026-09-01",
+      "al": "2027-07-30",
+      "giorni": ["lunedi", "mercoledi", "giovedi"],
+      "date_aggiunte": ["2026-12-22"],
+      "date_tolte": ["2027-06-02"],
+      "sospensioni": [{ "dal": "2026-12-24", "al": "2026-12-31", "motivo": "Chiusura del centro" }]
+    },
+    {
+      "codice": "CAL-FERIALI",
+      "nome": "Giorni feriali (da lunedi' a sabato, festivi esclusi)",
+      "codici_esterni": [{ "sistema": "Trasporti Provinciali Valfonda", "tipo": "periodo", "codice": "FER" }],
+      "dal": "2026-09-01",
+      "al": "2027-08-31",
+      "giorni": ["lunedi", "martedi", "mercoledi", "giovedi", "venerdi", "sabato"],
+      "date_tolte": [
+        "2026-12-08",
+        "2026-12-25",
+        "2026-12-26",
+        "2027-01-01",
+        "2027-01-06",
+        "2027-03-29",
+        "2027-05-01",
+        "2027-06-02"
+      ]
+    },
+    {
+      "codice": "CAL-CENTRO-GIO",
+      "nome": "Centro diurno: solo il giovedi'",
+      "base": "CAL-CENTRO",
+      "dal": "2026-09-01",
+      "al": "2027-07-30",
+      "giorni": ["giovedi"]
+    }
+  ]
+}

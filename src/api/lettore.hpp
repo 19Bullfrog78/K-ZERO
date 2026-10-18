@@ -4,6 +4,7 @@
 // Un file con un problema di forma non viene usato per niente (mai letto a meta'). Se c'e' almeno un errore
 // di forma i controlli sul contenuto non si fanno: darebbero risultati falsati.
 
+#include <cstdint>
 #include <filesystem>
 #include <map>
 #include <optional>
@@ -26,7 +27,13 @@ public:
     virtual ~Sorgente() = default;
     virtual std::vector<Voce> voci() const = 0;   // in ordine di nome
     virtual std::optional<std::string> leggi(const std::string& nome) const = 0;   // nessun valore se illeggibile
+    // Dimensione del file in byte, se si conosce senza leggerlo: un file troppo grande non si legge per niente.
+    virtual std::optional<std::uintmax_t> dimensione(const std::string&) const { return std::nullopt; }
 };
+
+// Limite di buon senso per un file di dati: oltre e' certamente un errore (un file sbagliato o di un altro
+// programma), e leggerlo potrebbe esaurire la memoria del PC.
+inline constexpr std::uintmax_t kMassimoMBFile = 256;
 
 // Una cartella sul disco.
 class CartellaSuDisco : public Sorgente {
@@ -34,6 +41,7 @@ public:
     explicit CartellaSuDisco(std::filesystem::path cartella) : cartella_(std::move(cartella)) {}
     std::vector<Voce> voci() const override;
     std::optional<std::string> leggi(const std::string& nome) const override;
+    std::optional<std::uintmax_t> dimensione(const std::string& nome) const override;
 
 private:
     std::filesystem::path cartella_;

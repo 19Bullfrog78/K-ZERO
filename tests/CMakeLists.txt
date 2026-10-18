@@ -9,7 +9,7 @@ add_executable(test_tempo test_tempo.cpp)
 target_link_libraries(test_tempo PRIVATE kzero_nucleo GTest::gtest_main)
 target_compile_options(test_tempo PRIVATE ${KZERO_WARNINGS})
 gtest_discover_tests(test_tempo PROPERTIES LABELS nucleo)
-foreach(prova test_regole test_dimostrazione test_ricerca test_pacchetto test_controlli)
+foreach(prova test_regole test_dimostrazione test_ricerca test_pacchetto test_controlli test_turni)
   add_executable(${prova} ${prova}.cpp)
   target_link_libraries(${prova} PRIVATE kzero_api GTest::gtest_main)
   target_compile_options(${prova} PRIVATE ${KZERO_WARNINGS})
@@ -23,6 +23,11 @@ target_link_libraries(test_api PRIVATE kzero_api GTest::gtest_main)
 target_compile_options(test_api PRIVATE ${KZERO_WARNINGS})
 target_compile_definitions(test_api PRIVATE KZERO_CARTELLA_PROVE="${CMAKE_CURRENT_SOURCE_DIR}")
 gtest_discover_tests(test_api PROPERTIES LABELS api)
+add_executable(test_giornata test_giornata.cpp)
+target_link_libraries(test_giornata PRIVATE kzero_api GTest::gtest_main)
+target_compile_options(test_giornata PRIVATE ${KZERO_WARNINGS})
+target_compile_definitions(test_giornata PRIVATE KZERO_SORGENTI="${PROJECT_SOURCE_DIR}")
+gtest_discover_tests(test_giornata PROPERTIES LABELS api)
 
 # --- Strumento standard per confrontare le uscite JSON con gli schemi ---------------
 # check-jsonschema, versioni e impronte fissate in tests/strumenti/check-jsonschema.txt.
@@ -147,24 +152,47 @@ kzero_prova(dimostrazione_json_tutti_i_dati USCITA 0 FORMATO json SCHEMA dimostr
             CONTIENE ${DATI_PERSONALI} ${DATI_PARTICOLARI} "\"24:12\""
             ARGOMENTI dimostrazione --includi-dati-particolari --includi-dati-personali --formato json)
 
-# kzero controlla sui pacchetti di esempio: nessun errore (uscita 0), solo gli avvisi voluti.
-set(AVVISI_DEMO "K-CTR-035|luoghi.json|/luoghi/5" "K-CTR-043|luoghi.json|/luoghi/17/trasbordo" "K-CTR-036||")
+# kzero controlla sui pacchetti di esempio: nessun errore (uscita 0), solo gli avvisi voluti (dal K-008 anche due
+# scadenze nel periodo, due turni scoperti per un fatto con le date e il mezzo di scorta al posto di quello abituale).
+set(AVVISI_DEMO "K-CTR-035|luoghi.json|/luoghi/5" "K-CTR-043|luoghi.json|/luoghi/17/trasbordo" "K-CTR-036||"
+    "K-CTR-050|mezzi.json|/mezzi/6/autorizzazioni_uso/0" "K-CTR-050|persone.json|/persone/2/abilitazioni/2"
+    "K-CTR-078|persone.json|/persone/2/abilitazioni/2" "K-CTR-078|assenze.json|/assenze/2"
+    "K-CTR-082|servizi_fissi.json|/servizi_fissi/2")
 set(luoghi_demo 23)          # 18 luoghi pubblici e 5 privati
 set(luoghi_demo-numeri 18)   # "solo numeri": nessun luogo privato
 foreach(pacchetto demo demo-numeri)
   string(REPLACE "-" "_" n ${pacchetto})
   kzero_prova(controlla_${n}_testo USCITA 0 FORMATO testo
-              CONTIENE "Riepilogo: 2 aziende, ${luoghi_${pacchetto}} luoghi, 7 servizi, 10 corse; 0 errori, 3 avvisi."
+              # Il riepilogo in due pezzi: in CMake il punto e virgola separa gli elementi di un elenco.
+              CONTIENE "Riepilogo: 2 aziende, ${luoghi_${pacchetto}} luoghi, 9 servizi, 26 corse, 10 mezzi, 12 persone, 18 turni"
+                       " 0 errori, 8 avvisi."
               PROBLEMI ${AVVISI_DEMO} NON_CONTIENE "Errore K-CTR"
               ARGOMENTI controlla ${PROJECT_SOURCE_DIR}/esempi/${pacchetto})
   kzero_prova(controlla_${n}_json USCITA 0 FORMATO json SCHEMA controlla
-              CONTIENE "\"errori\": 0" "\"avvisi\": 3" PROBLEMI ${AVVISI_DEMO}
+              CONTIENE "\"errori\": 0" "\"avvisi\": 8" PROBLEMI ${AVVISI_DEMO}
               ARGOMENTI controlla ${PROJECT_SOURCE_DIR}/esempi/${pacchetto} --formato json)
 endforeach()
 kzero_prova(controlla_demo_tutti_i_dati USCITA 0 FORMATO json SCHEMA controlla
             CONTIENE "\"dati_personali_inclusi\": true" "\"dati_particolari_inclusi\": true"
             ARGOMENTI controlla ${PROJECT_SOURCE_DIR}/esempi/demo --includi-dati-personali --includi-dati-particolari
                       --formato json)
+
+# I pacchetti scritti con le versioni precedenti dei file restano validi: copia congelata del demo del K-007
+# (calendari, mezzi, servizi e regolamenti nella versione 1), con gli stessi avvisi di allora.
+set(AVVISI_K007 "K-CTR-035|luoghi.json|/luoghi/5" "K-CTR-043|luoghi.json|/luoghi/17/trasbordo" "K-CTR-036||")
+set(luoghi_k007_demo 23)
+set(luoghi_k007_demo_numeri 18)
+foreach(pacchetto demo demo-numeri)
+  string(REPLACE "-" "_" n ${pacchetto})
+  kzero_prova(controlla_k007_${n}_testo USCITA 0 FORMATO testo
+              CONTIENE "Riepilogo: 2 aziende, ${luoghi_k007_${n}} luoghi, 7 servizi, 10 corse, 6 mezzi, 0 persone, 0 turni"
+                       " 0 errori, 3 avvisi."
+              PROBLEMI ${AVVISI_K007} NON_CONTIENE "Errore K-CTR"
+              ARGOMENTI controlla ${CMAKE_CURRENT_SOURCE_DIR}/esempi/k007-${pacchetto})
+  kzero_prova(controlla_k007_${n}_json USCITA 0 FORMATO json SCHEMA controlla
+              CONTIENE "\"errori\": 0" "\"avvisi\": 3" PROBLEMI ${AVVISI_K007}
+              ARGOMENTI controlla ${CMAKE_CURRENT_SOURCE_DIR}/esempi/k007-${pacchetto} --formato json)
+endforeach()
 
 # Errori del programma con kzero controlla: cartella mancante o inesistente.
 kzero_prova(controlla_senza_cartella USCITA 2 FORMATO testo ERRORE K-ERR-011 ARGOMENTI controlla)
@@ -228,6 +256,42 @@ kzero_rotto(rotto_calendario_senza_giorni FORMATO testo MODIFICA IMPOSTA calenda
             PROBLEMI "K-CTR-015|calendari.json|/calendari/4")
 kzero_rotto(rotto_calendario_circolare FORMATO testo MODIFICA IMPOSTA calendari.json /calendari/0/base "\"CAL-INFANZIA\""
             PROBLEMI "K-CTR-016|calendari.json|/calendari/0/base")
+kzero_rotto(rotto_calendario_combinato_con_se_stesso FORMATO testo
+            MODIFICA IMPOSTA calendari.json /calendari/4/aggiunge "{\"calendari\": [\"CAL-FERIALI\"]}"
+            PROBLEMI "K-CTR-049|calendari.json|/calendari/4/aggiunge/calendari/0")
+kzero_rotto(rotto_festivita_inesistente FORMATO json
+            MODIFICA IMPOSTA calendari.json /calendari/4/toglie/festivita/0 "\"FEST-XX\""
+            PROBLEMI "K-CTR-010|calendari.json|/calendari/4/toglie/festivita/0")
+# K-008: norme del paese, elenchi delle aziende, uso dei mezzi.
+kzero_rotto(rotto_abilitazione_inesistente_nelle_norme FORMATO testo
+            MODIFICA IMPOSTA norme.json /norme/0/requisiti_guida/2/alternative/1/abilitazioni/0 "\"D2\""
+            PROBLEMI "K-CTR-010|norme.json|/norme/0/requisiti_guida/2/alternative/1/abilitazioni/0"
+            CONTIENE "Il codice D2 non esiste tra le abilitazioni delle norme N-IT")
+kzero_rotto(rotto_uso_del_mezzo_inesistente FORMATO json MODIFICA IMPOSTA mezzi.json /mezzi/0/uso "\"NOLEGGIO\""
+            PROBLEMI "K-CTR-010|mezzi.json|/mezzi/0/uso")
+kzero_rotto(rotto_competenza_inesistente FORMATO testo MODIFICA IMPOSTA servizi.json /servizi/3/competenze_richieste/0 "\"PEDANE\""
+            PROBLEMI "K-CTR-010|servizi.json|/servizi/3/competenze_richieste/0"
+            CONTIENE "Il codice PEDANE non esiste tra le competenze dell'azienda ALFA")
+kzero_rotto(rotto_impostazioni_azienda_ripetute FORMATO testo MODIFICA IMPOSTA aziende.json /aziende/1/azienda "\"ALFA\""
+            PROBLEMI "K-CTR-009|aziende.json|/aziende/1")
+kzero_rotto(rotto_distrazione_rovesciata FORMATO testo
+            MODIFICA IMPOSTA mezzi.json /mezzi/4/autorizzazioni_uso
+                     "[{\"uso\": \"NCC\", \"ente\": \"Provincia\", \"riferimento\": \"n. 1\", \"dal\": \"2027-02-28\", \"al\": \"2026-03-01\"}]"
+            PROBLEMI "K-CTR-012|mezzi.json|/mezzi/4/autorizzazioni_uso/0")
+# K-008: persone, assenze, fermi.
+kzero_rotto(rotto_persona_doppia FORMATO testo MODIFICA IMPOSTA persone.json /persone/1/codice "\"P-A\""
+            PROBLEMI "K-CTR-009|persone.json|/persone/1")
+kzero_rotto(rotto_abilitazione_della_persona_inesistente FORMATO testo
+            MODIFICA IMPOSTA persone.json /persone/0/abilitazioni/1/tipo "\"D2\""
+            PROBLEMI "K-CTR-010|persone.json|/persone/0/abilitazioni/1/tipo"
+            CONTIENE "Il codice scritto in un dato personale (riservato) non esiste tra le abilitazioni delle norme N-IT"
+            NON_CONTIENE "D2" "Rossi Mario")
+kzero_rotto(rotto_tipo_di_assenza_inesistente FORMATO json MODIFICA IMPOSTA assenze.json /assenze/0/tipo "\"MALATTIA\""
+            PROBLEMI "K-CTR-010|assenze.json|/assenze/0/tipo" NON_CONTIENE "MALATTIA")
+kzero_rotto(rotto_tipo_di_fermo_inesistente FORMATO testo MODIFICA IMPOSTA fermi.json /fermi/0/tipo "\"OFFICINA\""
+            PROBLEMI "K-CTR-010|fermi.json|/fermi/0/tipo" CONTIENE "Il codice OFFICINA non esiste tra i tipi di fermo dell'azienda ALFA")
+kzero_rotto(rotto_assenza_rovesciata FORMATO testo MODIFICA IMPOSTA assenze.json /assenze/0/al "\"2026-10-21\""
+            PROBLEMI "K-CTR-012|assenze.json|/assenze/0" NON_CONTIENE "2026-10-21" "2026-10-22" "2026-10-23")
 # Caso reale: "16.08" scritto tra 12.05 e 12.19.
 kzero_rotto(rotto_orario_indietro FORMATO testo MODIFICA IMPOSTA corse.json /corse/3/passaggi/2/orario "\"16:08\""
             PROBLEMI "K-CTR-017|corse.json|/corse/3/passaggi/2"
@@ -250,6 +314,122 @@ kzero_rotto(rotto_attesa_fuori_regolamento FORMATO testo
 kzero_rotto(rotto_mezzo_massimo_sotto_il_minimo FORMATO testo
             MODIFICA IMPOSTA contratti.json /contratti/2/regole/posti_massimi 20
             PROBLEMI "K-CTR-022|contratti.json|/contratti/2/regole")
+# --- kzero giornata (K-008) ----------------------------------------------------------
+# Le tre giornate chieste dal mandato, confrontate con le uscite attese: una persona e un mezzo in un giovedi' (il
+# giorno della sostituzione di P-A) e una persona in un giorno festivo (orario festivo della linea di Beta).
+set(DATI_PERSONE "Verdi Carlo" "Rossi Mario" "Bianco Anna" "Russo Elena" "Galli Sara" "Via del Mulino" "FORMAZIONE" "FERIE")
+set(GIORNATA_DEMO giornata ${KZERO_DEMO})
+foreach(caso "persona_giovedi;--data;2026-10-22;--persona;P-C" "mezzo_giovedi;--data;2026-10-22;--mezzo;ALFA-05"
+             "persona_festivo;--data;2026-12-08;--persona;P-B3")
+  list(POP_FRONT caso nome_caso)
+  kzero_prova(giornata_${nome_caso} USCITA 0 FORMATO testo ATTESO ${CMAKE_CURRENT_SOURCE_DIR}/attesi/giornata_${nome_caso}.txt
+              NON_CONTIENE ${DATI_PERSONE} ${DATI_PERSONALI} "PEDANA" "tipo disabili"
+              ARGOMENTI ${GIORNATA_DEMO} ${caso})
+  kzero_prova(giornata_${nome_caso}_json USCITA 0 FORMATO json SCHEMA giornata
+              NON_CONTIENE ${DATI_PERSONE} ${DATI_PERSONALI} ${DATI_PARTICOLARI} "PEDANA"
+              ARGOMENTI ${GIORNATA_DEMO} ${caso} --formato json)
+endforeach()
+# Tutti i turni di un giorno di scuola: di base senza nomi e senza dati sulla salute; con i due parametri si vedono.
+kzero_prova(giornata_tutti USCITA 0 FORMATO testo
+            CONTIENE "Tutti i turni del giorno" "T-B-ACCOMP" "A bordo del mezzo: BETA-01" "Totali: 13 turni (nessuno scoperto"
+            NON_CONTIENE ${DATI_PERSONE} ${DATI_PERSONALI} "PEDANA" "tipo disabili"
+            ARGOMENTI ${GIORNATA_DEMO} --data 2026-10-22)
+kzero_prova(giornata_tutti_i_dati USCITA 0 FORMATO testo
+            CONTIENE "Persona: P-C Verdi Carlo" "Competenze richieste: PEDANA" "tipo disabili"
+            ARGOMENTI ${GIORNATA_DEMO} --data 2026-10-22 --includi-dati-personali --includi-dati-particolari)
+kzero_prova(giornata_tutti_i_dati_json USCITA 0 FORMATO json SCHEMA giornata
+            CONTIENE "\"dati_personali_inclusi\": true" "\"dati_particolari_inclusi\": true" "Verdi Carlo" "PEDANA"
+            ARGOMENTI ${GIORNATA_DEMO} --data 2026-10-22 --includi-dati-personali --includi-dati-particolari --formato json)
+kzero_prova(giornata_demo_numeri USCITA 0 FORMATO json SCHEMA giornata CONTIENE "\"livello\": \"solo_numeri\""
+            ARGOMENTI giornata ${PROJECT_SOURCE_DIR}/esempi/demo-numeri --data 2026-10-22 --formato json)
+# Principio del punto 12: un fatto con le date su un turno ricorrente e' un avviso in kzero controlla, e in kzero
+# giornata quel giorno il turno e' scoperto o senza mezzo, con il motivo. Lo stesso fatto su un'assegnazione del
+# singolo giorno e' un errore: kzero giornata non mostra nulla.
+kzero_prova(avviso_assenza_senza_sostituzione USCITA 0 FORMATO testo BASE ${KZERO_DEMO}
+            MODIFICA TOGLI assegnazioni.json /assegnazioni/3
+            PROBLEMI "K-CTR-078|assenze.json|/assenze/0" CONTIENE " 0 errori, 9 avvisi."
+            ARGOMENTI controlla @PACCHETTO@)
+kzero_prova(giornata_assenza_senza_sostituzione USCITA 0 FORMATO testo BASE ${KZERO_DEMO}
+            MODIFICA TOGLI assegnazioni.json /assegnazioni/3
+            CONTIENE "Persona: nessuna - TURNO SCOPERTO: la persona prevista P-A non puo' farlo (dati personali: riservati)."
+                     "Prevista: P-A, rotazione ROT-ALFA, passo 11"
+            NON_CONTIENE "FERIE"
+            ARGOMENTI giornata @PACCHETTO@ --data 2026-10-22 --persona P-A)
+kzero_prova(avviso_fermo_senza_sostituzione USCITA 0 FORMATO testo BASE ${KZERO_DEMO}
+            MODIFICA TOGLI assegnazioni.json /assegnazioni/0
+            PROBLEMI "K-CTR-079|fermi.json|/fermi/0" CONTIENE " 0 errori, 9 avvisi."
+            ARGOMENTI controlla @PACCHETTO@)
+kzero_prova(giornata_fermo_senza_sostituzione USCITA 0 FORMATO testo BASE ${KZERO_DEMO}
+            MODIFICA TOGLI assegnazioni.json /assegnazioni/0
+            CONTIENE "Mezzo: nessuno - TURNO SENZA MEZZO: il mezzo ALFA-01 (AA 101 AA) e' in fermo (REVISIONE)."
+            ARGOMENTI giornata @PACCHETTO@ --data 2026-10-19 --mezzo ALFA-01)
+kzero_rotto(rotto_assegnazione_su_persona_assente FORMATO testo MODIFICA IMPOSTA assegnazioni.json /assegnazioni/2/persona "\"P-A\""
+            PROBLEMI "K-CTR-067|assegnazioni.json|/assegnazioni/2" NON_CONTIENE "FERIE")
+kzero_prova(giornata_pacchetto_con_errori USCITA 1 FORMATO testo ERRORE K-ERR-018 BASE ${KZERO_DEMO}
+            MODIFICA IMPOSTA assegnazioni.json /assegnazioni/2/persona "\"P-A\""
+            CONTIENE "Il pacchetto ha 1 errore nei dati" "kzero controlla"
+            ARGOMENTI giornata @PACCHETTO@ --data 2026-10-22)
+kzero_prova(giornata_pacchetto_con_errori_json USCITA 1 FORMATO json SCHEMA errore ERRORE K-ERR-018 BASE ${KZERO_DEMO}
+            MODIFICA IMPOSTA assegnazioni.json /assegnazioni/2/persona "\"P-A\""
+            ARGOMENTI giornata @PACCHETTO@ --data 2026-10-22 --formato json)
+# Errori dei parametri e della data.
+kzero_prova(giornata_senza_data USCITA 2 FORMATO testo ERRORE K-ERR-013 CONTIENE "Manca il parametro --data"
+            ARGOMENTI ${GIORNATA_DEMO})
+kzero_prova(giornata_senza_data_json USCITA 2 FORMATO json SCHEMA errore ERRORE K-ERR-013 ARGOMENTI ${GIORNATA_DEMO} --formato json)
+kzero_prova(giornata_data_senza_valore USCITA 2 FORMATO testo ERRORE K-ERR-005 ARGOMENTI ${GIORNATA_DEMO} --data)
+kzero_prova(giornata_data_inesistente USCITA 2 FORMATO testo ERRORE K-ERR-014 CONTIENE "'2026-02-30'"
+            ARGOMENTI ${GIORNATA_DEMO} --data 2026-02-30)
+kzero_prova(giornata_data_scritta_male USCITA 2 FORMATO testo ERRORE K-ERR-014 ARGOMENTI ${GIORNATA_DEMO} --data 22/10/2026)
+kzero_prova(giornata_codice_scritto_male USCITA 2 FORMATO testo ERRORE K-ERR-014
+            ARGOMENTI ${GIORNATA_DEMO} --data 2026-10-22 --persona "P A")
+# Un valore troppo lungo si ricopia accorciato; un byte che non e' UTF-8 non rompe il JSON dell'errore.
+kzero_prova(giornata_codice_troppo_lungo USCITA 2 FORMATO testo ERRORE K-ERR-014
+            CONTIENE "'PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP...'"
+            ARGOMENTI ${GIORNATA_DEMO} --data 2026-10-22
+                      --persona PPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPPP)
+kzero_prova(giornata_codice_non_utf8_json USCITA 2 FORMATO json SCHEMA errore ERRORE K-ERR-014
+            ARGOMENTI ${GIORNATA_DEMO} --data 2026-10-22 --persona P@FF@ --formato json)
+kzero_prova(giornata_persona_e_mezzo USCITA 2 FORMATO testo ERRORE K-ERR-015
+            CONTIENE "I parametri --mezzo e --persona non si possono scrivere insieme"
+            ARGOMENTI ${GIORNATA_DEMO} --data 2026-10-22 --persona P-C --mezzo ALFA-05)
+kzero_prova(giornata_data_fuori_periodo USCITA 2 FORMATO testo ERRORE K-ERR-016 CONTIENE "(dal 2026-09-01 al 2027-08-31)"
+            ARGOMENTI ${GIORNATA_DEMO} --data 2027-09-01)
+kzero_prova(giornata_data_fuori_periodo_json USCITA 2 FORMATO json SCHEMA errore ERRORE K-ERR-016
+            ARGOMENTI ${GIORNATA_DEMO} --data 2026-08-31 --formato json)
+kzero_prova(giornata_persona_inesistente USCITA 2 FORMATO testo ERRORE K-ERR-017
+            ARGOMENTI ${GIORNATA_DEMO} --data 2026-10-22 --persona P-ZZ)
+kzero_prova(giornata_mezzo_inesistente USCITA 2 FORMATO testo ERRORE K-ERR-017
+            ARGOMENTI ${GIORNATA_DEMO} --data 2026-10-22 --mezzo ALFA-99)
+kzero_prova(giornata_cartella_inesistente USCITA 1 FORMATO testo ERRORE K-ERR-012
+            ARGOMENTI giornata ${CMAKE_CURRENT_BINARY_DIR}/cartella-che-non-esiste --data 2026-10-22)
+
+# Turni (K-008), i due pacchetti rotti chiesti dal mandato. La reperibilita' notturna di P-C del mercoledi' finisce
+# alle 07:30 invece che alle 06:30: il giovedi' della sostituzione P-C comincia il centro diurno alle 07:25.
+kzero_rotto(rotto_persona_in_due_turni_a_cavallo_della_mezzanotte FORMATO testo
+            MODIFICA IMPOSTA turni.json /turni/17/elementi/0/alle "\"31:30\""
+            PROBLEMI "K-CTR-063|assegnazioni.json|/assegnazioni/2"
+            CONTIENE "La persona P-C e' nel turno T-DIS (Centro diurno), che si sovrappone al turno T-REPERIBILE (Reperibilita' notturna) del giorno prima, a cavallo della mezzanotte, il 2026-10-22."
+            NON_CONTIENE "Verdi Carlo")
+kzero_rotto(rotto_persona_in_due_turni_a_cavallo_della_mezzanotte_json FORMATO json
+            MODIFICA IMPOSTA turni.json /turni/17/elementi/0/alle "\"31:30\""
+            PROBLEMI "K-CTR-063|assegnazioni.json|/assegnazioni/2")
+# P-F senza la patente D: il minibus del suo turno (16 posti, lunghezza non scritta) la chiede. Un errore solo, con i
+# 175 giorni di scuola raggruppati; quale abilitazione manca e' un dato personale.
+kzero_rotto(rotto_autista_senza_abilitazione FORMATO testo MODIFICA TOGLI persone.json /persone/10/abilitazioni/1
+            PROBLEMI "K-CTR-068|servizi_fissi.json|/servizi_fissi/4"
+            CONTIENE "Nel turno T-SCUOLA-2 (Scuola 2) la persona P-F guida il mezzo ALFA-02 (AA 102 AA) senza un'abilitazione richiesta dalle norme (dati personali: riservati), in 175 giorni tra il 2026-09-14 e il 2027-06-11"
+                     "1 errore, 8 avvisi."
+            NON_CONTIENE "Moretti Luca" "serve una di")
+kzero_rotto(rotto_autista_senza_abilitazione_json FORMATO json MODIFICA TOGLI persone.json /persone/10/abilitazioni/1
+            PROBLEMI "K-CTR-068|servizi_fissi.json|/servizi_fissi/4")
+# Senza la distrazione il mezzo di linea ALFA-05 non puo' fare la gita, che chiede l'uso noleggio. Sparisce anche
+# l'avviso sulla distrazione che scade.
+kzero_rotto(rotto_mezzo_senza_uso_richiesto FORMATO testo MODIFICA TOGLI mezzi.json /mezzi/6/autorizzazioni_uso/0
+            PROBLEMI "K-CTR-069|turni.json|/turni/11/mezzo"
+            CONTIENE "Nel turno T-GITA (Gita) il mezzo ALFA-05 (AA 105 AA) (uso LINEA) fa il servizio S-GITA (Gita della Pro Loco al lago di Lagobello), che chiede l'uso NCC, e non ha un'autorizzazione a quell'uso (distrazione), il 2026-11-15."
+                     "1 errore, 7 avvisi.")
+kzero_rotto(rotto_mezzo_senza_uso_richiesto_json FORMATO json MODIFICA TOGLI mezzi.json /mezzi/6/autorizzazioni_uso/0
+            PROBLEMI "K-CTR-069|turni.json|/turni/11/mezzo")
 kzero_rotto(rotto_trasbordo_non_autorizzato FORMATO testo MODIFICA TOGLI luoghi.json /luoghi/16/trasbordo
             PROBLEMI "K-CTR-023|corse.json|/corse/4/passaggi/2/trasbordi/0" "K-CTR-023|corse.json|/corse/5/passaggi/3/trasbordi/0")
 kzero_rotto(rotto_trasbordo_senza_meta FORMATO testo MODIFICA IMPOSTA corse.json /corse/5/passaggi/3/trasbordi/0/codice "\"T-02\""
@@ -288,7 +468,7 @@ kzero_rotto(due_regolamenti_medie_con_r_inv FORMATO testo MODIFICA IMPOSTA contr
             CONTIENE "(minuti concordati: 20; massimo: 15)" "(minuti concordati: 15; massimo: 10)")
 kzero_prova(due_regolamenti_linee_con_r_tn USCITA 0 FORMATO testo BASE ${KZERO_DEMO}
             MODIFICA IMPOSTA contratti.json /contratti/2/regolamento "\"R-TN\""
-            PROBLEMI "K-CTR-037|servizi.json|/servizi/2/domanda/gruppi/0" CONTIENE "0 errori, 4 avvisi."
+            PROBLEMI "K-CTR-037|servizi.json|/servizi/2/domanda/gruppi/0" CONTIENE "0 errori, 9 avvisi."
             ARGOMENTI controlla @PACCHETTO@)
 
 # Gli avvisi non bloccano: uscita 0. Es. domanda 8 a una fermata, corse 7.
@@ -300,6 +480,28 @@ kzero_prova(avviso_domanda_diversa_dalle_corse USCITA 0 FORMATO testo BASE ${KZE
 kzero_prova(avviso_mezzo_senza_costi USCITA 0 FORMATO json SCHEMA controlla BASE ${KZERO_DEMO}
             MODIFICA TOGLI mezzi.json /mezzi/0/costo_al_km PROBLEMI "K-CTR-044|mezzi.json|/mezzi/0"
             ARGOMENTI controlla @PACCHETTO@ --formato json)
+kzero_prova(avviso_distrazione_che_scade USCITA 0 FORMATO testo BASE ${KZERO_DEMO}
+            MODIFICA IMPOSTA mezzi.json /mezzi/4/autorizzazioni_uso
+                     "[{\"uso\": \"NCC\", \"ente\": \"Provincia\", \"riferimento\": \"n. 1\", \"dal\": \"2026-03-01\", \"al\": \"2027-02-28\"}]"
+            PROBLEMI "K-CTR-050|mezzi.json|/mezzi/4/autorizzazioni_uso/0" CONTIENE "scade il 2027-02-28"
+            ARGOMENTI controlla @PACCHETTO@)
+kzero_prova(avviso_mezzo_senza_uso USCITA 0 FORMATO json SCHEMA controlla BASE ${KZERO_DEMO}
+            MODIFICA TOGLI mezzi.json /mezzi/5/uso PROBLEMI "K-CTR-051|mezzi.json|/mezzi/5"
+            ARGOMENTI controlla @PACCHETTO@ --formato json)
+kzero_prova(avviso_azienda_senza_norme USCITA 0 FORMATO testo BASE ${KZERO_DEMO}
+            MODIFICA TOGLI aziende.json /aziende/0/norme PROBLEMI "K-CTR-052|pacchetto.json|/aziende/0"
+            ARGOMENTI controlla @PACCHETTO@)
+kzero_prova(avviso_abilitazione_che_scade USCITA 0 FORMATO testo BASE ${KZERO_DEMO}
+            MODIFICA IMPOSTA persone.json /persone/2/abilitazioni/2/scadenza "\"2027-03-31\""
+            PROBLEMI "K-CTR-050|persone.json|/persone/2/abilitazioni/2"
+            CONTIENE "Un'abilitazione o un'autorizzazione della persona P-C scade dentro il periodo del pacchetto"
+            NON_CONTIENE "CQC" "2027-03-31" "Verdi Carlo"
+            ARGOMENTI controlla @PACCHETTO@)
+kzero_prova(avviso_abilitazione_che_scade_dati_personali USCITA 0 FORMATO json SCHEMA controlla BASE ${KZERO_DEMO}
+            MODIFICA IMPOSTA persone.json /persone/2/abilitazioni/2/scadenza "\"2027-03-31\""
+            PROBLEMI "K-CTR-050|persone.json|/persone/2/abilitazioni/2"
+            CONTIENE "L'abilitazione CQC-P della persona P-C (Verdi Carlo) scade il 2027-03-31"
+            ARGOMENTI controlla @PACCHETTO@ --includi-dati-personali --formato json)
 kzero_prova(avviso_file_non_riconosciuto USCITA 0 FORMATO testo BASE ${KZERO_DEMO}
             MODIFICA AGGIUNGI fermate.json "{}" PROBLEMI "K-CTR-008|fermate.json"
             ARGOMENTI controlla @PACCHETTO@)
@@ -388,9 +590,18 @@ target_link_libraries(genera_scala PRIVATE kzero_api)
 target_compile_options(genera_scala PRIVATE ${KZERO_WARNINGS})
 add_test(NAME scala.genera COMMAND genera_scala ${CMAKE_CURRENT_BINARY_DIR}/scala)
 set_tests_properties(scala.genera PROPERTIES FIXTURES_SETUP scala LABELS scala)
-kzero_prova(scala_controlla USCITA 0 FORMATO testo CONTIENE "0 errori"
+# Il riepilogo in due pezzi: in CMake il punto e virgola separa gli elementi di un elenco.
+kzero_prova(scala_controlla USCITA 0 FORMATO testo
+            CONTIENE "10000 corse, 600 mezzi, 1320 persone, 1200 turni" " 0 errori, 0 avvisi."
             ARGOMENTI controlla ${CMAKE_CURRENT_BINARY_DIR}/scala)
 set_tests_properties(programma.scala_controlla PROPERTIES FIXTURES_REQUIRED scala LABELS "programma;scala")
+# K-008: la giornata di un giovedi' di scuola (tutti i turni) e quella di una persona finiscono senza errori.
+kzero_prova(scala_giornata USCITA 0 FORMATO testo CONTIENE "Totali: 1200 turni (nessuno scoperto, nessuno senza mezzo)"
+            ARGOMENTI giornata ${CMAKE_CURRENT_BINARY_DIR}/scala --data 2026-10-15)
+set_tests_properties(programma.scala_giornata PROPERTIES FIXTURES_REQUIRED scala LABELS "programma;scala")
+kzero_prova(scala_giornata_persona USCITA 0 FORMATO json SCHEMA giornata CONTIENE "\"turni\": 1,"
+            ARGOMENTI giornata ${CMAKE_CURRENT_BINARY_DIR}/scala --data 2026-10-15 --persona P-03-007 --formato json)
+set_tests_properties(programma.scala_giornata_persona PROPERTIES FIXTURES_REQUIRED scala LABELS "programma;scala")
 
 # --- Schemi: validi per JSON Schema draft-07; esempi e pacchetti di esempio conformi -----
 if(KZERO_CHECK_JSONSCHEMA)
@@ -405,9 +616,16 @@ if(KZERO_CHECK_JSONSCHEMA)
                      -DDOCUMENTO=${esempio} -P ${CMAKE_CURRENT_SOURCE_DIR}/programma/schema.cmake)
     set_tests_properties(schema.esempio.${nome} PROPERTIES LABELS schemi)
   endforeach()
-  # I file dei pacchetti di esempio, con lo strumento standard (indipendente dalla libreria del programma).
-  foreach(pacchetto demo demo-numeri)
-    file(GLOB file_dati CONFIGURE_DEPENDS ${PROJECT_SOURCE_DIR}/esempi/${pacchetto}/*.json)
+  # I file dei pacchetti di esempio, con lo strumento standard (indipendente dalla libreria del programma); anche
+  # la copia congelata del demo del K-007, scritta con le versioni precedenti degli schemi.
+  foreach(pacchetto demo demo-numeri tests/esempi/k007-demo tests/esempi/k007-demo-numeri)
+    if(pacchetto MATCHES "^tests/")
+      set(cartella ${PROJECT_SOURCE_DIR}/${pacchetto})
+      get_filename_component(pacchetto ${pacchetto} NAME)
+    else()
+      set(cartella ${PROJECT_SOURCE_DIR}/esempi/${pacchetto})
+    endif()
+    file(GLOB file_dati CONFIGURE_DEPENDS ${cartella}/*.json)
     foreach(f IN LISTS file_dati)
       get_filename_component(nome ${f} NAME_WE)
       add_test(NAME schema.${pacchetto}.${nome}

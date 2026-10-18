@@ -40,6 +40,13 @@ std::optional<std::string> CartellaSuDisco::leggi(const std::string& nome) const
     return testo.str();
 }
 
+std::optional<std::uintmax_t> CartellaSuDisco::dimensione(const std::string& nome) const {
+    std::error_code ec;
+    const std::uintmax_t n = std::filesystem::file_size(cartella_ / nome, ec);
+    if (ec) return std::nullopt;
+    return n;
+}
+
 std::vector<Sorgente::Voce> PacchettoIncorporato::voci() const {
     std::vector<Voce> v;
     const std::string prefisso = cartella_ + "/";
@@ -306,6 +313,18 @@ std::vector<E> valori_di(const std::vector<std::pair<const char*, E>>& tabella, 
     return v;
 }
 
+// Fonte con il documento obbligatorio e il punto facoltativo (norme, festivita').
+RuleSource fonte_documento(const JsonDati& f) {
+    return RuleSource{f.at("documento").get<std::string>(), Conversione::testo(f, "punto"), Conversione::testo(f, "riferimenti")};
+}
+
+std::vector<Ref> riferimenti(const JsonDati& o, const char* k, const std::string& p, const Conversione& c) {
+    std::vector<Ref> v;
+    const auto& e = Conversione::elenco(o, k);
+    for (std::size_t i = 0; i < e.size(); ++i) v.push_back({e[i].get<std::string>(), c.src(indice(p + "/" + k, i))});
+    return v;
+}
+
 // --- File per file -----------------------------------------------------------------------------------
 
 void manifesto(const JsonDati& d, Package& pk) {
@@ -351,6 +370,104 @@ AccessLimits limiti(const JsonDati& l, const std::string& p, const Conversione& 
         a.bans.push_back(b);
     }
     return a;
+}
+
+void aziende(const JsonDati& d, Package& pk) {
+    const Conversione c("aziende.json");
+    const auto& v = d.at("aziende");
+    for (std::size_t i = 0; i < v.size(); ++i) {
+        const auto& a = v[i];
+        const std::string p = indice("/aziende", i);
+        CompanySettings x;
+        x.company = c.ref(a, "azienda", p);
+        x.norms = c.ref_opz(a, "norme", p);
+        const auto& imp = a.at("impostazioni");
+        x.shelter = valore_di<ShelterNearHome>({{"preferito", ShelterNearHome::Preferred}, {"ammesso", ShelterNearHome::Allowed},
+                                                {"mai", ShelterNearHome::Never}},
+                                               imp.at("ricovero_vicino_a_casa").get<std::string>());
+        x.pairing = valore_di<DriverVehiclePairing>({{"nessuno", DriverVehiclePairing::None}, {"preferito", DriverVehiclePairing::Preferred},
+                                                     {"fisso", DriverVehiclePairing::Fixed}},
+                                                    imp.at("abbinamento_autista_mezzo").get<std::string>());
+        const auto& att = c.elenco(a, "attivita");
+        for (std::size_t k = 0; k < att.size(); ++k)
+            x.activities.push_back({att[k].at("codice").get<std::string>(), att[k].at("nome").get<std::string>(),
+                                    att[k].at("usa_il_mezzo").get<bool>(), c.testo(att[k], "nota"), c.src(indice(p + "/attivita", k))});
+        const auto voci = [&](const char* campo, std::vector<ListEntry>& out) {
+            const auto& e = c.elenco(a, campo);
+            for (std::size_t k = 0; k < e.size(); ++k)
+                out.push_back({e[k].at("codice").get<std::string>(), e[k].at("nome").get<std::string>(), c.testo(e[k], "nota"),
+                               c.src(indice(p + "/" + campo, k))});
+        };
+        voci("tipi_assenza", x.absence_types);
+        voci("tipi_fermo", x.stop_types);
+        voci("competenze", x.competences);
+        x.note = c.testo(a, "nota");
+        x.src = c.src(p);
+        pk.company_settings.push_back(x);
+    }
+}
+
+void norme(const JsonDati& d, Package& pk) {
+    const Conversione c("norme.json");
+    const auto& v = d.at("norme");
+    for (std::size_t i = 0; i < v.size(); ++i) {
+        const auto& n = v[i];
+        const std::string p = indice("/norme", i);
+        Norms x;
+        x.code = n.at("codice").get<std::string>();
+        x.name = n.at("nome").get<std::string>();
+        x.country = n.at("paese").get<std::string>();
+        const auto voci = [&](const char* campo, std::vector<NormEntry>& out) {
+            const auto& e = c.elenco(n, campo);
+            for (std::size_t k = 0; k < e.size(); ++k) {
+                NormEntry y;
+                y.code = e[k].at("codice").get<std::string>();
+                y.name = e[k].at("nome").get<std::string>();
+                if (e[k].contains("fonte")) y.source = fonte_documento(e[k].at("fonte"));
+                y.note = c.testo(e[k], "nota");
+                y.src = c.src(indice(p + "/" + campo, k));
+                out.push_back(y);
+            }
+        };
+        voci("abilitazioni", x.licences);
+        voci("usi", x.uses);
+        const auto& req = c.elenco(n, "requisiti_guida");
+        for (std::size_t k = 0; k < req.size(); ++k) {
+            const auto& r = req[k];
+            const std::string pr = indice(p + "/requisiti_guida", k);
+            DrivingRequirement y;
+            y.categories = valori_di(kCategorie, r, "categorie");
+            y.min_seats = c.intero(r, "posti_da");
+            y.max_seats = c.intero(r, "posti_fino_a");
+            if (r.contains("rimorchio")) y.trailer = r.at("rimorchio").get<bool>();
+            y.uses = riferimenti(r, "usi", pr, c);
+            const auto& alt = r.at("alternative");
+            for (std::size_t q = 0; q < alt.size(); ++q) {
+                const std::string pa = indice(pr + "/alternative", q);
+                y.alternatives.push_back({riferimenti(alt[q], "abilitazioni", pa, c), c.intero(alt[q], "posti_fino_a"),
+                                          c.decimale(alt[q], "lunghezza_fino_a_m"), c.src(pa)});
+            }
+            y.source = fonte_documento(r.at("fonte"));
+            y.to_confirm = c.vero(r, "da_confermare");
+            y.note = c.testo(r, "nota");
+            y.src = c.src(pr);
+            x.requirements.push_back(y);
+        }
+        const auto& usi = c.elenco(n, "usi_per_servizio");
+        for (std::size_t k = 0; k < usi.size(); ++k) {
+            const std::string pu = indice(p + "/usi_per_servizio", k);
+            ServiceUsesNorm y;
+            y.value = {valori_di(kTipiServizio, usi[k], "tipi_servizio"), riferimenti(usi[k], "usi", pu, c), c.src(pu)};
+            y.source = fonte_documento(usi[k].at("fonte"));
+            y.to_confirm = c.vero(usi[k], "da_confermare");
+            y.note = c.testo(usi[k], "nota");
+            y.src = c.src(pu);
+            x.service_uses.push_back(y);
+        }
+        x.note = c.testo(n, "nota");
+        x.src = c.src(p);
+        pk.norms.push_back(x);
+    }
 }
 
 void luoghi(const JsonDati& d, Package& pk) {
@@ -491,6 +608,24 @@ void regolamenti(const JsonDati& d, Package& pk) {
             x.standing = StandingRule{valori_di(kGradi, j, "non_ammessi_per_gradi"), c.intero(j, "durata_massima_minuti"),
                                       c.decimale(j, "km_massimi"), fonte(j.at("fonte")), c.src(pp + "/passeggeri_in_piedi")};
         }
+        if (par.contains("usi_dei_mezzi")) {   // versione 2
+            const auto& j = par.at("usi_dei_mezzi");
+            const std::string pj = pp + "/usi_dei_mezzi";
+            ServiceUsesRule u;
+            const auto& valori = j.at("valori");
+            for (std::size_t k = 0; k < valori.size(); ++k) {
+                const std::string pv = indice(pj + "/valori", k);
+                u.values.push_back({valori_di(kTipiServizio, valori[k], "tipi_servizio"), riferimenti(valori[k], "usi", pv, c), c.src(pv)});
+            }
+            u.source = fonte(j.at("fonte"));
+            u.src = c.src(pj);
+            x.vehicle_uses = u;
+        }
+        if (par.contains("autorizzazione_del_committente")) {   // versione 2
+            const auto& j = par.at("autorizzazione_del_committente");
+            x.client_authorization = ClientAuthorizationRule{valori_di(kTipiServizio, j, "tipi_servizio"), fonte(j.at("fonte")),
+                                                             c.src(pp + "/autorizzazione_del_committente")};
+        }
         if (par.contains("combinazioni_vietate")) {
             const auto& j = par.at("combinazioni_vietate");
             CombinationsRule cr;
@@ -501,6 +636,28 @@ void regolamenti(const JsonDati& d, Package& pk) {
         }
         x.src = c.src(p);
         pk.regulations.push_back(x);
+    }
+}
+
+void festivita(const JsonDati& d, Package& pk) {
+    const Conversione c("festivita.json");
+    const auto& v = d.at("festivita");
+    for (std::size_t i = 0; i < v.size(); ++i) {
+        const auto& f = v[i];
+        const std::string p = indice("/festivita", i);
+        HolidayCalendar x;
+        x.code = f.at("codice").get<std::string>();
+        x.name = f.at("nome").get<std::string>();
+        x.country = f.at("paese").get<std::string>();
+        x.territory = c.testo(f, "territorio");
+        x.source = fonte_documento(f.at("fonte"));
+        const auto& date = f.at("date");
+        for (std::size_t j = 0; j < date.size(); ++j)
+            x.days.push_back({c.data(date[j].at("data")), date[j].at("nome").get<std::string>(), c.vero(date[j], "da_confermare"),
+                              c.testo(date[j], "nota"), c.src(indice(p + "/date", j))});
+        x.note = c.testo(f, "nota");
+        x.src = c.src(p);
+        pk.holidays.push_back(x);
     }
 }
 
@@ -523,6 +680,20 @@ void calendari(const JsonDati& d, Package& pk) {
         };
         date("date_aggiunte", x.added);
         date("date_tolte", x.removed);
+        // Versione 2: giorni di altri calendari o delle festivita' aggiunti e tolti (la versione 1 non li ha).
+        const auto collegamenti = [&](const char* campo, std::vector<CalendarLink>& out) {
+            if (!k.contains(campo)) return;
+            const auto& o = k.at(campo);
+            const std::string pc = p + "/" + campo;
+            for (const auto& [chiave, tipo] : {std::pair<const char*, CalendarLinkKind>{"calendari", CalendarLinkKind::Calendar},
+                                               {"festivita", CalendarLinkKind::Holidays}}) {
+                const auto& e = c.elenco(o, chiave);
+                for (std::size_t j = 0; j < e.size(); ++j)
+                    out.push_back({tipo, Ref{e[j].get<std::string>(), c.src(indice(pc + "/" + chiave, j))}});
+            }
+        };
+        collegamenti("aggiunge", x.adds);
+        collegamenti("toglie", x.removes);
         const auto& sosp = c.elenco(k, "sospensioni");
         for (std::size_t j = 0; j < sosp.size(); ++j)
             x.suspensions.push_back({{c.data(sosp[j].at("dal")), c.data(sosp[j].at("al"))}, sosp[j].at("motivo").get<std::string>(),
@@ -690,6 +861,7 @@ void servizi(const JsonDati& d, Package& pk) {
         x.freedom = lib.at("tipo").get<std::string>() == "libera" ? TimeFreedom::Free : TimeFreedom::Fixed;
         x.agree_threshold_min = c.intero(lib, "soglia_da_concordare_minuti");
         x.rules = regole(s, p, c);
+        x.competences = riferimenti(s, "competenze_richieste", p, c);   // versione 2
         const auto& gruppi = s.at("domanda").at("gruppi");
         for (std::size_t k = 0; k < gruppi.size(); ++k) {
             const auto& g = gruppi[k];
@@ -789,6 +961,17 @@ void corse(const JsonDati& d, Package& pk) {
     }
 }
 
+std::vector<Loan> prestiti(const JsonDati& o, const std::string& p, const Conversione& c) {
+    std::vector<Loan> v;
+    const auto& e = c.elenco(o, "prestiti");
+    for (std::size_t k = 0; k < e.size(); ++k) {
+        const std::string pk = indice(p + "/prestiti", k);
+        v.push_back({c.ref(e[k], "azienda", pk), e[k].at("accordo").get<std::string>(), c.data_opz(e[k], "dal"), c.data_opz(e[k], "al"),
+                     c.src(pk)});
+    }
+    return v;
+}
+
 void mezzi(const JsonDati& d, Package& pk) {
     const Conversione c("mezzi.json");
     const auto& v = d.at("mezzi");
@@ -830,6 +1013,29 @@ void mezzi(const JsonDati& d, Package& pk) {
         x.daily_fixed_cost = c.decimale(m, "costo_fisso_giornaliero");
         x.cost_per_km = c.decimale(m, "costo_al_km");
         x.hypothetical = c.vero(m, "ipotetico");
+        // Versione 2: uso, autorizzazioni a un uso in piu', vincolo di destinazione, scorta, prestiti.
+        x.use = c.ref_opz(m, "uso", p);
+        const auto& aut = c.elenco(m, "autorizzazioni_uso");
+        for (std::size_t k = 0; k < aut.size(); ++k) {
+            const std::string pa = indice(p + "/autorizzazioni_uso", k);
+            x.use_authorizations.push_back({c.ref(aut[k], "uso", pa), aut[k].at("ente").get<std::string>(),
+                                            aut[k].at("riferimento").get<std::string>(), {c.data(aut[k].at("dal")), c.data(aut[k].at("al"))},
+                                            c.testo(aut[k], "prescrizioni"), c.src(pa)});
+        }
+        if (m.contains("vincolo_destinazione")) {
+            const auto& j = m.at("vincolo_destinazione");
+            const std::string pv = p + "/vincolo_destinazione";
+            DestinationConstraint v;
+            v.kinds = valori_di(kTipiServizio, j.at("ammessi"), "tipi_servizio");
+            v.contracts = riferimenti(j.at("ammessi"), "contratti", pv + "/ammessi", c);
+            v.until = c.data_opz(j, "fino_al");
+            v.source = j.at("fonte").get<std::string>();
+            v.note = c.testo(j, "nota");
+            v.src = c.src(pv);
+            x.constraint = v;
+        }
+        x.spare = c.vero(m, "scorta");
+        x.loans = prestiti(m, p, c);
         x.src = c.src(p);
         pk.vehicles.push_back(x);
     }
@@ -860,14 +1066,262 @@ void tempi_sosta(const JsonDati& d, Package& pk) {
     pk.dwell = x;
 }
 
+std::optional<HoursLimits> limiti_ore(const JsonDati& o, const char* k) {
+    if (!o.contains(k)) return std::nullopt;
+    const auto& j = o.at(k);
+    return HoursLimits{Conversione::decimale(j, "giorno"), Conversione::decimale(j, "settimana"), Conversione::decimale(j, "mese")};
+}
+
+void persone(const JsonDati& d, Package& pk) {
+    const Conversione c("persone.json");
+    const auto& v = d.at("persone");
+    for (std::size_t i = 0; i < v.size(); ++i) {
+        const auto& s = v[i];
+        const std::string p = indice("/persone", i);
+        Person x;
+        x.code = s.at("codice").get<std::string>();
+        x.company = c.ref(s, "azienda", p);
+        for (const auto& r : s.at("ruoli")) x.roles.push_back(r.get<std::string>() == "autista" ? PersonRole::Driver : PersonRole::Escort);
+        x.name = c.testo(s, "nome");
+        if (s.contains("casa")) {
+            const auto& h = s.at("casa");
+            x.home = Home{c.testo(h, "indirizzo"), c.testo(h, "comune"), c.coordinate_opz(h, "coordinate")};
+        }
+        x.base_place = c.ref_opz(s, "presa_servizio", p);
+        x.usual_vehicle = c.ref_opz(s, "mezzo_abituale", p);
+        x.hypothetical = c.vero(s, "ipotetica");
+        const auto& rap = s.at("rapporto");
+        x.employment = valore_di<EmploymentKind>(
+            {{"titolare", EmploymentKind::Owner}, {"collaboratore_familiare", EmploymentKind::FamilyHelper}, {"socio", EmploymentKind::Partner},
+             {"dipendente_tempo_pieno", EmploymentKind::FullTime}, {"dipendente_part_time", EmploymentKind::PartTime},
+             {"a_chiamata", EmploymentKind::OnCall}, {"tempo_determinato", EmploymentKind::FixedTerm}, {"stagionale", EmploymentKind::Seasonal},
+             {"autonomo", EmploymentKind::SelfEmployed}, {"volontario", EmploymentKind::Volunteer}, {"altro", EmploymentKind::Other}},
+            rap.at("tipo").get<std::string>());
+        x.employment_description = c.testo(rap, "descrizione");
+        if (s.contains("contratto_collettivo")) {
+            x.agreement_code = s.at("contratto_collettivo").at("codice").get<std::string>();
+            x.agreement_name = s.at("contratto_collettivo").at("nome").get<std::string>();
+        }
+        const auto& ore = c.elenco(s, "ore");
+        for (std::size_t k = 0; k < ore.size(); ++k)
+            x.hours.push_back({c.data_opz(ore[k], "dal"), c.data_opz(ore[k], "al"), limiti_ore(ore[k], "previste"),
+                               limiti_ore(ore[k], "massime"), c.src(indice(p + "/ore", k))});
+        const auto& disp = c.elenco(s, "disponibilita");
+        for (std::size_t k = 0; k < disp.size(); ++k)
+            x.availability.push_back({c.data_opz(disp[k], "dal"), c.data_opz(disp[k], "al"), c.giorni(disp[k].at("giorni")),
+                                      c.orario(disp[k].at("dalle")), c.orario(disp[k].at("alle")), c.src(indice(p + "/disponibilita", k))});
+        const auto& costi = c.elenco(s, "costo_orario");
+        for (std::size_t k = 0; k < costi.size(); ++k)
+            x.hourly_cost.push_back({c.data_opz(costi[k], "dal"), c.data_opz(costi[k], "al"), costi[k].at("valore").get<double>(),
+                                     c.src(indice(p + "/costo_orario", k))});
+        const auto& abil = c.elenco(s, "abilitazioni");
+        for (std::size_t k = 0; k < abil.size(); ++k) {
+            const std::string pa = indice(p + "/abilitazioni", k);
+            x.licences.push_back({c.ref(abil[k], "tipo", pa), c.data_opz(abil[k], "scadenza"), c.testo(abil[k], "riferimento"), c.src(pa)});
+        }
+        const auto& aut = c.elenco(s, "autorizzazioni");
+        for (std::size_t k = 0; k < aut.size(); ++k) {
+            const std::string pa = indice(p + "/autorizzazioni", k);
+            x.authorizations.push_back({c.ref(aut[k], "committente", pa), c.testo(aut[k], "riferimento"), c.data_opz(aut[k], "scadenza"), c.src(pa)});
+        }
+        x.competences = riferimenti(s, "competenze", p, c);
+        const auto& pref = c.elenco(s, "preferenze");
+        for (std::size_t k = 0; k < pref.size(); ++k) {
+            const auto& j = pref[k];
+            const std::string pp = indice(p + "/preferenze", k);
+            Preference y;
+            y.kind = valore_di<PreferenceKind>({{"giorni_liberi", PreferenceKind::FreeDays}, {"fascia_oraria", PreferenceKind::TimeWindow},
+                                                {"evita_turni", PreferenceKind::AvoidShifts}, {"pausa_massima", PreferenceKind::MaxBreak},
+                                                {"altro", PreferenceKind::Other}},
+                                               j.at("tipo").get<std::string>());
+            y.from = c.data_opz(j, "dal");
+            y.to = c.data_opz(j, "al");
+            if (j.contains("giorni")) y.days = c.giorni(j.at("giorni"));
+            y.start = c.orario_opz(j, "dalle").value_or(0);
+            y.end = c.orario_opz(j, "alle").value_or(0);
+            y.shifts = riferimenti(j, "turni", pp, c);
+            y.max_break_min = c.intero(j, "minuti").value_or(0);
+            y.description = c.testo(j, "descrizione");
+            y.src = c.src(pp);
+            x.preferences.push_back(y);
+        }
+        x.loans = prestiti(s, p, c);
+        x.note = c.testo(s, "nota");
+        x.src = c.src(p);
+        pk.persons.push_back(x);
+    }
+}
+
+void assenze(const JsonDati& d, Package& pk) {
+    const Conversione c("assenze.json");
+    const auto& v = d.at("assenze");
+    for (std::size_t i = 0; i < v.size(); ++i) {
+        const std::string p = indice("/assenze", i);
+        pk.absences.push_back({c.ref(v[i], "persona", p), c.ref(v[i], "tipo", p), {c.data(v[i].at("dal")), c.data(v[i].at("al"))},
+                               c.orario_opz(v[i], "dalle"), c.orario_opz(v[i], "alle"), c.src(p)});
+    }
+}
+
+void fermi(const JsonDati& d, Package& pk) {
+    const Conversione c("fermi.json");
+    const auto& v = d.at("fermi");
+    for (std::size_t i = 0; i < v.size(); ++i) {
+        const std::string p = indice("/fermi", i);
+        pk.stops.push_back({c.ref(v[i], "mezzo", p), c.ref(v[i], "tipo", p), {c.data(v[i].at("dal")), c.data(v[i].at("al"))},
+                            c.orario_opz(v[i], "dalle"), c.orario_opz(v[i], "alle"), c.testo(v[i], "nota"), c.src(p)});
+    }
+}
+
+std::optional<TripPoint> punto_corsa(const JsonDati& o, const char* k, const std::string& p, const Conversione& c) {
+    if (!o.contains(k)) return std::nullopt;
+    const std::string pk = p + "/" + k;
+    return TripPoint{c.ref(o.at(k), "luogo", pk), c.orario_opz(o.at(k), "orario"), c.src(pk)};
+}
+
+void turni(const JsonDati& d, Package& pk) {
+    const Conversione c("turni.json");
+    const auto& v = d.at("turni");
+    for (std::size_t i = 0; i < v.size(); ++i) {
+        const auto& s = v[i];
+        const std::string p = indice("/turni", i);
+        Shift x;
+        x.code = s.at("codice").get<std::string>();
+        x.name = c.testo(s, "nome");
+        x.company = c.ref(s, "azienda", p);
+        x.role = valore_di<ShiftRole>({{"autista", ShiftRole::Driver}, {"assistente", ShiftRole::Escort},
+                                       {"secondo_autista", ShiftRole::SecondDriver}},
+                                      s.at("ruolo").get<std::string>());
+        x.calendar = c.ref(s, "calendario", p);
+        const auto& m = s.at("mezzo");
+        x.vehicle_mode = valore_di<ShiftVehicleMode>({{"preciso", ShiftVehicleMode::Specific}, {"abituale", ShiftVehicleMode::Usual},
+                                                      {"da_assegnare", ShiftVehicleMode::ToAssign}, {"nessuno", ShiftVehicleMode::None}},
+                                                     m.at("modo").get<std::string>());
+        x.vehicle = c.ref_opz(m, "codice", p + "/mezzo");
+        x.vehicle_src = c.src(p + "/mezzo");
+        x.start_place = c.ref(s, "inizio", p);
+        x.end_place = c.ref(s, "fine", p);
+        const auto& el = s.at("elementi");
+        for (std::size_t k = 0; k < el.size(); ++k) {
+            const auto& e = el[k];
+            const std::string pe = indice(p + "/elementi", k);
+            ShiftItem y;
+            y.src = c.src(pe);
+            if (e.contains("corsa")) {
+                y.is_trip = true;
+                y.trip.trip = c.ref(e, "corsa", pe);
+                y.trip.from = punto_corsa(e, "da", pe, c);
+                y.trip.to = punto_corsa(e, "a", pe, c);
+                if (e.contains("assistente"))
+                    y.trip.escort = e.at("assistente").get<std::string>() == "azienda" ? EscortProvider::Company : EscortProvider::Client;
+            } else {
+                y.is_trip = false;
+                y.activity.type = c.ref(e, "attivita", pe);
+                y.activity.place = c.ref(e, "luogo", pe);
+                y.activity.to_place = c.ref_opz(e, "verso", pe);
+                y.activity.start = c.orario(e.at("dalle"));
+                y.activity.end = c.orario(e.at("alle"));
+                y.activity.empty_km = c.decimale(e, "km_vuoti");
+                y.activity.calendar = c.ref_opz(e, "calendario", pe);
+                y.activity.note = c.testo(e, "nota");
+            }
+            x.items.push_back(y);
+        }
+        x.competences = riferimenti(s, "competenze_richieste", p, c);
+        x.note = c.testo(s, "nota");
+        x.src = c.src(p);
+        pk.shifts.push_back(std::move(x));
+    }
+}
+
+void rotazioni(const JsonDati& d, Package& pk) {
+    const Conversione c("rotazioni.json");
+    const auto& v = d.at("rotazioni");
+    for (std::size_t i = 0; i < v.size(); ++i) {
+        const auto& r = v[i];
+        const std::string p = indice("/rotazioni", i);
+        Rotation x;
+        x.code = r.at("codice").get<std::string>();
+        x.name = c.testo(r, "nome");
+        x.unit = r.at("passo").get<std::string>() == "mese" ? RotationUnit::Month : RotationUnit::Day;
+        x.length = r.at("lunghezza").get<int>();
+        x.start = c.data(r.at("partenza"));
+        x.from = c.data_opz(r, "dal");
+        x.to = c.data_opz(r, "al");
+        const auto& righe = r.at("righe");
+        for (std::size_t k = 0; k < righe.size(); ++k) {
+            const std::string pr = indice(p + "/righe", k);
+            RotationRow row;
+            row.person = c.ref(righe[k], "persona", pr);
+            const auto& passi = righe[k].at("passi");
+            for (std::size_t q = 0; q < passi.size(); ++q) {
+                const std::string pp = indice(pr + "/passi", q);
+                RotationStep st;
+                st.src = c.src(pp);
+                if (passi[q].is_string()) {
+                    st.rest = true;
+                } else {
+                    for (std::size_t z = 0; z < passi[q].size(); ++z)
+                        st.shifts.push_back({passi[q][z].get<std::string>(), c.src(indice(pp, z))});
+                }
+                row.steps.push_back(st);
+            }
+            row.src = c.src(pr);
+            x.rows.push_back(row);
+        }
+        x.note = c.testo(r, "nota");
+        x.src = c.src(p);
+        pk.rotations.push_back(std::move(x));
+    }
+}
+
+void servizi_fissi(const JsonDati& d, Package& pk) {
+    const Conversione c("servizi_fissi.json");
+    const auto& v = d.at("servizi_fissi");
+    for (std::size_t i = 0; i < v.size(); ++i) {
+        const std::string p = indice("/servizi_fissi", i);
+        pk.fixed.push_back({v[i].at("codice").get<std::string>(), c.ref(v[i], "turno", p), c.ref(v[i], "persona", p),
+                            c.ref(v[i], "calendario", p), c.testo(v[i], "nota"), c.src(p)});
+    }
+}
+
+void assegnazioni(const JsonDati& d, Package& pk) {
+    const Conversione c("assegnazioni.json");
+    const auto& v = d.at("assegnazioni");
+    for (std::size_t i = 0; i < v.size(); ++i) {
+        const std::string p = indice("/assegnazioni", i);
+        pk.day_assignments.push_back({c.data(v[i].at("data")), c.ref(v[i], "turno", p), c.ref_opz(v[i], "persona", p),
+                                      c.ref_opz(v[i], "mezzo", p), c.testo(v[i], "nota"), c.src(p)});
+    }
+}
+
+void blocchi(const JsonDati& d, Package& pk) {
+    const Conversione c("blocchi.json");
+    const auto& v = d.at("blocchi");
+    for (std::size_t i = 0; i < v.size(); ++i) {
+        const std::string p = indice("/blocchi", i);
+        Block x;
+        x.code = v[i].at("codice").get<std::string>();
+        x.vehicle = c.ref(v[i], "mezzo", p);
+        x.trips = riferimenti(v[i], "corse", p, c);
+        x.from = c.data_opz(v[i], "dal");
+        x.to = c.data_opz(v[i], "al");
+        x.strength = v[i].at("forza").get<std::string>() == "tutto_fisso" ? BlockStrength::AllFixed : BlockStrength::VehicleFixed;
+        x.note = c.testo(v[i], "nota");
+        x.src = c.src(p);
+        pk.blocks.push_back(x);
+    }
+}
+
 void converti(const std::string& file, const JsonDati& d, Package& pk) {
     using Funzione = void (*)(const JsonDati&, Package&);
     static const std::vector<std::pair<const char*, Funzione>> conversioni = {
-        {"pacchetto.json", manifesto}, {"luoghi.json", luoghi}, {"tratti.json", tratti},
-        {"regolamenti.json", regolamenti}, {"calendari.json", calendari}, {"scuole.json", scuole},
+        {"pacchetto.json", manifesto}, {"aziende.json", aziende}, {"norme.json", norme}, {"luoghi.json", luoghi}, {"tratti.json", tratti},
+        {"regolamenti.json", regolamenti}, {"festivita.json", festivita}, {"calendari.json", calendari}, {"scuole.json", scuole},
         {"committenti.json", committenti}, {"contratti.json", contratti}, {"gruppi_servizi.json", gruppi_servizi},
         {"servizi.json", servizi}, {"corse.json", corse}, {"mezzi.json", mezzi}, {"rimesse.json", rimesse},
-        {"tempi_sosta.json", tempi_sosta}};
+        {"tempi_sosta.json", tempi_sosta}, {"persone.json", persone}, {"assenze.json", assenze}, {"fermi.json", fermi},
+        {"turni.json", turni}, {"rotazioni.json", rotazioni}, {"servizi_fissi.json", servizi_fissi},
+        {"assegnazioni.json", assegnazioni}, {"blocchi.json", blocchi}};
     for (const auto& [nome, f] : conversioni)
         if (file == nome) return f(d, pk);
     throw std::logic_error("file del formato senza conversione: " + file);
@@ -893,6 +1347,11 @@ Lettura leggi_pacchetto(const Sorgente& sorgente) {
 
     for (const FileDati& f : file_dati()) {
         if (!presenti.count(f.file)) continue;
+        const std::optional<std::uintmax_t> byte = sorgente.dimensione(f.file);
+        if (byte && *byte > kMassimoMBFile * 1024 * 1024) {
+            out.problemi.push_back(problema(Check::FileTooBig, f.file, "", {number_param("massimo", static_cast<long long>(kMassimoMBFile))}));
+            continue;
+        }
         const std::optional<std::string> testo = sorgente.leggi(f.file);
         if (!testo) {
             out.problemi.push_back(problema(Check::UnreadableFile, f.file, ""));

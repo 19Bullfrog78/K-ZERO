@@ -6,6 +6,7 @@
 
 #include "errori.hpp"
 #include "esecutori.hpp"
+#include "tempo.hpp"
 
 namespace kzero::api {
 
@@ -44,6 +45,39 @@ DefinizioneParametro parametro_dati_particolari() {
     return p;
 }
 
+DefinizioneParametro parametro_data() {
+    DefinizioneParametro p;
+    p.nome = "--data";
+    p.tipo = TipoParametro::Valore;
+    p.forma = FormaValore::Data;
+    p.obbligatorio = true;
+    p.descrizione = "Il giorno da mostrare, dentro il periodo del pacchetto (il programma non usa l'orologio).";
+    p.applica = [](Parametri& par, const std::string& valore) { par.data = kzero::day_from_text(valore); };
+    return p;
+}
+
+DefinizioneParametro parametro_persona() {
+    DefinizioneParametro p;
+    p.nome = "--persona";
+    p.tipo = TipoParametro::Valore;
+    p.forma = FormaValore::Codice;
+    p.incompatibili = {"--mezzo"};
+    p.descrizione = "Solo la giornata di questa persona (codice di persone.json): i turni che fa e quelli che non puo' fare.";
+    p.applica = [](Parametri& par, const std::string& valore) { par.persona = valore; };
+    return p;
+}
+
+DefinizioneParametro parametro_mezzo() {
+    DefinizioneParametro p;
+    p.nome = "--mezzo";
+    p.tipo = TipoParametro::Valore;
+    p.forma = FormaValore::Codice;
+    p.incompatibili = {"--persona"};
+    p.descrizione = "Solo la giornata di questo mezzo (codice di mezzi.json): i turni che lo usano e quelli che non puo' fare.";
+    p.applica = [](Parametri& par, const std::string& valore) { par.mezzo = valore; };
+    return p;
+}
+
 std::vector<DefinizioneComando> crea_comandi() {
     std::vector<DefinizioneComando> c = {
         {"controlla",
@@ -52,14 +86,14 @@ std::vector<DefinizioneComando> crea_comandi() {
          "posizione, poi un riepilogo; esce con 1 se trova errori (gli avvisi non bloccano).",
          {{"cartella", "Cartella del pacchetto dati, con il manifesto pacchetto.json."}},
          {parametro_formato(), parametro_dati_personali(), parametro_dati_particolari()},
-         {"controlla", 1},
+         {"controlla", 2},
          esegui_controlla},
         {"descrivi",
          "Descrive il programma: comandi, argomenti, parametri, schemi JSON, file dei pacchetti dati, codici di uscita, "
          "di errore e dei controlli.",
          {},
          {parametro_formato()},
-         {"descrivi", 2},
+         {"descrivi", 3},
          esegui_descrivi},
         {"dimostrazione",
          "Stampa di prova con il pacchetto dimostrativo esempi/demo (dati inventati, incorporato nel programma): "
@@ -68,6 +102,17 @@ std::vector<DefinizioneComando> crea_comandi() {
          {parametro_formato(), parametro_dati_personali(), parametro_dati_particolari()},
          {"dimostrazione", 2},
          esegui_dimostrazione},
+        {"giornata",
+         "Mostra la giornata di un giorno del pacchetto: per ogni turno chi lo fa e da dove viene l'assegnazione "
+         "(rotazione, servizio fisso, assegnazione del singolo giorno), il mezzo, le corse (intere o a pezzi) e le "
+         "attivita' in ordine con i passaggi, i tempi fermi e i km; i turni scoperti o senza mezzo con il motivo; i "
+         "totali. Con --persona o --mezzo solo quella persona o quel mezzo. Se il pacchetto ha errori nei dati non mostra "
+         "nulla e rimanda a kzero controlla (gli avvisi non bloccano).",
+         {{"cartella", "Cartella del pacchetto dati, con il manifesto pacchetto.json."}},
+         {parametro_formato(), parametro_dati_personali(), parametro_dati_particolari(), parametro_data(), parametro_persona(),
+          parametro_mezzo()},
+         {"giornata", 1},
+         esegui_giornata},
         {"versione",
          "Mostra la versione del programma.",
          {},
@@ -110,7 +155,7 @@ std::string forma_comando(const DefinizioneComando& c) {
 
 const std::vector<Schema>& schemi_ritirati() {
     // Versioni non piu' prodotte: i file restano in docs/schema per controllare le uscite salvate prima.
-    static const std::vector<Schema> s = {{"descrivi", 1}, {"dimostrazione", 1}};
+    static const std::vector<Schema> s = {{"controlla", 1}, {"descrivi", 1}, {"descrivi", 2}, {"dimostrazione", 1}};
     return s;
 }
 

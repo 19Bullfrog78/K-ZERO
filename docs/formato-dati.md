@@ -1,8 +1,9 @@
-# Formato dei dati di K-Zero (parte 1: rete e servizi)
+# Formato dei dati di K-Zero
 
-Questo documento spiega come si scrivono i dati che K-Zero legge: luoghi e fermate, regolamenti,
-calendari, scuole e centri, committenti e contratti, servizi con la loro domanda, corse, mezzi e rimesse.
-La seconda parte del formato (autisti, turni, rotazioni, blocchi) arrivera' con il mandato K-008.
+Questo documento spiega come si scrivono i dati che K-Zero legge. Parte 1 (K-007): luoghi e fermate,
+regolamenti, calendari, scuole e centri, committenti e contratti, servizi con la loro domanda, corse, mezzi e
+rimesse. Parte 2 (K-008): elenchi e impostazioni delle aziende, norme del paese, festivita', persone, assenze,
+fermi, turni del giorno, rotazioni, servizi fissi, assegnazioni del singolo giorno, blocchi.
 
 Il formato vale per qualunque azienda, consorzio o ente, di qualunque dimensione e di qualunque paese:
 nel programma non c'e' nulla di specifico di un'azienda o di un territorio. Le regole di un territorio
@@ -11,7 +12,11 @@ nomi nei dati.
 
 Per controllare un pacchetto: `kzero controlla <cartella>` (problemi spiegati in [controlli.md](controlli.md)).
 Esempi completi: `esempi/demo` (livello "completo") ed `esempi/demo-numeri` (livello "solo numeri"),
-con dati inventati.
+con dati inventati. Dal K-008 il demo ha anche persone e turni: in Alfa la rotazione di 14 giorni della forma di
+quella di Alpinabus, un servizio fisso solo il mercoledi', sostituzioni, un mezzo in revisione sostituito dal mezzo di
+scorta, un autobus di linea con la distrazione al noleggio usato per una gita, il cambio dell'autista a meta' corsa,
+turni notturni, spezzati, di riserva e di reperibilita'; in Beta una linea 7 su 7 con orario feriale e festivo e un
+ciclo di 3 giorni. La giornata di un giorno si vede con `kzero giornata esempi/demo --data 2026-10-22`.
 
 ## Il pacchetto dati
 
@@ -21,19 +26,30 @@ Solo il manifesto e' obbligatorio; un file che manca vuol dire "nessun elemento 
 | File | Obbligatorio | Contenuto |
 |---|---|---|
 | `pacchetto.json` | si' | Manifesto: aziende, periodo, origine, livello, fuso orario, valuta, impostazioni |
+| `aziende.json` | no | Elenchi e impostazioni di ogni azienda: tipi di attivita', di assenza, di fermo, competenze, norme, ricovero, abbinamento autista-mezzo |
+| `norme.json` | no | Norme di un paese: abilitazioni per guidare, usi dei mezzi, requisiti di guida, usi per tipo di servizio, con la fonte |
 | `luoghi.json` | no | Luoghi pubblici (fermate, scuole, centri, rimesse...) e luoghi privati (case) |
 | `tratti.json` | no | Tratti di strada tra due luoghi con i loro limiti |
 | `regolamenti.json` | no | Regolamenti: i parametri di un territorio o di un committente, con la fonte |
-| `calendari.json` | no | Calendari: giorni della settimana, date aggiunte e tolte, sospensioni |
+| `festivita.json` | no | Calendari delle festivita' di un paese o di un territorio, con la fonte |
+| `calendari.json` | no | Calendari: giorni della settimana, date aggiunte e tolte, sospensioni, altri calendari e festivita' aggiunti o tolti |
 | `scuole.json` | no | Scuole e centri: grado o tipo di centro, orari, attese concordate |
 | `committenti.json` | no | Committenti |
 | `contratti.json` | no | Contratti: committente, azienda, regolamento, regole del committente sul mezzo |
 | `gruppi_servizi.json` | no | Gruppi di servizi affidati insieme (es. un "lotto") |
 | `servizi.json` | no | Servizi con la loro domanda (gruppi di passeggeri) |
 | `corse.json` | no | Corse con i passaggi, i trasbordi, le coincidenze, i km |
-| `mezzi.json` | no | Mezzi |
+| `mezzi.json` | no | Mezzi: posti, attrezzature, costi, uso della carta di circolazione, distrazioni, vincolo di destinazione, scorta, prestiti |
 | `rimesse.json` | no | Rimesse e ricoveri dei mezzi |
 | `tempi_sosta.json` | no | Tempi di sosta alle fermate (facoltativi finche' non confermati) |
+| `persone.json` | no | Persone delle aziende: autisti e assistenti, ruoli, rapporto, ore, disponibilita', abilitazioni, competenze, preferenze |
+| `assenze.json` | no | Assenze programmate delle persone: periodo e tipo, mai la causa |
+| `fermi.json` | no | Fermi programmati dei mezzi (es. revisione) |
+| `turni.json` | no | Turni del giorno: corse intere o a pezzi e attivita' in ordine, mezzo, luoghi di inizio e fine, calendario |
+| `rotazioni.json` | no | Rotazioni: cicli di passi (giorni o mesi) con i turni di ogni persona |
+| `servizi_fissi.json` | no | Turni assegnati sempre alla stessa persona nei giorni di un calendario |
+| `assegnazioni.json` | no | Assegnazioni del singolo giorno: sostituzioni, scambi, un mezzo al posto di un altro, lavori occasionali |
+| `blocchi.json` | no | Blocchi: corse fissate su un mezzo, per il calcolo futuro |
 
 Un file con un nome diverso da questi non viene letto (avviso K-CTR-008): di solito e' un nome scritto male.
 
@@ -66,6 +82,8 @@ Un file con un nome diverso da questi non viene letto (avviso K-CTR-008): di sol
 - **Distanze** in km (nei regolamenti, dove il nome del campo lo dice, in metri: `_m`); **misure** in metri,
   **masse** in tonnellate; **costi** nella valuta del manifesto.
 - **Testi**: una riga non vuota fino a 300 caratteri; le note (`nota`) fino a 2000 caratteri.
+- **Dimensione**: un file piu' grande di 256 MB non viene letto (errore K-CTR-053): e' certamente un errore, e
+  leggerlo potrebbe esaurire la memoria del PC.
 - **Numeri**: ogni numero ha un minimo e un massimo di buon senso (es. 1.000 posti per mezzo, 10.000 persone a
   una fermata, 1.440 minuti, 3.600 secondi, 100 m per una misura, 1.000.000 per i valori di un regolamento):
   un valore piu' grande e' certamente un errore di scrittura e il file viene rifiutato (K-CTR-007).
@@ -95,8 +113,8 @@ parte da quella marcatura ed e' uguale per testo e JSON.
 | Classe | Cosa comprende | Nelle uscite, di base | Per vederli |
 |---|---|---|---|
 | comune | fermate pubbliche (nome, posizione, codici), scuole e centri, grado, orari, calendari, conteggi senza esigenze, mezzi (targa compresa), aziende, committenti, contratti, regolamenti, tutti i codici | sempre visibili | - |
-| personale | nomi e cognomi, indirizzi, case, punti porta a porta (sono la casa del passeggero), ricoveri presso la casa di una persona, motivi scritti a mano | sostituiti dal **codice** dell'elemento | `--includi-dati-personali` |
-| particolare | dati sulla salute: esigenze di una persona o di un gruppo (carrozzina, ausili piegati, assistente necessario), tipo di servizio e di gruppo ("disabili"), conteggi di carrozzine e di ausili piegati, pedana obbligatoria per un servizio, categoria ricavata della corsa | sostituiti da `"riservato"` | `--includi-dati-particolari` |
+| personale | nomi e cognomi, indirizzi, case, punti porta a porta (sono la casa del passeggero), ricoveri presso la casa di una persona, motivi scritti a mano; delle persone (autisti e assistenti): ruoli, nome, casa, rapporto di lavoro, contratto collettivo, ore, disponibilita', costo orario, abilitazioni, autorizzazioni, competenze, preferenze, note; le assenze; le note dei file che parlano di persone | sostituiti dal **codice** dell'elemento (o da `"riservato"`, se non c'e' un codice da mostrare) | `--includi-dati-personali` |
+| particolare | dati sulla salute: esigenze di una persona o di un gruppo (carrozzina, ausili piegati, assistente necessario), tipo di servizio e di gruppo ("disabili"), conteggi di carrozzine e di ausili piegati, pedana obbligatoria per un servizio, competenze richieste da un servizio o da un turno, categoria ricavata della corsa | sostituiti da `"riservato"` | `--includi-dati-particolari` |
 
 Perche' i dati particolari sono nascosti anche quando al posto del nome c'e' un codice: sono dati sulla
 salute, e restano dati personali anche senza nome (GDPR, considerando 26); in un paese piccolo
@@ -118,9 +136,16 @@ Il manifesto dichiara il **livello**:
 I conteggi di carrozzine e di ausili piegati (dati particolari aggregati) sono ammessi in entrambi i livelli,
 sempre filtrati nelle uscite.
 
+**Persone (autisti e assistenti) nei due livelli.** Anche un pacchetto "solo numeri" ha le persone: senza di loro
+non si possono controllare ne' pianificare i turni. Restano i dati che servono al calcolo (codice, azienda, ruolo,
+abilitazioni, competenze, disponibilita', ore, preferenze, mezzo abituale), che sono comunque nascosti nelle uscite
+di base; non ci sono invece il nome, la casa e le note scritte a mano (errore K-CTR-019), che per controllare e
+pianificare non servono. Le assenze restano: dicono solo quando una persona manca e il tipo, mai la causa.
+
 **Minimizzazione:** il formato non ha campi per codice fiscale, telefoni, mail delle famiglie, data di
-nascita. K-Zero non li conserva mai: per pianificare non servono. Un campo cosi' aggiunto a mano e' un
-errore ("campo non previsto").
+nascita; per le persone delle aziende nemmeno idoneita' medica e cause delle assenze (una malattia e' un dato sulla
+salute e per pianificare non serve). K-Zero non li conserva mai. Un campo cosi' aggiunto a mano e' un errore
+("campo non previsto").
 
 ### Come si legge la tabella dei campi
 
@@ -166,6 +191,60 @@ Il manifesto: chi, quando, da dove vengono i dati, che livello di dati contiene.
   "impostazioni": { "margine_trasbordo_minuti": 3 }
 }
 ```
+
+### aziende.json
+
+L'organizzazione la sceglie ogni azienda: qui stanno i suoi elenchi, con i suoi nomi, e le sue impostazioni.
+In un consorzio ogni azienda del manifesto ha la sua riga. Le `impostazioni` del manifesto sono un'altra cosa:
+scelte di chi pianifica, valide per tutto il pacchetto. Schema: [docs/schema/aziende.v1.schema.json](schema/aziende.v1.schema.json).
+
+| Campo | Obbl. | Classe | Significato |
+|---|---|---|---|
+| `aziende[].azienda` | si' | comune | Codice dell'azienda (dal manifesto); una riga per azienda (errore K-CTR-009 se ripetuta) |
+| `aziende[].norme` | no | comune | Norme del paese che valgono per l'azienda (`norme.json`); senza, usi dei mezzi e abilitazioni non si controllano (avviso K-CTR-052) |
+| `aziende[].impostazioni.ricovero_vicino_a_casa` | si' | comune | Il mezzo puo' dormire in un ricovero vicino a casa dell'autista: `preferito`, `ammesso`, `mai` (= sempre in rimessa) |
+| `aziende[].impostazioni.abbinamento_autista_mezzo` | si' | comune | `nessuno`, `preferito`, `fisso` (ogni autista ha il suo mezzo, il mezzo abituale, e guida solo quello) |
+| `aziende[].attivita[]` | no | comune | Tipi di attivita' senza passeggeri dei turni: `codice`, `nome`, `usa_il_mezzo` (true = impegna il mezzo del turno), `nota` |
+| `aziende[].tipi_assenza[]` | no | comune | Tipi di assenza delle persone (es. ferie, permesso, formazione): `codice`, `nome`, `nota`. Mai la causa |
+| `aziende[].tipi_fermo[]` | no | comune | Tipi di fermo dei mezzi (es. revisione, manutenzione): `codice`, `nome`, `nota` |
+| `aziende[].competenze[]` | no | comune | Competenze che un turno o un servizio puo' richiedere (es. conosce la linea B610, formato per la pedana): `codice`, `nome`, `nota` |
+| `aziende[].nota` | no | comune | Note |
+
+Le impostazioni sono solo dati: il costo delle scelte lo mostrera' il calcolo. Nel codice non c'e' nessun tipo di
+attivita', assenza, fermo o competenza: sono nomi nei dati. I codici delle competenze si confrontano come testi: in un
+consorzio le aziende che si scambiano persone usano gli stessi codici per le stesse competenze.
+
+### norme.json
+
+Le norme di un paese che servono a controllare chi guida cosa e quale mezzo fa quale servizio. **Nessuna patente e
+nessun uso e' scritto nel programma**: tutto e' un dato con la fonte, e cio' che non e' certo si segna
+`da_confermare`. Schema: [docs/schema/norme.v1.schema.json](schema/norme.v1.schema.json).
+
+| Campo | Obbl. | Classe | Significato |
+|---|---|---|---|
+| `norme[].codice` | si' | comune | Codice delle norme (es. `N-IT`) |
+| `norme[].nome` | si' | comune | Nome |
+| `norme[].paese` | si' | comune | Paese, codice ISO 3166-1 di due lettere |
+| `norme[].abilitazioni[]` | no | comune | Elenco delle abilitazioni del paese: `codice`, `nome`, `fonte`, `nota` (in Italia patenti B, D1, D, DE, CQC persone, KB, carta del conducente; in Germania anche il "P-Schein") |
+| `norme[].usi[]` | no | comune | Elenco degli usi dei mezzi come li scrive la carta di circolazione: `codice`, `nome`, `fonte`, `nota` (in Italia servizio di linea, noleggio con conducente, uso proprio) |
+| `norme[].requisiti_guida[]` | no | comune | Requisiti per guidare: `categorie` (M1, M2, M3), `posti_da`, `posti_fino_a`, `rimorchio`, `usi` (facoltativi) e le `alternative`; `fonte`, `da_confermare`, `nota` |
+| `requisiti_guida[].alternative[]` | si' | comune | Modi di soddisfare il requisito (ne basta uno): `abilitazioni[]` da avere tutte insieme; facoltativi `posti_fino_a` e `lunghezza_fino_a_m` (es. la patente D1 fino a 16 posti e 8 m) |
+| `norme[].usi_per_servizio[]` | no | comune | Usi dei mezzi ammessi per tipo di servizio: `tipi_servizio`, `usi` (ne basta uno), `fonte`, `da_confermare`, `nota` |
+| `norme[].nota` | no | comune | Note |
+
+Come si usano:
+- **requisiti di guida**: per il mezzo di un turno valgono tutti i requisiti che gli corrispondono (categoria, posti
+  per i passeggeri, rimorchio e, se il requisito ha degli usi, l'uso della carta di circolazione o un uso autorizzato
+  del mezzo). Per ognuno l'autista deve avere tutte le abilitazioni di almeno un'alternativa i cui limiti valgono per
+  quel mezzo (un mezzo senza la lunghezza non rispetta un limite di lunghezza: prudenza). Valgono le norme
+  dell'azienda del turno;
+- **usi per tipo di servizio**: per una corsa vale prima il regolamento del contratto del servizio (parametro
+  `usi_dei_mezzi`), poi le norme dell'azienda del contratto. Senza regola, nessun uso e' richiesto. Il mezzo va bene
+  se il suo `uso` e' tra quelli ammessi, oppure se ha un'autorizzazione a un uso ammesso valida quel giorno (la
+  distrazione, vedi `mezzi.json`).
+
+Nel demo le norme italiane (`N-IT`): patenti e usi dal Codice della strada (artt. 82 e 116), la CQC dal D.Lgs.
+286/2005; il certificato KB per le autovetture a noleggio e la patente DE sono segnati "da confermare".
 
 ### luoghi.json
 
@@ -243,7 +322,9 @@ Tratti di strada tra due luoghi con i loro limiti (es. un sottopasso, una strada
 
 Un regolamento e' l'insieme dei parametri di un territorio o di un committente (es. il testo unico di una
 Provincia). **Il programma non conosce nessun valore: li legge da qui.** Ogni contratto indica il
-regolamento che vale per i suoi servizi. Schema: [docs/schema/regolamenti.v1.schema.json](schema/regolamenti.v1.schema.json).
+regolamento che vale per i suoi servizi. Schemi: [docs/schema/regolamenti.v2.schema.json](schema/regolamenti.v2.schema.json)
+(versione attuale) e [docs/schema/regolamenti.v1.schema.json](schema/regolamenti.v1.schema.json) (versione 1, ancora
+letta: e' la versione 2 senza `usi_dei_mezzi` e `autorizzazione_del_committente`).
 
 | Campo | Obbl. | Classe | Significato |
 |---|---|---|---|
@@ -273,6 +354,8 @@ da quello del regolamento) e `fonte.riferimenti` (altre norme citate), piu' una 
 | `discesa_senza_adulto_con_autorizzazione` | `gradi[]` | Gradi per cui la discesa senza adulto e' ammessa con l'autorizzazione dei genitori |
 | `passeggeri_in_piedi` | `non_ammessi_per_gradi[]`, `durata_massima_minuti`, `km_massimi` | Passeggeri in piedi |
 | `combinazioni_vietate` | `combinazioni[]` di `primo` e `secondo` | Passeggeri che non possono viaggiare insieme (per grado o tipo di gruppo) |
+| `usi_dei_mezzi` | `valori[]` di `tipi_servizio` e `usi` | Versione 2. Usi dei mezzi ammessi per tipo di servizio, se il territorio decide diversamente dalle norme del paese (codici degli usi di `norme.json`) |
+| `autorizzazione_del_committente` | `tipi_servizio[]` | Versione 2. Per questi tipi di servizio l'autista deve avere un'autorizzazione del committente del contratto (es. un cartellino di riconoscimento) |
 
 `valori[]` per grado: elenco di `{ "gradi": [...], "valore": n }`. Gradi: `infanzia`, `primaria`,
 `secondaria_primo_grado`, `secondaria_secondo_grado`.
@@ -293,9 +376,39 @@ Il pacchetto demo ha due regolamenti: `R-TN` con i valori pubblici del testo uni
 (vedi REGOLE.md, parte 2) e `R-INV` con valori inventati e diversi, usato da un altro contratto: lo stesso
 controllo con i due regolamenti da' esiti diversi (prova `due_regolamenti_*`).
 
+### festivita.json
+
+Le festivita' di un paese o di un territorio (le feste nazionali, il santo patrono di un comune), con la fonte.
+**Nessuna festivita' e' scritta nel programma, nemmeno quelle mobili come Pasqua**: le date sono dati, e un
+calendario le aggiunge o le toglie (sotto). Cosi' le feste si scrivono una volta sola e valgono per tutti i
+calendari che le usano. Schema: [docs/schema/festivita.v1.schema.json](schema/festivita.v1.schema.json).
+
+| Campo | Obbl. | Classe | Significato |
+|---|---|---|---|
+| `festivita[].codice` | si' | comune | Codice del calendario delle festivita' |
+| `festivita[].nome` | si' | comune | Nome (es. "Festivita' nazionali in Italia, 2026/27") |
+| `festivita[].paese` | si' | comune | Paese, codice ISO 3166-1 di due lettere (`IT`, `DE`, `CH`...) |
+| `festivita[].territorio` | no | comune | Territorio a cui vale (es. un comune); assente = tutto il paese |
+| `festivita[].fonte` | si' | comune | `documento` (obbligatorio), `punto`, `riferimenti`: da dove vengono le date |
+| `festivita[].date[]` | si' | comune | Le feste: `data`, `nome`, `da_confermare` (facoltativo), `nota` |
+| `festivita[].nota` | no | comune | Note |
+
+```json
+{
+  "codice": "FEST-VALFONDA",
+  "nome": "Santo patrono di Valfonda (San Martino)",
+  "paese": "IT",
+  "territorio": "Comune di Valfonda (inventato)",
+  "fonte": { "documento": "Statuto del Comune di Valfonda (inventato)", "punto": "art. 3" },
+  "date": [{ "data": "2026-11-11", "nome": "San Martino, patrono di Valfonda" }]
+}
+```
+
 ### calendari.json
 
-Quando vale un servizio o una corsa. Schema: [docs/schema/calendari.v1.schema.json](schema/calendari.v1.schema.json).
+Quando vale un servizio, una corsa o un turno. Schemi: [docs/schema/calendari.v2.schema.json](schema/calendari.v2.schema.json)
+(versione attuale) e [docs/schema/calendari.v1.schema.json](schema/calendari.v1.schema.json) (versione 1, ancora letta:
+e' la versione 2 senza `aggiunge` e `toglie`).
 
 | Campo | Obbl. | Classe | Significato |
 |---|---|---|---|
@@ -308,14 +421,35 @@ Quando vale un servizio o una corsa. Schema: [docs/schema/calendari.v1.schema.js
 | `calendari[].date_aggiunte[]` | no | comune | Date in cui vale anche se non e' uno dei giorni indicati |
 | `calendari[].date_tolte[]` | no | comune | Date in cui non vale |
 | `calendari[].sospensioni[]` | no | comune | Periodi in cui non vale: `dal`, `al`, `motivo` (es. "chiusura del centro") |
+| `calendari[].aggiunge` | no | comune | Versione 2. Giorni di altri calendari (`calendari[]`) o di calendari delle festivita' (`festivita[]`) in cui questo calendario vale, dentro il suo periodo |
+| `calendari[].toglie` | no | comune | Versione 2. Giorni di altri calendari (`calendari[]`) o di calendari delle festivita' (`festivita[]`) in cui questo calendario non vale |
 | `calendari[].nota` | no | comune | Note |
 
-Come si decide se un calendario vale in un giorno: le date tolte e le sospensioni prevalgono su tutto;
-poi valgono le date aggiunte; poi il giorno deve stare nel periodo, essere uno dei giorni della settimana e,
-se c'e' una base, valere anche per la base. Con questi elementi si scrivono: i periodi di un committente,
-"solo nei giorni feriali" (da lunedi' a sabato, festivi tolti), "solo nei giorni scolastici escluso il
-sabato" (base = giorni di scuola, giorni = da lunedi' a venerdi'), l'attivazione o la disattivazione di un
-servizio (periodo o sospensione), i giorni sparsi (lunedi', mercoledi', giovedi').
+Come si decide se un calendario vale in un giorno (il primo punto che decide vince):
+1. le date tolte e le sospensioni prevalgono su tutto: il calendario non vale;
+2. le date aggiunte: vale (sono una scelta precisa dell'utente, quindi valgono anche contro un calendario tolto);
+3. fuori dal periodo (`dal`, `al`) non vale;
+4. un giorno di un calendario tolto (`toglie`): non vale;
+5. un giorno di un calendario aggiunto (`aggiunge`): vale, anche se non e' uno dei giorni della settimana;
+6. altrimenti il giorno deve essere uno dei giorni della settimana e, se c'e' una base, valere anche per la base.
+
+Con questi elementi si scrivono una volta sola: i periodi di un committente; "feriali" (da lunedi' a sabato,
+`toglie` le festivita'); "festivi" (`giorni` = domenica, `aggiunge` le festivita'); "scolastici" (base = giorni di
+scuola); "estivo" e "invernale" (periodi); "solo nei giorni scolastici escluso il sabato" (base = giorni di scuola,
+giorni = da lunedi' a venerdi'); l'attivazione o la disattivazione di un servizio (periodo o sospensione); i giorni
+sparsi (lunedi', mercoledi', giovedi'). Un calendario che si basa su se stesso (K-CTR-016) o che si combina con se
+stesso (K-CTR-049), direttamente o attraverso altri, e' un errore.
+
+```json
+{
+  "codice": "CAL-FERIALI",
+  "nome": "Giorni feriali (da lunedi' a sabato, festivi esclusi)",
+  "dal": "2026-09-01",
+  "al": "2027-08-31",
+  "giorni": ["lunedi", "martedi", "mercoledi", "giovedi", "venerdi", "sabato"],
+  "toglie": { "festivita": ["FEST-IT"] }
+}
+```
 
 ```json
 {
@@ -405,7 +539,9 @@ scambia una corsa alla volta, a volte un intero lotto. Schema:
 Il **servizio** e' il lavoro che un committente affida con un contratto: si paga, si perde, si rinuncia,
 si scambia. La sua **domanda** dice chi deve andare da dove a dove ed entro quando, indipendente dalle corse
 di oggi: cosi' un calcolo futuro potra' rifare i giri con mezzi diversi. Schema:
-[docs/schema/servizi.v1.schema.json](schema/servizi.v1.schema.json).
+[docs/schema/servizi.v2.schema.json](schema/servizi.v2.schema.json) (versione attuale) e
+[docs/schema/servizi.v1.schema.json](schema/servizi.v1.schema.json) (versione 1, ancora letta: e' la versione 2 senza
+`competenze_richieste`).
 
 | Campo | Obbl. | Classe | Significato |
 |---|---|---|---|
@@ -421,6 +557,7 @@ di oggi: cosi' un calcolo futuro potra' rifare i giri con mezzi diversi. Schema:
 | `servizi[].regole` | no | comune | Regole proprie del servizio, se diverse dal contratto: `posti_minimi`, `posti_massimi`, `durata_massima_a_bordo_minuti`, `categoria_riconosciuta` |
 | `servizi[].regole.pedana_obbligatoria` | no | particolare | Pedana obbligatoria per questo servizio: dice che a bordo viaggia una carrozzina |
 | `servizi[].domanda.gruppi[]` | si' | | Gruppi di passeggeri (sotto) |
+| `servizi[].competenze_richieste[]` | no | particolare | Versione 2. Competenze richieste a chi fa il servizio (codici dell'elenco dell'azienda del contratto). Dato particolare: una competenza come "formato per la pedana" fa capire che a bordo viaggia una carrozzina |
 | `servizi[].nota` | no | comune | Note |
 
 Gruppo di passeggeri (`servizi[].domanda.gruppi[]`):
@@ -532,8 +669,10 @@ tra corse di aziende diverse e' ammesso. Controlli: K-CTR-023 ... K-CTR-027.
 
 ### mezzi.json
 
-Schema: [docs/schema/mezzi.v1.schema.json](schema/mezzi.v1.schema.json). I posti non cambiano con l'eta'
-dei passeggeri.
+Schemi: [docs/schema/mezzi.v2.schema.json](schema/mezzi.v2.schema.json) (versione attuale) e
+[docs/schema/mezzi.v1.schema.json](schema/mezzi.v1.schema.json) (versione 1, ancora letta: e' la versione 2 senza
+`uso`, `autorizzazioni_uso`, `vincolo_destinazione`, `scorta` e `prestiti`). I posti non cambiano con l'eta' dei
+passeggeri.
 
 | Campo | Obbl. | Classe | Significato |
 |---|---|---|---|
@@ -555,7 +694,19 @@ dei passeggeri.
 | `mezzi[].costo_fisso_giornaliero` | no | comune | Assicurazione, bollo, ammortamento... per giorno (senza: avviso K-CTR-044) |
 | `mezzi[].costo_al_km` | no | comune | Costo per km |
 | `mezzi[].ipotetico` | no | comune | `true` = mezzo non ancora in flotta (scenari) |
+| `mezzi[].uso` | no | comune | Versione 2. Uso scritto sulla carta di circolazione: codice dell'elenco `usi` delle norme dell'azienda (senza: avviso K-CTR-051 se le norme lo usano) |
+| `mezzi[].autorizzazioni_uso[]` | no | comune | Versione 2. Autorizzazioni a un uso in piu' (la "distrazione"): `uso`, `ente`, `riferimento`, `dal`, `al`, `prescrizioni`. Per singolo mezzo e con le date; chi la rilascia e' un dato (cambia con il verso e il territorio) |
+| `mezzi[].vincolo_destinazione` | no | comune | Versione 2. Il mezzo fa solo certi servizi: `ammessi` (`tipi_servizio` e/o `contratti`), `fino_al`, `fonte`, `nota` (es. comprato con contributi per le linee: niente noleggio) |
+| `mezzi[].scorta` | no | comune | Versione 2. `true` = mezzo di scorta: se nessun turno lo usa non e' un avviso |
+| `mezzi[].prestiti[]` | no | comune | Versione 2. Prestiti ad altre aziende (subaffidamento, consorzio, noleggio): `azienda`, `accordo`, `dal`, `al`. Senza prestito il mezzo non entra nei turni di un'altra azienda |
 | `mezzi[].nota` | no | comune | Note |
+
+**Uso del mezzo e distrazione.** La carta di circolazione dice l'uso del mezzo (in Italia Codice della strada
+art. 82: uso proprio oppure uso di terzi, che comprende noleggio con conducente e servizio di linea). Un mezzo fa solo
+i servizi per cui e' omologato; per un altro uso serve un'autorizzazione da tenere a bordo (art. 87, comma 4;
+circolare del Ministero dei trasporti n. 27690 del 27/11/2013): e' la distrazione, per singolo mezzo e con le date.
+Quali usi servono per ogni tipo di servizio lo dicono le norme del paese e il regolamento del territorio, mai il
+programma.
 
 **Carrozzine e ausili piegati.** Chi viaggia **seduto sulla carrozzina** ha bisogno della pedana e di un posto
 carrozzina, e ogni carrozzina toglie i posti a sedere indicati. Chi viaggia su un posto normale con la
@@ -591,6 +742,282 @@ pedana resta sul mezzo. Schema: [docs/schema/tempi_sosta.v1.schema.json](schema/
 | `tempi.per_passeggero[]` | no | comune | Per `tipo` (`studente`, `infanzia`, `disabile`): `salita_secondi` e `discesa_secondi` per passeggero |
 | `tempi.scarico_a_scuola_secondi` | no | comune | Tempo di scarico a scuola |
 | `tempi.nota` | no | comune | Note |
+
+### persone.json
+
+Le persone delle aziende: autisti, assistenti a bordo o tutti e due. Schema:
+[docs/schema/persone.v1.schema.json](schema/persone.v1.schema.json).
+
+| Campo | Obbl. | Classe | Significato |
+|---|---|---|---|
+| `persone[].codice` | si' | comune | Codice della persona: compare al posto del nome nelle uscite di base |
+| `persone[].azienda` | si' | comune | Azienda della persona |
+| `persone[].ruoli[]` | si' | personale | `autista`, `assistente` (o tutti e due) |
+| `persone[].nome` | no | personale | Nome e cognome (non nel livello "solo numeri") |
+| `persone[].casa` | no | personale | `indirizzo`, `comune`, `coordinate` (non nel livello "solo numeri"): servira' per i ricoveri vicini a casa e per le pause |
+| `persone[].presa_servizio` | no | comune | Rimessa o luogo abituale di presa servizio (codice di un luogo) |
+| `persone[].mezzo_abituale` | no | comune | Mezzo abituale (abbinamento autista-mezzo, turni con il "mezzo abituale") |
+| `persone[].ipotetica` | no | comune | `true` = persona non ancora assunta (scenari) |
+| `persone[].rapporto` | si' | personale | `tipo`: `titolare`, `collaboratore_familiare`, `socio`, `dipendente_tempo_pieno`, `dipendente_part_time`, `a_chiamata`, `tempo_determinato`, `stagionale`, `autonomo`, `volontario` (es. accompagnatori autorizzati dal committente), `altro` con `descrizione` |
+| `persone[].contratto_collettivo` | no | personale | `codice` (es. il codice CNEL) e `nome` |
+| `persone[].ore[]` | no | personale | Ore `previste` e `massime` per `giorno`, `settimana`, `mese` (ore con decimali), con `dal` e `al` facoltativi |
+| `persone[].disponibilita[]` | no | personale | Giorni e fasce di disponibilita' (rigida): `giorni`, `dalle`, `alle`, con `dal` e `al` facoltativi |
+| `persone[].costo_orario[]` | no | personale | `valore` nella valuta del pacchetto, con `dal` e `al` facoltativi |
+| `persone[].abilitazioni[]` | no | personale | `tipo` (codice delle norme dell'azienda), `scadenza`, `riferimento` |
+| `persone[].autorizzazioni[]` | no | personale | Autorizzazioni del committente: `committente`, `riferimento`, `scadenza` (es. il cartellino per i servizi speciali) |
+| `persone[].competenze[]` | no | personale | Competenze (codici dell'elenco dell'azienda della persona) |
+| `persone[].preferenze[]` | no | personale | Preferenze (dati morbidi, sotto), con `dal` e `al` facoltativi |
+| `persone[].prestiti[]` | no | comune | Prestiti ad altre aziende: `azienda`, `accordo`, `dal`, `al` |
+| `persone[].nota` | no | personale | Note (non nel livello "solo numeri"; mai cause di assenza o dati sulla salute) |
+
+**Disponibilita' e preferenze.** La disponibilita' e' rigida: se per un giorno vale almeno una riga (per le date),
+la persona e' disponibile solo dentro le fasce di quel giorno della settimana; un turno fuori e' un fatto che la
+rende non disponibile. Senza righe per quel giorno, nessun limite. Le preferenze sono morbide: un turno che non le
+rispetta e' un avviso, mai un errore. Tipi: `giorni_liberi` (`giorni`), `fascia_oraria` (`dalle`, `alle`),
+`evita_turni` (`turni`), `pausa_massima` (`minuti`: nessuna pausa piu' lunga dentro un turno, es. "niente turni
+spezzati" con la soglia scelta dall'utente), `altro` (`descrizione`: mostrata, non controllata).
+
+**Ore, contratto collettivo, costo orario** sono solo dati: chi li verifica contro la legge e la filosofia
+aziendale e' il mandato "orari di lavoro".
+
+Una persona nel livello "completo" (nel livello "solo numeri" mancano `nome`, `casa` e `nota`):
+
+```json
+{
+  "codice": "P-C",
+  "azienda": "ALFA",
+  "ruoli": ["autista"],
+  "nome": "Verdi Carlo",
+  "presa_servizio": "L-RIMESSA-ALFA",
+  "rapporto": { "tipo": "titolare" },
+  "abilitazioni": [{ "tipo": "B" }, { "tipo": "D", "scadenza": "2030-01-15" }, { "tipo": "CQC-P", "scadenza": "2027-06-30" }],
+  "autorizzazioni": [{ "committente": "CVA", "riferimento": "Cartellino n. 9 (inventato)", "scadenza": "2027-08-31" }],
+  "competenze": ["PEDANA", "LINEA-B610", "ELETTRICO"],
+  "prestiti": [{ "azienda": "BETA", "accordo": "Accordo consortile n. 2/2026 (inventato)", "dal": "2026-09-01", "al": "2027-08-31" }]
+}
+```
+
+### assenze.json
+
+Assenze programmate delle persone. **Solo il tipo, mai la causa**: il formato non ha un campo per scriverla. Schema:
+[docs/schema/assenze.v1.schema.json](schema/assenze.v1.schema.json).
+
+| Campo | Obbl. | Classe | Significato |
+|---|---|---|---|
+| `assenze[].persona` | si' | comune | Codice della persona |
+| `assenze[].tipo` | si' | personale | Tipo dall'elenco dell'azienda della persona (es. ferie, permesso, formazione) |
+| `assenze[].dal`, `al` | si' | personale | Primo e ultimo giorno |
+| `assenze[].dalle`, `alle` | no | personale | Solo una parte di ogni giorno del periodo (vanno scritti insieme) |
+
+```json
+{ "persona": "P-A", "tipo": "FERIE", "dal": "2026-10-22", "al": "2026-10-23" }
+```
+
+### fermi.json
+
+Fermi programmati dei mezzi. Schema: [docs/schema/fermi.v1.schema.json](schema/fermi.v1.schema.json).
+
+| Campo | Obbl. | Classe | Significato |
+|---|---|---|---|
+| `fermi[].mezzo` | si' | comune | Codice del mezzo |
+| `fermi[].tipo` | si' | comune | Tipo dall'elenco dell'azienda del mezzo (es. revisione, manutenzione) |
+| `fermi[].dal`, `al` | si' | comune | Primo e ultimo giorno |
+| `fermi[].dalle`, `alle` | no | comune | Solo una parte di ogni giorno del periodo (vanno scritti insieme) |
+| `fermi[].nota` | no | comune | Note |
+
+```json
+{ "mezzo": "ALFA-01", "tipo": "REVISIONE", "dal": "2026-10-19", "al": "2026-10-20", "nota": "Revisione annuale in officina." }
+```
+
+### turni.json
+
+Il **turno del giorno** e' l'unita' di base del lavoro di una persona in un giorno: un elenco ordinato di corse
+(intere o a pezzi) e di attivita' senza passeggeri, con il mezzo, il luogo di inizio e di fine e il calendario dei
+giorni in cui vale. Il turno non dice chi lo fa: lo dicono le rotazioni, i servizi fissi e le assegnazioni del
+singolo giorno (sotto). La **giornata della persona** (i turni che fa in un giorno) e la **giornata del mezzo** (i
+turni che lo usano) sono due viste degli stessi turni: non si scrivono due volte. Schema:
+[docs/schema/turni.v1.schema.json](schema/turni.v1.schema.json).
+
+| Campo | Obbl. | Classe | Significato |
+|---|---|---|---|
+| `turni[].codice` | si' | comune | Codice del turno |
+| `turni[].nome` | no | comune | Nome dato dall'azienda (es. "Primo", "Festivo 3"): solo un nome |
+| `turni[].azienda` | si' | comune | Azienda del turno |
+| `turni[].ruolo` | si' | comune | `autista`, `assistente` (a bordo) o `secondo_autista` (viaggi lunghi, affiancamento di un autista nuovo) |
+| `turni[].calendario` | si' | comune | Giorni in cui vale il turno (calendari.json) |
+| `turni[].mezzo` | si' | comune | `modo`: `preciso` (con il `codice` del mezzo), `abituale` (il mezzo abituale di chi fa il turno), `da_assegnare`, `nessuno` (riserva, officina, ufficio; turni da assistente e da secondo autista) |
+| `turni[].inizio`, `fine` | si' | comune | Luogo di inizio e di fine (rimessa, ricovero esterno o punto di sosta) |
+| `turni[].elementi[]` | si' | comune | Corse e attivita' in ordine di orario (sotto) |
+| `turni[].competenze_richieste[]` | no | particolare | Competenze richieste a chi fa il turno (elenco dell'azienda): possono far capire chi viaggia |
+| `turni[].nota` | no | comune | Note |
+
+Un **elemento** e' una corsa oppure un'attivita':
+
+| Campo | Obbl. | Significato |
+|---|---|---|
+| `corsa` | si' (corsa) | Codice della corsa |
+| `da`, `a` | no | Solo un pezzo della corsa (cambio dell'autista lungo la corsa): `luogo` di un passaggio e, se la corsa ci passa piu' volte, `orario`. Senza `da`: dall'inizio della corsa; senza `a`: fino alla fine |
+| `assistente` | no | Per le corse con l'assistente a bordo, chi lo fornisce: `azienda` (una persona con il suo turno da assistente) o `committente` (senza nome). Assente = come dice il contratto |
+| `attivita` | si' (attivita') | Tipo di attivita' dall'elenco dell'azienda del turno (es. presa servizio, pulizia, rifornimento, ricarica, attesa, pausa, trasferimento a vuoto, riserva, reperibilita') |
+| `luogo`, `verso` | si' / no | Luogo dell'attivita'; `verso` = luogo di arrivo per le attivita' che spostano il mezzo o la persona |
+| `dalle`, `alle` | si' | Orari dell'attivita' (anche oltre le 24:00) |
+| `km_vuoti` | no | Km a vuoto dell'attivita', come li scrive chi pianifica (un dato, non un calcolo) |
+| `calendario` | no | Giorni in cui c'e' l'attivita' (dentro quelli del turno); assente = tutti i giorni del turno |
+| `nota` | no | Note |
+
+**Inizio e fine del turno** non si scrivono: si ricavano dalla prima e dall'ultima corsa o attivita' di ogni giorno
+(in un giorno valgono solo le corse e le attivita' il cui calendario vale quel giorno). Un turno che finisce dopo
+la mezzanotte resta del giorno in cui comincia ("24:12"). **Turno spezzato**: due parti con una pausa in mezzo
+(l'attivita' "pausa" e' facoltativa). **Turno notturno**: orari oltre le 24:00. **Cambio di mezzo** a meta'
+giornata: due turni (uno per mezzo), fatti dalla stessa persona. **Cambio dell'autista a meta' corsa**: la corsa
+compare in due turni, ognuno con il suo pezzo; il luogo del cambio e' il **punto di cambio**. Se l'attivita' del
+turno impegna il mezzo lo dice l'elenco dell'azienda (`usa_il_mezzo` in aziende.json): una pausa o una riserva non lo
+impegnano.
+
+**Turni da assistente e da secondo autista** elencano le corse in cui la persona e' a bordo; il mezzo e' quello del
+turno dell'autista che fa quelle corse.
+
+Il secondo turno del demo: va a piedi al punto di cambio, prende l'autobus a meta' della corsa C-LIN-549 e finisce in
+rimessa (alcune attivita' tolte per brevita'):
+
+```json
+{
+  "codice": "T-SECONDO",
+  "nome": "Secondo",
+  "azienda": "ALFA",
+  "ruolo": "autista",
+  "calendario": "CAL-LV-FER",
+  "mezzo": { "modo": "preciso", "codice": "ALFA-05" },
+  "inizio": "L-RIMESSA-ALFA",
+  "fine": "L-RIMESSA-ALFA",
+  "elementi": [
+    { "attivita": "A-PIEDI", "luogo": "L-RIMESSA-ALFA", "verso": "F-VALFONDA-PIAZZA", "dalle": "16:50", "alle": "17:00" },
+    { "corsa": "C-LIN-549", "da": { "luogo": "F-VALFONDA-PIAZZA" } },
+    { "attivita": "VUOTO", "luogo": "F-STAZIONE", "verso": "L-RIMESSA-ALFA", "dalle": "17:13", "alle": "17:21", "km_vuoti": 1.0 },
+    { "corsa": "C-LIN-553" },
+    { "attivita": "FINE", "luogo": "L-RIMESSA-ALFA", "dalle": "20:22", "alle": "20:30" }
+  ]
+}
+```
+
+### rotazioni.json
+
+Una **rotazione** e' un ciclo di passi che si ripete: per ogni passo e ogni persona, i turni che fa oppure
+"riposo". Ogni azienda fa la sua: nessuna lunghezza e nessuna forma e' fissa nel programma (cicli di 3, 8, 14
+giorni; passi di un mese per le aziende che cambiano a mesi). Piu' rotazioni possono valere nello stesso anno (es.
+invernale ed estiva) e nello stesso periodo per gruppi diversi di persone. Schema:
+[docs/schema/rotazioni.v1.schema.json](schema/rotazioni.v1.schema.json).
+
+| Campo | Obbl. | Classe | Significato |
+|---|---|---|---|
+| `rotazioni[].codice` | si' | comune | Codice della rotazione |
+| `rotazioni[].nome` | no | comune | Nome (es. "Rotazione invernale") |
+| `rotazioni[].passo` | si' | comune | `giorno` oppure `mese` (mese di calendario) |
+| `rotazioni[].lunghezza` | si' | comune | Quanti passi ha il ciclo (da 1 a 1000) |
+| `rotazioni[].partenza` | si' | comune | Giorno del primo passo (con i passi mensili: il primo giorno di un mese) |
+| `rotazioni[].dal`, `al` | no | comune | Date in cui vale la rotazione; assenti = dalla partenza alla fine del periodo del pacchetto |
+| `rotazioni[].righe[]` | si' | comune | Una riga per persona: `persona` e `passi` (uno per ogni passo del ciclo) |
+| `rotazioni[].nota` | no | personale | Note (possono parlare delle persone) |
+
+Un **passo** e' `"riposo"` oppure l'elenco dei turni della persona in quel passo, es. `["T-PRIMO", "T-SABATO"]`:
+in un giorno valgono quelli il cui calendario vale quel giorno (cosi' un passo puo' avere il turno del lunedi'-venerdi'
+e quello del sabato insieme).
+
+**Come si conta.** Il passo di un giorno si conta dalla `partenza`: passo = (giorni dalla partenza) diviso la
+lunghezza, resto. Il ciclo **non si ferma** nelle vacanze ne' nei giorni senza turni: un giorno in cui il turno del
+passo non vale (festa, vacanza della scuola) quella persona semplicemente non lavora, e il giorno dopo il ciclo va
+avanti. Si conta anche prima della partenza (con `dal` precedente). Con i passi mensili, il passo e' il numero di mesi
+di calendario dalla partenza. La regola dell'azienda Alpinabus, con la tabella di 14 giorni, e' scritta in REGOLE.md.
+
+La linea 7 su 7 del demo: tre autisti, ciclo di 3 giorni, il riposo scorre; il passo con due turni vale nei giorni
+feriali per il primo e nei festivi per l'altro, secondo i loro calendari:
+
+```json
+{
+  "codice": "ROT-BETA",
+  "nome": "Linea 7 su 7, ciclo di 3 giorni",
+  "passo": "giorno",
+  "lunghezza": 3,
+  "partenza": "2026-09-01",
+  "righe": [
+    { "persona": "P-B1", "passi": [["T-B-PRIMO", "T-B-FESTIVO"], "riposo", ["T-B-ASILO", "T-B-SERA"]] },
+    { "persona": "P-B2", "passi": [["T-B-ASILO", "T-B-SERA"], ["T-B-PRIMO", "T-B-FESTIVO"], "riposo"] },
+    { "persona": "P-B3", "passi": ["riposo", ["T-B-ASILO", "T-B-SERA"], ["T-B-PRIMO", "T-B-FESTIVO"]] }
+  ]
+}
+```
+
+### servizi_fissi.json
+
+Un **servizio fisso** e' un turno assegnato sempre alla stessa persona nei giorni di un calendario (es. il
+mercoledi'). Vale piu' della rotazione e meno di un'assegnazione del singolo giorno. Se un'azienda tiene fisse solo
+alcune corse, le mette in un turno a parte. Schema:
+[docs/schema/servizi_fissi.v1.schema.json](schema/servizi_fissi.v1.schema.json).
+
+| Campo | Obbl. | Classe | Significato |
+|---|---|---|---|
+| `servizi_fissi[].codice` | si' | comune | Codice |
+| `servizi_fissi[].turno` | si' | comune | Turno |
+| `servizi_fissi[].persona` | si' | comune | Persona |
+| `servizi_fissi[].calendario` | si' | comune | Giorni in cui il turno e' di questa persona; gli altri giorni il turno segue la rotazione |
+| `servizi_fissi[].nota` | no | personale | Note |
+
+```json
+{ "codice": "SF-MER", "turno": "T-SECONDO", "persona": "P-C", "calendario": "CAL-MER-FER" }
+```
+
+### assegnazioni.json
+
+Un'**assegnazione del singolo giorno** dice chi fa un turno in una data, con quale mezzo, o tutti e due:
+sostituzioni, scambi tra colleghi, un mezzo al posto di quello in revisione, lavori occasionali (una gita, un
+noleggio). Vale piu' dei servizi fissi e delle rotazioni. Il programma non le inventa: le registra se le scrive
+l'utente. Schema: [docs/schema/assegnazioni.v1.schema.json](schema/assegnazioni.v1.schema.json).
+
+| Campo | Obbl. | Classe | Significato |
+|---|---|---|---|
+| `assegnazioni[].data` | si' | comune | Il giorno |
+| `assegnazioni[].turno` | si' | comune | Il turno |
+| `assegnazioni[].persona` | no | comune | Chi fa il turno quel giorno |
+| `assegnazioni[].mezzo` | no | comune | Con quale mezzo quel giorno (almeno uno tra `persona` e `mezzo`) |
+| `assegnazioni[].nota` | no | personale | Note (mai la causa di un'assenza) |
+
+Una sostituzione e un mezzo al posto di quello in revisione:
+
+```json
+[
+  { "data": "2026-10-22", "turno": "T-SECONDO", "persona": "P-C" },
+  { "data": "2026-10-19", "turno": "T-SCUOLA-1", "mezzo": "ALFA-07" }
+]
+```
+
+**Chi fa il turno in un giorno**: l'assegnazione del singolo giorno, se c'e'; altrimenti il servizio fisso, se il
+suo calendario vale quel giorno; altrimenti la rotazione. Vince il modo piu' preciso, turno per turno. Se nessun
+modo da' una persona, il turno quel giorno e' **scoperto** (K-CTR-077): il programma non inventa assegnazioni.
+Il **mezzo** in un giorno: quello dell'assegnazione del singolo giorno, se c'e'; altrimenti quello del turno
+(preciso, oppure il mezzo abituale di chi fa il turno). Se la persona prevista quel giorno non puo' (assente, fuori
+dalla disponibilita', abilitazione scaduta, prestito non valido), il turno e' scoperto; se il mezzo non puo' (fermo,
+autorizzazione all'uso scaduta, prestito non valido), il turno e' senza mezzo. Il rimedio e' un'assegnazione del
+singolo giorno (controlli.md, "Controlli sui turni").
+
+### blocchi.json
+
+Un **blocco** fissa delle corse su un mezzo, con le date e la forza: e' un vincolo per il calcolo futuro. Oggi si
+controlla che le corse bloccate siano fatte con il loro mezzo (K-CTR-074) e che due blocchi non si contraddicano
+(K-CTR-075). Per le persone l'equivalente e' il servizio fisso. Schema:
+[docs/schema/blocchi.v1.schema.json](schema/blocchi.v1.schema.json).
+
+| Campo | Obbl. | Classe | Significato |
+|---|---|---|---|
+| `blocchi[].codice` | si' | comune | Codice |
+| `blocchi[].mezzo` | si' | comune | Mezzo |
+| `blocchi[].corse[]` | si' | comune | Corse del blocco (scelte per servizio, per fascia oraria o una per una: alla fine sono sempre corse) |
+| `blocchi[].dal`, `al` | no | comune | Date del blocco; assenti = tutto il periodo |
+| `blocchi[].forza` | si' | comune | `mezzo_fisso` (le corse restano a questo mezzo; un calcolo futuro potra' riorganizzare i giri con quel mezzo) oppure `tutto_fisso` (mezzo, corse e orari restano come sono) |
+| `blocchi[].nota` | no | comune | Note |
+
+```json
+{ "codice": "B-LINEA", "mezzo": "ALFA-05", "corse": ["C-LIN-533", "C-LIN-560"], "forza": "tutto_fisso" }
+```
 
 ## Ricerca dei luoghi per nome o codice esterno
 
@@ -851,12 +1278,32 @@ nel formato K-Zero senza riscrivere nulla. Il codice GTFS di un elemento va tra 
 | `calendari.json`: `giorni`, `dal`, `al` | `calendar.txt` (`monday` ... `sunday`, `start_date`, `end_date`) | |
 | `date_aggiunte`, `date_tolte` | `calendar_dates.txt` `exception_type` 1 e 2 | |
 | `sospensioni` | `calendar_dates.txt` (una riga con `exception_type` 2 per ogni giorno) | GTFS non ha periodi con motivo |
-| `calendari[].base` | nessuno | In GTFS il calendario va scritto per intero |
+| `calendari[].base`, `aggiunge`, `toglie` | nessuno | In GTFS il calendario va scritto per intero |
+| `festivita.json` | nessuno | In GTFS le feste sono date tolte (`calendar_dates.txt`) in ogni calendario |
 | `corse[].coincidenze[]` | `transfers.txt` (in parte) | GTFS descrive coincidenze tra le proprie corse; K-Zero con un servizio esterno (es. un treno) |
 | servizi, domanda, gruppi, passeggeri | nessuno | GTFS descrive l'offerta pubblica, non il lavoro affidato a un'azienda ne' chi deve viaggiare |
 | trasbordi | nessuno | |
 | regolamenti, contratti, committenti, gruppi di servizi | nessuno | |
+| `aziende.json`, `norme.json`, `persone.json`, `assenze.json`, `fermi.json` | nessuno | GTFS non descrive il personale ne' i mezzi |
+| giornata del mezzo (i turni da autista dello stesso mezzo in un giorno) | `trips.txt` `block_id` | In GTFS un `block_id` raggruppa le corse fatte di seguito dallo stesso mezzo; K-Zero lo ricava dai turni |
+| `turni.json`, rotazioni, servizi fissi, assegnazioni | nessuno | GTFS non descrive chi guida |
 | mezzi, rimesse, tratti con i limiti, tempi di sosta | nessuno | |
+
+## Corrispondenza con Transmodel
+
+Transmodel e' il modello europeo dei dati del trasporto pubblico (norma EN 12896; NeTEx ne e' il formato di
+scambio). I nomi di K-Zero sono italiani semplici, ma i concetti dei turni corrispondono:
+
+| K-Zero | Transmodel | Note |
+|---|---|---|
+| corsa | Vehicle Journey (Service Journey) | |
+| giornata del mezzo | Block (Vehicle Block) | Le corse di un mezzo in un giorno, dall'uscita al rientro in rimessa |
+| turno del giorno (ruolo autista) | Duty | Il lavoro di un autista in un giorno |
+| pezzo di corsa (`da`, `a`) | Run / Stretch | Parte di un Block fatta da un autista |
+| luogo del cambio dell'autista | Relief Point (Relief Opportunity) | |
+| attivita' senza passeggeri | Dead Run, Layover, Break... | In K-Zero l'elenco e' dell'azienda (aziende.json) |
+| rotazione | Rostering (Roster) | Transmodel non fissa la forma del ciclo |
+| calendario | Day Type / Operating Day | |
 
 ## Glossario
 
@@ -899,3 +1346,15 @@ nel formato K-Zero senza riscrivere nulla. Il codice GTFS di un elemento va tra 
 - **Livello del pacchetto** - "solo numeri" oppure "completo" (vedi sopra).
 - **Classe di un dato** - comune, personale o particolare (vedi sopra).
 - **Pacchetto** - la cartella con il manifesto e i file dei dati.
+- **Turno del giorno** - il lavoro di una persona in un giorno: corse (intere o a pezzi) e attivita' in ordine, con
+  il mezzo. Chi lo fa lo dicono rotazione, servizio fisso o assegnazione del singolo giorno.
+- **Giornata della persona / del mezzo** - i turni di una persona, o quelli che usano un mezzo, in un giorno: due
+  viste degli stessi turni.
+- **Rotazione** - ciclo di passi (giorni o mesi) che si ripete, con i turni di ogni persona.
+- **Servizio fisso** - un turno sempre alla stessa persona nei giorni di un calendario.
+- **Assegnazione del singolo giorno** - chi fa un turno, o con quale mezzo, in una data precisa.
+- **Turno scoperto** - un turno che in un giorno non ha nessuna persona.
+- **Punto di cambio** - il luogo dove un autista lascia la corsa a un altro.
+- **Blocco** - corse fissate su un mezzo, per il calcolo futuro.
+- **Distrazione** - autorizzazione di un mezzo a un uso diverso da quello della carta di circolazione (es. un bus
+  di linea usato per una gita), con l'autorita', il riferimento, le date e le prescrizioni.

@@ -60,28 +60,35 @@ Source dove(const std::string& file, const std::string& puntatore) { return Sour
 
 // --- Pacchetti di esempio --------------------------------------------------------------------------------
 
-// Il demo non ha errori: solo tre avvisi voluti (fermata senza coordinate, tempi di sosta non definiti,
-// punto di trasbordo autorizzato a voce).
-TEST(Controlli, demo_senza_errori) {
-    const auto v = check_package(demo());
-    ASSERT_EQ(v.size(), 3u) << elenco(v);
-    EXPECT_EQ(v[0].check, Check::PlaceWithoutCoordinates);
-    EXPECT_EQ(v[0].where.pointer, "/luoghi/5");
-    EXPECT_EQ(v[1].check, Check::DwellTimesUndefined);
-    EXPECT_EQ(v[1].where.file, "");
-    EXPECT_EQ(v[2].check, Check::TransferVerbalOnly);
-    EXPECT_EQ(v[2].where.pointer, "/luoghi/17/trasbordo");
+// Il demo non ha errori: solo avvisi voluti. Dal K-007: fermata senza coordinate, tempi di sosta non definiti, punto di
+// trasbordo autorizzato a voce. Dal K-008: la distrazione dell'autobus di linea e la CQC di P-C che scadono il
+// 2027-06-30 (da luglio il secondo del mercoledi', che e' di P-C, e' scoperto), il primo scoperto il giorno della
+// formazione di P-B, il mezzo di scorta al posto del mezzo abituale di P-E nei due giorni della revisione.
+void solo_avvisi_voluti(const std::vector<Problem>& v) {
+    ASSERT_EQ(v.size(), 8u) << elenco(v);
+    const std::vector<std::pair<Check, std::string>> attesi = {
+        {Check::PlaceWithoutCoordinates, "/luoghi/5"},
+        {Check::DwellTimesUndefined, ""},
+        {Check::TransferVerbalOnly, "/luoghi/17/trasbordo"},
+        {Check::ExpiresInPeriod, "/mezzi/6/autorizzazioni_uso/0"},
+        {Check::ExpiresInPeriod, "/persone/2/abilitazioni/2"},
+        {Check::RecurringShiftPersonFact, "/persone/2/abilitazioni/2"},
+        {Check::RecurringShiftPersonFact, "/assenze/2"},
+        {Check::PairingNotRespected, "/servizi_fissi/2"},
+    };
+    for (const auto& [c, puntatore] : attesi)
+        EXPECT_TRUE(std::any_of(v.begin(), v.end(), [&](const Problem& x) { return x.check == c && x.where.pointer == puntatore; }))
+            << api::definizione_controllo(c).codice << " " << puntatore << elenco(v);
+    for (const Problem& x : v) EXPECT_EQ(api::definizione_controllo(x.check).livello, api::Livello::Avviso) << elenco(v);
 }
+
+TEST(Controlli, demo_senza_errori) { solo_avvisi_voluti(check_package(demo())); }
 
 TEST(Controlli, demo_numeri_senza_errori) {
     const auto lettura = api::leggi_pacchetto(api::CartellaSuDisco(KZERO_SORGENTI "/esempi/demo-numeri"));
     ASSERT_TRUE(lettura.problemi.empty());
     EXPECT_EQ(lettura.pacchetto.manifest.level, Level::NumbersOnly);
-    const auto v = check_package(lettura.pacchetto);
-    ASSERT_EQ(v.size(), 3u) << elenco(v);
-    EXPECT_EQ(v[0].check, Check::PlaceWithoutCoordinates);
-    EXPECT_EQ(v[1].check, Check::DwellTimesUndefined);
-    EXPECT_EQ(v[2].check, Check::TransferVerbalOnly);
+    solo_avvisi_voluti(check_package(lettura.pacchetto));   // gli stessi del demo
 }
 
 // Stesso pacchetto = stessi problemi, nello stesso ordine.
@@ -166,9 +173,10 @@ TEST(Controlli, K_CTR_015_calendario_senza_giorni) {
     Package p = demo();
     per_codice(p.calendars, "CAL-FERIALI").days = Weekdays{};
     EXPECT_TRUE(segnala(p, Check::CalendarWithoutDays, 0, "calendari.json", "/calendari/4"));
-    // Con le sole date aggiunte un calendario vale lo stesso.
+    // Con le sole date aggiunte un calendario vale lo stesso (i calendari che lo usano come base e non hanno quel giorno
+    // della settimana, come i feriali da lunedi' a venerdi', restano senza giorni: e' giusto che siano segnalati).
     per_codice(p.calendars, "CAL-FERIALI").added.push_back({giorno("2026-10-10"), dove("calendari.json", "/x")});
-    EXPECT_EQ(quanti(p, Check::CalendarWithoutDays), 0);
+    EXPECT_FALSE(segnala(p, Check::CalendarWithoutDays, 0, "calendari.json", "/calendari/4"));
 }
 
 TEST(Controlli, K_CTR_016_calendario_circolare) {
@@ -176,10 +184,209 @@ TEST(Controlli, K_CTR_016_calendario_circolare) {
     per_codice(p.calendars, "CAL-SCUOLA").base = Ref{"CAL-INFANZIA", dove("calendari.json", "/calendari/0/base")};
     EXPECT_TRUE(segnala(p, Check::CalendarCycle, 0, "calendari.json", "/calendari/0/base"));
     EXPECT_EQ(quanti(p, Check::CalendarCycle), 3);   // i tre calendari del giro
+    // Nemmeno i calendari che usano quelli del giro (dal K-008: i martedi' e venerdi' di scuola) sono "senza giorni".
     EXPECT_EQ(quanti(p, Check::CalendarWithoutDays), 0);
 }
 
 // Caso reale: "16.08" scritto tra 12.05 e 12.19. L'orario fuori posto e' quello di mezzo.
+// Calendario che si combina con se stesso attraverso i calendari aggiunti o tolti (anche insieme alle basi).
+TEST(Controlli, K_CTR_049_calendario_combinato_con_se_stesso) {
+    Package p = demo();
+    per_codice(p.calendars, "CAL-FERIALI").adds = {
+        {CalendarLinkKind::Calendar, Ref{"CAL-CENTRO-GIO", dove("calendari.json", "/calendari/4/aggiunge/calendari/0")}}};
+    per_codice(p.calendars, "CAL-CENTRO").removes = {
+        {CalendarLinkKind::Calendar, Ref{"CAL-FERIALI", dove("calendari.json", "/calendari/3/toglie/calendari/0")}}};
+    // Giro: CAL-FERIALI aggiunge CAL-CENTRO-GIO, che ha base CAL-CENTRO, che toglie CAL-FERIALI.
+    EXPECT_TRUE(segnala(p, Check::CalendarCombinationCycle, 0, "calendari.json", "/calendari/4/aggiunge/calendari/0"));
+    EXPECT_TRUE(segnala(p, Check::CalendarCombinationCycle, 0, "calendari.json", "/calendari/3/toglie/calendari/0"));
+    EXPECT_EQ(quanti(p, Check::CalendarCombinationCycle), 3);   // i tre calendari del giro
+    EXPECT_EQ(quanti(p, Check::CalendarCycle), 0);              // il giro non e' fatto di sole basi
+    EXPECT_EQ(quanti(p, Check::CalendarWithoutDays), 0);        // niente avvisi in piu' sui calendari del giro
+    // Direttamente: un calendario che aggiunge se stesso.
+    Package q = demo();
+    per_codice(q.calendars, "CAL-FERIALI").adds = {
+        {CalendarLinkKind::Calendar, Ref{"CAL-FERIALI", dove("calendari.json", "/calendari/4/aggiunge/calendari/0")}}};
+    EXPECT_TRUE(segnala(q, Check::CalendarCombinationCycle, 0, "calendari.json", "/calendari/4/aggiunge/calendari/0"));
+    EXPECT_EQ(quanti(q, Check::CalendarCombinationCycle), 1);
+    // Controprova: aggiungere o togliere calendari senza giri va bene.
+    Package r = demo();
+    per_codice(r.calendars, "CAL-FERIALI").removes = {{CalendarLinkKind::Calendar, Ref{"CAL-CENTRO-GIO", {}}}};
+    EXPECT_EQ(quanti(r, Check::CalendarCombinationCycle), 0);
+}
+
+// Un calendario che aggiunge o toglie una festivita' o un calendario che non esistono.
+TEST(Controlli, K_CTR_010_festivita_inesistente) {
+    Package p = demo();
+    per_codice(p.calendars, "CAL-FERIALI").removes = {
+        {CalendarLinkKind::Holidays, Ref{"FEST-XX", dove("calendari.json", "/calendari/4/toglie/festivita/0")}}};
+    EXPECT_TRUE(segnala(p, Check::UnknownReference, 0, "calendari.json", "/calendari/4/toglie/festivita/0"));
+    // Un codice di calendario non vale come festivita' (e viceversa): ogni tipo ha i suoi codici.
+    per_codice(p.calendars, "CAL-FERIALI").removes = {
+        {CalendarLinkKind::Holidays, Ref{"CAL-SCUOLA", dove("calendari.json", "/calendari/4/toglie/festivita/0")}}};
+    EXPECT_TRUE(segnala(p, Check::UnknownReference, 0, "calendari.json", "/calendari/4/toglie/festivita/0"));
+}
+
+// K-008: riferimenti dentro gli elenchi delle norme e delle aziende.
+TEST(Controlli, K_CTR_010_elenchi_di_norme_e_aziende) {
+    Package p = demo();
+    per_codice(p.norms, "N-IT").requirements[2].alternatives[1].licences[0] =
+        Ref{"D2", dove("norme.json", "/norme/0/requisiti_guida/2/alternative/1/abilitazioni/0")};
+    EXPECT_TRUE(segnala(p, Check::UnknownReference, 1, "norme.json", "/norme/0/requisiti_guida/2/alternative/1/abilitazioni/0"));
+    Package q = demo();
+    per_codice(q.vehicles, "ALFA-01").use = Ref{"NOLEGGIO", dove("mezzi.json", "/mezzi/0/uso")};
+    EXPECT_TRUE(segnala(q, Check::UnknownReference, 1, "mezzi.json", "/mezzi/0/uso"));
+    Package r = demo();
+    per_codice(r.services, "S-DIS").competences[0] = Ref{"PEDANE", dove("servizi.json", "/servizi/3/competenze_richieste/0")};
+    EXPECT_TRUE(segnala(r, Check::UnknownReference, 2, "servizi.json", "/servizi/3/competenze_richieste/0"));
+    // Una competenza di un'altra azienda non vale: ogni azienda ha il suo elenco.
+    per_codice(r.services, "S-DIS").competences[0] = Ref{"INFANZIA", dove("servizi.json", "/servizi/3/competenze_richieste/0")};
+    EXPECT_TRUE(segnala(r, Check::UnknownReference, 2, "servizi.json", "/servizi/3/competenze_richieste/0"));
+    Package s = demo();
+    per_codice(s.regulations, "R-TN").vehicle_uses->values[0].uses[1] = Ref{"TAXI", dove("regolamenti.json", "/x")};
+    EXPECT_TRUE(segnala(s, Check::UnknownReference, 0, "regolamenti.json", "/x"));
+    Package u = demo();
+    u.company_settings[1].company = Ref{"GAMMA", dove("aziende.json", "/aziende/1/azienda")};
+    u.company_settings[1].norms = Ref{"N-DE", dove("aziende.json", "/aziende/1/norme")};
+    EXPECT_TRUE(segnala(u, Check::UnknownReference, 0, "aziende.json", "/aziende/1/azienda"));
+    EXPECT_TRUE(segnala(u, Check::UnknownReference, 0, "aziende.json", "/aziende/1/norme"));
+}
+
+TEST(Controlli, K_CTR_009_codici_doppi_di_norme_e_aziende) {
+    Package p = demo();
+    p.company_settings[1].company.code = "ALFA";
+    EXPECT_TRUE(segnala(p, Check::DuplicateCode, 0, "aziende.json", "/aziende/1"));
+    Package q = demo();
+    q.company_settings[0].activities[1].code = "PRESA";
+    EXPECT_TRUE(segnala(q, Check::DuplicateCode, 0, "aziende.json", "/aziende/0/attivita/1"));
+    Package r = demo();
+    r.norms[0].uses[1].code = "LINEA";
+    EXPECT_TRUE(segnala(r, Check::DuplicateCode, 0, "norme.json", "/norme/0/usi/1"));
+}
+
+// Distrazione: autorizzazione a un uso in piu' che scade dentro il periodo del pacchetto (avviso).
+TEST(Controlli, K_CTR_050_distrazione_che_scade_nel_periodo) {
+    Package p = demo();
+    Vehicle& v = per_codice(p.vehicles, "ALFA-X30");
+    v.use_authorizations.push_back({Ref{"NCC", {}}, "Provincia", "n. 1", {giorno("2026-03-01"), giorno("2027-02-28")}, "",
+                                    dove("mezzi.json", "/mezzi/4/autorizzazioni_uso/0")});
+    EXPECT_TRUE(segnala(p, Check::ExpiresInPeriod, 0, "mezzi.json", "/mezzi/4/autorizzazioni_uso/0"));
+    // Valida fino all'ultimo giorno del periodo (o oltre): nessun avviso.
+    v.use_authorizations[0].period.to = giorno("2027-08-31");
+    EXPECT_FALSE(segnala(p, Check::ExpiresInPeriod, 0, "mezzi.json", "/mezzi/4/autorizzazioni_uso/0"));
+    // Date rovesciate: errore K-CTR-012.
+    v.use_authorizations[0].period = {giorno("2027-02-28"), giorno("2026-03-01")};
+    EXPECT_TRUE(segnala(p, Check::InvertedPeriod, 0, "mezzi.json", "/mezzi/4/autorizzazioni_uso/0"));
+}
+
+// Mezzo senza l'uso della carta di circolazione, quando le norme dell'azienda lo usano (avviso).
+TEST(Controlli, K_CTR_051_mezzo_senza_uso) {
+    Package p = demo();
+    per_codice(p.vehicles, "BETA-01").use.reset();
+    EXPECT_TRUE(segnala(p, Check::VehicleWithoutUse, 0, "mezzi.json", "/mezzi/5"));
+    EXPECT_EQ(quanti(p, Check::VehicleWithoutUse), 1);
+}
+
+// Azienda che scrive l'uso dei mezzi ma non indica le norme del paese (avviso, una volta per azienda).
+TEST(Controlli, K_CTR_052_azienda_senza_norme) {
+    Package p = demo();
+    p.company_settings[0].norms.reset();
+    EXPECT_TRUE(segnala(p, Check::CompanyWithoutNorms, 0, "pacchetto.json", "/aziende/0"));
+    EXPECT_EQ(quanti(p, Check::CompanyWithoutNorms), 1);
+    EXPECT_EQ(quanti(p, Check::UnknownReference), 0);   // senza norme gli usi non si controllano
+    // Senza impostazioni per l'azienda: stesso avviso.
+    Package q = demo();
+    q.company_settings.erase(q.company_settings.begin() + 1);
+    EXPECT_TRUE(segnala(q, Check::CompanyWithoutNorms, 0, "pacchetto.json", "/aziende/1"));
+}
+
+// --- Persone, assenze, fermi (K-008) -----------------------------------------------------------------------
+
+TEST(Controlli, K_CTR_009_persona_doppia) {
+    Package p = demo();
+    p.persons[1].code = "P-A";
+    EXPECT_TRUE(segnala(p, Check::DuplicateCode, 0, "persone.json", "/persone/1"));
+}
+
+TEST(Controlli, K_CTR_010_riferimenti_delle_persone) {
+    Package p = demo();
+    Person& x = per_codice(p.persons, "P-A");
+    x.licences[1].type = Ref{"D2", dove("persone.json", "/persone/0/abilitazioni/1/tipo")};
+    x.competences[0] = Ref{"PEDALE", dove("persone.json", "/persone/0/competenze/0")};
+    x.usual_vehicle = Ref{"ALFA-99", dove("persone.json", "/persone/0/mezzo_abituale")};
+    x.base_place = Ref{"L-NON-ESISTE", dove("persone.json", "/persone/0/presa_servizio")};
+    EXPECT_TRUE(segnala(p, Check::UnknownReference, 1, "persone.json", "/persone/0/abilitazioni/1/tipo"));
+    EXPECT_TRUE(segnala(p, Check::UnknownReference, 2, "persone.json", "/persone/0/competenze/0"));
+    EXPECT_TRUE(segnala(p, Check::UnknownReference, 0, "persone.json", "/persone/0/mezzo_abituale"));
+    EXPECT_TRUE(segnala(p, Check::UnknownReference, 0, "persone.json", "/persone/0/presa_servizio"));
+    // Il codice scritto in un dato personale e' segnato come personale: compare solo con il parametro.
+    for (const Problem& q : check_package(p))
+        if (q.where.pointer == "/persone/0/abilitazioni/1/tipo") {
+            const Param* c = parametro(q, "codice");
+            ASSERT_NE(c, nullptr);
+            EXPECT_EQ(c->sensitivity, Param::Sensitivity::Personal);
+        }
+    Package q = demo();
+    q.absences[0].type = Ref{"MALATTIA", dove("assenze.json", "/assenze/0/tipo")};
+    EXPECT_TRUE(segnala(q, Check::UnknownReference, 2, "assenze.json", "/assenze/0/tipo"));
+    q.absences[0].person = Ref{"P-ZZ", dove("assenze.json", "/assenze/0/persona")};
+    EXPECT_TRUE(segnala(q, Check::UnknownReference, 0, "assenze.json", "/assenze/0/persona"));
+    Package r = demo();
+    r.stops[0].type = Ref{"OFFICINA", dove("fermi.json", "/fermi/0/tipo")};   // tipo di Beta, non di Alfa
+    EXPECT_TRUE(segnala(r, Check::UnknownReference, 2, "fermi.json", "/fermi/0/tipo"));
+    Package s = demo();
+    per_codice(s.persons, "P-D").authorizations[0].client = Ref{"XYZ", dove("persone.json", "/persone/3/autorizzazioni/0/committente")};
+    EXPECT_TRUE(segnala(s, Check::UnknownReference, 0, "persone.json", "/persone/3/autorizzazioni/0/committente"));
+}
+
+TEST(Controlli, K_CTR_012_periodi_rovesciati_di_persone_assenze_fermi) {
+    Package p = demo();
+    p.absences[0].days = {giorno("2026-10-23"), giorno("2026-10-22")};
+    p.stops[0].start = ora("12:00");
+    p.stops[0].end = ora("08:00");
+    per_codice(p.persons, "P-D").availability[0].end = ora("06:00");
+    EXPECT_TRUE(segnala(p, Check::InvertedPeriod, 0, "assenze.json", "/assenze/0"));
+    EXPECT_TRUE(segnala(p, Check::InvertedPeriod, 1, "fermi.json", "/fermi/0"));
+    EXPECT_TRUE(segnala(p, Check::InvertedPeriod, 1, "persone.json", "/persone/3/disponibilita/0"));
+}
+
+// "Solo numeri": restano ruolo, abilitazioni, competenze, disponibilita'; non nomi, case e note delle persone.
+TEST(Controlli, K_CTR_019_persone_in_solo_numeri) {
+    Package p = demo();
+    p.manifest.level = Level::NumbersOnly;
+    EXPECT_TRUE(segnala(p, Check::NumbersOnlyPersonalData, 2, "persone.json", "/persone/0/nome"));
+    EXPECT_TRUE(segnala(p, Check::NumbersOnlyPersonalData, 3, "persone.json", "/persone/0/casa"));
+    per_codice(p.persons, "P-NUOVO").note = "Da assumere";
+    EXPECT_TRUE(segnala(p, Check::NumbersOnlyPersonalData, 4, "persone.json", "/persone/4/nota"));
+    EXPECT_FALSE(segnala(p, Check::NumbersOnlyPersonalData, 2, "persone.json", "/persone/4/nome"));   // senza nome
+}
+
+TEST(Controlli, K_CTR_050_abilitazione_o_autorizzazione_che_scade) {
+    Package p = demo();
+    EXPECT_TRUE(segnala(p, Check::ExpiresInPeriod, 1, "persone.json", "/persone/2/abilitazioni/2"));   // gia' nel demo
+    per_codice(p.persons, "P-A").licences[1].expiry = giorno("2027-06-30");
+    per_codice(p.persons, "P-D").authorizations[0].expiry = giorno("2027-01-31");
+    EXPECT_TRUE(segnala(p, Check::ExpiresInPeriod, 1, "persone.json", "/persone/0/abilitazioni/1"));
+    EXPECT_TRUE(segnala(p, Check::ExpiresInPeriod, 2, "persone.json", "/persone/3/autorizzazioni/0"));
+    // Le altre scadenze sono dopo il periodo: oltre a queste tre resta solo la distrazione dell'autobus di linea.
+    EXPECT_EQ(quanti(p, Check::ExpiresInPeriod), 4);
+}
+
+TEST(Controlli, K_CTR_052_abilitazioni_senza_norme) {
+    Package p = demo();
+    p.company_settings[1].norms.reset();   // Beta: mezzi con l'uso e persone con le abilitazioni
+    for (Vehicle& v : p.vehicles)
+        if (v.company.code == "BETA") v.use.reset();
+    EXPECT_TRUE(segnala(p, Check::CompanyWithoutNorms, 0, "pacchetto.json", "/aziende/1"));
+    for (Person& x : p.persons)
+        if (x.company.code == "BETA") x.licences.clear();
+    EXPECT_TRUE(segnala(p, Check::CompanyWithoutNorms, 0, "pacchetto.json", "/aziende/1"));   // restano i turni con i mezzi
+    std::vector<Shift> turni;
+    for (const Shift& t : p.shifts)
+        if (t.company.code != "BETA" || t.vehicle_mode == ShiftVehicleMode::None) turni.push_back(t);
+    p.shifts = turni;
+    EXPECT_EQ(quanti(p, Check::CompanyWithoutNorms), 0);
+}
+
 TEST(Controlli, K_CTR_017_orario_che_torna_indietro) {
     Package p = demo();
     p.trips[3].passages[2].time = ora("16:08");
@@ -220,7 +427,12 @@ TEST(Controlli, K_CTR_019_dati_personali_in_solo_numeri) {
     p.manifest.level = Level::NumbersOnly;
     EXPECT_TRUE(segnala(p, Check::NumbersOnlyPersonalData, 0, "luoghi.json", "/luoghi_privati/0"));
     EXPECT_TRUE(segnala(p, Check::NumbersOnlyPersonalData, 1, "servizi.json", "/servizi/3/domanda/gruppi/0/passeggeri/0"));
-    EXPECT_EQ(quanti(p, Check::NumbersOnlyPersonalData), 8);   // 5 luoghi privati, 3 gruppi con passeggeri
+    EXPECT_TRUE(segnala(p, Check::NumbersOnlyPersonalData, 5, "rotazioni.json", "/rotazioni/0/nota"));
+    EXPECT_TRUE(segnala(p, Check::NumbersOnlyPersonalData, 6, "servizi_fissi.json", "/servizi_fissi/0/nota"));
+    EXPECT_TRUE(segnala(p, Check::NumbersOnlyPersonalData, 7, "assegnazioni.json", "/assegnazioni/2/nota"));
+    // 5 luoghi privati, 3 gruppi con passeggeri; dal K-008 anche 11 nomi e 5 case di persone, 2 note di rotazioni,
+    // 2 di servizi fissi e 8 di assegnazioni del singolo giorno.
+    EXPECT_EQ(quanti(p, Check::NumbersOnlyPersonalData), 36);
 }
 
 TEST(Controlli, K_CTR_020_persone_a_bordo_sotto_zero) {
@@ -536,6 +748,7 @@ TEST(Controlli, K_CTR_044_mezzo_senza_costi) {
 TEST(Controlli, K_CTR_045_azienda_senza_mezzi) {
     Package p = demo();
     per_codice(p.vehicles, "BETA-01").company.code = "ALFA";
+    per_codice(p.vehicles, "BETA-02").company.code = "ALFA";
     EXPECT_TRUE(segnala(p, Check::CompanyWithoutVehicles, 0, "pacchetto.json", "/aziende/1"));
 }
 
@@ -560,5 +773,13 @@ TEST(Controlli, catalogo_coperto) {
     EXPECT_EQ(api::definizione_controllo(Check::ContractWithoutRegulation).codice, "K-CTR-046");
     EXPECT_EQ(api::definizione_controllo(Check::AssistantNotRequested).codice, "K-CTR-047");
     EXPECT_EQ(api::definizione_controllo(Check::NotUtf8).codice, "K-CTR-048");
-    EXPECT_EQ(api::catalogo_controlli().size(), 48u);
+    EXPECT_EQ(api::definizione_controllo(Check::CalendarCombinationCycle).codice, "K-CTR-049");
+    EXPECT_EQ(api::definizione_controllo(Check::CompanyWithoutNorms).codice, "K-CTR-052");
+    EXPECT_EQ(api::definizione_controllo(Check::FileTooBig).codice, "K-CTR-053");
+    EXPECT_EQ(api::definizione_controllo(Check::ShiftPartInvalid).codice, "K-CTR-054");
+    EXPECT_EQ(api::definizione_controllo(Check::PersonOverlap).codice, "K-CTR-063");
+    EXPECT_EQ(api::definizione_controllo(Check::DriverWithoutLicence).codice, "K-CTR-068");
+    EXPECT_EQ(api::definizione_controllo(Check::ShiftUncovered).codice, "K-CTR-077");
+    EXPECT_EQ(api::definizione_controllo(Check::EscortProviderDiffers).codice, "K-CTR-087");
+    EXPECT_EQ(api::catalogo_controlli().size(), 87u);
 }

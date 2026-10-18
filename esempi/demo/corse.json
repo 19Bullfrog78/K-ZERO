@@ -298,6 +298,274 @@
         }
       ],
       "km_totali": { "pieni": 9.1, "vuoti": 6.4 }
+    },
+    {
+      "codice": "C-LIN-537",
+      "nome": "Linea B610, corsa delle 08:25",
+      "codici_esterni": [
+        { "sistema": "Trasporti Provinciali Valfonda", "tipo": "linea", "codice": "B610" },
+        { "sistema": "Trasporti Provinciali Valfonda", "tipo": "corsa", "codice": "537" }
+      ],
+      "servizi": ["S-LIN-B610"],
+      "calendario": "CAL-FERIALI",
+      "passaggi": [
+        { "luogo": "F-PRADELLO", "orario": "08:25" },
+        { "luogo": "F-CASTELROVO-ALTO", "orario": "08:32", "km": { "pieni": 5.1 } },
+        { "luogo": "F-VALFONDA-PIAZZA", "orario": "08:49", "km": { "pieni": 8.8 } },
+        { "luogo": "F-STAZIONE", "orario": "08:56", "km": { "pieni": 1.2 } }
+      ],
+      "km_totali": { "pieni": 15.1, "vuoti": 0 },
+      "testo_esposto": "B610 STAZIONE"
+    },
+    {
+      "codice": "C-LIN-545",
+      "nome": "Linea B610, corsa delle 13:30",
+      "codici_esterni": [
+        { "sistema": "Trasporti Provinciali Valfonda", "tipo": "linea", "codice": "B610" },
+        { "sistema": "Trasporti Provinciali Valfonda", "tipo": "corsa", "codice": "545" }
+      ],
+      "servizi": ["S-LIN-B610"],
+      "calendario": "CAL-FERIALI",
+      "passaggi": [
+        { "luogo": "F-STAZIONE", "orario": "13:30" },
+        { "luogo": "F-VALFONDA-PIAZZA", "orario": "13:34", "km": { "pieni": 1.2 } },
+        { "luogo": "F-CASTELROVO-ALTO", "orario": "13:46", "km": { "pieni": 8.8 } },
+        { "luogo": "F-PRADELLO", "orario": "13:53", "km": { "pieni": 5.1 } }
+      ],
+      "km_totali": { "pieni": 15.1, "vuoti": 0 },
+      "testo_esposto": "B610 PRADELLO"
+    },
+    {
+      "codice": "C-LIN-549",
+      "nome": "Linea B610, corsa delle 16:40 (cambio dell'autista a Valfonda, Piazza)",
+      "codici_esterni": [
+        { "sistema": "Trasporti Provinciali Valfonda", "tipo": "linea", "codice": "B610" },
+        { "sistema": "Trasporti Provinciali Valfonda", "tipo": "corsa", "codice": "549" }
+      ],
+      "servizi": ["S-LIN-B610"],
+      "calendario": "CAL-FERIALI",
+      "passaggi": [
+        { "luogo": "F-PRADELLO", "orario": "16:40" },
+        { "luogo": "F-CASTELROVO-ALTO", "orario": "16:47", "km": { "pieni": 5.1 } },
+        { "luogo": "F-VALFONDA-PIAZZA", "orario": "17:04", "km": { "pieni": 8.8 } },
+        { "luogo": "F-STAZIONE", "orario": "17:11", "km": { "pieni": 1.2 } }
+      ],
+      "km_totali": { "pieni": 15.1, "vuoti": 0 },
+      "testo_esposto": "B610 STAZIONE"
+    },
+    {
+      "codice": "C-LIN-553",
+      "nome": "Linea B610, corsa delle 19:45",
+      "codici_esterni": [
+        { "sistema": "Trasporti Provinciali Valfonda", "tipo": "linea", "codice": "B610" },
+        { "sistema": "Trasporti Provinciali Valfonda", "tipo": "corsa", "codice": "553" }
+      ],
+      "servizi": ["S-LIN-B610"],
+      "calendario": "CAL-FERIALI",
+      "passaggi": [
+        { "luogo": "F-STAZIONE", "orario": "19:45" },
+        { "luogo": "F-VALFONDA-PIAZZA", "orario": "19:49", "km": { "pieni": 1.2 } },
+        { "luogo": "F-CASTELROVO-ALTO", "orario": "20:01", "km": { "pieni": 8.8 } },
+        { "luogo": "F-PRADELLO", "orario": "20:08", "km": { "pieni": 5.1 } }
+      ],
+      "km_totali": { "pieni": 15.1, "vuoti": 0 },
+      "testo_esposto": "B610 PRADELLO"
+    },
+    {
+      "codice": "C-B620-01",
+      "nome": "Linea B620, feriale delle 06:40",
+      "codici_esterni": [
+        { "sistema": "Trasporti Provinciali Valfonda", "tipo": "linea", "codice": "B620" },
+        { "sistema": "Trasporti Provinciali Valfonda", "tipo": "corsa", "codice": "1" }
+      ],
+      "servizi": ["S-LIN-B620"],
+      "calendario": "CAL-FERIALI",
+      "passaggi": [
+        { "luogo": "F-SORGENTA", "orario": "06:40" },
+        { "luogo": "F-LAGOBELLO", "orario": "06:52", "km": { "pieni": 6.2 } },
+        { "luogo": "F-MONTEBRINO", "orario": "07:10", "km": { "pieni": 7.9 } }
+      ],
+      "km_totali": { "pieni": 14.1, "vuoti": 0 },
+      "testo_esposto": "B620 MONTEBRINO"
+    },
+    {
+      "codice": "C-B620-02",
+      "nome": "Linea B620, feriale delle 07:20",
+      "codici_esterni": [
+        { "sistema": "Trasporti Provinciali Valfonda", "tipo": "linea", "codice": "B620" },
+        { "sistema": "Trasporti Provinciali Valfonda", "tipo": "corsa", "codice": "2" }
+      ],
+      "servizi": ["S-LIN-B620"],
+      "calendario": "CAL-FERIALI",
+      "passaggi": [
+        { "luogo": "F-MONTEBRINO", "orario": "07:20" },
+        { "luogo": "F-LAGOBELLO", "orario": "07:38", "km": { "pieni": 7.9 } },
+        { "luogo": "F-SORGENTA", "orario": "07:50", "km": { "pieni": 6.2 } }
+      ],
+      "km_totali": { "pieni": 14.1, "vuoti": 0 },
+      "testo_esposto": "B620 SORGENTA"
+    },
+    {
+      "codice": "C-B620-03",
+      "nome": "Linea B620, feriale delle 12:30",
+      "codici_esterni": [
+        { "sistema": "Trasporti Provinciali Valfonda", "tipo": "linea", "codice": "B620" },
+        { "sistema": "Trasporti Provinciali Valfonda", "tipo": "corsa", "codice": "3" }
+      ],
+      "servizi": ["S-LIN-B620"],
+      "calendario": "CAL-FERIALI",
+      "passaggi": [
+        { "luogo": "F-SORGENTA", "orario": "12:30" },
+        { "luogo": "F-LAGOBELLO", "orario": "12:42", "km": { "pieni": 6.2 } },
+        { "luogo": "F-MONTEBRINO", "orario": "13:00", "km": { "pieni": 7.9 } }
+      ],
+      "km_totali": { "pieni": 14.1, "vuoti": 0 },
+      "testo_esposto": "B620 MONTEBRINO"
+    },
+    {
+      "codice": "C-B620-04",
+      "nome": "Linea B620, feriale delle 13:10",
+      "codici_esterni": [
+        { "sistema": "Trasporti Provinciali Valfonda", "tipo": "linea", "codice": "B620" },
+        { "sistema": "Trasporti Provinciali Valfonda", "tipo": "corsa", "codice": "4" }
+      ],
+      "servizi": ["S-LIN-B620"],
+      "calendario": "CAL-FERIALI",
+      "passaggi": [
+        { "luogo": "F-MONTEBRINO", "orario": "13:10" },
+        { "luogo": "F-LAGOBELLO", "orario": "13:28", "km": { "pieni": 7.9 } },
+        { "luogo": "F-SORGENTA", "orario": "13:40", "km": { "pieni": 6.2 } }
+      ],
+      "km_totali": { "pieni": 14.1, "vuoti": 0 },
+      "testo_esposto": "B620 SORGENTA"
+    },
+    {
+      "codice": "C-B620-05",
+      "nome": "Linea B620, feriale delle 17:30",
+      "codici_esterni": [
+        { "sistema": "Trasporti Provinciali Valfonda", "tipo": "linea", "codice": "B620" },
+        { "sistema": "Trasporti Provinciali Valfonda", "tipo": "corsa", "codice": "5" }
+      ],
+      "servizi": ["S-LIN-B620"],
+      "calendario": "CAL-FERIALI",
+      "passaggi": [
+        { "luogo": "F-SORGENTA", "orario": "17:30" },
+        { "luogo": "F-LAGOBELLO", "orario": "17:42", "km": { "pieni": 6.2 } },
+        { "luogo": "F-MONTEBRINO", "orario": "18:00", "km": { "pieni": 7.9 } }
+      ],
+      "km_totali": { "pieni": 14.1, "vuoti": 0 },
+      "testo_esposto": "B620 MONTEBRINO"
+    },
+    {
+      "codice": "C-B620-06",
+      "nome": "Linea B620, feriale delle 18:10",
+      "codici_esterni": [
+        { "sistema": "Trasporti Provinciali Valfonda", "tipo": "linea", "codice": "B620" },
+        { "sistema": "Trasporti Provinciali Valfonda", "tipo": "corsa", "codice": "6" }
+      ],
+      "servizi": ["S-LIN-B620"],
+      "calendario": "CAL-FERIALI",
+      "passaggi": [
+        { "luogo": "F-MONTEBRINO", "orario": "18:10" },
+        { "luogo": "F-LAGOBELLO", "orario": "18:28", "km": { "pieni": 7.9 } },
+        { "luogo": "F-SORGENTA", "orario": "18:40", "km": { "pieni": 6.2 } }
+      ],
+      "km_totali": { "pieni": 14.1, "vuoti": 0 },
+      "testo_esposto": "B620 SORGENTA"
+    },
+    {
+      "codice": "C-B620-11",
+      "nome": "Linea B620, festiva delle 09:00",
+      "codici_esterni": [
+        { "sistema": "Trasporti Provinciali Valfonda", "tipo": "linea", "codice": "B620" },
+        { "sistema": "Trasporti Provinciali Valfonda", "tipo": "corsa", "codice": "11" }
+      ],
+      "servizi": ["S-LIN-B620"],
+      "calendario": "CAL-FESTIVI",
+      "passaggi": [
+        { "luogo": "F-SORGENTA", "orario": "09:00" },
+        { "luogo": "F-LAGOBELLO", "orario": "09:12", "km": { "pieni": 6.2 } },
+        { "luogo": "F-MONTEBRINO", "orario": "09:30", "km": { "pieni": 7.9 } }
+      ],
+      "km_totali": { "pieni": 14.1, "vuoti": 0 },
+      "testo_esposto": "B620 MONTEBRINO"
+    },
+    {
+      "codice": "C-B620-12",
+      "nome": "Linea B620, festiva delle 09:40",
+      "codici_esterni": [
+        { "sistema": "Trasporti Provinciali Valfonda", "tipo": "linea", "codice": "B620" },
+        { "sistema": "Trasporti Provinciali Valfonda", "tipo": "corsa", "codice": "12" }
+      ],
+      "servizi": ["S-LIN-B620"],
+      "calendario": "CAL-FESTIVI",
+      "passaggi": [
+        { "luogo": "F-MONTEBRINO", "orario": "09:40" },
+        { "luogo": "F-LAGOBELLO", "orario": "09:58", "km": { "pieni": 7.9 } },
+        { "luogo": "F-SORGENTA", "orario": "10:10", "km": { "pieni": 6.2 } }
+      ],
+      "km_totali": { "pieni": 14.1, "vuoti": 0 },
+      "testo_esposto": "B620 SORGENTA"
+    },
+    {
+      "codice": "C-B620-13",
+      "nome": "Linea B620, festiva delle 17:00",
+      "codici_esterni": [
+        { "sistema": "Trasporti Provinciali Valfonda", "tipo": "linea", "codice": "B620" },
+        { "sistema": "Trasporti Provinciali Valfonda", "tipo": "corsa", "codice": "13" }
+      ],
+      "servizi": ["S-LIN-B620"],
+      "calendario": "CAL-FESTIVI",
+      "passaggi": [
+        { "luogo": "F-SORGENTA", "orario": "17:00" },
+        { "luogo": "F-LAGOBELLO", "orario": "17:12", "km": { "pieni": 6.2 } },
+        { "luogo": "F-MONTEBRINO", "orario": "17:30", "km": { "pieni": 7.9 } }
+      ],
+      "km_totali": { "pieni": 14.1, "vuoti": 0 },
+      "testo_esposto": "B620 MONTEBRINO"
+    },
+    {
+      "codice": "C-B620-14",
+      "nome": "Linea B620, festiva delle 17:40",
+      "codici_esterni": [
+        { "sistema": "Trasporti Provinciali Valfonda", "tipo": "linea", "codice": "B620" },
+        { "sistema": "Trasporti Provinciali Valfonda", "tipo": "corsa", "codice": "14" }
+      ],
+      "servizi": ["S-LIN-B620"],
+      "calendario": "CAL-FESTIVI",
+      "passaggi": [
+        { "luogo": "F-MONTEBRINO", "orario": "17:40" },
+        { "luogo": "F-LAGOBELLO", "orario": "17:58", "km": { "pieni": 7.9 } },
+        { "luogo": "F-SORGENTA", "orario": "18:10", "km": { "pieni": 6.2 } }
+      ],
+      "km_totali": { "pieni": 14.1, "vuoti": 0 },
+      "testo_esposto": "B620 SORGENTA"
+    },
+    {
+      "codice": "C-GITA-A",
+      "nome": "Gita della Pro Loco, andata",
+      "servizi": ["S-GITA"],
+      "calendario": "CAL-GITA",
+      "passaggi": [
+        { "luogo": "L-RIMESSA-ALFA", "orario": "08:00" },
+        { "luogo": "F-VALFONDA-PIAZZA", "orario": "08:10", "persone": [{ "gruppo": "G-GITA-A", "salgono": 30 }], "km": { "vuoti": 1.0 } },
+        { "luogo": "F-LAGOBELLO", "orario": "08:45", "persone": [{ "gruppo": "G-GITA-A", "scendono": 30 }], "km": { "pieni": 8.0 } }
+      ],
+      "km_totali": { "pieni": 8.0, "vuoti": 1.0 },
+      "testo_esposto": "GITA"
+    },
+    {
+      "codice": "C-GITA-R",
+      "nome": "Gita della Pro Loco, ritorno",
+      "servizi": ["S-GITA"],
+      "calendario": "CAL-GITA",
+      "passaggi": [
+        { "luogo": "F-LAGOBELLO", "orario": "17:00", "persone": [{ "gruppo": "G-GITA-R", "salgono": 30 }] },
+        { "luogo": "F-VALFONDA-PIAZZA", "orario": "17:35", "persone": [{ "gruppo": "G-GITA-R", "scendono": 30 }], "km": { "pieni": 8.0 } },
+        { "luogo": "L-RIMESSA-ALFA", "orario": "17:45", "km": { "vuoti": 1.0 } }
+      ],
+      "km_totali": { "pieni": 8.0, "vuoti": 1.0 },
+      "testo_esposto": "GITA"
     }
   ]
 }

@@ -19,9 +19,9 @@ enum class Livello { Errore, Avviso };
 
 struct DefinizioneControllo {
     DefinizioneControllo(kzero::Check c, std::string cod, Livello l, std::string descr, std::vector<std::string> mess,
-                         std::map<int, std::string> ris = {})
+                         std::map<int, std::string> ris = {}, std::map<int, std::string> pers = {})
         : controllo(c), codice(std::move(cod)), livello(l), descrizione(std::move(descr)), messaggi(std::move(mess)),
-          riservati(std::move(ris)) {}
+          riservati(std::move(ris)), personali(std::move(pers)) {}
 
     kzero::Check controllo;
     std::string codice;                  // "K-CTR-001": fisso, mai riusato per altro
@@ -30,6 +30,9 @@ struct DefinizioneControllo {
     std::vector<std::string> messaggi;   // un modello per variante; {nome} = valore del problema
     // Varianti che parlano di dati particolari: il modello da usare senza --includi-dati-particolari.
     std::map<int, std::string> riservati;
+    // Varianti che parlano di dati personali (es. un'abilitazione o un'assenza di una persona): il modello da usare
+    // senza --includi-dati-personali.
+    std::map<int, std::string> personali;
 };
 
 // Catalogo completo, in ordine di codice.
@@ -37,6 +40,11 @@ const std::vector<DefinizioneControllo>& catalogo_controlli();
 const DefinizioneControllo& definizione_controllo(kzero::Check c);
 
 const char* nome_livello(Livello l);   // "errore", "avviso"
+
+// Giorni di un problema raggruppati in periodi di giorni consecutivi: (primo, ultimo).
+std::vector<std::pair<kzero::Day, kzero::Day>> periodi_di_giorni(const std::vector<kzero::Day>& giorni);
+// Giorni di un problema in italiano: "il 2026-10-20", "dal 2026-10-20 al 2026-10-24 (5 giorni)", ...
+std::string testo_giorni(const std::vector<kzero::Day>& giorni);
 
 // Scrive i messaggi dei problemi. I riferimenti agli elementi mostrano il codice e, se le classi dei dati
 // lo permettono, il nome: il nome di un punto porta a porta (dato personale) compare solo con

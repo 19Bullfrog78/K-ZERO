@@ -9,18 +9,25 @@
 #include "dimostrazione.hpp"
 #include "pacchetto.hpp"
 #include "pacchetto_demo.hpp"
+#include "turni.hpp"
 
 using namespace kzero;
 using namespace kzero::prove;
 
 // La categoria di ogni corsa la ricava il nucleo: superiori + medie di due contratti = ibrido,
-// centro diurno = handicap (anche la corsa del giovedi' con la carrozzina piegata), solo utenti di linea = linea.
+// centro diurno = handicap (anche la corsa del giovedi' con la carrozzina piegata), solo utenti di linea = linea,
+// solo gruppi di tipo "altro" (la gita, K-008) = altro.
 TEST(Dimostrazione, categorie_ricavate) {
-    const std::vector<std::pair<std::string, ServiceType>> attese = {
+    std::vector<std::pair<std::string, ServiceType>> attese = {
         {"C-AM-1", ServiceType::School},      {"C-AM-2", ServiceType::School},     {"C-AM-3", ServiceType::School},
         {"C-RM-1", ServiceType::Hybrid},      {"C-DIS-R", ServiceType::Disability}, {"C-DIS-1", ServiceType::Disability},
         {"C-ASILO-1", ServiceType::School},   {"C-LIN-533", ServiceType::Line},     {"C-LIN-560", ServiceType::Line},
         {"C-DIS-GIO", ServiceType::Disability}};
+    for (const char* c : {"C-LIN-537", "C-LIN-545", "C-LIN-549", "C-LIN-553", "C-B620-01", "C-B620-02", "C-B620-03", "C-B620-04",
+                          "C-B620-05", "C-B620-06", "C-B620-11", "C-B620-12", "C-B620-13", "C-B620-14"})
+        attese.push_back({c, ServiceType::Line});
+    attese.push_back({"C-GITA-A", ServiceType::Other});
+    attese.push_back({"C-GITA-R", ServiceType::Other});
     const Index idx(demo());
     ASSERT_EQ(demo().trips.size(), attese.size());
     for (std::size_t i = 0; i < attese.size(); ++i) {
@@ -46,34 +53,55 @@ TEST(Dimostrazione, totali_e_pause) {
         pieni += t.loaded_km();
         vuoti += t.empty_km();
     }
-    EXPECT_NEAR(pieni, 131.8, 1e-9);
-    EXPECT_NEAR(vuoti, 61.7, 1e-9);
+    EXPECT_NEAR(pieni, 349.2, 1e-9);
+    EXPECT_NEAR(vuoti, 63.7, 1e-9);
 
-    Schedule giornata;
-    giornata.routes = {per_codice(demo().trips, "C-AM-1"), per_codice(demo().trips, "C-RM-1")};
-    EXPECT_NEAR(giornata.loaded_km(), 29.9, 1e-9);
-    EXPECT_NEAR(giornata.empty_km(), 12.8, 1e-9);
-    EXPECT_EQ(giornata.idle_minutes(), 263);
-    Driver autista;
-    autista.home = *per_codice(demo().places, "L-RIMESSA-ALFA").coord;
-    const Index idx(demo());
-    const BreakReport br = check_home_breaks(giornata, autista, [&](const Code& c) { return idx.place(c); });
-    EXPECT_EQ(br.near_home, 1);
-    EXPECT_EQ(br.far_from_home, 0);
+    // Un turno con l'andata del mattino e il ritorno di mezzogiorno (K-008: il turno del giorno al posto della
+    // vecchia "giornata del mezzo"): km dei dati e minuti fermi tra le due corse.
+    Package p = demo();
+    Shift s;
+    s.code = "T-PROVA";
+    s.company = Ref{"ALFA", {}};
+    s.calendar = Ref{"CAL-SCUOLA-LV", {}};
+    s.vehicle_mode = ShiftVehicleMode::Specific;
+    s.vehicle = Ref{"ALFA-01", {}};
+    for (const char* c : {"C-AM-1", "C-RM-1"}) {
+        ShiftItem it;
+        it.trip.trip = Ref{c, {}};
+        s.items.push_back(it);
+    }
+    p.shifts.clear();   // il demo ha i suoi turni (K-008): qui basta questo
+    p.shifts.push_back(s);
+    const Planner piano(p);
+    const auto giornata = piano.day(giorno("2026-10-15"));
+    ASSERT_EQ(giornata.size(), 1u);
+    EXPECT_NEAR(loaded_km(giornata[0]), 29.9, 1e-9);
+    EXPECT_NEAR(empty_km(giornata[0]), 12.8, 1e-9);
+    EXPECT_EQ(idle_minutes(giornata[0]), 263);
+    Person autista;
+    autista.home = Home{"", "", per_codice(p.places, "L-RIMESSA-ALFA").coord};
+    const auto luogo = [&piano](const Code& c) { return piano.index().place(c); };
+    const auto br = check_home_breaks(giornata[0], autista, HomeBreakRule{60, 5.0, std::nullopt}, luogo);
+    ASSERT_TRUE(br.has_value());
+    EXPECT_EQ(br->near_home, 1);
+    EXPECT_EQ(br->far_from_home, 0);
+    EXPECT_FALSE(check_home_breaks(giornata[0], autista, std::nullopt, luogo).has_value());   // senza regola non giudica
 }
 
 // Posti, carrozzine, costi e assistente, con i valori del pacchetto demo.
 TEST(Dimostrazione, posti_costi_assistente) {
     const Dimostrazione d = calcola_dimostrazione(demo());
 
-    // 38 ragazzi del servizio S-SCU-AM: non stanno sul mezzo piu' grande in flotta (16 posti).
+    // 38 ragazzi del servizio S-SCU-AM: non stanno sul mezzo piu' grande dell'azienda in flotta (35 posti, K-008).
+    // La gita (30 persone all'andata e 30 al ritorno, K-008) e' di 30 persone: ci sta.
     ASSERT_EQ(d.giri.size(), 1u);
     EXPECT_EQ(d.giri[0].servizio, "S-SCU-AM");
     EXPECT_EQ(d.giri[0].persone, 38);
-    ASSERT_EQ(d.giri[0].mezzi.size(), 5u);
+    ASSERT_EQ(d.giri[0].mezzi.size(), 8u);
     EXPECT_EQ(d.giri[0].mezzi[0].giri, 3);   // ALFA-01, 16 posti
     EXPECT_EQ(d.giri[0].mezzi[2].giri, 4);   // ALFA-03, 12 posti
     EXPECT_EQ(d.giri[0].mezzi[4].giri, 2);   // ALFA-X30, 30 posti (ipotetico)
+    EXPECT_EQ(d.giri[0].mezzi[5].giri, 2);   // ALFA-05, 35 posti
 
     // ALFA-03: 12 posti, 3 persi per carrozzina, al massimo 2 carrozzine.
     ASSERT_EQ(d.carrozzine.size(), 1u);
@@ -110,25 +138,29 @@ TEST(Dimostrazione, posti_costi_assistente) {
     EXPECT_TRUE(auto_.casi[2].ammesso);                // 1 ausilio con 4 seduti: nel bagagliaio
     EXPECT_EQ(auto_.casi[2].posti_liberi, 0);
 
-    // La linea chiede un mezzo da almeno 30 posti: solo il mezzo ipotetico e' ammesso.
+    // La linea chiede un mezzo da almeno 30 posti: sono ammessi l'autobus di linea (K-008) e il mezzo ipotetico.
+    // Sei corse da 15,1 km al giorno (K-008: quattro corse in piu').
     ASSERT_EQ(d.costi.size(), 2u);
     const CostiServizio& linea = d.costi[1];
     EXPECT_EQ(linea.servizio, "S-LIN-B610");
     EXPECT_EQ(linea.posti_minimi, 30);
     EXPECT_EQ(linea.posti_massimi, 54);
-    EXPECT_NEAR(linea.km_al_giorno, 30.2, 1e-9);
-    ASSERT_EQ(linea.mezzi.size(), 5u);
+    EXPECT_NEAR(linea.km_al_giorno, 90.6, 1e-9);
+    ASSERT_EQ(linea.mezzi.size(), 8u);
     EXPECT_FALSE(linea.mezzi[0].ammesso);
-    EXPECT_NEAR(*linea.mezzi[0].costo, 61.61, 1e-9);    // 45 + 30,2 km x 0,55
+    EXPECT_NEAR(*linea.mezzi[0].costo, 94.83, 1e-9);    // 45 + 90,6 km x 0,55
     EXPECT_TRUE(linea.mezzi[4].ammesso);
     EXPECT_TRUE(linea.mezzi[4].ipotetico);
-    EXPECT_NEAR(*linea.mezzi[4].costo, 118.69, 1e-9);   // 90 + 30,2 km x 0,95
+    EXPECT_NEAR(*linea.mezzi[4].costo, 176.07, 1e-9);   // 90 + 90,6 km x 0,95
+    EXPECT_TRUE(linea.mezzi[5].ammesso);
+    EXPECT_FALSE(linea.mezzi[5].ipotetico);
+    EXPECT_NEAR(*linea.mezzi[5].costo, 190.13, 1e-9);   // 95 + 90,6 km x 1,05
 
     // Infanzia di Lagobello con un mezzo da 19 posti: il regolamento R-TN chiede l'assistente.
     ASSERT_EQ(d.assistente.size(), 1u);
     EXPECT_EQ(d.assistente[0].corsa, "C-ASILO-1");
     EXPECT_EQ(d.assistente[0].regolamento, "R-TN");
-    ASSERT_EQ(d.assistente[0].mezzi.size(), 1u);
+    ASSERT_EQ(d.assistente[0].mezzi.size(), 2u);   // K-008: anche l'autobus di linea di Beta
     EXPECT_EQ(d.assistente[0].mezzi[0].mezzo, "BETA-01");
     EXPECT_TRUE(d.assistente[0].mezzi[0].serve);
 }

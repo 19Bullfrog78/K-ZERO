@@ -1,0 +1,60 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "K-Zero - file di dati assegnazioni.json, versione 1",
+  "description": "Assegnazioni del singolo giorno (file assegnazioni.json): data, turno e la persona, il mezzo o tutti e due. Sostituzioni, scambi tra colleghi, un mezzo al posto di quello in revisione, lavori occasionali come una gita o un noleggio. Valgono piu' dei servizi fissi e delle rotazioni. Il programma non le pianifica: le registra se le scrive l'utente.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "schema_versione", "assegnazioni"],
+  "properties": {
+    "schema": { "const": "assegnazioni", "x-kzero-classe": "comune" },
+    "schema_versione": { "const": 1, "x-kzero-classe": "comune" },
+    "assegnazioni": {
+      "type": "array",
+      "items": {
+        "description": "Un'assegnazione del singolo giorno: la persona, il mezzo o tutti e due.",
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["data", "turno"],
+        "anyOf": [{ "required": ["persona"] }, { "required": ["mezzo"] }],
+        "properties": {
+          "data": { "$ref": "#/definitions/data", "x-kzero-classe": "comune" },
+          "turno": { "$ref": "#/definitions/codice", "x-kzero-classe": "comune" },
+          "persona": {
+            "description": "Chi fa il turno quel giorno (sostituzione, scambio tra colleghi, lavoro occasionale).",
+            "$ref": "#/definitions/codice",
+            "x-kzero-classe": "comune"
+          },
+          "mezzo": {
+            "description": "Con quale mezzo (es. al posto di quello in revisione).",
+            "$ref": "#/definitions/codice",
+            "x-kzero-classe": "comune"
+          },
+          "nota": {
+            "description": "Note (dato personale: mai la causa di un'assenza).",
+            "$ref": "#/definitions/nota",
+            "x-kzero-classe": "personale"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "codice": {
+      "description": "Codice K-Zero: scelto da chi scrive i dati, unico per tipo di elemento. Lettere senza accenti, cifre, '-', '_' e '.'; inizia con una lettera o una cifra; al massimo 64 caratteri.",
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+    },
+    "nota": {
+      "description": "Testo libero, non vuoto (al massimo 2000 caratteri).",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2000,
+      "pattern": "\\S"
+    },
+    "data": {
+      "description": "Data AAAA-MM-GG che esiste nel calendario (es. 2026-09-14; il 29 febbraio solo negli anni bisestili).",
+      "type": "string",
+      "pattern": "^([0-9]{4}-((0[13578]|1[02])-(0[1-9]|[12][0-9]|3[01])|(0[469]|11)-(0[1-9]|[12][0-9]|30)|02-(0[1-9]|1[0-9]|2[0-8]))|([0-9]{2}(0[48]|[2468][048]|[13579][26])|([02468][048]|[13579][26])00)-02-29)$"
+    }
+  }
+}

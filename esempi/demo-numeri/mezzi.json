@@ -1,9 +1,10 @@
 {
   "schema": "mezzi",
-  "schema_versione": 1,
+  "schema_versione": 2,
   "mezzi": [
     {
       "codice": "ALFA-01",
+      "uso": "NCC",
       "azienda": "ALFA",
       "targa": "AA 101 AA",
       "categoria": "M2",
@@ -16,6 +17,7 @@
     },
     {
       "codice": "ALFA-02",
+      "uso": "NCC",
       "azienda": "ALFA",
       "targa": "AA 102 AA",
       "categoria": "M2",
@@ -27,6 +29,7 @@
     },
     {
       "codice": "ALFA-03",
+      "uso": "NCC",
       "azienda": "ALFA",
       "targa": "AA 103 AA",
       "categoria": "M2",
@@ -35,12 +38,18 @@
       "posti_persi_per_carrozzina": 3,
       "pedana": true,
       "tempo_pedana_secondi": 120,
+      "vincolo_destinazione": {
+        "ammessi": { "tipi_servizio": ["disabili"] },
+        "fino_al": "2031-12-31",
+        "fonte": "Decreto di contributo per i mezzi attrezzati n. 45/2021, art. 4 (inventato)"
+      },
       "alimentazione": { "tipo": "gasolio" },
       "costo_fisso_giornaliero": 50.0,
       "costo_al_km": 0.55
     },
     {
       "codice": "ALFA-04",
+      "uso": "NCC",
       "azienda": "ALFA",
       "targa": "AA 104 AA",
       "categoria": "M1",
@@ -52,6 +61,7 @@
     },
     {
       "codice": "ALFA-X30",
+      "uso": "LINEA",
       "azienda": "ALFA",
       "targa": "NON IMMATRICOLATO",
       "categoria": "M3",
@@ -66,6 +76,7 @@
     },
     {
       "codice": "BETA-01",
+      "uso": "NCC",
       "azienda": "BETA",
       "targa": "BB 201 BB",
       "categoria": "M2",
@@ -73,6 +84,69 @@
       "alimentazione": { "tipo": "gasolio" },
       "costo_fisso_giornaliero": 48.0,
       "costo_al_km": 0.58
+    },
+    {
+      "codice": "ALFA-05",
+      "uso": "LINEA",
+      "azienda": "ALFA",
+      "targa": "AA 105 AA",
+      "categoria": "M3",
+      "posti": 35,
+      "posti_in_piedi": 20,
+      "misure": { "lunghezza_m": 10.8, "larghezza_m": 2.55, "altezza_m": 3.2, "massa_t": 12.5 },
+      "alimentazione": { "tipo": "gasolio" },
+      "costo_fisso_giornaliero": 95.0,
+      "costo_al_km": 1.05,
+      "autorizzazioni_uso": [
+        {
+          "uso": "NCC",
+          "ente": "Motorizzazione civile di Valfonda (inventato)",
+          "riferimento": "Autorizzazione alla distrazione n. 12/2026 (inventata)",
+          "dal": "2026-07-01",
+          "al": "2027-06-30",
+          "prescrizioni": "Esporre il contrassegno del noleggio durante i servizi di noleggio (esempio inventato)."
+        }
+      ],
+      "nota": "Autobus di linea: con la distrazione annuale fa anche gite e noleggi."
+    },
+    {
+      "codice": "ALFA-06",
+      "uso": "NCC",
+      "azienda": "ALFA",
+      "targa": "AA 106 AA",
+      "categoria": "M2",
+      "posti": 14,
+      "misure": { "lunghezza_m": 7.1 },
+      "alimentazione": { "tipo": "gasolio" },
+      "costo_fisso_giornaliero": 42.0,
+      "costo_al_km": 0.5
+    },
+    {
+      "codice": "ALFA-07",
+      "uso": "NCC",
+      "azienda": "ALFA",
+      "targa": "AA 107 AA",
+      "categoria": "M2",
+      "posti": 15,
+      "misure": { "lunghezza_m": 6.0 },
+      "alimentazione": { "tipo": "gasolio" },
+      "costo_fisso_giornaliero": 40.0,
+      "costo_al_km": 0.5,
+      "scorta": true,
+      "nota": "Mezzo di scorta: sostituisce gli altri durante revisioni e guasti."
+    },
+    {
+      "codice": "BETA-02",
+      "uso": "LINEA",
+      "azienda": "BETA",
+      "targa": "BB 202 BB",
+      "categoria": "M3",
+      "posti": 41,
+      "posti_in_piedi": 25,
+      "misure": { "lunghezza_m": 10.2, "altezza_m": 3.1 },
+      "alimentazione": { "tipo": "gasolio" },
+      "costo_fisso_giornaliero": 92.0,
+      "costo_al_km": 1.0
     }
   ]
 }

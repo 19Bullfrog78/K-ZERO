@@ -1,0 +1,28 @@
+{
+  "schema": "servizi_fissi",
+  "schema_versione": 1,
+  "servizi_fissi": [
+    {
+      "codice": "SF-MER",
+      "turno": "T-SECONDO",
+      "persona": "P-C",
+      "calendario": "CAL-MER-FER",
+      "nota": "Il mercoledi' il secondo lo fa il titolare: gli altri giorni segue la rotazione."
+    },
+    { "codice": "SF-NOTTE", "turno": "T-NOTTE", "persona": "P-NUOVO", "calendario": "CAL-FERIALI" },
+    { "codice": "SF-SCUOLA-1", "turno": "T-SCUOLA-1", "persona": "P-E", "calendario": "CAL-SCUOLA-LV" },
+    { "codice": "SF-DIS-GIO", "turno": "T-DIS-GIO", "persona": "P-E", "calendario": "CAL-CENTRO-GIO" },
+    { "codice": "SF-SCUOLA-2", "turno": "T-SCUOLA-2", "persona": "P-F", "calendario": "CAL-SCUOLA-LV" },
+    { "codice": "SF-SCUOLA-3", "turno": "T-SCUOLA-3", "persona": "P-G", "calendario": "CAL-SCUOLA-LV" },
+    { "codice": "SF-AUTO", "turno": "T-AUTO", "persona": "P-D", "calendario": "CAL-CENTRO" },
+    { "codice": "SF-RISERVA", "turno": "T-RISERVA", "persona": "P-D", "calendario": "CAL-MAR-VEN" },
+    { "codice": "SF-B-ACCOMP", "turno": "T-B-ACCOMP", "persona": "P-B4", "calendario": "CAL-INFANZIA" },
+    {
+      "codice": "SF-REPERIBILE",
+      "turno": "T-REPERIBILE",
+      "persona": "P-C",
+      "calendario": "CAL-MER-FER",
+      "nota": "Dopo il secondo del mercoledi'."
+    }
+  ]
+}

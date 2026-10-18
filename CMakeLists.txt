@@ -76,10 +76,12 @@ target_include_directories(kzero_valijson SYSTEM INTERFACE ${valijson_SOURCE_DIR
 # Nessuna stampa, nessuna riga di comando, nessuna libreria esterna (lo controlla una prova).
 add_library(kzero_nucleo STATIC
   src/nucleo/controlli.cpp
+  src/nucleo/controlli_turni.cpp
   src/nucleo/dimostrazione.cpp
   src/nucleo/pacchetto.cpp
   src/nucleo/ricerca.cpp
   src/nucleo/tempo.cpp
+  src/nucleo/turni.cpp
 )
 target_include_directories(kzero_nucleo PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src/nucleo)
 target_compile_options(kzero_nucleo PRIVATE ${KZERO_WARNINGS})
@@ -105,6 +107,7 @@ add_library(kzero_api STATIC
   src/api/comando_controlla.cpp
   src/api/comando_descrivi.cpp
   src/api/comando_dimostrazione.cpp
+  src/api/comando_giornata.cpp
   src/api/comando_versione.cpp
   src/api/controlli_catalogo.cpp
   src/api/controllo.cpp
@@ -116,6 +119,7 @@ add_library(kzero_api STATIC
   src/api/schemi_dati.cpp
   src/api/uscita.cpp
   src/api/validazione.cpp
+  src/api/vista.cpp
   ${CMAKE_CURRENT_BINARY_DIR}/generato/risorse.cpp
 )
 target_include_directories(kzero_api

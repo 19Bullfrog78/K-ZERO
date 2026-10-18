@@ -1,0 +1,5 @@
+{
+  "schema": "fermi",
+  "schema_versione": 1,
+  "fermi": [{ "mezzo": "ALFA-01", "tipo": "REVISIONE", "dal": "2026-10-19", "al": "2026-10-20", "nota": "Revisione annuale in officina." }]
+}
