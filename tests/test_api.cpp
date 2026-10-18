@@ -261,7 +261,8 @@ TEST(Api, pacchetto_demo_letto) {
     const Lettura l = leggi_pacchetto(m);
     EXPECT_TRUE(l.problemi.empty());
     EXPECT_TRUE(l.forma_valida());
-    EXPECT_EQ(l.versioni.size(), 13u);   // tutti i file del formato tranne tempi_sosta.json
+    EXPECT_EQ(l.versioni.size(), 14u);   // tutti i file del formato tranne tempi_sosta.json
+    EXPECT_EQ(l.versioni.at("calendari.json"), 2);
     EXPECT_EQ(l.pacchetto.trips.size(), 10u);
 }
 

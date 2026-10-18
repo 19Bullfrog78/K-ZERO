@@ -180,6 +180,43 @@ TEST(Controlli, K_CTR_016_calendario_circolare) {
 }
 
 // Caso reale: "16.08" scritto tra 12.05 e 12.19. L'orario fuori posto e' quello di mezzo.
+// Calendario che si combina con se stesso attraverso i calendari aggiunti o tolti (anche insieme alle basi).
+TEST(Controlli, K_CTR_049_calendario_combinato_con_se_stesso) {
+    Package p = demo();
+    per_codice(p.calendars, "CAL-FERIALI").adds = {
+        {CalendarLinkKind::Calendar, Ref{"CAL-CENTRO-GIO", dove("calendari.json", "/calendari/4/aggiunge/calendari/0")}}};
+    per_codice(p.calendars, "CAL-CENTRO").removes = {
+        {CalendarLinkKind::Calendar, Ref{"CAL-FERIALI", dove("calendari.json", "/calendari/3/toglie/calendari/0")}}};
+    // Giro: CAL-FERIALI aggiunge CAL-CENTRO-GIO, che ha base CAL-CENTRO, che toglie CAL-FERIALI.
+    EXPECT_TRUE(segnala(p, Check::CalendarCombinationCycle, 0, "calendari.json", "/calendari/4/aggiunge/calendari/0"));
+    EXPECT_TRUE(segnala(p, Check::CalendarCombinationCycle, 0, "calendari.json", "/calendari/3/toglie/calendari/0"));
+    EXPECT_EQ(quanti(p, Check::CalendarCombinationCycle), 3);   // i tre calendari del giro
+    EXPECT_EQ(quanti(p, Check::CalendarCycle), 0);              // il giro non e' fatto di sole basi
+    EXPECT_EQ(quanti(p, Check::CalendarWithoutDays), 0);        // niente avvisi in piu' sui calendari del giro
+    // Direttamente: un calendario che aggiunge se stesso.
+    Package q = demo();
+    per_codice(q.calendars, "CAL-FERIALI").adds = {
+        {CalendarLinkKind::Calendar, Ref{"CAL-FERIALI", dove("calendari.json", "/calendari/4/aggiunge/calendari/0")}}};
+    EXPECT_TRUE(segnala(q, Check::CalendarCombinationCycle, 0, "calendari.json", "/calendari/4/aggiunge/calendari/0"));
+    EXPECT_EQ(quanti(q, Check::CalendarCombinationCycle), 1);
+    // Controprova: aggiungere o togliere calendari senza giri va bene.
+    Package r = demo();
+    per_codice(r.calendars, "CAL-FERIALI").removes = {{CalendarLinkKind::Calendar, Ref{"CAL-CENTRO-GIO", {}}}};
+    EXPECT_EQ(quanti(r, Check::CalendarCombinationCycle), 0);
+}
+
+// Un calendario che aggiunge o toglie una festivita' o un calendario che non esistono.
+TEST(Controlli, K_CTR_010_festivita_inesistente) {
+    Package p = demo();
+    per_codice(p.calendars, "CAL-FERIALI").removes = {
+        {CalendarLinkKind::Holidays, Ref{"FEST-XX", dove("calendari.json", "/calendari/4/toglie/festivita/0")}}};
+    EXPECT_TRUE(segnala(p, Check::UnknownReference, 0, "calendari.json", "/calendari/4/toglie/festivita/0"));
+    // Un codice di calendario non vale come festivita' (e viceversa): ogni tipo ha i suoi codici.
+    per_codice(p.calendars, "CAL-FERIALI").removes = {
+        {CalendarLinkKind::Holidays, Ref{"CAL-SCUOLA", dove("calendari.json", "/calendari/4/toglie/festivita/0")}}};
+    EXPECT_TRUE(segnala(p, Check::UnknownReference, 0, "calendari.json", "/calendari/4/toglie/festivita/0"));
+}
+
 TEST(Controlli, K_CTR_017_orario_che_torna_indietro) {
     Package p = demo();
     p.trips[3].passages[2].time = ora("16:08");
@@ -560,5 +597,6 @@ TEST(Controlli, catalogo_coperto) {
     EXPECT_EQ(api::definizione_controllo(Check::ContractWithoutRegulation).codice, "K-CTR-046");
     EXPECT_EQ(api::definizione_controllo(Check::AssistantNotRequested).codice, "K-CTR-047");
     EXPECT_EQ(api::definizione_controllo(Check::NotUtf8).codice, "K-CTR-048");
-    EXPECT_EQ(api::catalogo_controlli().size(), 48u);
+    EXPECT_EQ(api::definizione_controllo(Check::CalendarCombinationCycle).codice, "K-CTR-049");
+    EXPECT_EQ(api::catalogo_controlli().size(), 49u);
 }

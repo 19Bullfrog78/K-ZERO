@@ -143,6 +143,9 @@ const std::vector<DefinizioneControllo>& catalogo_controlli() {
               "codifica UTF-8. Il file non e' stato letto.",
               "Il file e' salvato in UTF-16 (il \"Unicode\" del Blocco note), ma il formato accetta solo UTF-8. Salvarlo di "
               "nuovo scegliendo la codifica UTF-8. Il file non e' stato letto."}},
+            {Check::CalendarCombinationCycle, "K-CTR-049", E, "Calendario combinato con se stesso",
+             {"Il calendario {calendario} aggiunge o toglie i giorni di se stesso, direttamente o attraverso altri "
+              "calendari: non si puo' sapere in quali giorni vale."}},
             // Contenuto: avvisi
             {Check::PlaceWithoutCoordinates, "K-CTR-035", A, "Luogo senza coordinate",
              {"Il luogo {luogo} non ha le coordinate: serviranno al calcolo delle distanze."}},
@@ -212,6 +215,7 @@ const char* nome_elementi(kzero::Element e) {
         case kzero::Element::Vehicle: return "i mezzi";
         case kzero::Element::Depot: return "le rimesse";
         case kzero::Element::Transfer: return "i trasbordi";
+        case kzero::Element::Holidays: return "i calendari delle festivita'";
     }
     return "gli elementi";
 }
@@ -266,6 +270,7 @@ std::string Presentatore::riferimento(kzero::Element e, const std::string& codic
         case kzero::Element::Place: da(idx.place(codice)); break;
         case kzero::Element::Segment: da(idx.segment(codice)); break;
         case kzero::Element::Calendar: da(idx.calendar(codice)); break;
+        case kzero::Element::Holidays: da(idx.holidays(codice)); break;
         case kzero::Element::School: da(idx.school(codice)); break;
         case kzero::Element::Client: da(idx.client(codice)); break;
         case kzero::Element::Contract: da(idx.contract(codice)); break;

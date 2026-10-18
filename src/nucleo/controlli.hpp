@@ -50,6 +50,7 @@ enum class Check {
     ServiceInTwoLots,
     GroupNotOnTripServices,
     AssistantNotRequested,
+    CalendarCombinationCycle,
     // Contenuto: avvisi.
     PlaceWithoutCoordinates,
     DwellTimesUndefined,
@@ -68,7 +69,7 @@ enum class Check {
 // Tipi di elemento del pacchetto: per i riferimenti nei messaggi.
 enum class Element {
     Company, Place, Segment, Regulation, Calendar, School, Client, Contract, Lot, Service, Group, Passenger, Trip,
-    Vehicle, Depot, Transfer,
+    Vehicle, Depot, Transfer, Holidays,
 };
 
 // Un valore da mettere nel messaggio, al posto di {nome}.

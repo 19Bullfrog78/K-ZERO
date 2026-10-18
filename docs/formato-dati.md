@@ -24,7 +24,8 @@ Solo il manifesto e' obbligatorio; un file che manca vuol dire "nessun elemento 
 | `luoghi.json` | no | Luoghi pubblici (fermate, scuole, centri, rimesse...) e luoghi privati (case) |
 | `tratti.json` | no | Tratti di strada tra due luoghi con i loro limiti |
 | `regolamenti.json` | no | Regolamenti: i parametri di un territorio o di un committente, con la fonte |
-| `calendari.json` | no | Calendari: giorni della settimana, date aggiunte e tolte, sospensioni |
+| `festivita.json` | no | Calendari delle festivita' di un paese o di un territorio, con la fonte |
+| `calendari.json` | no | Calendari: giorni della settimana, date aggiunte e tolte, sospensioni, altri calendari e festivita' aggiunti o tolti |
 | `scuole.json` | no | Scuole e centri: grado o tipo di centro, orari, attese concordate |
 | `committenti.json` | no | Committenti |
 | `contratti.json` | no | Contratti: committente, azienda, regolamento, regole del committente sul mezzo |
@@ -293,9 +294,39 @@ Il pacchetto demo ha due regolamenti: `R-TN` con i valori pubblici del testo uni
 (vedi REGOLE.md, parte 2) e `R-INV` con valori inventati e diversi, usato da un altro contratto: lo stesso
 controllo con i due regolamenti da' esiti diversi (prova `due_regolamenti_*`).
 
+### festivita.json
+
+Le festivita' di un paese o di un territorio (le feste nazionali, il santo patrono di un comune), con la fonte.
+**Nessuna festivita' e' scritta nel programma, nemmeno quelle mobili come Pasqua**: le date sono dati, e un
+calendario le aggiunge o le toglie (sotto). Cosi' le feste si scrivono una volta sola e valgono per tutti i
+calendari che le usano. Schema: [docs/schema/festivita.v1.schema.json](schema/festivita.v1.schema.json).
+
+| Campo | Obbl. | Classe | Significato |
+|---|---|---|---|
+| `festivita[].codice` | si' | comune | Codice del calendario delle festivita' |
+| `festivita[].nome` | si' | comune | Nome (es. "Festivita' nazionali in Italia, 2026/27") |
+| `festivita[].paese` | si' | comune | Paese, codice ISO 3166-1 di due lettere (`IT`, `DE`, `CH`...) |
+| `festivita[].territorio` | no | comune | Territorio a cui vale (es. un comune); assente = tutto il paese |
+| `festivita[].fonte` | si' | comune | `documento` (obbligatorio), `punto`, `riferimenti`: da dove vengono le date |
+| `festivita[].date[]` | si' | comune | Le feste: `data`, `nome`, `da_confermare` (facoltativo), `nota` |
+| `festivita[].nota` | no | comune | Note |
+
+```json
+{
+  "codice": "FEST-VALFONDA",
+  "nome": "Santo patrono di Valfonda (San Martino)",
+  "paese": "IT",
+  "territorio": "Comune di Valfonda (inventato)",
+  "fonte": { "documento": "Statuto del Comune di Valfonda (inventato)", "punto": "art. 3" },
+  "date": [{ "data": "2026-11-11", "nome": "San Martino, patrono di Valfonda" }]
+}
+```
+
 ### calendari.json
 
-Quando vale un servizio o una corsa. Schema: [docs/schema/calendari.v1.schema.json](schema/calendari.v1.schema.json).
+Quando vale un servizio, una corsa o un turno. Schemi: [docs/schema/calendari.v2.schema.json](schema/calendari.v2.schema.json)
+(versione attuale) e [docs/schema/calendari.v1.schema.json](schema/calendari.v1.schema.json) (versione 1, ancora letta:
+e' la versione 2 senza `aggiunge` e `toglie`).
 
 | Campo | Obbl. | Classe | Significato |
 |---|---|---|---|
@@ -308,14 +339,35 @@ Quando vale un servizio o una corsa. Schema: [docs/schema/calendari.v1.schema.js
 | `calendari[].date_aggiunte[]` | no | comune | Date in cui vale anche se non e' uno dei giorni indicati |
 | `calendari[].date_tolte[]` | no | comune | Date in cui non vale |
 | `calendari[].sospensioni[]` | no | comune | Periodi in cui non vale: `dal`, `al`, `motivo` (es. "chiusura del centro") |
+| `calendari[].aggiunge` | no | comune | Versione 2. Giorni di altri calendari (`calendari[]`) o di calendari delle festivita' (`festivita[]`) in cui questo calendario vale, dentro il suo periodo |
+| `calendari[].toglie` | no | comune | Versione 2. Giorni di altri calendari (`calendari[]`) o di calendari delle festivita' (`festivita[]`) in cui questo calendario non vale |
 | `calendari[].nota` | no | comune | Note |
 
-Come si decide se un calendario vale in un giorno: le date tolte e le sospensioni prevalgono su tutto;
-poi valgono le date aggiunte; poi il giorno deve stare nel periodo, essere uno dei giorni della settimana e,
-se c'e' una base, valere anche per la base. Con questi elementi si scrivono: i periodi di un committente,
-"solo nei giorni feriali" (da lunedi' a sabato, festivi tolti), "solo nei giorni scolastici escluso il
-sabato" (base = giorni di scuola, giorni = da lunedi' a venerdi'), l'attivazione o la disattivazione di un
-servizio (periodo o sospensione), i giorni sparsi (lunedi', mercoledi', giovedi').
+Come si decide se un calendario vale in un giorno (il primo punto che decide vince):
+1. le date tolte e le sospensioni prevalgono su tutto: il calendario non vale;
+2. le date aggiunte: vale (sono una scelta precisa dell'utente, quindi valgono anche contro un calendario tolto);
+3. fuori dal periodo (`dal`, `al`) non vale;
+4. un giorno di un calendario tolto (`toglie`): non vale;
+5. un giorno di un calendario aggiunto (`aggiunge`): vale, anche se non e' uno dei giorni della settimana;
+6. altrimenti il giorno deve essere uno dei giorni della settimana e, se c'e' una base, valere anche per la base.
+
+Con questi elementi si scrivono una volta sola: i periodi di un committente; "feriali" (da lunedi' a sabato,
+`toglie` le festivita'); "festivi" (`giorni` = domenica, `aggiunge` le festivita'); "scolastici" (base = giorni di
+scuola); "estivo" e "invernale" (periodi); "solo nei giorni scolastici escluso il sabato" (base = giorni di scuola,
+giorni = da lunedi' a venerdi'); l'attivazione o la disattivazione di un servizio (periodo o sospensione); i giorni
+sparsi (lunedi', mercoledi', giovedi'). Un calendario che si basa su se stesso (K-CTR-016) o che si combina con se
+stesso (K-CTR-049), direttamente o attraverso altri, e' un errore.
+
+```json
+{
+  "codice": "CAL-FERIALI",
+  "nome": "Giorni feriali (da lunedi' a sabato, festivi esclusi)",
+  "dal": "2026-09-01",
+  "al": "2027-08-31",
+  "giorni": ["lunedi", "martedi", "mercoledi", "giovedi", "venerdi", "sabato"],
+  "toglie": { "festivita": ["FEST-IT"] }
+}
+```
 
 ```json
 {
@@ -851,7 +903,8 @@ nel formato K-Zero senza riscrivere nulla. Il codice GTFS di un elemento va tra 
 | `calendari.json`: `giorni`, `dal`, `al` | `calendar.txt` (`monday` ... `sunday`, `start_date`, `end_date`) | |
 | `date_aggiunte`, `date_tolte` | `calendar_dates.txt` `exception_type` 1 e 2 | |
 | `sospensioni` | `calendar_dates.txt` (una riga con `exception_type` 2 per ogni giorno) | GTFS non ha periodi con motivo |
-| `calendari[].base` | nessuno | In GTFS il calendario va scritto per intero |
+| `calendari[].base`, `aggiunge`, `toglie` | nessuno | In GTFS il calendario va scritto per intero |
+| `festivita.json` | nessuno | In GTFS le feste sono date tolte (`calendar_dates.txt`) in ogni calendario |
 | `corse[].coincidenze[]` | `transfers.txt` (in parte) | GTFS descrive coincidenze tra le proprie corse; K-Zero con un servizio esterno (es. un treno) |
 | servizi, domanda, gruppi, passeggeri | nessuno | GTFS descrive l'offerta pubblica, non il lavoro affidato a un'azienda ne' chi deve viaggiare |
 | trasbordi | nessuno | |

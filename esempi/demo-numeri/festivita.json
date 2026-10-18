@@ -1,0 +1,46 @@
+{
+  "schema": "festivita",
+  "schema_versione": 1,
+  "festivita": [
+    {
+      "codice": "FEST-IT",
+      "nome": "Festivita' nazionali in Italia, 2026/27",
+      "paese": "IT",
+      "fonte": {
+        "documento": "Legge 27 maggio 1949, n. 260",
+        "punto": "art. 2 (testo vigente)",
+        "riferimenti": "Modificata dalla legge 5 marzo 1977, n. 54, dal D.P.R. 28 dicembre 1985, n. 792 e dalla legge 20 novembre 2000, n. 336"
+      },
+      "date": [
+        {
+          "data": "2026-10-04",
+          "nome": "San Francesco d'Assisi, patrono d'Italia",
+          "da_confermare": true,
+          "nota": "Festivita' reintrodotta dal 2026 con una legge del 2025: estremi della legge da confermare. Nel 2026 cade di domenica."
+        },
+        { "data": "2026-11-01", "nome": "Ognissanti" },
+        { "data": "2026-12-08", "nome": "Immacolata Concezione" },
+        { "data": "2026-12-25", "nome": "Natale" },
+        { "data": "2026-12-26", "nome": "Santo Stefano" },
+        { "data": "2027-01-01", "nome": "Capodanno" },
+        { "data": "2027-01-06", "nome": "Epifania" },
+        { "data": "2027-03-28", "nome": "Pasqua" },
+        { "data": "2027-03-29", "nome": "Lunedi' dell'Angelo" },
+        { "data": "2027-04-25", "nome": "Festa della Liberazione" },
+        { "data": "2027-05-01", "nome": "Festa del lavoro" },
+        { "data": "2027-06-02", "nome": "Festa della Repubblica" },
+        { "data": "2027-08-15", "nome": "Assunzione (Ferragosto)" }
+      ],
+      "nota": "Le domeniche sono festive per la stessa legge: i calendari 'festivi' le scrivono come giorni della settimana."
+    },
+    {
+      "codice": "FEST-VALFONDA",
+      "nome": "Santo patrono di Valfonda (San Martino)",
+      "paese": "IT",
+      "territorio": "Comune di Valfonda (inventato)",
+      "fonte": { "documento": "Statuto del Comune di Valfonda (inventato)", "punto": "art. 3" },
+      "date": [{ "data": "2026-11-11", "nome": "San Martino, patrono di Valfonda" }],
+      "nota": "Dato inventato per il pacchetto dimostrativo."
+    }
+  ]
+}

@@ -1,0 +1,99 @@
+{
+  "schema": "scuole",
+  "schema_versione": 1,
+  "scuole": [
+    {
+      "codice": "SC-MEDIE",
+      "nome": "Scuola secondaria di primo grado di Valfonda",
+      "luogo": "L-MEDIE",
+      "tipo": "scuola",
+      "grado": "secondaria_primo_grado",
+      "orari": [
+        {
+          "dal": "2026-09-14",
+          "al": "2027-06-12",
+          "giorni": ["lunedi", "martedi", "mercoledi", "giovedi", "venerdi"],
+          "inizio": "07:55",
+          "fine": "12:00",
+          "attesa_concordata": { "prima_minuti": 20, "dopo_minuti": 15, "accordo": "Verbale con l'istituto del 2026-09-03" }
+        }
+      ]
+    },
+    {
+      "codice": "SC-PRIM",
+      "nome": "Scuola primaria di Valfonda",
+      "luogo": "L-PRIM",
+      "tipo": "scuola",
+      "grado": "primaria",
+      "orari": [
+        {
+          "dal": "2026-09-14",
+          "al": "2027-06-12",
+          "giorni": ["lunedi", "martedi", "mercoledi", "giovedi", "venerdi"],
+          "inizio": "08:05",
+          "fine": "12:35",
+          "attesa_concordata": { "prima_minuti": 15, "dopo_minuti": 10, "accordo": "Verbale con l'istituto del 2026-09-03" },
+          "orari_autorizzati": [
+            {
+              "tipo": "arrivo",
+              "orario": "07:42",
+              "accordo": "Accordo con la scuola del 2026-09-03: sorveglianza dalle 07:40 per il secondo giro"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "codice": "SC-SUP",
+      "nome": "Istituto superiore di Valfonda",
+      "luogo": "L-SUP",
+      "tipo": "scuola",
+      "grado": "secondaria_secondo_grado",
+      "orari": [
+        {
+          "dal": "2026-09-14",
+          "al": "2027-06-12",
+          "giorni": ["lunedi", "martedi", "mercoledi", "giovedi", "venerdi", "sabato"],
+          "inizio": "07:50",
+          "fine": "11:50",
+          "attesa_concordata": { "prima_minuti": 10, "dopo_minuti": 10, "accordo": "Accordo con l'istituto del 2026-09-04" }
+        }
+      ]
+    },
+    {
+      "codice": "SC-INFANZIA",
+      "nome": "Scuola dell'infanzia di Lagobello",
+      "luogo": "L-INFANZIA",
+      "tipo": "scuola",
+      "grado": "infanzia",
+      "orari": [
+        {
+          "dal": "2026-09-21",
+          "al": "2027-06-12",
+          "giorni": ["lunedi", "martedi", "mercoledi", "giovedi", "venerdi"],
+          "inizio": "08:00",
+          "fine": "16:00",
+          "attesa_concordata": { "prima_minuti": 10, "dopo_minuti": 10, "accordo": "Accordo con la scuola del 2026-09-10" }
+        }
+      ]
+    },
+    {
+      "codice": "SC-CENTRO",
+      "nome": "Centro diurno Il Faro",
+      "luogo": "L-CENTRO",
+      "tipo": "centro",
+      "tipo_centro": { "valore": "diurno" },
+      "orari": [
+        {
+          "dal": "2026-09-01",
+          "al": "2027-07-30",
+          "giorni": ["lunedi", "mercoledi", "giovedi"],
+          "inizio": "09:00",
+          "fine": "16:00",
+          "arrivo_entro": "09:00"
+        }
+      ],
+      "durata_massima_a_bordo_minuti": 60
+    }
+  ]
+}

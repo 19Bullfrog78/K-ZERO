@@ -166,6 +166,22 @@ kzero_prova(controlla_demo_tutti_i_dati USCITA 0 FORMATO json SCHEMA controlla
             ARGOMENTI controlla ${PROJECT_SOURCE_DIR}/esempi/demo --includi-dati-personali --includi-dati-particolari
                       --formato json)
 
+# I pacchetti scritti con le versioni precedenti dei file restano validi: copia congelata del demo del K-007
+# (calendari, mezzi, servizi e regolamenti nella versione 1), con gli stessi avvisi di allora.
+set(AVVISI_K007 "K-CTR-035|luoghi.json|/luoghi/5" "K-CTR-043|luoghi.json|/luoghi/17/trasbordo" "K-CTR-036||")
+set(luoghi_k007_demo 23)
+set(luoghi_k007_demo_numeri 18)
+foreach(pacchetto demo demo-numeri)
+  string(REPLACE "-" "_" n ${pacchetto})
+  kzero_prova(controlla_k007_${n}_testo USCITA 0 FORMATO testo
+              CONTIENE "Riepilogo: 2 aziende, ${luoghi_k007_${n}} luoghi, 7 servizi, 10 corse; 0 errori, 3 avvisi."
+              PROBLEMI ${AVVISI_K007} NON_CONTIENE "Errore K-CTR"
+              ARGOMENTI controlla ${CMAKE_CURRENT_SOURCE_DIR}/esempi/k007-${pacchetto})
+  kzero_prova(controlla_k007_${n}_json USCITA 0 FORMATO json SCHEMA controlla
+              CONTIENE "\"errori\": 0" "\"avvisi\": 3" PROBLEMI ${AVVISI_K007}
+              ARGOMENTI controlla ${CMAKE_CURRENT_SOURCE_DIR}/esempi/k007-${pacchetto} --formato json)
+endforeach()
+
 # Errori del programma con kzero controlla: cartella mancante o inesistente.
 kzero_prova(controlla_senza_cartella USCITA 2 FORMATO testo ERRORE K-ERR-011 ARGOMENTI controlla)
 kzero_prova(controlla_senza_cartella_json USCITA 2 FORMATO json SCHEMA errore ERRORE K-ERR-011
@@ -228,6 +244,12 @@ kzero_rotto(rotto_calendario_senza_giorni FORMATO testo MODIFICA IMPOSTA calenda
             PROBLEMI "K-CTR-015|calendari.json|/calendari/4")
 kzero_rotto(rotto_calendario_circolare FORMATO testo MODIFICA IMPOSTA calendari.json /calendari/0/base "\"CAL-INFANZIA\""
             PROBLEMI "K-CTR-016|calendari.json|/calendari/0/base")
+kzero_rotto(rotto_calendario_combinato_con_se_stesso FORMATO testo
+            MODIFICA IMPOSTA calendari.json /calendari/4/aggiunge "{\"calendari\": [\"CAL-FERIALI\"]}"
+            PROBLEMI "K-CTR-049|calendari.json|/calendari/4/aggiunge/calendari/0")
+kzero_rotto(rotto_festivita_inesistente FORMATO json
+            MODIFICA IMPOSTA calendari.json /calendari/4/toglie/festivita/0 "\"FEST-XX\""
+            PROBLEMI "K-CTR-010|calendari.json|/calendari/4/toglie/festivita/0")
 # Caso reale: "16.08" scritto tra 12.05 e 12.19.
 kzero_rotto(rotto_orario_indietro FORMATO testo MODIFICA IMPOSTA corse.json /corse/3/passaggi/2/orario "\"16:08\""
             PROBLEMI "K-CTR-017|corse.json|/corse/3/passaggi/2"
@@ -405,9 +427,16 @@ if(KZERO_CHECK_JSONSCHEMA)
                      -DDOCUMENTO=${esempio} -P ${CMAKE_CURRENT_SOURCE_DIR}/programma/schema.cmake)
     set_tests_properties(schema.esempio.${nome} PROPERTIES LABELS schemi)
   endforeach()
-  # I file dei pacchetti di esempio, con lo strumento standard (indipendente dalla libreria del programma).
-  foreach(pacchetto demo demo-numeri)
-    file(GLOB file_dati CONFIGURE_DEPENDS ${PROJECT_SOURCE_DIR}/esempi/${pacchetto}/*.json)
+  # I file dei pacchetti di esempio, con lo strumento standard (indipendente dalla libreria del programma); anche
+  # la copia congelata del demo del K-007, scritta con le versioni precedenti degli schemi.
+  foreach(pacchetto demo demo-numeri tests/esempi/k007-demo tests/esempi/k007-demo-numeri)
+    if(pacchetto MATCHES "^tests/")
+      set(cartella ${PROJECT_SOURCE_DIR}/${pacchetto})
+      get_filename_component(pacchetto ${pacchetto} NAME)
+    else()
+      set(cartella ${PROJECT_SOURCE_DIR}/esempi/${pacchetto})
+    endif()
+    file(GLOB file_dati CONFIGURE_DEPENDS ${cartella}/*.json)
     foreach(f IN LISTS file_dati)
       get_filename_component(nome ${f} NAME_WE)
       add_test(NAME schema.${pacchetto}.${nome}

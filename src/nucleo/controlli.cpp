@@ -139,6 +139,7 @@ private:
         duplicates_in(pointers(p_.places), Element::Place);
         duplicates_in(pointers(p_.segments), Element::Segment);
         duplicates_in(pointers(p_.regulations), Element::Regulation);
+        duplicates_in(pointers(p_.holidays), Element::Holidays);
         duplicates_in(pointers(p_.calendars), Element::Calendar);
         duplicates_in(pointers(p_.schools), Element::School);
         duplicates_in(pointers(p_.clients), Element::Client);
@@ -179,6 +180,7 @@ private:
             case Element::Vehicle: return idx_.vehicle(c) != nullptr;
             case Element::Depot: return idx_.depot(c) != nullptr;
             case Element::Transfer: return true;
+            case Element::Holidays: return idx_.holidays(c) != nullptr;
         }
         return false;
     }
@@ -199,8 +201,12 @@ private:
             for (const AccessBan& b : s.limits.bans)
                 if (b.vehicle) ref(*b.vehicle, Element::Vehicle);
         }
-        for (const Calendar& c : p_.calendars)
+        for (const Calendar& c : p_.calendars) {
             if (c.base) ref(*c.base, Element::Calendar);
+            for (const auto* links : {&c.adds, &c.removes})
+                for (const CalendarLink& l : *links)
+                    ref(l.ref, l.kind == CalendarLinkKind::Holidays ? Element::Holidays : Element::Calendar);
+        }
         for (const School& s : p_.schools) ref(s.place, Element::Place);
         for (const Contract& c : p_.contracts) {
             ref(c.client, Element::Client);
@@ -300,6 +306,35 @@ private:
         return false;
     }
 
+    // Dal calendario from si arriva al calendario target, seguendo le basi e i calendari aggiunti o tolti?
+    bool leads_to(const Code& from, const Code& target) const {
+        std::set<Code> seen;
+        std::vector<Code> todo{from};
+        while (!todo.empty()) {
+            const Code cur = todo.back();
+            todo.pop_back();
+            if (cur == target) return true;
+            if (!seen.insert(cur).second) continue;
+            const Calendar* c = idx_.calendar(cur);
+            if (!c) continue;
+            if (c->base) todo.push_back(c->base->code);
+            for (const auto* links : {&c->adds, &c->removes})
+                for (const CalendarLink& l : *links)
+                    if (l.kind == CalendarLinkKind::Calendar) todo.push_back(l.ref.code);
+        }
+        return false;
+    }
+
+    // Il calendario si combina con se stesso (giro che passa da almeno un calendario aggiunto o tolto)?
+    // Restituisce il punto dei dati da cui parte il giro, oppure nullptr.
+    const Source* combination_cycle(const Calendar& c) const {
+        for (const auto* links : {&c.adds, &c.removes})
+            for (const CalendarLink& l : *links)
+                if (l.kind == CalendarLinkKind::Calendar && leads_to(l.ref.code, c.code)) return &l.ref.src;
+        if (c.base && leads_to(c.base->code, c.code)) return &c.base->src;
+        return nullptr;
+    }
+
     void calendars() {
         const DateRange period = p_.manifest.period;
         for (const Calendar& c : p_.calendars) {
@@ -336,7 +371,9 @@ private:
             }
             const bool cycle = in_cycle(c);
             if (cycle) add(Check::CalendarCycle, c.base->src, {cal});
-            if (!inverted && !cycle && period.from <= period.to && !first_active_day(c, period, idx_))
+            const Source* combined = cycle ? nullptr : combination_cycle(c);
+            if (combined) add(Check::CalendarCombinationCycle, *combined, {cal});
+            if (!inverted && !cycle && !combined && period.from <= period.to && !first_active_day(c, period, idx_))
                 add(Check::CalendarWithoutDays, c.src, {cal, date_param("dal", period.from), date_param("al", period.to)});
         }
     }

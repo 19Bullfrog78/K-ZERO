@@ -504,6 +504,29 @@ void regolamenti(const JsonDati& d, Package& pk) {
     }
 }
 
+void festivita(const JsonDati& d, Package& pk) {
+    const Conversione c("festivita.json");
+    const auto& v = d.at("festivita");
+    for (std::size_t i = 0; i < v.size(); ++i) {
+        const auto& f = v[i];
+        const std::string p = indice("/festivita", i);
+        HolidayCalendar x;
+        x.code = f.at("codice").get<std::string>();
+        x.name = f.at("nome").get<std::string>();
+        x.country = f.at("paese").get<std::string>();
+        x.territory = c.testo(f, "territorio");
+        const auto& fonte = f.at("fonte");
+        x.source = RuleSource{fonte.at("documento").get<std::string>(), c.testo(fonte, "punto"), c.testo(fonte, "riferimenti")};
+        const auto& date = f.at("date");
+        for (std::size_t j = 0; j < date.size(); ++j)
+            x.days.push_back({c.data(date[j].at("data")), date[j].at("nome").get<std::string>(), c.vero(date[j], "da_confermare"),
+                              c.testo(date[j], "nota"), c.src(indice(p + "/date", j))});
+        x.note = c.testo(f, "nota");
+        x.src = c.src(p);
+        pk.holidays.push_back(x);
+    }
+}
+
 void calendari(const JsonDati& d, Package& pk) {
     const Conversione c("calendari.json");
     const auto& v = d.at("calendari");
@@ -523,6 +546,20 @@ void calendari(const JsonDati& d, Package& pk) {
         };
         date("date_aggiunte", x.added);
         date("date_tolte", x.removed);
+        // Versione 2: giorni di altri calendari o delle festivita' aggiunti e tolti (la versione 1 non li ha).
+        const auto collegamenti = [&](const char* campo, std::vector<CalendarLink>& out) {
+            if (!k.contains(campo)) return;
+            const auto& o = k.at(campo);
+            const std::string pc = p + "/" + campo;
+            for (const auto& [chiave, tipo] : {std::pair<const char*, CalendarLinkKind>{"calendari", CalendarLinkKind::Calendar},
+                                               {"festivita", CalendarLinkKind::Holidays}}) {
+                const auto& e = c.elenco(o, chiave);
+                for (std::size_t j = 0; j < e.size(); ++j)
+                    out.push_back({tipo, Ref{e[j].get<std::string>(), c.src(indice(pc + "/" + chiave, j))}});
+            }
+        };
+        collegamenti("aggiunge", x.adds);
+        collegamenti("toglie", x.removes);
         const auto& sosp = c.elenco(k, "sospensioni");
         for (std::size_t j = 0; j < sosp.size(); ++j)
             x.suspensions.push_back({{c.data(sosp[j].at("dal")), c.data(sosp[j].at("al"))}, sosp[j].at("motivo").get<std::string>(),
@@ -864,7 +901,7 @@ void converti(const std::string& file, const JsonDati& d, Package& pk) {
     using Funzione = void (*)(const JsonDati&, Package&);
     static const std::vector<std::pair<const char*, Funzione>> conversioni = {
         {"pacchetto.json", manifesto}, {"luoghi.json", luoghi}, {"tratti.json", tratti},
-        {"regolamenti.json", regolamenti}, {"calendari.json", calendari}, {"scuole.json", scuole},
+        {"regolamenti.json", regolamenti}, {"festivita.json", festivita}, {"calendari.json", calendari}, {"scuole.json", scuole},
         {"committenti.json", committenti}, {"contratti.json", contratti}, {"gruppi_servizi.json", gruppi_servizi},
         {"servizi.json", servizi}, {"corse.json", corse}, {"mezzi.json", mezzi}, {"rimesse.json", rimesse},
         {"tempi_sosta.json", tempi_sosta}};

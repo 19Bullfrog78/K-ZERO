@@ -19,8 +19,8 @@ Come si legge il resoconto:
 - in fondo un **riepilogo**: aziende, luoghi, servizi, corse, errori, avvisi;
 - **codice di uscita 0** se non ci sono errori (gli avvisi non bloccano), **1** se c'e' almeno un errore;
 - prima si controlla la **forma** dei file (K-CTR-001 ... K-CTR-008 e K-CTR-048): un file con un errore di
-  forma non viene usato, e finche' c'e' un errore di forma i controlli sul **contenuto** (K-CTR-009 ...
-  K-CTR-047) non si fanno, perche' darebbero risultati falsati. Il resoconto lo dice;
+  forma non viene usato, e finche' c'e' un errore di forma i controlli sul **contenuto** (gli altri codici)
+  non si fanno, perche' darebbero risultati falsati. Il resoconto lo dice;
 - i messaggi seguono le **classi dei dati**: di base, al posto di un dato personale (es. il nome di una casa)
   c'e' il codice dell'elemento e i dati particolari non compaiono; si vedono con `--includi-dati-personali`
   e `--includi-dati-particolari`;
@@ -100,3 +100,4 @@ Un nuovo controllo prende il codice successivo all'ultimo.
 | K-CTR-046 | avviso | Contratto senza regolamento valido per una parte del periodo | Il regolamento del contratto non vale per una parte del periodo del contratto (dentro il periodo del pacchetto). | Indicare il regolamento valido o correggere le date. |
 | K-CTR-047 | errore | Passeggero con un'esigenza che il suo gruppo non riporta | Un passeggero che viaggia (non sospeso) ha bisogno dell'assistente a bordo, ma il suo gruppo non richiede l'assistente (`assistente_richiesto`). Senza `--includi-dati-particolari` il messaggio non nomina l'assistente. | Indicare `assistente_richiesto: true` nel gruppo, o correggere le esigenze del passeggero. |
 | K-CTR-048 | errore | File non salvato in UTF-8 | Il file non e' salvato in UTF-8, la codifica dei file JSON: di solito e' stato salvato come "ANSI" (lettere accentate scritte in un'altra codifica) o come "Unicode" (UTF-16) dal Blocco note o da un programma vecchio. Riga e colonna indicano il primo carattere sbagliato; il messaggio non riporta il testo del file. Il file non viene letto. | Aprire il file e salvarlo di nuovo scegliendo la codifica UTF-8. |
+| K-CTR-049 | errore | Calendario combinato con se stesso | Un calendario aggiunge o toglie i giorni di se stesso, direttamente o attraverso altri calendari (es. A aggiunge B, B ha base C, C toglie A): non si puo' sapere in quali giorni vale. Un giro fatto di sole basi e' K-CTR-016. | Togliere il collegamento (aggiunge, toglie o base) che chiude il giro. |

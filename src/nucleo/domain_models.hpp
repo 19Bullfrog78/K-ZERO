@@ -276,6 +276,49 @@ struct Suspension {
     Source src;
 };
 
+// Calendario delle festivita' di un paese o di un territorio (es. le feste nazionali, il santo patrono di un
+// comune), con la fonte. Nessuna festivita' e' scritta nel codice, nemmeno quelle mobili come Pasqua: le date
+// sono dati.
+struct Holiday {
+    Day day = 0;
+    std::string name;          // es. "Natale"
+    bool to_confirm = false;   // da confermare
+    std::string note;
+    Source src;
+};
+
+struct HolidayCalendar {
+    Code code;
+    std::string name;
+    std::string country;     // codice ISO 3166-1 del paese, es. "IT"
+    std::string territory;   // vuoto = tutto il paese
+    RuleSource source;       // documento, punto, riferimenti
+    std::vector<Holiday> days;
+    std::string note;
+    Source src;
+
+    bool contains(Day d) const {
+        for (const auto& h : days)
+            if (h.day == d) return true;
+        return false;
+    }
+};
+
+// Un calendario puo' aggiungere o togliere i giorni di altri calendari o di calendari delle festivita'.
+enum class CalendarLinkKind { Calendar, Holidays };
+
+struct CalendarLink {
+    CalendarLinkKind kind = CalendarLinkKind::Calendar;
+    Ref ref;
+};
+
+// Un calendario vale in un giorno se (in quest'ordine, il primo che decide vince):
+// - il giorno non e' una data tolta e non cade in una sospensione (altrimenti no);
+// - il giorno e' una data aggiunta (allora si');
+// - il giorno sta nel periodo (altrimenti no);
+// - il giorno non e' un giorno di un calendario tolto (removes; altrimenti no);
+// - il giorno e' un giorno di un calendario aggiunto (adds; allora si');
+// - il giorno e' uno dei giorni della settimana e, se c'e' una base, vale anche la base.
 struct Calendar {
     Code code;
     std::string name;
@@ -285,6 +328,7 @@ struct Calendar {
     Weekdays days;
     std::vector<DayEntry> added, removed;
     std::vector<Suspension> suspensions;
+    std::vector<CalendarLink> adds, removes;   // giorni di altri calendari aggiunti e tolti
     Source src;
 };
 
@@ -716,6 +760,7 @@ struct Package {
     std::vector<Place> places;
     std::vector<RoadSegment> segments;
     std::vector<Regulation> regulations;
+    std::vector<HolidayCalendar> holidays;
     std::vector<Calendar> calendars;
     std::vector<School> schools;
     std::vector<Client> clients;
