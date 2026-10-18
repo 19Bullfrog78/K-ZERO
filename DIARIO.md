@@ -85,6 +85,16 @@
   copia del demo con un solo valore cambiato, 1 documentazione, 1 architettura, 57 sugli schemi, 1 generazione della
   prova di scala). Sabotaggio: ausilio tra i sedili che non occupa posti, ausili sempre ammessi, bagagliaio ignorato,
   messaggio di K-CTR-047 senza filtro: tutti scoperti (prove rosse: 6, 6, 6 e 1).
+- 2026-10-18 - K-008 (regole del mestiere, salvate direttamente su main): REGOLE.md, "Turni del giorno e
+  rotazione": ogni azienda sceglie la sua rotazione (es. 3, 8 o 14 giorni) e il suo modo di assegnare i turni;
+  chi fa il turno in tre modi (rotazione, servizi fissi con i loro giorni, assegnazione del singolo giorno scritta
+  dall'utente), vince il piu' preciso; turno scoperto se nessuno lo fa; la rotazione di 14 giorni di Alpinabus
+  (senza nomi) come esempio. "Autisti": la pausa a casa vale dai 30 minuti in su se il giro lo consente (risposta
+  di Mauro del 13/10), il rientro dev'essere giustificato dai dati, la regola precisa la fissa il mandato "orari di
+  lavoro"; il mezzo dorme preferibilmente vicino a casa dell'autista (impostazione dell'azienda: preferito,
+  ammesso, mai); tolta dai "Da confermare" la domanda sulla pausa con il mezzo o con l'auto. "Mezzi e strade": un
+  mezzo fa solo i servizi per cui e' omologato; per l'altro uso serve la distrazione, per singolo mezzo e con le
+  date (Codice della strada artt. 82 e 87, circolare n. 27690 del 27/11/2013).
 
 ## Bug e limiti noti
 - check_home_breaks non usa ancora max_home_detour_km: oggi guarda solo la distanza da casa.
