@@ -1,0 +1,299 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "K-Zero - file di dati servizi.json, versione 2",
+  "description": "Servizi: il lavoro che un committente affida con un contratto, con la sua domanda (file servizi.json). Versione 2: in piu' le competenze richieste a chi fa il servizio. La versione 1 resta valida.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "schema_versione", "servizi"],
+  "properties": {
+    "schema": { "const": "servizi", "x-kzero-classe": "comune" },
+    "schema_versione": { "const": 2, "x-kzero-classe": "comune" },
+    "servizi": { "type": "array", "items": { "$ref": "#/definitions/servizio" } }
+  },
+  "definitions": {
+    "codice": {
+      "description": "Codice K-Zero: scelto da chi scrive i dati, unico per tipo di elemento. Lettere senza accenti, cifre, '-', '_' e '.'; inizia con una lettera o una cifra; al massimo 64 caratteri.",
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+    },
+    "testo": {
+      "description": "Testo di una riga, non vuoto (al massimo 300 caratteri).",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 300,
+      "pattern": "\\S"
+    },
+    "nota": {
+      "description": "Testo libero, non vuoto (al massimo 2000 caratteri).",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2000,
+      "pattern": "\\S"
+    },
+    "data": {
+      "description": "Data AAAA-MM-GG che esiste nel calendario (es. 2026-09-14; il 29 febbraio solo negli anni bisestili).",
+      "type": "string",
+      "pattern": "^([0-9]{4}-((0[13578]|1[02])-(0[1-9]|[12][0-9]|3[01])|(0[469]|11)-(0[1-9]|[12][0-9]|30)|02-(0[1-9]|1[0-9]|2[0-8]))|([0-9]{2}(0[48]|[2468][048]|[13579][26])|([02468][048]|[13579][26])00)-02-29)$"
+    },
+    "orario": {
+      "description": "Orario HH:MM, ora locale del fuso del pacchetto. Dopo mezzanotte si continua a contare come in GTFS: 24:15 = 00:15 del giorno dopo; al massimo 47:59.",
+      "type": "string",
+      "pattern": "^([0-3][0-9]|4[0-7]):[0-5][0-9]$"
+    },
+    "coordinate": {
+      "description": "Posizione WGS84 in gradi decimali.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["lat", "lon"],
+      "properties": {
+        "lat": { "type": "number", "minimum": -90, "maximum": 90 },
+        "lon": { "type": "number", "minimum": -180, "maximum": 180 }
+      }
+    },
+    "codici_esterni": {
+      "description": "Codici dello stesso elemento in altri sistemi (committenti, orari pubblici, piattaforme).",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["sistema", "tipo", "codice"],
+        "properties": {
+          "sistema": { "$ref": "#/definitions/testo" },
+          "tipo": { "$ref": "#/definitions/testo" },
+          "codice": { "$ref": "#/definitions/testo" }
+        }
+      }
+    },
+    "servizio": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["codice", "tipo", "contratto", "calendario", "liberta_oraria", "domanda"],
+      "properties": {
+        "codice": { "$ref": "#/definitions/codice", "x-kzero-classe": "comune" },
+        "nome": { "$ref": "#/definitions/testo", "x-kzero-classe": "comune" },
+        "codici_esterni": { "$ref": "#/definitions/codici_esterni", "x-kzero-classe": "comune" },
+        "tipo": {
+          "description": "Tipo dichiarato dal committente. 'Ibrido' non si dichiara: lo ricava il programma sulla corsa.",
+          "enum": ["linea", "scolastico", "disabili", "altro"],
+          "x-kzero-classe": "particolare"
+        },
+        "tipo_descrizione": { "$ref": "#/definitions/testo", "x-kzero-classe": "particolare" },
+        "contratto": { "$ref": "#/definitions/codice", "x-kzero-classe": "comune" },
+        "calendario": { "$ref": "#/definitions/codice", "x-kzero-classe": "comune" },
+        "liberta_oraria": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["tipo"],
+          "properties": {
+            "tipo": {
+              "description": "fissa = orari del committente; libera = liberi dentro il regolamento.",
+              "enum": ["fissa", "libera"]
+            },
+            "soglia_da_concordare_minuti": {
+              "description": "Oltre questo spostamento un cambio d'orario va concordato.",
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 1440
+            }
+          },
+          "if": { "properties": { "tipo": { "const": "libera" } } },
+          "then": { "required": ["soglia_da_concordare_minuti"] },
+          "else": { "properties": { "soglia_da_concordare_minuti": false } },
+          "x-kzero-classe": "comune"
+        },
+        "regole": {
+          "description": "Regole proprie del servizio, se diverse da quelle del contratto.",
+          "$ref": "#/definitions/regole_servizio"
+        },
+        "domanda": {
+          "description": "Chi deve andare da dove a dove ed entro quando, indipendente dalle corse.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["gruppi"],
+          "properties": { "gruppi": { "type": "array", "items": { "$ref": "#/definitions/gruppo" } } }
+        },
+        "competenze_richieste": {
+          "description": "Competenze richieste a chi fa il servizio (codici dell'elenco dell'azienda del contratto, es. formato per la pedana). Dato particolare: una competenza puo' far capire che a bordo viaggiano passeggeri con disabilita'.",
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "$ref": "#/definitions/codice" },
+          "x-kzero-classe": "particolare"
+        },
+        "nota": { "$ref": "#/definitions/nota", "x-kzero-classe": "comune" }
+      },
+      "if": { "properties": { "tipo": { "const": "altro" } } },
+      "then": { "required": ["tipo_descrizione"] }
+    },
+    "regole_servizio": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "posti_minimi": { "type": "integer", "minimum": 1, "maximum": 1000, "x-kzero-classe": "comune" },
+        "posti_massimi": { "type": "integer", "minimum": 1, "maximum": 1000, "x-kzero-classe": "comune" },
+        "pedana_obbligatoria": {
+          "description": "Dato particolare: dice che sul servizio viaggia una carrozzina.",
+          "type": "boolean",
+          "x-kzero-classe": "particolare"
+        },
+        "durata_massima_a_bordo_minuti": { "type": "integer", "minimum": 1, "maximum": 1440, "x-kzero-classe": "comune" },
+        "categoria_riconosciuta": { "$ref": "#/definitions/testo", "x-kzero-classe": "comune" }
+      },
+      "minProperties": 1
+    },
+    "gruppo": {
+      "description": "Un gruppo di passeggeri della domanda.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["codice", "tipo", "verso", "conteggi", "fermate"],
+      "properties": {
+        "codice": { "$ref": "#/definitions/codice", "x-kzero-classe": "comune" },
+        "nome": { "$ref": "#/definitions/testo", "x-kzero-classe": "comune" },
+        "tipo": {
+          "enum": ["studenti", "disabili", "utenti_linea", "adulti_autorizzati", "altro"],
+          "x-kzero-classe": "particolare"
+        },
+        "tipo_descrizione": { "$ref": "#/definitions/testo", "x-kzero-classe": "particolare" },
+        "verso": {
+          "description": "andata = verso la scuola o il centro; ritorno = dalla scuola o dal centro.",
+          "enum": ["andata", "ritorno"],
+          "x-kzero-classe": "comune"
+        },
+        "scuola": {
+          "description": "Scuola o centro di arrivo (andata) o di partenza (ritorno).",
+          "$ref": "#/definitions/codice",
+          "x-kzero-classe": "comune"
+        },
+        "finestra": {
+          "description": "Finestra oraria: arrivo (andata) o partenza (ritorno).",
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["dalle", "alle"],
+          "properties": { "dalle": { "$ref": "#/definitions/orario" }, "alle": { "$ref": "#/definitions/orario" } },
+          "x-kzero-classe": "comune"
+        },
+        "conteggi": {
+          "description": "Per le linee il numero puo' essere stimato o non noto.",
+          "enum": ["esatti", "stimati", "non_noti"],
+          "x-kzero-classe": "comune"
+        },
+        "fermate": {
+          "description": "Fermate di salita e di discesa con il numero di persone.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["luogo"],
+            "properties": {
+              "luogo": { "$ref": "#/definitions/codice", "x-kzero-classe": "comune" },
+              "salgono": { "type": "integer", "minimum": 0, "maximum": 10000, "x-kzero-classe": "comune" },
+              "scendono": { "type": "integer", "minimum": 0, "maximum": 10000, "x-kzero-classe": "comune" },
+              "carrozzine": {
+                "description": "Persone che salgono qui e viaggiano sedute sulla carrozzina (servono pedana e posto carrozzina). Chi viaggia con la carrozzina piegata non conta qui: conta tra gli ausili piegati.",
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 10000,
+                "x-kzero-classe": "particolare"
+              },
+              "ausili_piegati": {
+                "description": "Ausili piegati da caricare qui per le persone che salgono qui (carrozzine piegate comprese, deambulatori e altri ausili dichiarati).",
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 10000,
+                "x-kzero-classe": "particolare"
+              }
+            }
+          }
+        },
+        "assistente_richiesto": { "type": "boolean", "x-kzero-classe": "particolare" },
+        "passeggeri": {
+          "description": "Passeggeri uno per uno: solo nei pacchetti di livello completo.",
+          "type": "array",
+          "items": { "$ref": "#/definitions/passeggero" }
+        }
+      },
+      "allOf": [
+        { "if": { "properties": { "tipo": { "const": "altro" } } }, "then": { "required": ["tipo_descrizione"] } },
+        {
+          "if": { "properties": { "conteggi": { "const": "non_noti" } } },
+          "then": { "properties": { "fermate": { "items": { "properties": { "salgono": false, "scendono": false } } } } }
+        }
+      ]
+    },
+    "passeggero": {
+      "description": "Un passeggero (solo nel livello completo).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["codice", "stato"],
+      "properties": {
+        "codice": { "$ref": "#/definitions/codice", "x-kzero-classe": "comune" },
+        "nome": { "description": "Nome e cognome.", "$ref": "#/definitions/testo", "x-kzero-classe": "personale" },
+        "casa": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "indirizzo": { "$ref": "#/definitions/testo" },
+            "comune": { "$ref": "#/definitions/testo" },
+            "coordinate": { "$ref": "#/definitions/coordinate" }
+          },
+          "minProperties": 1,
+          "x-kzero-classe": "personale"
+        },
+        "stato": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["tipo"],
+          "properties": {
+            "tipo": {
+              "description": "attivo = ha diritto al trasporto; sospeso = posto libero; sbloccato = sbloccato dal committente.",
+              "enum": ["attivo", "sospeso", "sbloccato"]
+            },
+            "riferimento": { "description": "Riferimento dello sblocco (es. mail del committente).", "$ref": "#/definitions/testo" }
+          },
+          "if": { "properties": { "tipo": { "const": "sbloccato" } } },
+          "then": { "required": ["riferimento"] },
+          "x-kzero-classe": "comune"
+        },
+        "salita": { "$ref": "#/definitions/assegnazione", "x-kzero-classe": "comune" },
+        "discesa": { "$ref": "#/definitions/assegnazione", "x-kzero-classe": "comune" },
+        "motivo": {
+          "description": "Motivo scritto a mano (es. perche' e' stato spostato di fermata).",
+          "$ref": "#/definitions/nota",
+          "x-kzero-classe": "personale"
+        },
+        "esigenze": {
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "carrozzina": {
+              "description": "Come viaggia con la carrozzina: sulla_carrozzina = seduto sulla carrozzina (servono pedana e posto carrozzina); piegata = su un posto normale, con la carrozzina piegata da caricare come ausilio.",
+              "enum": ["sulla_carrozzina", "piegata"]
+            },
+            "ausili_piegati": {
+              "description": "Numero di altri ausili dichiarati dal trasportato che viaggiano piegati (es. deambulatore), oltre alla carrozzina piegata. Il passeggino non si dichiara e non si pianifica.",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 10
+            },
+            "assistente": { "description": "Serve l'assistente a bordo.", "type": "boolean" },
+            "altro": { "$ref": "#/definitions/testo" }
+          },
+          "minProperties": 1,
+          "x-kzero-classe": "particolare"
+        }
+      }
+    },
+    "assegnazione": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["luogo", "assegnazione"],
+      "properties": {
+        "luogo": { "$ref": "#/definitions/codice" },
+        "assegnazione": {
+          "description": "proposta = dal programma; bloccata = scelta a mano: un calcolo non la cambia finche' qualcuno non toglie il blocco.",
+          "enum": ["proposta", "bloccata"]
+        }
+      }
+    }
+  }
+}

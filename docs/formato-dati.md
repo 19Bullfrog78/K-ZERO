@@ -21,6 +21,8 @@ Solo il manifesto e' obbligatorio; un file che manca vuol dire "nessun elemento 
 | File | Obbligatorio | Contenuto |
 |---|---|---|
 | `pacchetto.json` | si' | Manifesto: aziende, periodo, origine, livello, fuso orario, valuta, impostazioni |
+| `aziende.json` | no | Elenchi e impostazioni di ogni azienda: tipi di attivita', di assenza, di fermo, competenze, norme, ricovero, abbinamento autista-mezzo |
+| `norme.json` | no | Norme di un paese: abilitazioni per guidare, usi dei mezzi, requisiti di guida, usi per tipo di servizio, con la fonte |
 | `luoghi.json` | no | Luoghi pubblici (fermate, scuole, centri, rimesse...) e luoghi privati (case) |
 | `tratti.json` | no | Tratti di strada tra due luoghi con i loro limiti |
 | `regolamenti.json` | no | Regolamenti: i parametri di un territorio o di un committente, con la fonte |
@@ -32,7 +34,7 @@ Solo il manifesto e' obbligatorio; un file che manca vuol dire "nessun elemento 
 | `gruppi_servizi.json` | no | Gruppi di servizi affidati insieme (es. un "lotto") |
 | `servizi.json` | no | Servizi con la loro domanda (gruppi di passeggeri) |
 | `corse.json` | no | Corse con i passaggi, i trasbordi, le coincidenze, i km |
-| `mezzi.json` | no | Mezzi |
+| `mezzi.json` | no | Mezzi: posti, attrezzature, costi, uso della carta di circolazione, distrazioni, vincolo di destinazione, scorta, prestiti |
 | `rimesse.json` | no | Rimesse e ricoveri dei mezzi |
 | `tempi_sosta.json` | no | Tempi di sosta alle fermate (facoltativi finche' non confermati) |
 
@@ -97,7 +99,7 @@ parte da quella marcatura ed e' uguale per testo e JSON.
 |---|---|---|---|
 | comune | fermate pubbliche (nome, posizione, codici), scuole e centri, grado, orari, calendari, conteggi senza esigenze, mezzi (targa compresa), aziende, committenti, contratti, regolamenti, tutti i codici | sempre visibili | - |
 | personale | nomi e cognomi, indirizzi, case, punti porta a porta (sono la casa del passeggero), ricoveri presso la casa di una persona, motivi scritti a mano | sostituiti dal **codice** dell'elemento | `--includi-dati-personali` |
-| particolare | dati sulla salute: esigenze di una persona o di un gruppo (carrozzina, ausili piegati, assistente necessario), tipo di servizio e di gruppo ("disabili"), conteggi di carrozzine e di ausili piegati, pedana obbligatoria per un servizio, categoria ricavata della corsa | sostituiti da `"riservato"` | `--includi-dati-particolari` |
+| particolare | dati sulla salute: esigenze di una persona o di un gruppo (carrozzina, ausili piegati, assistente necessario), tipo di servizio e di gruppo ("disabili"), conteggi di carrozzine e di ausili piegati, pedana obbligatoria per un servizio, competenze richieste da un servizio o da un turno, categoria ricavata della corsa | sostituiti da `"riservato"` | `--includi-dati-particolari` |
 
 Perche' i dati particolari sono nascosti anche quando al posto del nome c'e' un codice: sono dati sulla
 salute, e restano dati personali anche senza nome (GDPR, considerando 26); in un paese piccolo
@@ -167,6 +169,60 @@ Il manifesto: chi, quando, da dove vengono i dati, che livello di dati contiene.
   "impostazioni": { "margine_trasbordo_minuti": 3 }
 }
 ```
+
+### aziende.json
+
+L'organizzazione la sceglie ogni azienda: qui stanno i suoi elenchi, con i suoi nomi, e le sue impostazioni.
+In un consorzio ogni azienda del manifesto ha la sua riga. Le `impostazioni` del manifesto sono un'altra cosa:
+scelte di chi pianifica, valide per tutto il pacchetto. Schema: [docs/schema/aziende.v1.schema.json](schema/aziende.v1.schema.json).
+
+| Campo | Obbl. | Classe | Significato |
+|---|---|---|---|
+| `aziende[].azienda` | si' | comune | Codice dell'azienda (dal manifesto); una riga per azienda (errore K-CTR-009 se ripetuta) |
+| `aziende[].norme` | no | comune | Norme del paese che valgono per l'azienda (`norme.json`); senza, usi dei mezzi e abilitazioni non si controllano (avviso K-CTR-052) |
+| `aziende[].impostazioni.ricovero_vicino_a_casa` | si' | comune | Il mezzo puo' dormire in un ricovero vicino a casa dell'autista: `preferito`, `ammesso`, `mai` (= sempre in rimessa) |
+| `aziende[].impostazioni.abbinamento_autista_mezzo` | si' | comune | `nessuno`, `preferito`, `fisso` (ogni autista ha il suo mezzo, il mezzo abituale, e guida solo quello) |
+| `aziende[].attivita[]` | no | comune | Tipi di attivita' senza passeggeri dei turni: `codice`, `nome`, `usa_il_mezzo` (true = impegna il mezzo del turno), `nota` |
+| `aziende[].tipi_assenza[]` | no | comune | Tipi di assenza delle persone (es. ferie, permesso, formazione): `codice`, `nome`, `nota`. Mai la causa |
+| `aziende[].tipi_fermo[]` | no | comune | Tipi di fermo dei mezzi (es. revisione, manutenzione): `codice`, `nome`, `nota` |
+| `aziende[].competenze[]` | no | comune | Competenze che un turno o un servizio puo' richiedere (es. conosce la linea B610, formato per la pedana): `codice`, `nome`, `nota` |
+| `aziende[].nota` | no | comune | Note |
+
+Le impostazioni sono solo dati: il costo delle scelte lo mostrera' il calcolo. Nel codice non c'e' nessun tipo di
+attivita', assenza, fermo o competenza: sono nomi nei dati. I codici delle competenze si confrontano come testi: in un
+consorzio le aziende che si scambiano persone usano gli stessi codici per le stesse competenze.
+
+### norme.json
+
+Le norme di un paese che servono a controllare chi guida cosa e quale mezzo fa quale servizio. **Nessuna patente e
+nessun uso e' scritto nel programma**: tutto e' un dato con la fonte, e cio' che non e' certo si segna
+`da_confermare`. Schema: [docs/schema/norme.v1.schema.json](schema/norme.v1.schema.json).
+
+| Campo | Obbl. | Classe | Significato |
+|---|---|---|---|
+| `norme[].codice` | si' | comune | Codice delle norme (es. `N-IT`) |
+| `norme[].nome` | si' | comune | Nome |
+| `norme[].paese` | si' | comune | Paese, codice ISO 3166-1 di due lettere |
+| `norme[].abilitazioni[]` | no | comune | Elenco delle abilitazioni del paese: `codice`, `nome`, `fonte`, `nota` (in Italia patenti B, D1, D, DE, CQC persone, KB, carta del conducente; in Germania anche il "P-Schein") |
+| `norme[].usi[]` | no | comune | Elenco degli usi dei mezzi come li scrive la carta di circolazione: `codice`, `nome`, `fonte`, `nota` (in Italia servizio di linea, noleggio con conducente, uso proprio) |
+| `norme[].requisiti_guida[]` | no | comune | Requisiti per guidare: `categorie` (M1, M2, M3), `posti_da`, `posti_fino_a`, `rimorchio`, `usi` (facoltativi) e le `alternative`; `fonte`, `da_confermare`, `nota` |
+| `requisiti_guida[].alternative[]` | si' | comune | Modi di soddisfare il requisito (ne basta uno): `abilitazioni[]` da avere tutte insieme; facoltativi `posti_fino_a` e `lunghezza_fino_a_m` (es. la patente D1 fino a 16 posti e 8 m) |
+| `norme[].usi_per_servizio[]` | no | comune | Usi dei mezzi ammessi per tipo di servizio: `tipi_servizio`, `usi` (ne basta uno), `fonte`, `da_confermare`, `nota` |
+| `norme[].nota` | no | comune | Note |
+
+Come si usano:
+- **requisiti di guida**: per il mezzo di un turno valgono tutti i requisiti che gli corrispondono (categoria, posti
+  per i passeggeri, rimorchio e, se il requisito ha degli usi, l'uso della carta di circolazione o un uso autorizzato
+  del mezzo). Per ognuno l'autista deve avere tutte le abilitazioni di almeno un'alternativa i cui limiti valgono per
+  quel mezzo (un mezzo senza la lunghezza non rispetta un limite di lunghezza: prudenza). Valgono le norme
+  dell'azienda del turno;
+- **usi per tipo di servizio**: per una corsa vale prima il regolamento del contratto del servizio (parametro
+  `usi_dei_mezzi`), poi le norme dell'azienda del contratto. Senza regola, nessun uso e' richiesto. Il mezzo va bene
+  se il suo `uso` e' tra quelli ammessi, oppure se ha un'autorizzazione a un uso ammesso valida quel giorno (la
+  distrazione, vedi `mezzi.json`).
+
+Nel demo le norme italiane (`N-IT`): patenti e usi dal Codice della strada (artt. 82 e 116), la CQC dal D.Lgs.
+286/2005; il certificato KB per le autovetture a noleggio e la patente DE sono segnati "da confermare".
 
 ### luoghi.json
 
@@ -244,7 +300,9 @@ Tratti di strada tra due luoghi con i loro limiti (es. un sottopasso, una strada
 
 Un regolamento e' l'insieme dei parametri di un territorio o di un committente (es. il testo unico di una
 Provincia). **Il programma non conosce nessun valore: li legge da qui.** Ogni contratto indica il
-regolamento che vale per i suoi servizi. Schema: [docs/schema/regolamenti.v1.schema.json](schema/regolamenti.v1.schema.json).
+regolamento che vale per i suoi servizi. Schemi: [docs/schema/regolamenti.v2.schema.json](schema/regolamenti.v2.schema.json)
+(versione attuale) e [docs/schema/regolamenti.v1.schema.json](schema/regolamenti.v1.schema.json) (versione 1, ancora
+letta: e' la versione 2 senza `usi_dei_mezzi` e `autorizzazione_del_committente`).
 
 | Campo | Obbl. | Classe | Significato |
 |---|---|---|---|
@@ -274,6 +332,8 @@ da quello del regolamento) e `fonte.riferimenti` (altre norme citate), piu' una 
 | `discesa_senza_adulto_con_autorizzazione` | `gradi[]` | Gradi per cui la discesa senza adulto e' ammessa con l'autorizzazione dei genitori |
 | `passeggeri_in_piedi` | `non_ammessi_per_gradi[]`, `durata_massima_minuti`, `km_massimi` | Passeggeri in piedi |
 | `combinazioni_vietate` | `combinazioni[]` di `primo` e `secondo` | Passeggeri che non possono viaggiare insieme (per grado o tipo di gruppo) |
+| `usi_dei_mezzi` | `valori[]` di `tipi_servizio` e `usi` | Versione 2. Usi dei mezzi ammessi per tipo di servizio, se il territorio decide diversamente dalle norme del paese (codici degli usi di `norme.json`) |
+| `autorizzazione_del_committente` | `tipi_servizio[]` | Versione 2. Per questi tipi di servizio l'autista deve avere un'autorizzazione del committente del contratto (es. un cartellino di riconoscimento) |
 
 `valori[]` per grado: elenco di `{ "gradi": [...], "valore": n }`. Gradi: `infanzia`, `primaria`,
 `secondaria_primo_grado`, `secondaria_secondo_grado`.
@@ -457,7 +517,9 @@ scambia una corsa alla volta, a volte un intero lotto. Schema:
 Il **servizio** e' il lavoro che un committente affida con un contratto: si paga, si perde, si rinuncia,
 si scambia. La sua **domanda** dice chi deve andare da dove a dove ed entro quando, indipendente dalle corse
 di oggi: cosi' un calcolo futuro potra' rifare i giri con mezzi diversi. Schema:
-[docs/schema/servizi.v1.schema.json](schema/servizi.v1.schema.json).
+[docs/schema/servizi.v2.schema.json](schema/servizi.v2.schema.json) (versione attuale) e
+[docs/schema/servizi.v1.schema.json](schema/servizi.v1.schema.json) (versione 1, ancora letta: e' la versione 2 senza
+`competenze_richieste`).
 
 | Campo | Obbl. | Classe | Significato |
 |---|---|---|---|
@@ -473,6 +535,7 @@ di oggi: cosi' un calcolo futuro potra' rifare i giri con mezzi diversi. Schema:
 | `servizi[].regole` | no | comune | Regole proprie del servizio, se diverse dal contratto: `posti_minimi`, `posti_massimi`, `durata_massima_a_bordo_minuti`, `categoria_riconosciuta` |
 | `servizi[].regole.pedana_obbligatoria` | no | particolare | Pedana obbligatoria per questo servizio: dice che a bordo viaggia una carrozzina |
 | `servizi[].domanda.gruppi[]` | si' | | Gruppi di passeggeri (sotto) |
+| `servizi[].competenze_richieste[]` | no | particolare | Versione 2. Competenze richieste a chi fa il servizio (codici dell'elenco dell'azienda del contratto). Dato particolare: una competenza come "formato per la pedana" fa capire che a bordo viaggia una carrozzina |
 | `servizi[].nota` | no | comune | Note |
 
 Gruppo di passeggeri (`servizi[].domanda.gruppi[]`):
@@ -584,8 +647,10 @@ tra corse di aziende diverse e' ammesso. Controlli: K-CTR-023 ... K-CTR-027.
 
 ### mezzi.json
 
-Schema: [docs/schema/mezzi.v1.schema.json](schema/mezzi.v1.schema.json). I posti non cambiano con l'eta'
-dei passeggeri.
+Schemi: [docs/schema/mezzi.v2.schema.json](schema/mezzi.v2.schema.json) (versione attuale) e
+[docs/schema/mezzi.v1.schema.json](schema/mezzi.v1.schema.json) (versione 1, ancora letta: e' la versione 2 senza
+`uso`, `autorizzazioni_uso`, `vincolo_destinazione`, `scorta` e `prestiti`). I posti non cambiano con l'eta' dei
+passeggeri.
 
 | Campo | Obbl. | Classe | Significato |
 |---|---|---|---|
@@ -607,7 +672,19 @@ dei passeggeri.
 | `mezzi[].costo_fisso_giornaliero` | no | comune | Assicurazione, bollo, ammortamento... per giorno (senza: avviso K-CTR-044) |
 | `mezzi[].costo_al_km` | no | comune | Costo per km |
 | `mezzi[].ipotetico` | no | comune | `true` = mezzo non ancora in flotta (scenari) |
+| `mezzi[].uso` | no | comune | Versione 2. Uso scritto sulla carta di circolazione: codice dell'elenco `usi` delle norme dell'azienda (senza: avviso K-CTR-051 se le norme lo usano) |
+| `mezzi[].autorizzazioni_uso[]` | no | comune | Versione 2. Autorizzazioni a un uso in piu' (la "distrazione"): `uso`, `ente`, `riferimento`, `dal`, `al`, `prescrizioni`. Per singolo mezzo e con le date; chi la rilascia e' un dato (cambia con il verso e il territorio) |
+| `mezzi[].vincolo_destinazione` | no | comune | Versione 2. Il mezzo fa solo certi servizi: `ammessi` (`tipi_servizio` e/o `contratti`), `fino_al`, `fonte`, `nota` (es. comprato con contributi per le linee: niente noleggio) |
+| `mezzi[].scorta` | no | comune | Versione 2. `true` = mezzo di scorta: se nessun turno lo usa non e' un avviso |
+| `mezzi[].prestiti[]` | no | comune | Versione 2. Prestiti ad altre aziende (subaffidamento, consorzio, noleggio): `azienda`, `accordo`, `dal`, `al`. Senza prestito il mezzo non entra nei turni di un'altra azienda |
 | `mezzi[].nota` | no | comune | Note |
+
+**Uso del mezzo e distrazione.** La carta di circolazione dice l'uso del mezzo (in Italia Codice della strada
+art. 82: uso proprio oppure uso di terzi, che comprende noleggio con conducente e servizio di linea). Un mezzo fa solo
+i servizi per cui e' omologato; per un altro uso serve un'autorizzazione da tenere a bordo (art. 87, comma 4;
+circolare del Ministero dei trasporti n. 27690 del 27/11/2013): e' la distrazione, per singolo mezzo e con le date.
+Quali usi servono per ogni tipo di servizio lo dicono le norme del paese e il regolamento del territorio, mai il
+programma.
 
 **Carrozzine e ausili piegati.** Chi viaggia **seduto sulla carrozzina** ha bisogno della pedana e di un posto
 carrozzina, e ogni carrozzina toglie i posti a sedere indicati. Chi viaggia su un posto normale con la
@@ -909,6 +986,7 @@ nel formato K-Zero senza riscrivere nulla. Il codice GTFS di un elemento va tra 
 | servizi, domanda, gruppi, passeggeri | nessuno | GTFS descrive l'offerta pubblica, non il lavoro affidato a un'azienda ne' chi deve viaggiare |
 | trasbordi | nessuno | |
 | regolamenti, contratti, committenti, gruppi di servizi | nessuno | |
+| `aziende.json`, `norme.json` | nessuno | |
 | mezzi, rimesse, tratti con i limiti, tempi di sosta | nessuno | |
 
 ## Glossario

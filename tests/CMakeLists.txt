@@ -250,6 +250,22 @@ kzero_rotto(rotto_calendario_combinato_con_se_stesso FORMATO testo
 kzero_rotto(rotto_festivita_inesistente FORMATO json
             MODIFICA IMPOSTA calendari.json /calendari/4/toglie/festivita/0 "\"FEST-XX\""
             PROBLEMI "K-CTR-010|calendari.json|/calendari/4/toglie/festivita/0")
+# K-008: norme del paese, elenchi delle aziende, uso dei mezzi.
+kzero_rotto(rotto_abilitazione_inesistente_nelle_norme FORMATO testo
+            MODIFICA IMPOSTA norme.json /norme/0/requisiti_guida/2/alternative/1/abilitazioni/0 "\"D2\""
+            PROBLEMI "K-CTR-010|norme.json|/norme/0/requisiti_guida/2/alternative/1/abilitazioni/0"
+            CONTIENE "Il codice D2 non esiste tra le abilitazioni delle norme N-IT")
+kzero_rotto(rotto_uso_del_mezzo_inesistente FORMATO json MODIFICA IMPOSTA mezzi.json /mezzi/0/uso "\"NOLEGGIO\""
+            PROBLEMI "K-CTR-010|mezzi.json|/mezzi/0/uso")
+kzero_rotto(rotto_competenza_inesistente FORMATO testo MODIFICA IMPOSTA servizi.json /servizi/3/competenze_richieste/0 "\"PEDANE\""
+            PROBLEMI "K-CTR-010|servizi.json|/servizi/3/competenze_richieste/0"
+            CONTIENE "Il codice PEDANE non esiste tra le competenze dell'azienda ALFA")
+kzero_rotto(rotto_impostazioni_azienda_ripetute FORMATO testo MODIFICA IMPOSTA aziende.json /aziende/1/azienda "\"ALFA\""
+            PROBLEMI "K-CTR-009|aziende.json|/aziende/1")
+kzero_rotto(rotto_distrazione_rovesciata FORMATO testo
+            MODIFICA IMPOSTA mezzi.json /mezzi/4/autorizzazioni_uso
+                     "[{\"uso\": \"NCC\", \"ente\": \"Provincia\", \"riferimento\": \"n. 1\", \"dal\": \"2027-02-28\", \"al\": \"2026-03-01\"}]"
+            PROBLEMI "K-CTR-012|mezzi.json|/mezzi/4/autorizzazioni_uso/0")
 # Caso reale: "16.08" scritto tra 12.05 e 12.19.
 kzero_rotto(rotto_orario_indietro FORMATO testo MODIFICA IMPOSTA corse.json /corse/3/passaggi/2/orario "\"16:08\""
             PROBLEMI "K-CTR-017|corse.json|/corse/3/passaggi/2"
@@ -322,6 +338,17 @@ kzero_prova(avviso_domanda_diversa_dalle_corse USCITA 0 FORMATO testo BASE ${KZE
 kzero_prova(avviso_mezzo_senza_costi USCITA 0 FORMATO json SCHEMA controlla BASE ${KZERO_DEMO}
             MODIFICA TOGLI mezzi.json /mezzi/0/costo_al_km PROBLEMI "K-CTR-044|mezzi.json|/mezzi/0"
             ARGOMENTI controlla @PACCHETTO@ --formato json)
+kzero_prova(avviso_distrazione_che_scade USCITA 0 FORMATO testo BASE ${KZERO_DEMO}
+            MODIFICA IMPOSTA mezzi.json /mezzi/4/autorizzazioni_uso
+                     "[{\"uso\": \"NCC\", \"ente\": \"Provincia\", \"riferimento\": \"n. 1\", \"dal\": \"2026-03-01\", \"al\": \"2027-02-28\"}]"
+            PROBLEMI "K-CTR-050|mezzi.json|/mezzi/4/autorizzazioni_uso/0" CONTIENE "scade il 2027-02-28"
+            ARGOMENTI controlla @PACCHETTO@)
+kzero_prova(avviso_mezzo_senza_uso USCITA 0 FORMATO json SCHEMA controlla BASE ${KZERO_DEMO}
+            MODIFICA TOGLI mezzi.json /mezzi/5/uso PROBLEMI "K-CTR-051|mezzi.json|/mezzi/5"
+            ARGOMENTI controlla @PACCHETTO@ --formato json)
+kzero_prova(avviso_azienda_senza_norme USCITA 0 FORMATO testo BASE ${KZERO_DEMO}
+            MODIFICA TOGLI aziende.json /aziende/0/norme PROBLEMI "K-CTR-052|pacchetto.json|/aziende/0"
+            ARGOMENTI controlla @PACCHETTO@)
 kzero_prova(avviso_file_non_riconosciuto USCITA 0 FORMATO testo BASE ${KZERO_DEMO}
             MODIFICA AGGIUNGI fermate.json "{}" PROBLEMI "K-CTR-008|fermate.json"
             ARGOMENTI controlla @PACCHETTO@)

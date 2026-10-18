@@ -47,7 +47,8 @@ const std::vector<DefinizioneControllo>& catalogo_controlli() {
             {Check::DuplicateCode, "K-CTR-009", E, "Codice doppio",
              {"Il codice {codice} compare due volte tra {elementi}: la prima volta in {prima}."}},
             {Check::UnknownReference, "K-CTR-010", E, "Riferimento a un codice inesistente",
-             {"Il codice {codice} non esiste tra {elementi}."}},
+             {"Il codice {codice} non esiste tra {elementi}.", "Il codice {codice} non esiste tra {elementi} delle norme {norme}.",
+              "Il codice {codice} non esiste tra {elementi} dell'azienda {azienda}."}},
             {Check::WrongPlaceType, "K-CTR-011", E, "Luogo del tipo sbagliato",
              {"Il luogo {luogo} non e' una scuola ne' un centro.", "Il luogo {luogo} non e' una rimessa ne' un ricovero esterno."}},
             {Check::InvertedPeriod, "K-CTR-012", E, "Fine prima dell'inizio",
@@ -146,6 +147,15 @@ const std::vector<DefinizioneControllo>& catalogo_controlli() {
             {Check::CalendarCombinationCycle, "K-CTR-049", E, "Calendario combinato con se stesso",
              {"Il calendario {calendario} aggiunge o toglie i giorni di se stesso, direttamente o attraverso altri "
               "calendari: non si puo' sapere in quali giorni vale."}},
+            {Check::ExpiresInPeriod, "K-CTR-050", A, "Scadenza dentro il periodo del pacchetto",
+             {"L'autorizzazione del mezzo {mezzo} all'uso {uso} (distrazione) scade il {data}, dentro il periodo del pacchetto: "
+              "dopo quella data il mezzo non puo' fare i servizi che chiedono quell'uso."}},
+            {Check::VehicleWithoutUse, "K-CTR-051", A, "Mezzo senza l'uso della carta di circolazione",
+             {"Il mezzo {mezzo} non ha l'uso della carta di circolazione: con le norme {norme} l'uso richiesto dai servizi e i "
+              "requisiti di guida che dipendono dall'uso non si possono controllare."}},
+            {Check::CompanyWithoutNorms, "K-CTR-052", A, "Azienda senza le norme del paese",
+             {"L'azienda {azienda} non indica le norme del paese (aziende.json): usi dei mezzi, abilitazioni e requisiti di guida "
+              "dei suoi dati non si possono controllare."}},
             // Contenuto: avvisi
             {Check::PlaceWithoutCoordinates, "K-CTR-035", A, "Luogo senza coordinate",
              {"Il luogo {luogo} non ha le coordinate: serviranno al calcolo delle distanze."}},
@@ -216,6 +226,14 @@ const char* nome_elementi(kzero::Element e) {
         case kzero::Element::Depot: return "le rimesse";
         case kzero::Element::Transfer: return "i trasbordi";
         case kzero::Element::Holidays: return "i calendari delle festivita'";
+        case kzero::Element::Norms: return "le norme";
+        case kzero::Element::CompanySettings: return "le impostazioni delle aziende";
+        case kzero::Element::Licence: return "le abilitazioni";
+        case kzero::Element::VehicleUse: return "gli usi dei mezzi";
+        case kzero::Element::ActivityType: return "i tipi di attivita'";
+        case kzero::Element::AbsenceType: return "i tipi di assenza";
+        case kzero::Element::StopType: return "i tipi di fermo";
+        case kzero::Element::Competence: return "le competenze";
     }
     return "gli elementi";
 }
@@ -271,6 +289,7 @@ std::string Presentatore::riferimento(kzero::Element e, const std::string& codic
         case kzero::Element::Segment: da(idx.segment(codice)); break;
         case kzero::Element::Calendar: da(idx.calendar(codice)); break;
         case kzero::Element::Holidays: da(idx.holidays(codice)); break;
+        case kzero::Element::Norms: da(idx.norms(codice)); break;
         case kzero::Element::School: da(idx.school(codice)); break;
         case kzero::Element::Client: da(idx.client(codice)); break;
         case kzero::Element::Contract: da(idx.contract(codice)); break;
@@ -294,7 +313,14 @@ std::string Presentatore::riferimento(kzero::Element e, const std::string& codic
             }
             break;
         case kzero::Element::Depot:
-        case kzero::Element::Transfer: break;
+        case kzero::Element::Transfer:
+        case kzero::Element::CompanySettings:
+        case kzero::Element::Licence:
+        case kzero::Element::VehicleUse:
+        case kzero::Element::ActivityType:
+        case kzero::Element::AbsenceType:
+        case kzero::Element::StopType:
+        case kzero::Element::Competence: break;
     }
     if (!src || nome.empty() || !dati_->versioni) return codice;
     // La classe del nome viene dalla marcatura dello schema del file da cui viene l'elemento.

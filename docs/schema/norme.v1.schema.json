@@ -1,0 +1,200 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "K-Zero - file di dati norme.json, versione 1",
+  "description": "Norme di un paese (file norme.json): elenco delle abilitazioni per guidare, elenco degli usi dei mezzi, requisiti per guidare un mezzo e usi ammessi per tipo di servizio, ognuno con la sua fonte. Nessuna patente e nessun uso e' scritto nel programma. Ogni azienda indica le norme che valgono per lei (aziende.json).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "schema_versione", "norme"],
+  "properties": {
+    "schema": { "const": "norme", "x-kzero-classe": "comune" },
+    "schema_versione": { "const": 1, "x-kzero-classe": "comune" },
+    "norme": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["codice", "nome", "paese"],
+        "properties": {
+          "codice": { "$ref": "#/definitions/codice", "x-kzero-classe": "comune" },
+          "nome": { "$ref": "#/definitions/testo", "x-kzero-classe": "comune" },
+          "paese": {
+            "description": "Paese, codice ISO 3166-1 di due lettere (es. IT).",
+            "type": "string",
+            "pattern": "^[A-Z]{2}$",
+            "x-kzero-classe": "comune"
+          },
+          "abilitazioni": {
+            "description": "Elenco delle abilitazioni del paese (patenti, carte di qualificazione, certificati...): le persone e i requisiti usano questi codici.",
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["codice", "nome"],
+              "properties": {
+                "codice": { "$ref": "#/definitions/codice" },
+                "nome": { "$ref": "#/definitions/testo" },
+                "fonte": { "$ref": "#/definitions/fonte" },
+                "nota": { "$ref": "#/definitions/nota" }
+              }
+            },
+            "x-kzero-classe": "comune"
+          },
+          "usi": {
+            "description": "Elenco degli usi dei mezzi del paese (come li scrive la carta di circolazione, es. servizio di linea, noleggio con conducente, uso proprio).",
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["codice", "nome"],
+              "properties": {
+                "codice": { "$ref": "#/definitions/codice" },
+                "nome": { "$ref": "#/definitions/testo" },
+                "fonte": { "$ref": "#/definitions/fonte" },
+                "nota": { "$ref": "#/definitions/nota" }
+              }
+            },
+            "x-kzero-classe": "comune"
+          },
+          "requisiti_guida": {
+            "description": "Quali abilitazioni servono per guidare un mezzo, per categoria, posti, rimorchio e uso. Valgono tutti i requisiti che corrispondono al mezzo.",
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["categorie", "alternative", "fonte"],
+              "properties": {
+                "categorie": {
+                  "description": "Categorie dei mezzi a cui vale il requisito.",
+                  "type": "array",
+                  "minItems": 1,
+                  "uniqueItems": true,
+                  "items": { "enum": ["M1", "M2", "M3"] }
+                },
+                "posti_da": {
+                  "description": "Vale sui mezzi con almeno questi posti per i passeggeri.",
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 1000
+                },
+                "posti_fino_a": {
+                  "description": "Vale sui mezzi con al massimo questi posti per i passeggeri.",
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 1000
+                },
+                "rimorchio": {
+                  "description": "true = vale solo con il rimorchio; false = solo senza; assente = in tutti e due i casi.",
+                  "type": "boolean"
+                },
+                "usi": {
+                  "description": "Vale solo sui mezzi con uno di questi usi (codici dell'elenco 'usi'); assente = qualunque uso.",
+                  "type": "array",
+                  "minItems": 1,
+                  "uniqueItems": true,
+                  "items": { "$ref": "#/definitions/codice" }
+                },
+                "alternative": {
+                  "description": "Modi di soddisfare il requisito: basta uno.",
+                  "type": "array",
+                  "minItems": 1,
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": ["abilitazioni"],
+                    "properties": {
+                      "abilitazioni": {
+                        "description": "Abilitazioni da avere tutte insieme (codici dell'elenco 'abilitazioni' di queste norme).",
+                        "type": "array",
+                        "minItems": 1,
+                        "uniqueItems": true,
+                        "items": { "$ref": "#/definitions/codice" }
+                      },
+                      "posti_fino_a": {
+                        "description": "L'alternativa vale solo sui mezzi con al massimo questi posti per i passeggeri.",
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 1000
+                      },
+                      "lunghezza_fino_a_m": {
+                        "description": "L'alternativa vale solo sui mezzi lunghi al massimo tanti metri (un mezzo senza lunghezza non la rispetta).",
+                        "type": "number",
+                        "exclusiveMinimum": 0,
+                        "maximum": 100
+                      }
+                    }
+                  }
+                },
+                "fonte": { "$ref": "#/definitions/fonte" },
+                "da_confermare": { "description": "true = regola ancora da confermare.", "type": "boolean" },
+                "nota": { "$ref": "#/definitions/nota" }
+              }
+            },
+            "x-kzero-classe": "comune"
+          },
+          "usi_per_servizio": {
+            "description": "Usi dei mezzi ammessi per tipo di servizio. Un regolamento del territorio puo' decidere diversamente per i servizi dei suoi contratti.",
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["tipi_servizio", "usi", "fonte"],
+              "properties": {
+                "tipi_servizio": {
+                  "description": "Tipi di servizio (dichiarati dal committente) a cui vale.",
+                  "type": "array",
+                  "minItems": 1,
+                  "uniqueItems": true,
+                  "items": { "enum": ["linea", "scolastico", "disabili", "altro"] }
+                },
+                "usi": {
+                  "description": "Usi dei mezzi ammessi per questi servizi: basta uno.",
+                  "type": "array",
+                  "minItems": 1,
+                  "uniqueItems": true,
+                  "items": { "$ref": "#/definitions/codice" }
+                },
+                "fonte": { "$ref": "#/definitions/fonte" },
+                "da_confermare": { "description": "true = regola ancora da confermare.", "type": "boolean" },
+                "nota": { "$ref": "#/definitions/nota" }
+              }
+            },
+            "x-kzero-classe": "comune"
+          },
+          "nota": { "$ref": "#/definitions/nota", "x-kzero-classe": "comune" }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "codice": {
+      "description": "Codice K-Zero: scelto da chi scrive i dati, unico per tipo di elemento. Lettere senza accenti, cifre, '-', '_' e '.'; inizia con una lettera o una cifra; al massimo 64 caratteri.",
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+    },
+    "testo": {
+      "description": "Testo di una riga, non vuoto (al massimo 300 caratteri).",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 300,
+      "pattern": "\\S"
+    },
+    "nota": {
+      "description": "Testo libero, non vuoto (al massimo 2000 caratteri).",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2000,
+      "pattern": "\\S"
+    },
+    "fonte": {
+      "description": "Fonte: documento (es. una legge o una delibera), punto del documento e altre norme citate.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["documento"],
+      "properties": {
+        "documento": { "$ref": "#/definitions/testo" },
+        "punto": { "$ref": "#/definitions/testo" },
+        "riferimenti": { "$ref": "#/definitions/testo" }
+      }
+    }
+  }
+}

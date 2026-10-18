@@ -241,6 +241,28 @@ struct CombinationsRule {
     Source src;
 };
 
+// Usi dei mezzi (carta di circolazione) ammessi per alcuni tipi di servizio, es. scolastico e disabili: linea o
+// noleggio con conducente. Sta nelle norme di un paese e, se un territorio decide diversamente, nel regolamento.
+struct ServiceUses {
+    std::vector<ServiceKind> kinds;
+    std::vector<Ref> uses;   // codici degli usi (norme del paese)
+    Source src;
+};
+
+struct ServiceUsesRule {
+    std::vector<ServiceUses> values;
+    RuleSource source;
+    Source src;
+};
+
+// Per alcuni tipi di servizio l'autista ha bisogno di un'autorizzazione del committente (es. un cartellino di
+// riconoscimento per i servizi speciali).
+struct ClientAuthorizationRule {
+    std::vector<ServiceKind> kinds;
+    RuleSource source;
+    Source src;
+};
+
 struct Regulation {
     Code code;
     std::string authority;   // ente
@@ -260,7 +282,77 @@ struct Regulation {
     std::optional<GradesRule> dropoff_without_adult;  // discesa senza adulto ammessa con l'autorizzazione dei genitori
     std::optional<StandingRule> standing;
     std::optional<CombinationsRule> forbidden;
+    std::optional<ServiceUsesRule> vehicle_uses;                 // usi dei mezzi per tipo di servizio (versione 2)
+    std::optional<ClientAuthorizationRule> client_authorization; // autorizzazione del committente (versione 2)
     Source src;
+};
+
+// --- Norme di un paese: abilitazioni, usi dei mezzi, requisiti per guidare ----------------------------------
+// Tutto e' un dato con la fonte: nessuna patente, nessun uso e nessun requisito e' scritto nel codice.
+
+// Una voce di un elenco delle norme: un'abilitazione (es. patente D1, CQC persone) o un uso dei mezzi (es. servizio
+// di linea, noleggio con conducente, uso proprio).
+struct NormEntry {
+    Code code;
+    std::string name;
+    std::optional<RuleSource> source;
+    std::string note;
+    Source src;
+};
+
+// Un modo per soddisfare un requisito: tutte queste abilitazioni insieme, se il mezzo rispetta i limiti indicati
+// (es. patente D1 solo fino a 16 posti e 8 m di lunghezza).
+struct LicenceAlternative {
+    std::vector<Ref> licences;
+    std::optional<int> max_seats;          // posti per i passeggeri
+    std::optional<double> max_length_m;    // un mezzo senza lunghezza non rispetta il limite (prudenza)
+    Source src;
+};
+
+// Requisito per guidare i mezzi di alcune categorie: vale se il mezzo e' di una delle categorie, ha i posti
+// indicati, il rimorchio indicato e (se ci sono usi) uno degli usi. L'autista deve soddisfare una delle alternative.
+// Valgono tutti i requisiti che corrispondono al mezzo (es. la patente per le dimensioni e la CQC per l'uso).
+struct DrivingRequirement {
+    std::vector<VehicleCategory> categories;
+    std::optional<int> min_seats, max_seats;
+    std::optional<bool> trailer;
+    std::vector<Ref> uses;
+    std::vector<LicenceAlternative> alternatives;
+    RuleSource source;
+    bool to_confirm = false;
+    std::string note;
+    Source src;
+};
+
+struct ServiceUsesNorm {
+    ServiceUses value;
+    RuleSource source;
+    bool to_confirm = false;
+    std::string note;
+    Source src;
+};
+
+struct Norms {
+    Code code;
+    std::string name;
+    std::string country;   // ISO 3166-1, es. "IT"
+    std::vector<NormEntry> licences;
+    std::vector<NormEntry> uses;
+    std::vector<DrivingRequirement> requirements;
+    std::vector<ServiceUsesNorm> service_uses;
+    std::string note;
+    Source src;
+
+    const NormEntry* licence(const Code& c) const {
+        for (const auto& e : licences)
+            if (e.code == c) return &e;
+        return nullptr;
+    }
+    const NormEntry* use(const Code& c) const {
+        for (const auto& e : uses)
+            if (e.code == c) return &e;
+        return nullptr;
+    }
 };
 
 // --- Calendari ----------------------------------------------------------------------
@@ -527,6 +619,7 @@ struct Service {
     std::optional<int> agree_threshold_min;   // oltre questo spostamento un cambio d'orario e' "da concordare"
     VehicleRules rules;                       // proprie del servizio, se diverse dal contratto
     std::vector<PassengerGroup> groups;       // la domanda
+    std::vector<Ref> competences;             // competenze richieste a chi lo fa (versione 2; dato particolare)
     Source src;
 };
 
@@ -625,6 +718,38 @@ struct Power {
     std::optional<int> min_charge_percent;      // elettrici: carica minima
 };
 
+// Persona o mezzo prestato a un'altra azienda (subaffidamento, consorzio, noleggio con conducente): ammesso nei
+// turni di quell'azienda solo se dichiarato, con il riferimento dell'accordo.
+struct Loan {
+    Ref company;             // azienda che lo riceve
+    std::string agreement;   // riferimento dell'accordo
+    std::optional<Day> from, to;
+    Source src;
+
+    bool covers(Day d) const { return (!from || d >= *from) && (!to || d <= *to); }
+};
+
+// Autorizzazione a un uso in piu' rispetto alla carta di circolazione (in Italia la "distrazione": es. un mezzo di
+// linea che fa noleggio), per singolo mezzo e con le date. Chi la rilascia e' un dato.
+struct UseAuthorization {
+    Ref use;                  // l'uso autorizzato
+    std::string authority;    // ente che la rilascia
+    std::string reference;    // riferimento del documento
+    DateRange period;
+    std::string prescriptions;
+    Source src;
+};
+
+// Vincolo di destinazione: il mezzo fa solo certi servizi (per tipo o per contratto), fino a una data.
+struct DestinationConstraint {
+    std::vector<ServiceKind> kinds;
+    std::vector<Ref> contracts;
+    std::optional<Day> until;
+    std::string source;   // da dove viene il vincolo (es. il contributo pubblico)
+    std::string note;
+    Source src;
+};
+
 struct Vehicle {
     Code code;
     Ref company;
@@ -647,6 +772,12 @@ struct Vehicle {
     std::optional<double> daily_fixed_cost;   // nella valuta del pacchetto: assicurazione, bollo, ammortamento
     std::optional<double> cost_per_km;
     bool hypothetical = false;          // non ancora in flotta (scenari)
+    // Versione 2 di mezzi.json.
+    std::optional<Ref> use;                       // uso della carta di circolazione (norme del paese)
+    std::vector<UseAuthorization> use_authorizations;
+    std::optional<DestinationConstraint> constraint;
+    bool spare = false;                           // mezzo di scorta: non usarlo non e' un avviso
+    std::vector<Loan> loans;
     Source src;
 };
 
@@ -734,6 +865,46 @@ struct Company {
     Source src;
 };
 
+// --- Elenchi e impostazioni di un'azienda ---------------------------------------------------------------------
+// L'organizzazione la sceglie l'azienda: i tipi di attivita', di assenza, di fermo dei mezzi e le competenze sono
+// elenchi nei dati, con i nomi dell'azienda. Nel codice c'e' solo cio' che serve a un controllo.
+
+enum class ShelterNearHome { Preferred, Allowed, Never };     // ricovero dei mezzi vicino a casa dell'autista
+enum class DriverVehiclePairing { None, Preferred, Fixed };   // abbinamento autista-mezzo
+
+struct ActivityType {
+    Code code;
+    std::string name;
+    bool uses_vehicle = true;   // l'attivita' impegna il mezzo del turno (es. pulizia si', spostamento a piedi no)
+    std::string note;
+    Source src;
+};
+
+struct ListEntry {
+    Code code;
+    std::string name;
+    std::string note;
+    Source src;
+};
+
+struct CompanySettings {
+    Ref company;
+    std::optional<Ref> norms;   // norme del paese che valgono per l'azienda
+    ShelterNearHome shelter = ShelterNearHome::Allowed;
+    DriverVehiclePairing pairing = DriverVehiclePairing::None;
+    std::vector<ActivityType> activities;
+    std::vector<ListEntry> absence_types, stop_types, competences;
+    std::string note;
+    Source src;
+
+    template <class T>
+    static const T* find_in(const std::vector<T>& v, const Code& c) {
+        for (const auto& e : v)
+            if (e.code == c) return &e;
+        return nullptr;
+    }
+};
+
 enum class Level { NumbersOnly, Full };                      // "solo numeri", "completo"
 enum class Origin { Manual, Computed, Imported, Scenario };  // rilevato a mano, calcolato, importato, scenario
 
@@ -757,6 +928,8 @@ struct Manifest {
 // Tutti i dati di un pacchetto. I luoghi privati (case) stanno insieme ai pubblici, segnati da is_private.
 struct Package {
     Manifest manifest;
+    std::vector<CompanySettings> company_settings;
+    std::vector<Norms> norms;
     std::vector<Place> places;
     std::vector<RoadSegment> segments;
     std::vector<Regulation> regulations;

@@ -5,6 +5,8 @@ namespace kzero {
 
 Index::Index(const Package& p) : package_(&p) {
     fill(companies_, p.manifest.companies);
+    for (const CompanySettings& s : p.company_settings) settings_.emplace(s.company.code, &s);
+    fill(norms_, p.norms);
     fill(places_, p.places);
     fill(segments_, p.segments);
     fill(regulations_, p.regulations);
@@ -27,6 +29,11 @@ Index::Index(const Package& p) : package_(&p) {
                 passenger_group_.emplace(x.code, &g);
             }
         }
+}
+
+const Norms* Index::norms_of(const Code& company) const {
+    const CompanySettings* s = settings(company);
+    return s && s->norms ? norms(s->norms->code) : nullptr;
 }
 
 const Regulation* Index::regulation_of(const Service& s) const {

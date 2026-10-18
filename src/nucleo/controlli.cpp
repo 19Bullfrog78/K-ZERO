@@ -105,6 +105,9 @@ public:
         vehicle_costs();
         companies_without_vehicles();
         contract_regulations();
+        expiries();
+        vehicles_without_use();
+        companies_without_norms();
         return std::move(out_);
     }
 
@@ -158,6 +161,24 @@ private:
             }
         duplicates_in(groups, Element::Group);
         duplicates_in(passengers, Element::Passenger);
+        // K-008: norme, impostazioni delle aziende e loro elenchi.
+        duplicates_in(pointers(p_.norms), Element::Norms);
+        for (const Norms& n : p_.norms) {
+            duplicates_in(pointers(n.licences), Element::Licence);
+            duplicates_in(pointers(n.uses), Element::VehicleUse);
+        }
+        std::map<Code, const Source*> settings;
+        for (const CompanySettings& s : p_.company_settings) {
+            const auto [it, inserted] = settings.emplace(s.company.code, &s.src);
+            if (!inserted)
+                add(Check::DuplicateCode, s.src,
+                    {text_param("codice", s.company.code), elements_param("elementi", Element::CompanySettings),
+                     text_param("prima", position_text(*it->second))});
+            duplicates_in(pointers(s.activities), Element::ActivityType);
+            duplicates_in(pointers(s.absence_types), Element::AbsenceType);
+            duplicates_in(pointers(s.stop_types), Element::StopType);
+            duplicates_in(pointers(s.competences), Element::Competence);
+        }
     }
 
     // --- Riferimenti -----------------------------------------------------------------------
@@ -181,6 +202,14 @@ private:
             case Element::Depot: return idx_.depot(c) != nullptr;
             case Element::Transfer: return true;
             case Element::Holidays: return idx_.holidays(c) != nullptr;
+            case Element::Norms: return idx_.norms(c) != nullptr;
+            case Element::CompanySettings: return idx_.settings(c) != nullptr;
+            case Element::Licence:
+            case Element::VehicleUse:
+            case Element::ActivityType:
+            case Element::AbsenceType:
+            case Element::StopType:
+            case Element::Competence: return true;   // elenchi di norme o aziende: controllati con ref_in
         }
         return false;
     }
@@ -188,6 +217,33 @@ private:
     void ref(const Ref& r, Element e) {
         if (!exists(e, r.code))
             add(Check::UnknownReference, r.src, {text_param("codice", r.code), elements_param("elementi", e)});
+    }
+
+    // Riferimento a una voce dell'elenco di un insieme di norme (abilitazioni, usi).
+    void ref_in(const Ref& r, Element e, const Norms& n) {
+        const bool found = e == Element::Licence ? n.licence(r.code) != nullptr : n.use(r.code) != nullptr;
+        if (!found)
+            add(Check::UnknownReference, r.src,
+                {text_param("codice", r.code), elements_param("elementi", e), ref_param("norme", Element::Norms, n.code)}, 1);
+    }
+
+    // Riferimento a una voce di un elenco dell'azienda (attivita', assenze, fermi, competenze). Senza impostazioni
+    // dell'azienda l'elenco e' vuoto.
+    void ref_in(const Ref& r, Element e, const Code& company) {
+        const CompanySettings* s = idx_.settings(company);
+        bool found = false;
+        if (s) {
+            switch (e) {
+                case Element::ActivityType: found = CompanySettings::find_in(s->activities, r.code) != nullptr; break;
+                case Element::AbsenceType: found = CompanySettings::find_in(s->absence_types, r.code) != nullptr; break;
+                case Element::StopType: found = CompanySettings::find_in(s->stop_types, r.code) != nullptr; break;
+                case Element::Competence: found = CompanySettings::find_in(s->competences, r.code) != nullptr; break;
+                default: break;
+            }
+        }
+        if (!found)
+            add(Check::UnknownReference, r.src,
+                {text_param("codice", r.code), elements_param("elementi", e), ref_param("azienda", Element::Company, company)}, 2);
     }
 
     void references() {
@@ -242,7 +298,44 @@ private:
             }
             for (const Connection& c : t.connections) ref(c.place, Element::Place);
         }
-        for (const Vehicle& v : p_.vehicles) ref(v.company, Element::Company);
+        for (const Vehicle& v : p_.vehicles) {
+            ref(v.company, Element::Company);
+            const Norms* n = idx_.norms_of(v.company.code);
+            if (v.use && n) ref_in(*v.use, Element::VehicleUse, *n);
+            for (const UseAuthorization& a : v.use_authorizations)
+                if (n) ref_in(a.use, Element::VehicleUse, *n);
+            if (v.constraint)
+                for (const Ref& c : v.constraint->contracts) ref(c, Element::Contract);
+            for (const Loan& l : v.loans) ref(l.company, Element::Company);
+        }
+        // K-008: impostazioni delle aziende, norme, usi nei regolamenti, competenze dei servizi.
+        for (const CompanySettings& s : p_.company_settings) {
+            ref(s.company, Element::Company);
+            if (s.norms) ref(*s.norms, Element::Norms);
+        }
+        for (const Norms& n : p_.norms) {
+            for (const DrivingRequirement& r : n.requirements) {
+                for (const Ref& u : r.uses) ref_in(u, Element::VehicleUse, n);
+                for (const LicenceAlternative& a : r.alternatives)
+                    for (const Ref& l : a.licences) ref_in(l, Element::Licence, n);
+            }
+            for (const ServiceUsesNorm& s : n.service_uses)
+                for (const Ref& u : s.value.uses) ref_in(u, Element::VehicleUse, n);
+        }
+        for (const Regulation& r : p_.regulations)
+            if (r.vehicle_uses)
+                for (const ServiceUses& v : r.vehicle_uses->values)
+                    for (const Ref& u : v.uses) {
+                        bool found = false;
+                        for (const Norms& n : p_.norms) found = found || n.use(u.code) != nullptr;
+                        if (!found)
+                            add(Check::UnknownReference, u.src, {text_param("codice", u.code), elements_param("elementi", Element::VehicleUse)});
+                    }
+        for (const Service& s : p_.services) {
+            const Contract* c = idx_.contract(s.contract.code);
+            if (c)
+                for (const Ref& k : s.competences) ref_in(k, Element::Competence, c->company.code);
+        }
         for (const Depot& d : p_.depots) {
             ref(d.place, Element::Place);
             ref(d.company, Element::Company);
@@ -290,6 +383,11 @@ private:
         for (const Service& s : p_.services)
             for (const PassengerGroup& g : s.groups)
                 if (g.window) times(g.src, g.window->open, g.window->close);
+        for (const Vehicle& v : p_.vehicles) {
+            for (const UseAuthorization& a : v.use_authorizations) dates(a.src, a.period.from, a.period.to);
+            for (const Loan& l : v.loans)
+                if (l.from && l.to) dates(l.src, *l.from, *l.to);
+        }
     }
 
     // --- Calendari -----------------------------------------------------------------------------
@@ -874,6 +972,49 @@ private:
             };
             if (r->valid_from && *r->valid_from > period.from) gap(period.from, std::min(period.to, *r->valid_from - 1));
             if (r->valid_to && *r->valid_to < period.to) gap(std::max(period.from, *r->valid_to + 1), period.to);
+        }
+    }
+
+    // --- Scadenze dentro il periodo del pacchetto (K-008) --------------------------------------------------
+
+    bool expires_in_period(Day last_valid_day) const {
+        return last_valid_day >= p_.manifest.period.from && last_valid_day < p_.manifest.period.to;
+    }
+
+    void expiries() {
+        for (const Vehicle& v : p_.vehicles)
+            for (const UseAuthorization& a : v.use_authorizations)
+                if (expires_in_period(a.period.to))
+                    add(Check::ExpiresInPeriod, a.src,
+                        {ref_param("mezzo", Element::Vehicle, v.code), text_param("uso", a.use.code), date_param("data", a.period.to)}, 0);
+    }
+
+    // --- Mezzi senza uso e aziende senza norme (K-008) ----------------------------------------------------------
+
+    // Le norme dell'azienda dicono qualcosa che dipende dall'uso dei mezzi?
+    static bool norms_use_uses(const Norms& n) {
+        if (!n.service_uses.empty()) return true;
+        for (const DrivingRequirement& r : n.requirements)
+            if (!r.uses.empty()) return true;
+        return false;
+    }
+
+    void vehicles_without_use() {
+        for (const Vehicle& v : p_.vehicles) {
+            const Norms* n = idx_.norms_of(v.company.code);
+            if (!v.use && n && norms_use_uses(*n))
+                add(Check::VehicleWithoutUse, v.src, {ref_param("mezzo", Element::Vehicle, v.code), ref_param("norme", Element::Norms, n->code)});
+        }
+    }
+
+    // Un'azienda usa dati che si controllano con le norme del paese (usi dei mezzi, abilitazioni), ma non le indica.
+    void companies_without_norms() {
+        for (const Company& c : p_.manifest.companies) {
+            if (idx_.norms_of(c.code)) continue;
+            bool needed = false;
+            for (const Vehicle& v : p_.vehicles)
+                needed = needed || (v.company.code == c.code && (v.use || !v.use_authorizations.empty()));
+            if (needed) add(Check::CompanyWithoutNorms, c.src, {ref_param("azienda", Element::Company, c.code)});
         }
     }
 

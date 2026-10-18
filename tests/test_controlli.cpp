@@ -217,6 +217,79 @@ TEST(Controlli, K_CTR_010_festivita_inesistente) {
     EXPECT_TRUE(segnala(p, Check::UnknownReference, 0, "calendari.json", "/calendari/4/toglie/festivita/0"));
 }
 
+// K-008: riferimenti dentro gli elenchi delle norme e delle aziende.
+TEST(Controlli, K_CTR_010_elenchi_di_norme_e_aziende) {
+    Package p = demo();
+    per_codice(p.norms, "N-IT").requirements[2].alternatives[1].licences[0] =
+        Ref{"D2", dove("norme.json", "/norme/0/requisiti_guida/2/alternative/1/abilitazioni/0")};
+    EXPECT_TRUE(segnala(p, Check::UnknownReference, 1, "norme.json", "/norme/0/requisiti_guida/2/alternative/1/abilitazioni/0"));
+    Package q = demo();
+    per_codice(q.vehicles, "ALFA-01").use = Ref{"NOLEGGIO", dove("mezzi.json", "/mezzi/0/uso")};
+    EXPECT_TRUE(segnala(q, Check::UnknownReference, 1, "mezzi.json", "/mezzi/0/uso"));
+    Package r = demo();
+    per_codice(r.services, "S-DIS").competences[0] = Ref{"PEDANE", dove("servizi.json", "/servizi/3/competenze_richieste/0")};
+    EXPECT_TRUE(segnala(r, Check::UnknownReference, 2, "servizi.json", "/servizi/3/competenze_richieste/0"));
+    // Una competenza di un'altra azienda non vale: ogni azienda ha il suo elenco.
+    per_codice(r.services, "S-DIS").competences[0] = Ref{"INFANZIA", dove("servizi.json", "/servizi/3/competenze_richieste/0")};
+    EXPECT_TRUE(segnala(r, Check::UnknownReference, 2, "servizi.json", "/servizi/3/competenze_richieste/0"));
+    Package s = demo();
+    per_codice(s.regulations, "R-TN").vehicle_uses->values[0].uses[1] = Ref{"TAXI", dove("regolamenti.json", "/x")};
+    EXPECT_TRUE(segnala(s, Check::UnknownReference, 0, "regolamenti.json", "/x"));
+    Package u = demo();
+    u.company_settings[1].company = Ref{"GAMMA", dove("aziende.json", "/aziende/1/azienda")};
+    u.company_settings[1].norms = Ref{"N-DE", dove("aziende.json", "/aziende/1/norme")};
+    EXPECT_TRUE(segnala(u, Check::UnknownReference, 0, "aziende.json", "/aziende/1/azienda"));
+    EXPECT_TRUE(segnala(u, Check::UnknownReference, 0, "aziende.json", "/aziende/1/norme"));
+}
+
+TEST(Controlli, K_CTR_009_codici_doppi_di_norme_e_aziende) {
+    Package p = demo();
+    p.company_settings[1].company.code = "ALFA";
+    EXPECT_TRUE(segnala(p, Check::DuplicateCode, 0, "aziende.json", "/aziende/1"));
+    Package q = demo();
+    q.company_settings[0].activities[1].code = "PRESA";
+    EXPECT_TRUE(segnala(q, Check::DuplicateCode, 0, "aziende.json", "/aziende/0/attivita/1"));
+    Package r = demo();
+    r.norms[0].uses[1].code = "LINEA";
+    EXPECT_TRUE(segnala(r, Check::DuplicateCode, 0, "norme.json", "/norme/0/usi/1"));
+}
+
+// Distrazione: autorizzazione a un uso in piu' che scade dentro il periodo del pacchetto (avviso).
+TEST(Controlli, K_CTR_050_distrazione_che_scade_nel_periodo) {
+    Package p = demo();
+    Vehicle& v = per_codice(p.vehicles, "ALFA-X30");
+    v.use_authorizations.push_back({Ref{"NCC", {}}, "Provincia", "n. 1", {giorno("2026-03-01"), giorno("2027-02-28")}, "",
+                                    dove("mezzi.json", "/mezzi/4/autorizzazioni_uso/0")});
+    EXPECT_TRUE(segnala(p, Check::ExpiresInPeriod, 0, "mezzi.json", "/mezzi/4/autorizzazioni_uso/0"));
+    // Valida fino all'ultimo giorno del periodo (o oltre): nessun avviso.
+    v.use_authorizations[0].period.to = giorno("2027-08-31");
+    EXPECT_EQ(quanti(p, Check::ExpiresInPeriod), 0);
+    // Date rovesciate: errore K-CTR-012.
+    v.use_authorizations[0].period = {giorno("2027-02-28"), giorno("2026-03-01")};
+    EXPECT_TRUE(segnala(p, Check::InvertedPeriod, 0, "mezzi.json", "/mezzi/4/autorizzazioni_uso/0"));
+}
+
+// Mezzo senza l'uso della carta di circolazione, quando le norme dell'azienda lo usano (avviso).
+TEST(Controlli, K_CTR_051_mezzo_senza_uso) {
+    Package p = demo();
+    per_codice(p.vehicles, "BETA-01").use.reset();
+    EXPECT_TRUE(segnala(p, Check::VehicleWithoutUse, 0, "mezzi.json", "/mezzi/5"));
+    EXPECT_EQ(quanti(p, Check::VehicleWithoutUse), 1);
+}
+
+// Azienda che scrive l'uso dei mezzi ma non indica le norme del paese (avviso, una volta per azienda).
+TEST(Controlli, K_CTR_052_azienda_senza_norme) {
+    Package p = demo();
+    p.company_settings[0].norms.reset();
+    EXPECT_TRUE(segnala(p, Check::CompanyWithoutNorms, 0, "pacchetto.json", "/aziende/0"));
+    EXPECT_EQ(quanti(p, Check::CompanyWithoutNorms), 1);
+    EXPECT_EQ(quanti(p, Check::UnknownReference), 0);   // senza norme gli usi non si controllano
+    // Senza impostazioni per l'azienda: stesso avviso.
+    Package q = demo();
+    q.company_settings.erase(q.company_settings.begin() + 1);
+    EXPECT_TRUE(segnala(q, Check::CompanyWithoutNorms, 0, "pacchetto.json", "/aziende/1"));
+}
+
 TEST(Controlli, K_CTR_017_orario_che_torna_indietro) {
     Package p = demo();
     p.trips[3].passages[2].time = ora("16:08");
@@ -598,5 +671,6 @@ TEST(Controlli, catalogo_coperto) {
     EXPECT_EQ(api::definizione_controllo(Check::AssistantNotRequested).codice, "K-CTR-047");
     EXPECT_EQ(api::definizione_controllo(Check::NotUtf8).codice, "K-CTR-048");
     EXPECT_EQ(api::definizione_controllo(Check::CalendarCombinationCycle).codice, "K-CTR-049");
-    EXPECT_EQ(api::catalogo_controlli().size(), 49u);
+    EXPECT_EQ(api::definizione_controllo(Check::CompanyWithoutNorms).codice, "K-CTR-052");
+    EXPECT_EQ(api::catalogo_controlli().size(), 52u);
 }

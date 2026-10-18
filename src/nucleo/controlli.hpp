@@ -51,6 +51,10 @@ enum class Check {
     GroupNotOnTripServices,
     AssistantNotRequested,
     CalendarCombinationCycle,
+    // Contenuto: avvisi (K-008).
+    ExpiresInPeriod,
+    VehicleWithoutUse,
+    CompanyWithoutNorms,
     // Contenuto: avvisi.
     PlaceWithoutCoordinates,
     DwellTimesUndefined,
@@ -70,6 +74,8 @@ enum class Check {
 enum class Element {
     Company, Place, Segment, Regulation, Calendar, School, Client, Contract, Lot, Service, Group, Passenger, Trip,
     Vehicle, Depot, Transfer, Holidays,
+    // K-008
+    Norms, CompanySettings, Licence, VehicleUse, ActivityType, AbsenceType, StopType, Competence,
 };
 
 // Un valore da mettere nel messaggio, al posto di {nome}.

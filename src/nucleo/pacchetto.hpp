@@ -19,6 +19,11 @@ public:
 
     const Package& package() const { return *package_; }
     const Company* company(const Code& c) const { return find(companies_, c); }
+    // Impostazioni ed elenchi di un'azienda (aziende.json), se ci sono.
+    const CompanySettings* settings(const Code& company) const { return find(settings_, company); }
+    const Norms* norms(const Code& c) const { return find(norms_, c); }
+    // Norme del paese che valgono per un'azienda, se indicate.
+    const Norms* norms_of(const Code& company) const;
     const Place* place(const Code& c) const { return find(places_, c); }
     const RoadSegment* segment(const Code& c) const { return find(segments_, c); }
     const Regulation* regulation(const Code& c) const { return find(regulations_, c); }
@@ -59,6 +64,8 @@ private:
 
     const Package* package_;
     Map<Company> companies_;
+    Map<CompanySettings> settings_;
+    Map<Norms> norms_;
     Map<Place> places_;
     Map<RoadSegment> segments_;
     Map<Regulation> regulations_;

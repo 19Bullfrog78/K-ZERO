@@ -261,8 +261,8 @@ TEST(Api, pacchetto_demo_letto) {
     const Lettura l = leggi_pacchetto(m);
     EXPECT_TRUE(l.problemi.empty());
     EXPECT_TRUE(l.forma_valida());
-    EXPECT_EQ(l.versioni.size(), 14u);   // tutti i file del formato tranne tempi_sosta.json
-    EXPECT_EQ(l.versioni.at("calendari.json"), 2);
+    EXPECT_EQ(l.versioni.size(), 16u);   // tutti i file del formato tranne tempi_sosta.json
+    for (const char* f : {"calendari.json", "regolamenti.json", "servizi.json", "mezzi.json"}) EXPECT_EQ(l.versioni.at(f), 2) << f;
     EXPECT_EQ(l.pacchetto.trips.size(), 10u);
 }
 
@@ -288,7 +288,7 @@ TEST(Api, K_CTR_003_json_non_valido) {
     ASSERT_EQ(l.problemi.size(), 1u);
     EXPECT_EQ(l.problemi[0].check, Check::InvalidJson);
     EXPECT_EQ(l.problemi[0].where.file, "mezzi.json");
-    EXPECT_EQ(l.problemi[0].where.line, 73);     // la riga dopo la virgola mancante: "alimentazione"...
+    EXPECT_EQ(l.problemi[0].where.line, 79);     // la riga dopo la virgola mancante: "alimentazione"...
     EXPECT_EQ(l.problemi[0].where.column, 21);   // ...letto fino in fondo prima di accorgersi dell'errore
     EXPECT_FALSE(l.usato("mezzi.json"));   // mai letto a meta'
 }
@@ -567,6 +567,7 @@ TEST(Api, classi_marcate_negli_schemi) {
     EXPECT_TRUE(personali.count("servizi/servizi/*/domanda/gruppi/*/passeggeri/*/nome"));
     EXPECT_TRUE(personali.count("servizi/servizi/*/domanda/gruppi/*/passeggeri/*/motivo"));
     const std::set<std::string> attesi = {
+        "servizi/servizi/*/competenze_richieste/*",   // versione 2: una competenza puo' far capire chi viaggia
         "servizi/servizi/*/tipo",
         "servizi/servizi/*/tipo_descrizione",
         "servizi/servizi/*/regole/pedana_obbligatoria",
