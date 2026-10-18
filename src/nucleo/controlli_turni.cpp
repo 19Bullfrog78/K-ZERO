@@ -26,12 +26,24 @@ struct Interval {
     long long a = 0, b = 0;   // minuti assoluti, [a, b)
     Day day = 0;
     const Shift* shift = nullptr;
-    Source where;
+    const Source* where = nullptr;   // punto dei dati dell'assegnazione (resta valido: e' nel pacchetto)
 };
+
+// Pezzi delle corse di un giorno: per ogni corsa del pacchetto (stessa posizione), i turni da autista che la fanno.
+using Pieces = std::vector<std::vector<std::pair<const PlannedItem*, const ShiftDay*>>>;
 
 class ShiftChecker {
 public:
-    ShiftChecker(const Package& p, std::vector<Problem>& out) : p_(p), out_(out), plan_(p), idx_(plan_.index()) {}
+    ShiftChecker(const Package& p, std::vector<Problem>& out)
+        : p_(p), out_(out), plan_(p), idx_(plan_.index()), pieces_(p.trips.size()), escorts_(p.trips.size()) {
+        // Cose che non cambiano da un giorno all'altro, preparate una volta sola.
+        for (const Trip& t : p.trips) {
+            trip_days_.push_back(plan_.days().days_of(t.calendar.code));
+            bool aboard = false;
+            for (const Passage& ps : t.passages) aboard = aboard || ps.assistant != AssistantMove::None;
+            assistant_aboard_.push_back(aboard ? 1 : 0);
+        }
+    }
 
     void run() {
         if (p_.shifts.empty() && p_.rotations.empty() && p_.fixed.empty() && p_.day_assignments.empty() && p_.blocks.empty())
@@ -172,52 +184,58 @@ private:
             if (a.date == d && idx_.shift(a.shift.code) && !present.count(a.shift.code))
                 add(Check::AssignmentOnDayWithoutShift, a.src, {ref_param("turno", Element::Shift, a.shift.code), date_param("data", d)}, 1);
 
-        std::map<const Trip*, std::vector<std::pair<const PlannedItem*, const ShiftDay*>>> pieces;   // turni da autista
-        std::map<const Trip*, std::vector<const ShiftDay*>> escorts;                                // turni da assistente
+        // Turni da autista e da assistente di ogni corsa, quel giorno (i vettori si riusano da un giorno all'altro).
+        for (const std::size_t i : touched_) {
+            pieces_[i].clear();
+            escorts_[i].clear();
+        }
+        touched_.clear();
         for (const ShiftDay& sd : plan) {
             items(sd);
             person(sd);
             vehicle(sd);
             for (const PlannedItem& it : sd.items)
                 if (it.trip) {
-                    if (sd.shift->role == ShiftRole::Driver) pieces[it.trip].push_back({&it, &sd});
-                    if (sd.shift->role == ShiftRole::Escort) escorts[it.trip].push_back(&sd);
+                    const std::size_t i = trip_index(it.trip);
+                    if (sd.shift->role == ShiftRole::Driver) pieces_[i].push_back({&it, &sd});
+                    if (sd.shift->role == ShiftRole::Escort) escorts_[i].push_back(&sd);
+                    touched_.push_back(i);
                 }
         }
-        trips(d, pieces);
-        escort_checks(plan, escorts);
-        blocks(d, pieces);
+        trips(d);
+        escort_checks(plan);
+        blocks(d);
     }
 
     // Elementi del turno che si sovrappongono quel giorno.
     void items(const ShiftDay& sd) {
-        const Param days = days_param("giorni", sd.day);
+        const auto days = [&] { return days_param("giorni", sd.day); };   // solo se serve
         for (std::size_t i = 1; i < sd.items.size(); ++i)
             if (sd.items[i].start < sd.items[i - 1].end && sd.items[i].start >= sd.items[i - 1].start)
                 add(Check::ShiftItemsOrder, sd.items[i].item->src,
-                    {shift_param(*sd.shift), time_param("orario", sd.items[i].start), time_param("fine", sd.items[i - 1].end), days}, 1);
+                    {shift_param(*sd.shift), time_param("orario", sd.items[i].start), time_param("fine", sd.items[i - 1].end), days()}, 1);
     }
 
     // Chi fa il turno: candidati, ruolo, prestito, competenze, abilitazioni, fatti, preferenze, abbinamento.
     void person(const ShiftDay& sd) {
         const Shift& s = *sd.shift;
-        const Param days = days_param("giorni", sd.day);
+        const auto days = [&] { return days_param("giorni", sd.day); };   // solo se serve
         // Due persone della rotazione nello stesso turno.
         for (std::size_t i = 1; i < sd.rotation_candidates.size(); ++i) {
             const RotationCandidate& c = sd.rotation_candidates[i];
             const RotationCandidate& first = sd.rotation_candidates.front();
             if (!c.person || !first.person || c.person == first.person) continue;
             add(Check::RotationTwoPersons, c.rotation->rows[c.row].src,
-                {shift_param(s), person_param(*c.person), person_param(*first.person, "altra"), days});
+                {shift_param(s), person_param(*c.person), person_param(*first.person, "altra"), days()});
         }
         for (std::size_t i = 1; i < sd.fixed_candidates.size(); ++i)
             add(Check::TwoAssignmentsSameShift, sd.fixed_candidates[i]->src,
-                {shift_param(s), ref_param("altro", Element::FixedAssignment, sd.fixed_candidates.front()->code), days}, 0);
+                {shift_param(s), ref_param("altro", Element::FixedAssignment, sd.fixed_candidates.front()->code), days()}, 0);
         for (std::size_t i = 1; i < sd.day_candidates.size(); ++i)
             add(Check::TwoAssignmentsSameShift, sd.day_candidates[i]->src, {shift_param(s), date_param("data", sd.day)}, 1);
 
         if (!sd.planned) {
-            if (sd.person_source == PersonSource::None) add(Check::ShiftUncovered, s.src, {shift_param(s), days});
+            if (sd.person_source == PersonSource::None) add(Check::ShiftUncovered, s.src, {shift_param(s), days()});
             return;
         }
         const Person& p = *sd.planned;
@@ -228,20 +246,20 @@ private:
                 add(Check::DayAssignmentAgainstFact, sd.person_assignment->src, {shift_param(s), person_param(p), detail, date_param("data", sd.day)},
                     variant);
             else
-                add(Check::RecurringShiftPersonFact, where, {shift_param(s), person_param(p), detail, days}, variant);
+                add(Check::RecurringShiftPersonFact, where, {shift_param(s), person_param(p), detail, days()}, variant);
         }
         if (!sd.person) return;
-        persons_[p.code].push_back({absolute(sd.day, sd.start), absolute(sd.day, sd.end), sd.day, &s, sd.person_position()});
+        persons_[&p].push_back({absolute(sd.day, sd.start), absolute(sd.day, sd.end), sd.day, &s, &sd.person_position()});
         used_persons_.insert(p.code);
-        const Source where = sd.person_position();
+        const Source& where = sd.person_position();
 
         const bool driver = s.role == ShiftRole::Driver || s.role == ShiftRole::SecondDriver;
         if ((driver && !p.has_role(PersonRole::Driver)) || (s.role == ShiftRole::Escort && !p.has_role(PersonRole::Escort)))
-            add(Check::PersonRoleMismatch, where, {shift_param(s), person_param(p), days}, s.role == ShiftRole::Escort ? 1 : 0);
+            add(Check::PersonRoleMismatch, where, {shift_param(s), person_param(p), days()}, s.role == ShiftRole::Escort ? 1 : 0);
         if (p.company.code != s.company.code &&
             std::none_of(p.loans.begin(), p.loans.end(), [&s](const Loan& l) { return l.company.code == s.company.code; }))
             add(Check::OtherCompanyWithoutLoan, where,
-                {shift_param(s), person_param(p), ref_param("azienda", Element::Company, s.company.code), days}, 0);
+                {shift_param(s), person_param(p), ref_param("azienda", Element::Company, s.company.code), days()}, 0);
         // Competenze richieste dal turno e (per l'autista) dai servizi delle sue corse.
         std::set<Code> required;
         for (const Ref& k : s.competences) required.insert(k.code);
@@ -253,7 +271,7 @@ private:
                             for (const Ref& k : sv->competences) required.insert(k.code);
         for (const Code& k : required)
             if (!p.has_competence(k))
-                add(Check::PersonWithoutCompetence, where, {shift_param(s), person_param(p), particular(text_param("competenza", k)), days});
+                add(Check::PersonWithoutCompetence, where, {shift_param(s), person_param(p), particular(text_param("competenza", k)), days()});
         // Abilitazioni e autorizzazioni del committente.
         const Vehicle* v = s.role == ShiftRole::Driver ? sd.vehicle : s.role == ShiftRole::SecondDriver ? sd.aboard : nullptr;
         if (v)
@@ -261,7 +279,7 @@ private:
                 const LicenceResult r = check_licences(p, *v, *n, sd.day);
                 if (r.status == LicenceStatus::Missing)
                     add(Check::DriverWithoutLicence, where,
-                        {shift_param(s), person_param(p), vehicle_param(*v), personal(text_param("alternative", alternatives(*r.requirement, *v))), days},
+                        {shift_param(s), person_param(p), vehicle_param(*v), personal(text_param("alternative", alternatives(*r.requirement, *v))), days()},
                         0);
             }
         if (s.role == ShiftRole::Driver)
@@ -271,7 +289,7 @@ private:
                 if (!any)
                     add(Check::DriverWithoutLicence, where,
                         {shift_param(s), person_param(p), ref_param("committente", Element::Client, ra.contract->client.code),
-                         ref_param("servizio", Element::Service, ra.service->code), days},
+                         ref_param("servizio", Element::Service, ra.service->code), days()},
                         1);
             }
         preferences(sd, p);
@@ -310,7 +328,7 @@ private:
     }
 
     void preferences(const ShiftDay& sd, const Person& p) {
-        const Param days = days_param("giorni", sd.day);
+        const auto days = [&] { return days_param("giorni", sd.day); };   // solo se serve
         const int variant = sd.person_source == PersonSource::Day ? 1 : 0;
         for (const Preference& f : p.preferences) {
             if (!f.covers_date(sd.day)) continue;
@@ -327,7 +345,7 @@ private:
                     break;
                 case PreferenceKind::Other: break;
             }
-            if (violated) add(Check::PreferenceNotRespected, f.src, {person_param(p), shift_param(*sd.shift), days}, variant);
+            if (violated) add(Check::PreferenceNotRespected, f.src, {person_param(p), shift_param(*sd.shift), days()}, variant);
         }
     }
 
@@ -338,8 +356,8 @@ private:
         if (!settings || settings->pairing == DriverVehiclePairing::None) return;
         const Vehicle& v = *sd.vehicle;
         if (p.usual_vehicle && p.usual_vehicle->code == v.code) return;
-        const Param days = days_param("giorni", sd.day);
-        std::vector<Param> params = {shift_param(*sd.shift), person_param(p), vehicle_param(v), days};
+        const auto days = [&] { return days_param("giorni", sd.day); };   // solo se serve
+        std::vector<Param> params = {shift_param(*sd.shift), person_param(p), vehicle_param(v), days()};
         const int with_usual = p.usual_vehicle ? 0 : 1;
         if (settings->pairing == DriverVehiclePairing::Fixed) {
             const bool day = sd.person_source == PersonSource::Day || sd.vehicle_source == VehicleSource::Day;
@@ -359,11 +377,11 @@ private:
     void vehicle(const ShiftDay& sd) {
         const Shift& s = *sd.shift;
         if (s.role != ShiftRole::Driver) return;
-        const Param days = days_param("giorni", sd.day);
+        const auto days = [&] { return days_param("giorni", sd.day); };   // solo se serve
         if (s.vehicle_mode == ShiftVehicleMode::ToAssign && sd.vehicle_source == VehicleSource::None)
-            add(Check::ShiftVehicleToAssign, s.vehicle_src, {shift_param(s), days});
+            add(Check::ShiftVehicleToAssign, s.vehicle_src, {shift_param(s), days()});
         if (s.vehicle_mode == ShiftVehicleMode::Usual && sd.vehicle_source == VehicleSource::Usual && sd.person && !sd.person->usual_vehicle)
-            add(Check::ShiftVehicleInconsistent, sd.person_position(), {shift_param(s), person_param(*sd.person), days}, 2);
+            add(Check::ShiftVehicleInconsistent, sd.person_position(), {shift_param(s), person_param(*sd.person), days()}, 2);
         if (!sd.planned_vehicle) return;
         const Vehicle& v = *sd.planned_vehicle;
         if (sd.vehicle_impediment != VehicleImpediment::None) {
@@ -392,16 +410,16 @@ private:
                 add(Check::DayAssignmentAgainstFact, sd.vehicle_assignment->src, {shift_param(s), vehicle_param(v), detail, date_param("data", sd.day)},
                     5 + variant);
             else
-                add(Check::RecurringShiftVehicleFact, where, {shift_param(s), vehicle_param(v), detail, days}, variant);
+                add(Check::RecurringShiftVehicleFact, where, {shift_param(s), vehicle_param(v), detail, days()}, variant);
         }
         if (!sd.vehicle) return;
         used_vehicles_.insert(v.code);
-        const Source where = sd.vehicle_position();
-        vehicles_[v.code].push_back({absolute(sd.day, sd.vehicle_start.value_or(sd.start)), absolute(sd.day, sd.vehicle_end.value_or(sd.end)),
-                                     sd.day, &s, where});
+        const Source& where = sd.vehicle_position();
+        vehicles_[&v].push_back({absolute(sd.day, sd.vehicle_start.value_or(sd.start)), absolute(sd.day, sd.vehicle_end.value_or(sd.end)),
+                                 sd.day, &s, &where});
         if (v.company.code != s.company.code &&
             std::none_of(v.loans.begin(), v.loans.end(), [&s](const Loan& l) { return l.company.code == s.company.code; }))
-            add(Check::OtherCompanyWithoutLoan, where, {shift_param(s), vehicle_param(v), ref_param("azienda", Element::Company, s.company.code), days},
+            add(Check::OtherCompanyWithoutLoan, where, {shift_param(s), vehicle_param(v), ref_param("azienda", Element::Company, s.company.code), days()},
                 1);
         const bool constrained = v.constraint && (!v.constraint->until || sd.day <= *v.constraint->until);
         std::set<Code> reported;
@@ -411,7 +429,7 @@ private:
                 const Service* sv = idx_.service(sr.code);
                 if (!sv || !reported.insert(sv->code).second) continue;
                 // Uso dei mezzi: senza nessuna autorizzazione a un uso ammesso e' sempre sbagliato.
-                const auto allowed = allowed_uses(*sv, idx_);
+                const std::optional<std::vector<Code>>& allowed = plan_.uses_of(*sv);
                 if (allowed && v.use) {
                     const auto ok = [&allowed](const Code& u) { return std::find(allowed->begin(), allowed->end(), u) != allowed->end(); };
                     const bool authorized = std::any_of(v.use_authorizations.begin(), v.use_authorizations.end(),
@@ -421,7 +439,7 @@ private:
                         for (const Code& u : *allowed) uses += (uses.empty() ? "" : ", ") + u;
                         add(Check::VehicleWithoutUseForService, where,
                             {shift_param(s), vehicle_param(v), text_param("uso", v.use->code), ref_param("servizio", Element::Service, sv->code),
-                             text_param("usi", uses), days});
+                             text_param("usi", uses), days()});
                     }
                 }
                 if (constrained) {
@@ -430,24 +448,24 @@ private:
                     const bool contract_ok = std::any_of(c.contracts.begin(), c.contracts.end(),
                                                          [sv](const Ref& r) { return r.code == sv->contract.code; });
                     if (!kind_ok && !contract_ok)
-                        add(Check::VehicleAgainstConstraint, where, {shift_param(s), vehicle_param(v), ref_param("servizio", Element::Service, sv->code), days});
+                        add(Check::VehicleAgainstConstraint, where, {shift_param(s), vehicle_param(v), ref_param("servizio", Element::Service, sv->code), days()});
                 }
             }
         }
     }
 
     // Corse del giorno: senza turno, divise in pezzi con un buco, nello stesso pezzo di due turni.
-    void trips(Day d, const std::map<const Trip*, std::vector<std::pair<const PlannedItem*, const ShiftDay*>>>& pieces) {
+    void trips(Day d) {
         if (p_.shifts.empty()) return;
-        const Param days = days_param("giorni", d);
-        for (const Trip& t : p_.trips) {
-            if (!plan_.days().active(t.calendar.code, d) || t.passages.empty()) continue;
-            const auto it = pieces.find(&t);
-            if (it == pieces.end()) {
-                add(Check::TripWithoutShift, t.src, {ref_param("corsa", Element::Trip, t.code), days});
+        for (std::size_t i = 0; i < p_.trips.size(); ++i) {
+            const Trip& t = p_.trips[i];
+            if (!plan_.days().active(trip_days_[i], d) || t.passages.empty()) continue;
+            const auto days = [&] { return days_param("giorni", d); };   // solo se serve
+            if (pieces_[i].empty()) {
+                add(Check::TripWithoutShift, t.src, {ref_param("corsa", Element::Trip, t.code), days()});
                 continue;
             }
-            auto v = it->second;
+            auto v = pieces_[i];
             std::sort(v.begin(), v.end(), [](const auto& a, const auto& b) {
                 return std::tie(a.first->from, a.first->to) < std::tie(b.first->from, b.first->to);
             });
@@ -455,24 +473,24 @@ private:
             if (v.front().first->from > 0)
                 add(Check::TripPartsGap, v.front().first->item->src,
                     {ref_param("corsa", Element::Trip, t.code), ref_param("da", Element::Place, t.passages[0].place.code),
-                     ref_param("a", Element::Place, t.passages[v.front().first->from].place.code), days});
+                     ref_param("a", Element::Place, t.passages[v.front().first->from].place.code), days()});
             std::size_t covered = v.front().first->to;
             for (std::size_t i = 1; i < v.size(); ++i) {
                 const PlannedItem& cur = *v[i].first;
                 if (cur.from < covered)
                     add(Check::TripInTwoShifts, cur.item->src,
                         {ref_param("corsa", Element::Trip, t.code), shift_param(*v[i].second->shift),
-                         ref_param("altro", Element::Shift, previous_owner(v, i, cur.from)->shift->code), days});
+                         ref_param("altro", Element::Shift, previous_owner(v, i, cur.from)->shift->code), days()});
                 else if (cur.from > covered)
                     add(Check::TripPartsGap, cur.item->src,
                         {ref_param("corsa", Element::Trip, t.code), ref_param("da", Element::Place, t.passages[covered].place.code),
-                         ref_param("a", Element::Place, t.passages[cur.from].place.code), days});
+                         ref_param("a", Element::Place, t.passages[cur.from].place.code), days()});
                 covered = std::max(covered, cur.to);
             }
             if (covered < last)
                 add(Check::TripPartsGap, v.back().first->item->src,
                     {ref_param("corsa", Element::Trip, t.code), ref_param("da", Element::Place, t.passages[covered].place.code),
-                     ref_param("a", Element::Place, t.passages[last].place.code), days});
+                     ref_param("a", Element::Place, t.passages[last].place.code), days()});
         }
     }
 
@@ -485,50 +503,47 @@ private:
     }
 
     // Assistente a bordo: chi lo fornisce secondo il turno e il contratto; persona dell'azienda assegnata.
-    void escort_checks(const std::vector<ShiftDay>& plan, const std::map<const Trip*, std::vector<const ShiftDay*>>& escorts) {
+    void escort_checks(const std::vector<ShiftDay>& plan) {
         for (const ShiftDay& sd : plan) {
             if (sd.shift->role != ShiftRole::Driver) continue;
-            const Param days = days_param("giorni", sd.day);
+            const auto days = [&] { return days_param("giorni", sd.day); };   // solo se serve
             for (const PlannedItem& it : sd.items) {
                 if (!it.trip || it.trip->services.empty()) continue;
                 const Service* sv = idx_.service(it.trip->services.front().code);
                 const Contract* c = sv ? idx_.contract(sv->contract.code) : nullptr;
                 if (!c) continue;
-                bool aboard = it.item->trip.escort.has_value();
-                for (const Passage& ps : it.trip->passages) aboard = aboard || ps.assistant != AssistantMove::None;
+                const bool aboard = it.item->trip.escort.has_value() || assistant_aboard_[trip_index(it.trip)] != 0;
                 const EscortProvider provider = it.item->trip.escort.value_or(c->escort_provider);
                 const Param trip = ref_param("corsa", Element::Trip, it.trip->code);
                 const Param contract = ref_param("contratto", Element::Contract, c->code);
                 if (it.item->trip.escort && *it.item->trip.escort != c->escort_provider)
-                    add(Check::EscortProviderDiffers, it.item->src, {shift_param(*sd.shift), trip, contract, days},
+                    add(Check::EscortProviderDiffers, it.item->src, {shift_param(*sd.shift), trip, contract, days()},
                         *it.item->trip.escort == EscortProvider::Company ? 0 : 1);
-                const auto e = escorts.find(it.trip);
-                const bool company_escort =
-                    e != escorts.end() && std::any_of(e->second.begin(), e->second.end(), [](const ShiftDay* x) { return x->person != nullptr; });
+                const std::vector<const ShiftDay*>& e = escorts_[trip_index(it.trip)];
+                const bool company_escort = std::any_of(e.begin(), e.end(), [](const ShiftDay* x) { return x->person != nullptr; });
                 if (aboard && provider == EscortProvider::Company && !company_escort)
-                    add(Check::EscortWithoutPerson, it.item->src, {shift_param(*sd.shift), trip, days});
-                if (e != escorts.end() && provider == EscortProvider::Client && !it.item->trip.escort)
-                    add(Check::EscortProviderDiffers, e->second.front()->shift->src,
-                        {ref_param("turno", Element::Shift, e->second.front()->shift->code), trip, contract, days}, 2);
+                    add(Check::EscortWithoutPerson, it.item->src, {shift_param(*sd.shift), trip, days()});
+                if (!e.empty() && provider == EscortProvider::Client && !it.item->trip.escort)
+                    add(Check::EscortProviderDiffers, e.front()->shift->src,
+                        {ref_param("turno", Element::Shift, e.front()->shift->code), trip, contract, days()}, 2);
             }
         }
     }
 
     // Corse bloccate su un mezzo e fatte con un altro.
-    void blocks(Day d, const std::map<const Trip*, std::vector<std::pair<const PlannedItem*, const ShiftDay*>>>& pieces) {
-        const Param days = days_param("giorni", d);
+    void blocks(Day d) {
+        const auto days = [&] { return days_param("giorni", d); };   // solo se serve
         for (const Block& b : p_.blocks) {
             if (!b.valid_on(d)) continue;
             for (const Ref& tr : b.trips) {
                 const Trip* t = idx_.trip(tr.code);
-                const auto it = t ? pieces.find(t) : pieces.end();
-                if (it == pieces.end()) continue;
-                for (const auto& [item, sd] : it->second)
+                if (!t) continue;
+                for (const auto& [item, sd] : pieces_[trip_index(t)])
                     if (sd->vehicle && sd->vehicle->code != b.vehicle.code)
                         add(Check::BlockedTripOtherVehicle, sd->vehicle_position(),
                             {ref_param("corsa", Element::Trip, t->code), ref_param("blocco", Element::Block, b.code),
                              vehicle_param_code(b.vehicle.code), ref_param("altro", Element::Vehicle, sd->vehicle->code),
-                             shift_param(*sd->shift), days});
+                             shift_param(*sd->shift), days()});
             }
         }
     }
@@ -536,13 +551,16 @@ private:
     // Persone o mezzi in due turni che si sovrappongono, anche a cavallo della mezzanotte (un orario arriva al massimo a
     // 47:59: il turno sovrapposto e' dello stesso giorno o del giorno prima). Il messaggio non scrive la data dell'altro
     // turno: e' il giorno prima di ogni giorno elencato, e cosi' lo stesso problema di molti giorni si raggruppa.
-    void overlaps(std::map<Code, std::vector<Interval>>& all, Check c, Element e) {
-        for (auto& [code, v] : all) {
+    // L'elenco e' per persona o per mezzo (in ordine di posizione nel pacchetto).
+    template <class T>
+    void overlaps(std::map<const T*, std::vector<Interval>>& all, Check c, Element e) {
+        for (auto& [who, v] : all) {
+            const Code& code = who->code;
             std::sort(v.begin(), v.end(), [](const Interval& a, const Interval& b) { return std::tie(a.a, a.b) < std::tie(b.a, b.b); });
             const Interval* longest = nullptr;
             for (const Interval& x : v) {
                 if (longest && x.a < longest->b)
-                    add(c, x.where,
+                    add(c, *x.where,
                         {ref_param(e == Element::Person ? "persona" : "mezzo", e, code), shift_param(*x.shift),
                          ref_param("altro", Element::Shift, longest->shift->code), days_param("giorni", x.day)},
                         longest->day == x.day ? 0 : 1);
@@ -560,11 +578,19 @@ private:
             if (!v.hypothetical && !v.spare && !used_vehicles_.count(v.code)) add(Check::VehicleNeverUsed, v.src, {vehicle_param(v)});
     }
 
+    std::size_t trip_index(const Trip* t) const { return static_cast<std::size_t>(t - p_.trips.data()); }
+
     const Package& p_;
     std::vector<Problem>& out_;
     Planner plan_;
     const Index& idx_;
-    std::map<Code, std::vector<Interval>> persons_, vehicles_;
+    Pieces pieces_;
+    std::vector<std::vector<const ShiftDay*>> escorts_;
+    std::vector<std::size_t> touched_;
+    std::vector<const std::vector<char>*> trip_days_;
+    std::vector<char> assistant_aboard_;
+    std::map<const Person*, std::vector<Interval>> persons_;
+    std::map<const Vehicle*, std::vector<Interval>> vehicles_;
     std::set<Code> used_persons_, used_vehicles_;
 };
 

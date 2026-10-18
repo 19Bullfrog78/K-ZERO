@@ -582,9 +582,18 @@ target_link_libraries(genera_scala PRIVATE kzero_api)
 target_compile_options(genera_scala PRIVATE ${KZERO_WARNINGS})
 add_test(NAME scala.genera COMMAND genera_scala ${CMAKE_CURRENT_BINARY_DIR}/scala)
 set_tests_properties(scala.genera PROPERTIES FIXTURES_SETUP scala LABELS scala)
-kzero_prova(scala_controlla USCITA 0 FORMATO testo CONTIENE "0 errori"
+# Il riepilogo in due pezzi: in CMake il punto e virgola separa gli elementi di un elenco.
+kzero_prova(scala_controlla USCITA 0 FORMATO testo
+            CONTIENE "10000 corse, 600 mezzi, 1320 persone, 1200 turni" " 0 errori, 0 avvisi."
             ARGOMENTI controlla ${CMAKE_CURRENT_BINARY_DIR}/scala)
 set_tests_properties(programma.scala_controlla PROPERTIES FIXTURES_REQUIRED scala LABELS "programma;scala")
+# K-008: la giornata di un giovedi' di scuola (tutti i turni) e quella di una persona finiscono senza errori.
+kzero_prova(scala_giornata USCITA 0 FORMATO testo CONTIENE "Totali: 1200 turni (nessuno scoperto, nessuno senza mezzo)"
+            ARGOMENTI giornata ${CMAKE_CURRENT_BINARY_DIR}/scala --data 2026-10-15)
+set_tests_properties(programma.scala_giornata PROPERTIES FIXTURES_REQUIRED scala LABELS "programma;scala")
+kzero_prova(scala_giornata_persona USCITA 0 FORMATO json SCHEMA giornata CONTIENE "\"turni\": 1,"
+            ARGOMENTI giornata ${CMAKE_CURRENT_BINARY_DIR}/scala --data 2026-10-15 --persona P-03-007 --formato json)
+set_tests_properties(programma.scala_giornata_persona PROPERTIES FIXTURES_REQUIRED scala LABELS "programma;scala")
 
 # --- Schemi: validi per JSON Schema draft-07; esempi e pacchetti di esempio conformi -----
 if(KZERO_CHECK_JSONSCHEMA)

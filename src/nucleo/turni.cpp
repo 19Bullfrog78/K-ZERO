@@ -7,7 +7,7 @@
 
 namespace kzero {
 
-Source ShiftDay::person_position() const {
+const Source& ShiftDay::person_position() const {
     switch (person_source) {
         case PersonSource::Day: return person_assignment->src;
         case PersonSource::Fixed: return fixed->src;
@@ -17,7 +17,7 @@ Source ShiftDay::person_position() const {
     return shift->src;
 }
 
-Source ShiftDay::vehicle_position() const {
+const Source& ShiftDay::vehicle_position() const {
     switch (vehicle_source) {
         case VehicleSource::Day: return vehicle_assignment->src;
         case VehicleSource::Shift:
@@ -223,6 +223,40 @@ std::vector<RequiredAuthorization> required_authorizations(const ShiftDay& sd, c
 // --- Il piano di un giorno ---------------------------------------------------------------------------------------
 
 Planner::Planner(const Package& p) : p_(p), idx_(p), days_(idx_, p.manifest.period) {
+    for (const Service& s : p.services) service_uses_.emplace(&s, allowed_uses(s, idx_));
+    // Rotazioni: turni di ogni passo e persona di ogni riga cercati una volta sola (un turno doppio vale il primo, come
+    // nell'indice; un turno che non esiste si salta: K-CTR-010).
+    std::unordered_map<Code, std::size_t> shift_pos;
+    for (std::size_t i = 0; i < p.shifts.size(); ++i) shift_pos.emplace(p.shifts[i].code, i);
+    for (const Rotation& r : p.rotations) {
+        std::vector<RotationRowPlan> rows;
+        for (const RotationRow& row : r.rows) {
+            RotationRowPlan rp;
+            rp.person = idx_.person(row.person.code);
+            for (const RotationStep& st : row.steps) {
+                std::vector<std::size_t> shifts;
+                if (!st.rest)
+                    for (const Ref& sh : st.shifts) {
+                        const auto it = shift_pos.find(sh.code);
+                        if (it != shift_pos.end()) shifts.push_back(it->second);
+                    }
+                rp.steps.push_back(std::move(shifts));
+            }
+            rows.push_back(std::move(rp));
+        }
+        rotation_plan_.push_back(std::move(rows));
+    }
+    for (const Shift& s : p.shifts)
+        for (const ShiftItem& item : s.items) {
+            if (!item.is_trip) continue;
+            TripItem ti;
+            ti.trip = idx_.trip(item.trip.trip.code);
+            if (ti.trip) {
+                ti.days = days_.days_of(ti.trip->calendar.code);
+                ti.part = resolve_part(item.trip, *ti.trip);
+            }
+            trip_items_.emplace(&item, ti);
+        }
     for (const DayAssignment& a : p.day_assignments) day_assignments_[{a.date, a.shift.code}].push_back(&a);
     for (const FixedAssignment& f : p.fixed) fixed_[f.shift.code].push_back(&f);
     for (const Absence& a : p.absences) absences_[a.person.code].push_back(&a);
@@ -401,7 +435,8 @@ void Planner::vehicle_facts(ShiftDay& sd) const {
             if (!it.trip || sd.vehicle_impediment != VehicleImpediment::None) continue;
             for (const Ref& sr : it.trip->services) {
                 const Service* s = idx_.service(sr.code);
-                const auto allowed = s ? allowed_uses(*s, idx_) : std::nullopt;
+                if (!s) continue;
+                const std::optional<std::vector<Code>>& allowed = uses_of(*s);
                 if (!allowed) continue;
                 const auto ok = [&allowed](const Code& u) { return std::find(allowed->begin(), allowed->end(), u) != allowed->end(); };
                 if (ok(v->use->code)) continue;
@@ -425,8 +460,20 @@ void Planner::vehicle_facts(ShiftDay& sd) const {
 
 bool Planner::item_on(const ShiftItem& item, Day d) const {
     if (!item.is_trip) return !item.activity.calendar || days_.active(item.activity.calendar->code, d);
-    const Trip* t = idx_.trip(item.trip.trip.code);
-    return t && days_.active(t->calendar.code, d) && resolve_part(item.trip, *t).problem == PartProblem::None;
+    const auto it = trip_items_.find(&item);
+    if (it == trip_items_.end()) {   // elemento che non viene dai turni del pacchetto
+        const Trip* t = idx_.trip(item.trip.trip.code);
+        return t && days_.active(t->calendar.code, d) && resolve_part(item.trip, *t).problem == PartProblem::None;
+    }
+    const TripItem& ti = it->second;
+    return ti.trip && days_.active(ti.days, d) && ti.part.problem == PartProblem::None;
+}
+
+const std::optional<std::vector<Code>>& Planner::uses_of(const Service& s) const {
+    const auto it = service_uses_.find(&s);
+    if (it != service_uses_.end()) return it->second;
+    static const std::optional<std::vector<Code>> nessuna_regola;   // servizio che non e' nel pacchetto
+    return nessuna_regola;
 }
 
 int Planner::shift_days(const Shift& s) const {
@@ -444,20 +491,20 @@ std::vector<ShiftDay> Planner::day(Day d) const {
     if (!days_.in_period(d)) return out;
 
     // Candidati delle rotazioni valide quel giorno, turno per turno (una sola passata sulle righe).
-    std::map<Code, std::vector<RotationCandidate>> rotation_candidates;
-    for (const Rotation& r : p_.rotations) {
+    std::vector<std::vector<RotationCandidate>> rotation_candidates(p_.shifts.size());
+    for (std::size_t ri = 0; ri < p_.rotations.size(); ++ri) {
+        const Rotation& r = p_.rotations[ri];
         if (!r.valid_on(d, p_.manifest.period.to)) continue;
         const int step = r.step_index(d);
         for (std::size_t i = 0; i < r.rows.size(); ++i) {
-            const RotationRow& row = r.rows[i];
+            const RotationRowPlan& row = rotation_plan_[ri][i];
             if (static_cast<std::size_t>(step) >= row.steps.size()) continue;   // riga piu' corta del ciclo (K-CTR-057)
-            const RotationStep& st = row.steps[static_cast<std::size_t>(step)];
-            if (st.rest) continue;
-            for (const Ref& s : st.shifts) rotation_candidates[s.code].push_back({&r, i, step, idx_.person(row.person.code)});
+            for (const std::size_t s : row.steps[static_cast<std::size_t>(step)]) rotation_candidates[s].push_back({&r, i, step, row.person});
         }
     }
 
-    for (const Shift& s : p_.shifts) {
+    for (std::size_t si = 0; si < p_.shifts.size(); ++si) {
+        const Shift& s = p_.shifts[si];
         if (!days_.active(s.calendar.code, d)) continue;
         ShiftDay sd;
         sd.shift = &s;
@@ -468,8 +515,9 @@ std::vector<ShiftDay> Planner::day(Day d) const {
             PlannedItem pi;
             pi.item = &item;
             if (item.is_trip) {
-                const Trip* t = idx_.trip(item.trip.trip.code);
-                const PartResolution pr = resolve_part(item.trip, *t);
+                const TripItem& ti = trip_items_.at(&item);
+                const Trip* t = ti.trip;
+                const PartResolution& pr = ti.part;
                 pi.trip = t;
                 pi.from = pr.from;
                 pi.to = pr.to;
@@ -505,8 +553,7 @@ std::vector<ShiftDay> Planner::day(Day d) const {
             sd.vehicle_start = sd.vehicle_start ? std::min(*sd.vehicle_start, pi.start) : pi.start;
             sd.vehicle_end = sd.vehicle_end ? std::max(*sd.vehicle_end, pi.end) : pi.end;
         }
-        const auto rc = rotation_candidates.find(s.code);
-        if (rc != rotation_candidates.end()) sd.rotation_candidates = rc->second;
+        sd.rotation_candidates = std::move(rotation_candidates[si]);
         resolve_person(sd);
         person_facts(sd, false);
         resolve_vehicle(sd);

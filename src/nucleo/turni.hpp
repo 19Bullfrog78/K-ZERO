@@ -8,6 +8,7 @@
 #include <map>
 #include <optional>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 #include "pacchetto.hpp"
@@ -84,9 +85,9 @@ struct ShiftDay {
     // Punto dei dati in cui e' scritta l'assegnazione della persona (la riga della rotazione, il servizio fisso,
     // l'assegnazione del giorno); il turno se nessun modo da' una persona. Resta lo stesso nei giorni diversi, cosi' i
     // problemi uguali di molti giorni si raggruppano.
-    Source person_position() const;
+    const Source& person_position() const;
     // Punto dei dati in cui e' scritto il mezzo (assegnazione del giorno o turno).
-    Source vehicle_position() const;
+    const Source& vehicle_position() const;
 };
 
 // Inizio assoluto di un orario di un giorno: minuti dall'inizio del 1970-01-01 (per confrontare giorni diversi,
@@ -199,15 +200,33 @@ public:
     // o un'attivita'.
     int shift_days(const Shift& s) const;
 
+    // Usi dei mezzi ammessi per un servizio del pacchetto (allowed_uses), calcolati una volta sola.
+    const std::optional<std::vector<Code>>& uses_of(const Service& s) const;
+
 private:
     void resolve_person(ShiftDay& sd) const;
     void resolve_vehicle(ShiftDay& sd) const;
     void person_facts(ShiftDay& sd, bool with_vehicle) const;
     void vehicle_facts(ShiftDay& sd) const;
 
+    // Corsa e pezzo di ogni elemento-corsa dei turni: non cambiano da un giorno all'altro, si calcolano una volta sola.
+    struct TripItem {
+        const Trip* trip = nullptr;
+        const std::vector<char>* days = nullptr;   // giorni del calendario della corsa
+        PartResolution part;
+    };
+
     const Package& p_;
     Index idx_;
     CalendarDays days_;
+    std::unordered_map<const ShiftItem*, TripItem> trip_items_;
+    std::unordered_map<const Service*, std::optional<std::vector<Code>>> service_uses_;
+    // Per ogni rotazione, riga e passo: i turni del passo (posizioni in Package::shifts) e la persona della riga.
+    struct RotationRowPlan {
+        const Person* person = nullptr;
+        std::vector<std::vector<std::size_t>> steps;   // vuoto = riposo
+    };
+    std::vector<std::vector<RotationRowPlan>> rotation_plan_;
     std::map<std::pair<Day, Code>, std::vector<const DayAssignment*>> day_assignments_;
     std::map<Code, std::vector<const FixedAssignment*>> fixed_;
     std::map<Code, std::vector<const Absence*>> absences_;

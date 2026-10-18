@@ -116,6 +116,12 @@ public:
     bool active(const Code& calendar, Day d) const;
     // Quanti giorni del periodo vale il calendario.
     int count(const Code& calendar) const;
+    // I giorni del periodo di un calendario (1 = vale), per chi li guarda molte volte senza cercare il codice ogni
+    // volta; nullptr se il calendario non esiste. Restano validi finche' vive questo oggetto.
+    const std::vector<char>* days_of(const Code& calendar) const;
+    bool active(const std::vector<char>* days, Day d) const {
+        return days && in_period(d) && (*days)[static_cast<std::size_t>(d - period_.from)] != 0;
+    }
 
 private:
     DateRange period_;

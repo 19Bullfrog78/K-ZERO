@@ -3,6 +3,7 @@
 // (controlli sulla forma dei file), messaggi in italiano, classi dei dati e loro filtro.
 // Le prove che lanciano il programma vero stanno in tests/programma.
 #include <algorithm>
+#include <functional>
 #include <fstream>
 #include <map>
 #include <optional>
@@ -340,6 +341,120 @@ TEST(Api, K_CTR_053_file_troppo_grande) {
     Memoria n;
     n.grandi["corse.json"] = kMassimoMBFile * 1024 * 1024;   // al limite: si legge
     EXPECT_TRUE(problemi(n, {}));
+}
+
+// File costruiti apposta per rompere il programma (K-008, sui file nuovi): annidamenti profondissimi, numeri e testi
+// enormi, orari e date impossibili, file vuoti. Ogni caso finisce subito con il codice giusto, il file non si usa e
+// il programma non si blocca. Un file con il segno BOM di UTF-8 all'inizio si legge (lo scrive il Blocco note).
+TEST(Api, file_costruiti_per_rompere) {
+    struct Caso {
+        std::string nome, file, testo;
+        Check atteso;
+        std::string puntatore;
+    };
+    const std::string profondo(300000, '[');
+    const std::string chiuso = std::string(100000, '[') + std::string(100000, ']');
+    Memoria demo;
+    const auto con = [&demo](const std::string& file, const std::string& vecchio, const std::string& nuovo) {
+        std::string t = *demo.file.at(file);
+        const std::size_t i = t.find(vecchio);
+        if (i == std::string::npos) throw std::logic_error("testo assente: " + vecchio);
+        return t.replace(i, vecchio.size(), nuovo);
+    };
+    const std::vector<Caso> casi = {
+        {"annidamento aperto", "turni.json", profondo, Check::InvalidJson, ""},
+        {"annidamento chiuso", "turni.json", chiuso, Check::WrongSchema, ""},
+        {"file vuoto", "rotazioni.json", "", Check::InvalidJson, ""},
+        {"numero enorme", "rotazioni.json", con("rotazioni.json", "\"lunghezza\": 14,", "\"lunghezza\": 1e308,"), Check::SchemaViolation,
+         "/rotazioni/0/lunghezza"},
+        {"numero lunghissimo", "rotazioni.json",
+         con("rotazioni.json", "\"lunghezza\": 14,", "\"lunghezza\": 123456789012345678901234567890,"), Check::SchemaViolation,
+         "/rotazioni/0/lunghezza"},
+        {"ciclo troppo lungo", "rotazioni.json", con("rotazioni.json", "\"lunghezza\": 14,", "\"lunghezza\": 1001,"),
+         Check::SchemaViolation, "/rotazioni/0/lunghezza"},
+        {"ciclo vuoto", "rotazioni.json", con("rotazioni.json", "\"lunghezza\": 14,", "\"lunghezza\": 0,"), Check::SchemaViolation,
+         "/rotazioni/0/lunghezza"},
+        {"testo enorme", "turni.json", con("turni.json", "\"nome\": \"Primo\",", "\"nome\": \"" + std::string(1000000, 'x') + "\","),
+         Check::SchemaViolation, "/turni/0/nome"},
+        {"orario impossibile", "turni.json", con("turni.json", "\"dalle\": \"07:15\"", "\"dalle\": \"48:00\""), Check::SchemaViolation,
+         "/turni/0/elementi/0/dalle"},
+        {"data inesistente", "assegnazioni.json", con("assegnazioni.json", "\"2026-10-19\"", "\"2026-02-30\""), Check::SchemaViolation,
+         "/assegnazioni/0/data"},
+        {"km negativi", "turni.json", con("turni.json", "\"km_vuoti\": 1.0", "\"km_vuoti\": -1.0"), Check::SchemaViolation,
+         "/turni/0/elementi/1/km_vuoti"},
+    };
+    for (const Caso& c : casi) {
+        Memoria m;
+        m.file[c.file] = c.testo;
+        const Lettura l = leggi_pacchetto(m);
+        ASSERT_FALSE(l.problemi.empty()) << c.nome;
+        EXPECT_EQ(l.problemi.front().check, c.atteso) << c.nome;
+        EXPECT_EQ(l.problemi.front().where.file, c.file) << c.nome;
+        if (!c.puntatore.empty()) {
+            EXPECT_EQ(l.problemi.front().where.pointer, c.puntatore) << c.nome;
+        }
+        EXPECT_FALSE(l.usato(c.file)) << c.nome;
+        const Resoconto r = controlla_pacchetto(m, Visibilita{});
+        EXPECT_FALSE(r.contenuto_controllato) << c.nome;   // con un errore di forma i controlli sul contenuto non partono
+        EXPECT_GE(r.errori, 1) << c.nome;
+    }
+    Memoria bom;
+    bom.file["turni.json"] = "\xEF\xBB\xBF" + *bom.file.at("turni.json");
+    EXPECT_TRUE(problemi(bom, {}));
+}
+
+// Ogni numero e ogni testo dei file di dati (tutte le versioni) ha un massimo di buon senso nello schema: un valore
+// enorme (un errore di battitura, un file prodotto male) si ferma alla lettura. Un testo e' limitato da maxLength,
+// da un elenco di valori o da un'espressione ancorata senza ripetizioni libere. Eccezione nota del K-007 (versione 1
+// del manifesto, non piu' modificabile): il fuso orario, che pero' deve essere un nome della forma Area/Luogo.
+TEST(Api, limiti_di_buon_senso_negli_schemi) {
+    const std::set<std::string> eccezioni = {"pacchetto/fuso_orario"};
+    std::vector<std::string> senza_limite;
+    std::function<void(const JsonDati&, const JsonDati&, const std::string&, int)> visita;
+    visita = [&](const JsonDati& radice, const JsonDati& n, const std::string& percorso, int profondita) {
+        ASSERT_LT(profondita, 60) << percorso;
+        if (!n.is_object()) return;
+        if (n.contains("$ref")) {
+            const std::string ref = n.at("$ref").get<std::string>();
+            visita(radice, radice.at("definitions").at(ref.substr(ref.rfind('/') + 1)), percorso, profondita + 1);
+        }
+        std::vector<std::string> tipi;
+        if (n.contains("type")) {
+            if (n.at("type").is_string()) tipi.push_back(n.at("type").get<std::string>());
+            else
+                for (const auto& t : n.at("type")) tipi.push_back(t.get<std::string>());
+        }
+        const auto ha = [&tipi](const char* t) { return std::find(tipi.begin(), tipi.end(), t) != tipi.end(); };
+        const bool elenco = n.contains("enum") || n.contains("const");
+        if ((ha("number") || ha("integer")) && !elenco && !n.contains("maximum") && !n.contains("exclusiveMaximum"))
+            senza_limite.push_back(percorso + " (numero)");
+        if (ha("string") && !elenco && !n.contains("maxLength")) {
+            const std::string pat = n.contains("pattern") ? n.at("pattern").get<std::string>() : "";
+            const bool ancorato = pat.size() > 1 && pat.front() == '^' && pat.back() == '$' && pat.find('*') == std::string::npos &&
+                                  pat.find('+') == std::string::npos;
+            if (!ancorato) senza_limite.push_back(percorso + " (testo)");
+        }
+        for (const auto& [k, v] : n.items()) {
+            if (k == "definitions") continue;
+            if (k == "properties")
+                for (const auto& [nome, figlio] : v.items()) visita(radice, figlio, percorso + "/" + nome, profondita + 1);
+            else if (k == "items" || k == "additionalProperties" || k == "not" || k == "if" || k == "then" || k == "else")
+                visita(radice, v, percorso, profondita + 1);
+            else if (k == "oneOf" || k == "anyOf" || k == "allOf")
+                for (const auto& x : v) visita(radice, x, percorso, profondita + 1);
+        }
+    };
+    for (const FileDati& f : file_dati())
+        for (int v : f.versioni) {
+            const JsonDati* s = SchemiDati::incorporati().schema(f.schema, v);
+            ASSERT_NE(s, nullptr) << f.schema;
+            senza_limite.clear();
+            visita(*s, *s, f.schema, 0);
+            for (const std::string& x : senza_limite) {
+                const std::string campo = x.substr(0, x.find(' '));
+                EXPECT_TRUE(eccezioni.count(campo)) << f.file << " versione " << v << ": " << x << " senza un massimo";
+            }
+        }
 }
 
 // Il rispetto dello schema lo controlla la libreria (valijson); i messaggi diventano italiani.

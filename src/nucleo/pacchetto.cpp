@@ -120,6 +120,11 @@ bool CalendarDays::active(const Code& calendar, Day d) const {
     return it != days_.end() && it->second[static_cast<std::size_t>(d - period_.from)] != 0;
 }
 
+const std::vector<char>* CalendarDays::days_of(const Code& calendar) const {
+    const auto it = days_.find(calendar);
+    return it == days_.end() ? nullptr : &it->second;
+}
+
 int CalendarDays::count(const Code& calendar) const {
     const auto it = days_.find(calendar);
     if (it == days_.end()) return 0;
