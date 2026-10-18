@@ -3,6 +3,7 @@
 // Da questa tabella nascono la lettura della riga di comando, la descrizione del programma
 // (kzero descrivi) e l'esecuzione: nulla va riscritto a mano una seconda volta.
 
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -20,6 +21,9 @@ struct Parametri {
     Formato formato = Formato::Testo;
     bool includi_dati_personali = false;
     bool includi_dati_particolari = false;
+    std::optional<kzero::Day> data;       // --data (kzero giornata)
+    std::string persona;                  // --persona: vuoto = non scritto
+    std::string mezzo;                    // --mezzo: vuoto = non scritto
     std::vector<std::string> argomenti;   // argomenti del comando (es. la cartella), nell'ordine della definizione
 };
 
@@ -32,6 +36,13 @@ struct DefinizioneArgomento {
 enum class TipoParametro {
     Interruttore,   // senza valore: presente o assente (es. --includi-dati-personali)
     Scelta,         // un valore fra quelli ammessi (es. --formato json)
+    Valore,         // un valore libero di una certa forma (es. --data 2026-10-15, --persona P-A)
+};
+
+// Forma di un valore libero; la controlla la lettura dei parametri, prima del comando.
+enum class FormaValore {
+    Data,     // AAAA-MM-GG, un giorno che esiste nel calendario
+    Codice,   // codice K-Zero: lettere senza accenti, cifre, '-', '_' e '.'; al massimo 64 caratteri
 };
 
 struct DefinizioneParametro {
@@ -39,6 +50,9 @@ struct DefinizioneParametro {
     TipoParametro tipo = TipoParametro::Interruttore;
     std::vector<std::string> valori;    // Scelta: valori ammessi, in ordine alfabetico
     std::string predefinito;            // Scelta: valore usato se il parametro manca
+    FormaValore forma = FormaValore::Codice;   // Valore: forma del valore
+    bool obbligatorio = false;                 // Valore: va sempre scritto
+    std::vector<std::string> incompatibili;    // parametri che non si possono scrivere insieme a questo
     std::string descrizione;
     // Mette il valore nei Parametri ("" per un interruttore presente).
     void (*applica)(Parametri&, const std::string& valore) = nullptr;

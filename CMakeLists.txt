@@ -107,6 +107,7 @@ add_library(kzero_api STATIC
   src/api/comando_controlla.cpp
   src/api/comando_descrivi.cpp
   src/api/comando_dimostrazione.cpp
+  src/api/comando_giornata.cpp
   src/api/comando_versione.cpp
   src/api/controlli_catalogo.cpp
   src/api/controllo.cpp
@@ -118,6 +119,7 @@ add_library(kzero_api STATIC
   src/api/schemi_dati.cpp
   src/api/uscita.cpp
   src/api/validazione.cpp
+  src/api/vista.cpp
   ${CMAKE_CURRENT_BINARY_DIR}/generato/risorse.cpp
 )
 target_include_directories(kzero_api

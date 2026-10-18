@@ -52,7 +52,10 @@ Resoconto controlla_pacchetto(const Sorgente& sorgente, const Visibilita& visibi
     const Presentatore presentatore(r.contenuto_controllato ? &r.lettura.pacchetto : nullptr, &r.lettura.versioni, visibilita);
     for (const kzero::Problem& p : problemi) {
         const DefinizioneControllo& d = definizione_controllo(p.check);
-        r.problemi.push_back({d.livello, d.codice, presentatore.messaggio(p), p.where});
+        std::vector<std::pair<kzero::Day, kzero::Day>> giorni;
+        for (const kzero::Param& x : p.params)
+            if (x.kind == kzero::Param::Kind::Days) giorni = periodi_di_giorni(x.days);
+        r.problemi.push_back({d.livello, d.codice, presentatore.messaggio(p), p.where, giorni});
         (d.livello == Livello::Errore ? r.errori : r.avvisi) += 1;
     }
     std::stable_sort(r.problemi.begin(), r.problemi.end(), prima);

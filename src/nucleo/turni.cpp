@@ -423,6 +423,22 @@ void Planner::vehicle_facts(ShiftDay& sd) const {
     if (sd.vehicle_impediment != VehicleImpediment::None && sd.vehicle_source != VehicleSource::Day) sd.vehicle = nullptr;
 }
 
+bool Planner::item_on(const ShiftItem& item, Day d) const {
+    if (!item.is_trip) return !item.activity.calendar || days_.active(item.activity.calendar->code, d);
+    const Trip* t = idx_.trip(item.trip.trip.code);
+    return t && days_.active(t->calendar.code, d) && resolve_part(item.trip, *t).problem == PartProblem::None;
+}
+
+int Planner::shift_days(const Shift& s) const {
+    int n = 0;
+    const DateRange& period = days_.period();
+    for (Day d = period.from; d <= period.to; ++d)
+        if (days_.active(s.calendar.code, d) &&
+            std::any_of(s.items.begin(), s.items.end(), [&](const ShiftItem& it) { return item_on(it, d); }))
+            ++n;
+    return n;
+}
+
 std::vector<ShiftDay> Planner::day(Day d) const {
     std::vector<ShiftDay> out;
     if (!days_.in_period(d)) return out;
@@ -448,13 +464,12 @@ std::vector<ShiftDay> Planner::day(Day d) const {
         sd.day = d;
         const CompanySettings* settings = idx_.settings(s.company.code);
         for (const ShiftItem& item : s.items) {
+            if (!item_on(item, d)) continue;   // corsa o attivita' che quel giorno non c'e' (o pezzo sbagliato: K-CTR-054)
             PlannedItem pi;
             pi.item = &item;
             if (item.is_trip) {
                 const Trip* t = idx_.trip(item.trip.trip.code);
-                if (!t || !days_.active(t->calendar.code, d)) continue;
                 const PartResolution pr = resolve_part(item.trip, *t);
-                if (pr.problem != PartProblem::None) continue;   // errore K-CTR-054
                 pi.trip = t;
                 pi.from = pr.from;
                 pi.to = pr.to;
@@ -472,7 +487,6 @@ std::vector<ShiftDay> Planner::day(Day d) const {
                 }
             } else {
                 const ShiftActivity& a = item.activity;
-                if (a.calendar && !days_.active(a.calendar->code, d)) continue;
                 pi.start = a.start;
                 pi.end = a.end;
                 pi.empty_km = a.empty_km.value_or(0.0);

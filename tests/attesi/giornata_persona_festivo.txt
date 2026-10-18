@@ -1,0 +1,50 @@
+Giornata del 2026-12-08, martedi' - pacchetto DEMO-2026 "Pacchetto dimostrativo K-Zero" (dati inventati)
+Persona P-B3, azienda BETA, presa servizio a L-RIMESSA-BETA (Sorgenta, rimessa Trasporti Beta)
+Festivita': Immacolata Concezione (FEST-IT).
+Controllo del pacchetto: nessun errore, 8 avvisi (dettagli con kzero controlla).
+Dati personali: sostituiti dal codice; dati particolari: riservati.
+
+T-B-FESTIVO "Festivo"  08:40-18:20 (9 ore e 40 minuti)  azienda BETA, autista
+   Persona: P-B3, rotazione ROT-BETA, passo 3 (rotazioni.json /rotazioni/1/righe/2)
+   Mezzo: BETA-02 (BB 202 BB, M3, 41 posti + 25 in piedi, uso LINEA), scritto nel turno
+   Calendario CAL-FESTIVI "Domeniche e festivita' nazionali"; il turno c'e' in 60 giorni del periodo
+   Comincia a L-RIMESSA-BETA (Sorgenta, rimessa Trasporti Beta), finisce a L-RIMESSA-BETA (Sorgenta, rimessa Trasporti Beta)
+   Nota: Orario festivo della linea: domeniche e festivita' nazionali.
+   08:40-08:58  Uscita dalla rimessa e controllo (PRESA-SERVIZIO), da L-RIMESSA-BETA (Sorgenta, rimessa Trasporti Beta) a F-SORGENTA (Sorgenta, Municipio), km a vuoto 2,5
+                (fermo 2 minuti)
+   09:00-09:30  corsa C-B620-11 "Linea B620, festiva delle 09:00"
+                servizi S-LIN-B620 (tipo riservato, contratto CT-LIN-BETA, committente TPV)
+                calendario CAL-FESTIVI "Domeniche e festivita' nazionali", 60 giorni nel periodo; km a pieno 14,1, a vuoto 0
+      09:00  F-SORGENTA  Sorgenta, Municipio  a bordo non noto
+      09:12  F-LAGOBELLO  Lagobello, Lago  km a pieno 6,2  a bordo non noto
+      09:30  F-MONTEBRINO  Montebrino, Centro  km a pieno 7,9  a bordo non noto
+   09:30-09:40  Sosta al capolinea (SOSTA), a F-MONTEBRINO (Montebrino, Centro)
+   09:40-10:10  corsa C-B620-12 "Linea B620, festiva delle 09:40"
+                servizi S-LIN-B620 (tipo riservato, contratto CT-LIN-BETA, committente TPV)
+                calendario CAL-FESTIVI "Domeniche e festivita' nazionali", 60 giorni nel periodo; km a pieno 14,1, a vuoto 0
+      09:40  F-MONTEBRINO  Montebrino, Centro  a bordo non noto
+      09:58  F-LAGOBELLO  Lagobello, Lago  km a pieno 7,9  a bordo non noto
+      10:10  F-SORGENTA  Sorgenta, Municipio  km a pieno 6,2  a bordo non noto
+                (fermo 2 minuti)
+   10:12-10:20  Rientro in rimessa (RIENTRO), da F-SORGENTA (Sorgenta, Municipio) a L-RIMESSA-BETA (Sorgenta, rimessa Trasporti Beta), km a vuoto 2,5
+                (fermo 6 ore e 20 minuti)
+   16:40-16:58  Uscita dalla rimessa e controllo (PRESA-SERVIZIO), da L-RIMESSA-BETA (Sorgenta, rimessa Trasporti Beta) a F-SORGENTA (Sorgenta, Municipio), km a vuoto 2,5
+                (fermo 2 minuti)
+   17:00-17:30  corsa C-B620-13 "Linea B620, festiva delle 17:00"
+                servizi S-LIN-B620 (tipo riservato, contratto CT-LIN-BETA, committente TPV)
+                calendario CAL-FESTIVI "Domeniche e festivita' nazionali", 60 giorni nel periodo; km a pieno 14,1, a vuoto 0
+      17:00  F-SORGENTA  Sorgenta, Municipio  a bordo non noto
+      17:12  F-LAGOBELLO  Lagobello, Lago  km a pieno 6,2  a bordo non noto
+      17:30  F-MONTEBRINO  Montebrino, Centro  km a pieno 7,9  a bordo non noto
+   17:30-17:40  Sosta al capolinea (SOSTA), a F-MONTEBRINO (Montebrino, Centro)
+   17:40-18:10  corsa C-B620-14 "Linea B620, festiva delle 17:40"
+                servizi S-LIN-B620 (tipo riservato, contratto CT-LIN-BETA, committente TPV)
+                calendario CAL-FESTIVI "Domeniche e festivita' nazionali", 60 giorni nel periodo; km a pieno 14,1, a vuoto 0
+      17:40  F-MONTEBRINO  Montebrino, Centro  a bordo non noto
+      17:58  F-LAGOBELLO  Lagobello, Lago  km a pieno 7,9  a bordo non noto
+      18:10  F-SORGENTA  Sorgenta, Municipio  km a pieno 6,2  a bordo non noto
+                (fermo 2 minuti)
+   18:12-18:20  Rientro in rimessa (RIENTRO), da F-SORGENTA (Sorgenta, Municipio) a L-RIMESSA-BETA (Sorgenta, rimessa Trasporti Beta), km a vuoto 2,5
+   Totale del turno: km a pieno 56,4, a vuoto 10; fermo 6 ore e 28 minuti.
+
+Totali: 1 turno (nessuno scoperto, nessuno senza mezzo), 1 persona, 1 mezzo; km a pieno 56,4, a vuoto 10 (dei mezzi guidati dalla persona); fermi 6 ore e 28 minuti.

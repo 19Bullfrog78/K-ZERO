@@ -35,6 +35,13 @@ const std::vector<DefinizioneErrore>& catalogo_errori() {
              "Impossibile scrivere il risultato"},
             {Errore::MancaArgomento, "K-ERR-011", CodiceUscita::ErroreParametri, "Manca un argomento"},
             {Errore::CartellaNonTrovata, "K-ERR-012", CodiceUscita::ErroreDati, "Cartella del pacchetto non trovata"},
+            {Errore::ParametroObbligatorio, "K-ERR-013", CodiceUscita::ErroreParametri, "Manca un parametro obbligatorio"},
+            {Errore::ValoreScrittoMale, "K-ERR-014", CodiceUscita::ErroreParametri, "Valore scritto nella forma sbagliata"},
+            {Errore::ParametriIncompatibili, "K-ERR-015", CodiceUscita::ErroreParametri,
+             "Parametri che non si possono usare insieme"},
+            {Errore::DataFuoriPeriodo, "K-ERR-016", CodiceUscita::ErroreParametri, "Data fuori dal periodo del pacchetto"},
+            {Errore::ElementoNonTrovato, "K-ERR-017", CodiceUscita::ErroreParametri, "Persona o mezzo non presente nel pacchetto"},
+            {Errore::PacchettoConErrori, "K-ERR-018", CodiceUscita::ErroreDati, "Il pacchetto ha errori nei dati"},
         };
         std::sort(c.begin(), c.end(), [](const DefinizioneErrore& a, const DefinizioneErrore& b) {
             return a.codice < b.codice;

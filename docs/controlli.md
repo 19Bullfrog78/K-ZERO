@@ -2,7 +2,7 @@
 
 `kzero controlla <cartella>` controlla un pacchetto dati (spiegato in [formato-dati.md](formato-dati.md))
 e scrive un resoconto in testo o in JSON (schema `controlla`, file
-[schema/controlla.v1.schema.json](schema/controlla.v1.schema.json)).
+[schema/controlla.v2.schema.json](schema/controlla.v2.schema.json); la versione 1, del K-007, non e' piu' prodotta).
 
 Ogni problema ha:
 - un **livello**: **errore** (il dato e' sbagliato e va corretto) oppure **avviso** (il dato e' accettabile,
@@ -16,7 +16,7 @@ Ogni problema ha:
 Come si legge il resoconto:
 - prima gli errori, poi gli avvisi; ciascuno in ordine di file (nell'ordine del formato) e di posizione;
   stesso pacchetto = stesso resoconto, byte per byte;
-- in fondo un **riepilogo**: aziende, luoghi, servizi, corse, errori, avvisi;
+- in fondo un **riepilogo**: aziende, luoghi, servizi, corse, mezzi, persone, turni, errori, avvisi;
 - **codice di uscita 0** se non ci sono errori (gli avvisi non bloccano), **1** se c'e' almeno un errore;
 - prima si controlla la **forma** dei file (K-CTR-001 ... K-CTR-008, K-CTR-048 e K-CTR-053): un file con un errore di
   forma non viene usato, e finche' c'e' un errore di forma i controlli sul **contenuto** (gli altri codici)
@@ -36,8 +36,13 @@ Controllo del pacchetto DEMO-2026 "Pacchetto dimostrativo K-Zero" (livello compl
 Errore K-CTR-017 (corse.json, /corse/3/passaggi/2): Nella corsa C-RM-1 (Ritorno mezzogiorno superiori e medie) l'orario 16:08 non sta tra quello del passaggio precedente (12:05) e quello del successivo (12:19): l'orario torna indietro.
 Avviso K-CTR-035 (luoghi.json, /luoghi/5): Il luogo F-CASTELROVO-ALTO (Castelrovo, Alto) non ha le coordinate: serviranno al calcolo delle distanze.
 Avviso K-CTR-043 (luoghi.json, /luoghi/17/trasbordo): Il punto di trasbordo L-TRASB-CROCE (Croce di Pradello, parcheggio) e' autorizzato solo a voce: manca il documento.
+Avviso K-CTR-050 (mezzi.json, /mezzi/6/autorizzazioni_uso/0): L'autorizzazione del mezzo ALFA-05 (AA 105 AA) all'uso NCC (distrazione) scade il 2027-06-30, dentro il periodo del pacchetto: dopo quella data il mezzo non puo' fare i servizi che chiedono quell'uso.
+Avviso K-CTR-050 (persone.json, /persone/2/abilitazioni/2): Un'abilitazione o un'autorizzazione della persona P-C scade dentro il periodo del pacchetto (dati personali: riservati).
+Avviso K-CTR-078 (persone.json, /persone/2/abilitazioni/2): Il turno T-SECONDO (Secondo) e' scoperto in 8 giorni tra il 2027-07-07 e il 2027-08-25 (i primi: 2027-07-07, 2027-07-14, 2027-07-21, 2027-07-28, 2027-08-04, 2027-08-11...): la persona prevista P-C non puo' farlo (dati personali: riservati). Rimedio: un'assegnazione del singolo giorno.
+Avviso K-CTR-078 (assenze.json, /assenze/2): Il turno T-PRIMO (Primo) e' scoperto il 2026-11-20: la persona prevista P-B non puo' farlo (dati personali: riservati). Rimedio: un'assegnazione del singolo giorno.
+Avviso K-CTR-082 (servizi_fissi.json, /servizi_fissi/2): Nel turno T-SCUOLA-1 (Scuola 1) la persona P-E guida il mezzo ALFA-07 (AA 107 AA), non il suo mezzo abituale (abbinamento preferito), dal 2026-10-19 al 2026-10-20 (2 giorni).
 Avviso K-CTR-036: Il pacchetto non ha i tempi di sosta (file tempi_sosta.json): serviranno al calcolo.
-Riepilogo: 2 aziende, 23 luoghi, 7 servizi, 10 corse; 1 errore, 3 avvisi.
+Riepilogo: 2 aziende, 23 luoghi, 9 servizi, 26 corse, 10 mezzi, 12 persone, 18 turni; 1 errore, 8 avvisi.
 ```
 
 Non sono in questo catalogo (arriveranno con la verifica delle regole e con il mandato "orari di lavoro"):
@@ -65,7 +70,7 @@ mezzo, con quali corse e attivita'. Seguono un principio unico:
 posizione, stesso messaggio a parte i giorni) si scrive una volta sola, con i giorni raggruppati in periodi
 di giorni consecutivi: "il 2026-10-22", "dal 2026-10-19 al 2026-10-23 (5 giorni)", "in 3 giorni (2026-10-12,
 dal 2026-10-19 al 2026-10-20)"; se i periodi sono piu' di sei: "in N giorni tra il X e il Y (i primi: ...)".
-La posizione e' scelta perche' resti la stessa nei
+In JSON il problema ha anche il campo `giorni`, con tutti i periodi (`dal`, `al`). La posizione e' scelta perche' resti la stessa nei
 giorni diversi: la riga della rotazione, il servizio fisso, l'assegnazione, il fatto (assenza, fermo), oppure
 il turno. Un turno scoperto tutti i giorni feriali di un anno e' quindi un solo avviso, non 261.
 

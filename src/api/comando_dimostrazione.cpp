@@ -1,13 +1,9 @@
 // K-Zero API - comando "dimostrazione": stampa di prova con il pacchetto dimostrativo esempi/demo
 // (DATI INVENTATI, incorporati nel programma), in testo o in JSON.
-// Prima si costruisce il documento JSON, gia' filtrato secondo le classi dei dati (marcatura degli schemi);
+// Prima si costruisce il documento JSON, gia' filtrato secondo le classi dei dati (marcatura degli schemi, vista.hpp);
 // il testo si scrive da quel documento: cosi' il filtro e' lo stesso per le due uscite.
 // Di base: dati personali sostituiti dal codice dell'elemento; dati particolari "riservato".
 #include <algorithm>
-#include <cmath>
-#include <locale>
-#include <set>
-#include <sstream>
 #include <stdexcept>
 #include <string>
 
@@ -16,162 +12,13 @@
 #include "esecutori.hpp"
 #include "pacchetto.hpp"
 #include "schemi_dati.hpp"
+#include "vista.hpp"
 
 namespace kzero::api {
 
 namespace {
 
 const char* const kPacchettoDemo = "esempi/demo";
-
-// --- Filtro delle classi -----------------------------------------------------------------------------------
-
-Classe piu_riservata(Classe a, Classe b) { return static_cast<int>(a) >= static_cast<int>(b) ? a : b; }
-
-class Vista {
-public:
-    Vista(const Lettura& lettura, Visibilita visibilita) : lettura_(lettura), visibilita_(visibilita) {}
-
-    const Visibilita& visibilita() const { return visibilita_; }
-
-    // Classe del campo di un elemento, dalla marcatura dello schema del suo file.
-    Classe classe(const kzero::Source& elemento, const std::string& campo) const {
-        const auto v = lettura_.versioni.find(elemento.file);
-        if (v == lettura_.versioni.end()) return Classe::Particolare;
-        return SchemiDati::incorporati().classe(elemento.file.substr(0, elemento.file.rfind(".json")), v->second,
-                                                elemento.pointer + "/" + campo);
-    }
-
-    // Valore di un campo dell'elemento: visibile, oppure sostituito dal codice (personale) o da "riservato".
-    Json campo(const kzero::Source& elemento, const std::string& campo, Json valore, const std::string& codice) const {
-        return filtra(classe(elemento, campo), std::move(valore), codice);
-    }
-
-    Json filtra(Classe c, Json valore, const std::string& codice) const {
-        if (visibile(c, visibilita_)) return valore;
-        return c == Classe::Personale ? Json(codice) : Json(kRiservato);
-    }
-
-private:
-    const Lettura& lettura_;
-    Visibilita visibilita_;
-};
-
-// --- Etichette --------------------------------------------------------------------------------------------
-
-const char* nome_tipo_luogo(kzero::PlaceType t) {
-    switch (t) {
-        case kzero::PlaceType::Stop: return "fermata";
-        case kzero::PlaceType::School: return "scuola";
-        case kzero::PlaceType::Center: return "centro";
-        case kzero::PlaceType::Depot: return "rimessa";
-        case kzero::PlaceType::ExternalShelter: return "ricovero_esterno";
-        case kzero::PlaceType::Parking: return "punto_sosta";
-        case kzero::PlaceType::TransferPoint: return "punto_trasbordo";
-        case kzero::PlaceType::DoorToDoor: return "porta_a_porta";
-    }
-    return "?";
-}
-
-const char* nome_categoria(kzero::ServiceType t) {
-    switch (t) {
-        case kzero::ServiceType::Line: return "linea";
-        case kzero::ServiceType::Disability: return "disabili";
-        case kzero::ServiceType::School: return "scolastico";
-        case kzero::ServiceType::Hybrid: return "ibrido";
-        case kzero::ServiceType::Other: return "altro";
-    }
-    return "?";
-}
-
-const char* nome_tipo_servizio(kzero::ServiceKind k) {
-    switch (k) {
-        case kzero::ServiceKind::Line: return "linea";
-        case kzero::ServiceKind::School: return "scolastico";
-        case kzero::ServiceKind::Disability: return "disabili";
-        case kzero::ServiceKind::Other: return "altro";
-    }
-    return "?";
-}
-
-const char* nome_tipo_gruppo(kzero::GroupType t) {
-    switch (t) {
-        case kzero::GroupType::Students: return "studenti";
-        case kzero::GroupType::Disabled: return "disabili";
-        case kzero::GroupType::LineUsers: return "utenti_linea";
-        case kzero::GroupType::AuthorizedAdults: return "adulti_autorizzati";
-        case kzero::GroupType::Other: return "altro";
-    }
-    return "?";
-}
-
-const char* nome_categoria_mezzo(kzero::VehicleCategory c) {
-    switch (c) {
-        case kzero::VehicleCategory::M1: return "M1";
-        case kzero::VehicleCategory::M2: return "M2";
-        case kzero::VehicleCategory::M3: return "M3";
-    }
-    return "?";
-}
-
-const char* nome_grado(kzero::Grade g) {
-    switch (g) {
-        case kzero::Grade::Kindergarten: return "infanzia";
-        case kzero::Grade::Primary: return "primaria";
-        case kzero::Grade::LowerSecondary: return "secondaria_primo_grado";
-        case kzero::Grade::UpperSecondary: return "secondaria_secondo_grado";
-    }
-    return "?";
-}
-
-const char* nome_stato(kzero::PassengerStatus s) {
-    switch (s) {
-        case kzero::PassengerStatus::Active: return "attivo";
-        case kzero::PassengerStatus::Suspended: return "sospeso";
-        case kzero::PassengerStatus::Unlocked: return "sbloccato";
-    }
-    return "?";
-}
-
-// Testo per le persone: "riservato" resta tale, gli altri codici con lo spazio al posto di "_".
-std::string leggibile(const std::string& s) {
-    std::string out = s;
-    std::replace(out.begin(), out.end(), '_', ' ');
-    return out;
-}
-
-// 12.5 -> "12,5"; con decimali fissi se richiesti (euro: 2).
-std::string numero(double x, int decimali_fissi = -1) {
-    std::ostringstream o;
-    o.imbue(std::locale::classic());
-    if (decimali_fissi >= 0) {
-        o.setf(std::ios::fixed);
-        o.precision(decimali_fissi);
-        o << x;
-    } else {
-        o.setf(std::ios::fixed);
-        o.precision(3);
-        o << x;
-    }
-    std::string s = o.str();
-    if (decimali_fissi < 0) {
-        while (!s.empty() && s.back() == '0') s.pop_back();
-        if (!s.empty() && s.back() == '.') s.pop_back();
-    }
-    std::replace(s.begin(), s.end(), '.', ',');
-    return s;
-}
-
-// Testo di un valore del documento: numeri con la virgola, testi come sono.
-std::string testo(const Json& j) {
-    if (j.is_string()) return leggibile(j.get<std::string>());
-    if (j.is_boolean()) return j.get<bool>() ? "si'" : "no";
-    if (j.is_number_integer()) return std::to_string(j.get<long long>());
-    if (j.is_number()) return numero(j.get<double>());
-    if (j.is_null()) return "-";
-    return j.dump();
-}
-
-std::string euro(const Json& j) { return j.is_null() ? "non indicato" : numero(j.get<double>(), 2) + " EUR"; }
 
 // --- Il documento JSON ---------------------------------------------------------------------------------------
 
@@ -435,10 +282,6 @@ Json in_json(const DefinizioneComando& comando, const Resoconto& r, const Vista&
 }
 
 // --- Il testo, scritto dal documento JSON -----------------------------------------------------------------
-
-std::string quanti(long long n, const char* uno, const char* molti) {
-    return n == 0 ? std::string("nessun ") + uno : std::to_string(n) + " " + (n == 1 ? uno : molti);
-}
 
 std::string in_testo(const Json& j) {
     std::string t;

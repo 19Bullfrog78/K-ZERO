@@ -192,6 +192,13 @@ public:
     // Tutti i turni che ci sono nel giorno d (dentro il periodo del pacchetto), in ordine di inizio e di codice.
     std::vector<ShiftDay> day(Day d) const;
 
+    // L'elemento del turno c'e' nel giorno d? Una corsa se vale il suo calendario (e il pezzo si trova nella corsa),
+    // un'attivita' se vale il suo calendario (o non ne ha). Il calendario del turno si guarda a parte.
+    bool item_on(const ShiftItem& item, Day d) const;
+    // In quanti giorni del periodo del pacchetto c'e' il turno: vale il suo calendario e quel giorno ha almeno una corsa
+    // o un'attivita'.
+    int shift_days(const Shift& s) const;
+
 private:
     void resolve_person(ShiftDay& sd) const;
     void resolve_vehicle(ShiftDay& sd) const;

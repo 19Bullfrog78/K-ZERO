@@ -20,7 +20,16 @@ const char* const kDescrizioneProgramma =
     "K-Zero: pianificazione della flotta per servizi di linea, disabili, scolastici e ibridi, per aziende, consorzi "
     "ed enti di ogni dimensione e di ogni paese.";
 
-const char* nome_tipo(TipoParametro t) { return t == TipoParametro::Scelta ? "scelta" : "interruttore"; }
+const char* nome_tipo(TipoParametro t) {
+    switch (t) {
+        case TipoParametro::Interruttore: return "interruttore";
+        case TipoParametro::Scelta: return "scelta";
+        case TipoParametro::Valore: return "valore";
+    }
+    return "?";
+}
+
+const char* nome_forma(FormaValore f) { return f == FormaValore::Data ? "data" : "codice"; }
 
 std::string unisci(const std::vector<std::string>& v, const std::string& separatore) {
     std::string s;
@@ -28,9 +37,14 @@ std::string unisci(const std::vector<std::string>& v, const std::string& separat
     return s;
 }
 
-// "--formato <json|testo>" oppure "--includi-dati-personali"
+// "--formato <json|testo>", "--data <AAAA-MM-GG>", "--persona <codice>" oppure "--includi-dati-personali"
 std::string forma(const DefinizioneParametro& p) {
-    return p.tipo == TipoParametro::Scelta ? p.nome + " <" + unisci(p.valori, "|") + ">" : p.nome;
+    switch (p.tipo) {
+        case TipoParametro::Scelta: return p.nome + " <" + unisci(p.valori, "|") + ">";
+        case TipoParametro::Valore: return p.nome + (p.forma == FormaValore::Data ? " <AAAA-MM-GG>" : " <codice>");
+        case TipoParametro::Interruttore: break;
+    }
+    return p.nome;
 }
 
 std::string riempi(const std::string& s, std::size_t larghezza) {
@@ -45,6 +59,9 @@ Json in_json(const DefinizioneParametro& p) {
         j["valori"] = p.valori;
         j["predefinito"] = p.predefinito;
     }
+    if (p.tipo == TipoParametro::Valore) j["forma"] = nome_forma(p.forma);
+    j["obbligatorio"] = p.obbligatorio;
+    j["incompatibile_con"] = p.incompatibili;
     j["descrizione"] = p.descrizione;
     return j;
 }
@@ -178,6 +195,8 @@ std::string descrizione_testo() {
         for (const auto& p : c.parametri) {
             t += rientro + riempi(forma(p), larghezza_parametro) + "  " + p.descrizione;
             if (p.tipo == TipoParametro::Scelta) t += " Predefinito: " + p.predefinito + ".";
+            if (p.obbligatorio) t += " Obbligatorio.";
+            if (!p.incompatibili.empty()) t += " Non insieme a " + unisci(p.incompatibili, ", ") + ".";
             t += "\n";
         }
         t += rientro + "Uscita JSON: schema " + c.schema.nome + ", versione " + std::to_string(c.schema.versione) +
