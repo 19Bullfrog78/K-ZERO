@@ -49,6 +49,10 @@ Esempio in JSON (`kzero pianifica --formato json`, codice di uscita 2):
 }
 ```
 
+Gli errori del programma non sanno quali parametri sono stati scritti: la loro posizione non nomina mai un file di
+dati che, tutto intero, e' un dato personale (es. `assenze.json`, vedi controlli.md). Oggi nessun errore K-ERR ha una
+posizione in un file di dati.
+
 Quando l'errore ha una posizione, nel testo compare tra parentesi
 (`Errore K-ERR-nnn (mezzi.csv, riga 3, colonna 5): ...`) e nel JSON nel campo `posizione`
 (`"posizione": {"file": "mezzi.csv", "riga": 3, "colonna": 5}`), con le sole parti note.

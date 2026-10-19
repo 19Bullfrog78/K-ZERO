@@ -132,6 +132,12 @@ Un campo senza marcatura vale, per prudenza, come particolare: una prova control
 abbiano la loro classe, che i dati personali stiano solo nei luoghi privati e nei passeggeri, e quali sono
 i dati particolari.
 
+Dal K-009 le stesse classi decidono anche le **posizioni** dei problemi (di base non entrano mai in un dato personale
+o particolare), quali problemi si contano soltanto (quelli sui dati sulla salute) e quanti dati personali e
+particolari ci sono in un pacchetto: docs/controlli.md e docs/sicurezza.md. Una marcatura puo' stare anche su un elemento
+intero o su un file intero (es. un'assenza): vale per tutto quello che contiene, tranne i campi marcati diversamente
+(es. il codice della persona). Un luogo pubblico puo' essere **sensibile** (luoghi.json, versione 2).
+
 ### Due livelli di pacchetto
 
 Il manifesto dichiara il **livello**:
@@ -832,6 +838,10 @@ Assenze programmate delle persone. **Solo il tipo, mai la causa**: il formato no
 ```json
 { "persona": "P-A", "tipo": "FERIE", "dal": "2026-10-22", "al": "2026-10-23" }
 ```
+
+Che una persona abbia un'assenza e' gia' un dato personale: nello schema il file intero e ogni assenza sono marcati
+personali, e ogni assenza indica la persona a cui appartiene (`x-kzero-titolare`). Per questo, di base, la posizione di
+un problema su un'assenza e' la persona in `persone.json`, non `assenze.json` (docs/controlli.md).
 
 ### fermi.json
 
