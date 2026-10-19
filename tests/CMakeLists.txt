@@ -191,7 +191,14 @@ foreach(pacchetto demo demo-numeri)
               ARGOMENTI controlla ${PROJECT_SOURCE_DIR}/esempi/${pacchetto} --formato json)
 endforeach()
 kzero_prova(controlla_demo_dati_personali USCITA 0 FORMATO testo PROBLEMI ${AVVISI_DEMO_COMPLETI} NON_CONTIENE "il punto preciso"
+            CONTIENE "Dati personali e particolari nel pacchetto: 248 valori personali e 37 particolari: luoghi.json 25 personali"
+                     "assenze.json 9 personali e 0 particolari"
             ARGOMENTI controlla ${PROJECT_SOURCE_DIR}/esempi/demo --includi-dati-personali)
+# Quali dati personali e particolari ci sono nel pacchetto (es. se va perso): di base solo i totali.
+kzero_prova(controlla_demo_dati_presenti USCITA 0 FORMATO testo
+            CONTIENE "Dati personali e particolari nel pacchetto: 248 valori personali e 37 particolari (file per file: --includi-dati-personali)."
+            NON_CONTIENE "assenze.json"
+            ARGOMENTI controlla ${PROJECT_SOURCE_DIR}/esempi/demo)
 kzero_prova(controlla_demo_tutti_i_dati USCITA 0 FORMATO json SCHEMA controlla
             PROBLEMI ${AVVISI_DEMO_COMPLETI} NON_CONTIENE "posizione_completa_con"
             CONTIENE "\"dati_personali_inclusi\": true" "\"dati_particolari_inclusi\": true"

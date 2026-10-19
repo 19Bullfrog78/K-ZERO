@@ -1465,6 +1465,36 @@ void indicizza(const std::string& file, const std::string& schema, int versione,
     }
 }
 
+// Conta i valori di un documento (gia' conforme allo schema) secondo la loro classe: la marcatura piu' vicina, come nel
+// filtro delle uscite. Un valore e' un testo, un numero o un vero/falso; gli oggetti e gli elenchi si attraversano.
+void conta_classi(const JsonDati& radice, const JsonDati& valore, const JsonDati& nodo, Classe classe, Lettura::ValoriRiservati& out,
+                  int profondita = 0) {
+    if (profondita > 64) return;   // lo schema dei file e' molto meno profondo
+    const JsonDati& definizione = nodo.is_object() && nodo.contains("$ref") ? SchemiDati::risolvi(radice, nodo) : nodo;
+    for (const JsonDati* n : {&definizione, &nodo})
+        if (n->is_object() && n->contains("x-kzero-classe")) {
+            const std::string c = n->at("x-kzero-classe").get<std::string>();
+            classe = c == "personale" ? Classe::Personale : c == "particolare" ? Classe::Particolare : Classe::Comune;
+        }
+    if (valore.is_object()) {
+        const auto props = definizione.find("properties");
+        for (const auto& [k, v] : valore.items()) {
+            const bool previsto = props != definizione.end() && props->contains(k);
+            conta_classi(radice, v, previsto ? props->at(k) : JsonDati::object(), classe, out, profondita + 1);
+        }
+        return;
+    }
+    if (valore.is_array()) {
+        const auto items = definizione.find("items");
+        for (const auto& v : valore)
+            conta_classi(radice, v, items != definizione.end() && items->is_object() ? *items : JsonDati::object(), classe, out,
+                         profondita + 1);
+        return;
+    }
+    if (classe == Classe::Personale) ++out.personali;
+    if (classe == Classe::Particolare) ++out.particolari;
+}
+
 Problem problema(Check c, const std::string& file, std::string puntatore, std::vector<Param> param = {}, int variante = 0) {
     return Problem{c, variante, Source{file, std::move(puntatore), 0, 0}, std::move(param)};
 }
@@ -1538,6 +1568,10 @@ void leggi_file(const std::string& file, const std::string& testo, Lettura& out)
     }
     converti(f.file, d, out.pacchetto);
     indicizza(f.file, f.schema, static_cast<int>(v), d, out);
+    const JsonDati& schema = *SchemiDati::incorporati().schema(f.schema, static_cast<int>(v));
+    Lettura::ValoriRiservati valori;
+    conta_classi(schema, d, schema, Classe::Comune, valori);
+    if (valori.personali + valori.particolari > 0) out.riservati[f.file] = valori;
     out.versioni[f.file] = static_cast<int>(v);
 }
 

@@ -89,6 +89,13 @@ struct Lettura {
     std::map<std::pair<std::string, std::string>, std::map<std::string, std::size_t>> codici;
     // gli elementi che appartengono a un altro ("x-kzero-titolare", es. le assenze): file -> puntatore -> codice.
     std::map<std::string, std::map<std::string, std::string>> titolari;
+    // Quanti valori personali e particolari ci sono in ogni file letto (dalle classi degli schemi): dicono quali dati
+    // contiene un pacchetto, es. per avvisare il titolare se il pacchetto e' andato perso (docs/sicurezza.md).
+    struct ValoriRiservati {
+        std::size_t personali = 0;
+        std::size_t particolari = 0;
+    };
+    std::map<std::string, ValoriRiservati> riservati;
 
     bool usato(const std::string& file) const { return versioni.count(file) > 0; }
     // Nessun errore di forma (i file non riconosciuti sono solo avvisi): si possono controllare i contenuti.

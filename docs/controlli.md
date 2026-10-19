@@ -18,6 +18,10 @@ Come si legge il resoconto:
 - prima gli errori, poi gli avvisi; ciascuno in ordine di file (nell'ordine del formato) e di posizione;
   stesso pacchetto = stesso resoconto, byte per byte;
 - in fondo un **riepilogo**: aziende, luoghi, servizi, corse, mezzi, persone, turni, errori, avvisi;
+- prima del riepilogo, **quali dati personali e particolari contiene il pacchetto** (K-009): quanti valori di ogni
+  classe, contati con le classi degli schemi, mai i valori stessi (es. "248 valori personali e 37 particolari"); file per
+  file con `--includi-dati-personali`. Serve a sapere cosa e' coinvolto se il pacchetto va perso o finisce alla persona
+  sbagliata (docs/sicurezza.md). In JSON e' il campo `dati_riservati_presenti`;
 - **codice di uscita 0** se non ci sono errori (gli avvisi non bloccano), **1** se c'e' almeno un errore;
 - prima si controlla la **forma** dei file (K-CTR-001 ... K-CTR-008, K-CTR-048, K-CTR-053 e K-CTR-088 ... K-CTR-090): un
   file con un errore di forma non viene usato, e finche' c'e' un errore di forma i controlli sul **contenuto** (gli altri codici)
@@ -44,6 +48,7 @@ Avviso K-CTR-050 (persone.json, /persone/2; il punto preciso con --includi-dati-
 Avviso K-CTR-078 (persone.json, /persone/2; il punto preciso con --includi-dati-personali): Il turno T-SECONDO (Secondo) e' scoperto in 8 giorni tra il 2027-07-07 e il 2027-08-25 (i primi: 2027-07-07, 2027-07-14, 2027-07-21, 2027-07-28, 2027-08-04, 2027-08-11...): la persona prevista P-C non puo' farlo (dati personali: riservati). Rimedio: un'assegnazione del singolo giorno.
 Avviso K-CTR-082 (servizi_fissi.json, /servizi_fissi/2): Nel turno T-SCUOLA-1 (Scuola 1) la persona P-E guida il mezzo ALFA-07 (AA 107 AA), non il suo mezzo abituale (abbinamento preferito), dal 2026-10-19 al 2026-10-20 (2 giorni).
 Avviso K-CTR-036: Il pacchetto non ha i tempi di sosta (file tempi_sosta.json): serviranno al calcolo.
+Dati personali e particolari nel pacchetto: 248 valori personali e 37 particolari (file per file: --includi-dati-personali).
 Riepilogo: 2 aziende, 23 luoghi, 9 servizi, 26 corse, 10 mezzi, 12 persone, 18 turni; 1 errore, 8 avvisi.
 ```
 

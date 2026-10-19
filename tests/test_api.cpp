@@ -1048,6 +1048,24 @@ TEST(Api, luoghi_sensibili_nei_messaggi) {
     EXPECT_TRUE(problemi(v1, {}));
 }
 
+// Quali dati personali e particolari contiene un pacchetto, file per file (quanti valori, dalle classi degli schemi):
+// serve a dire cosa e' coinvolto se il pacchetto va perso. I file con soli dati comuni non compaiono.
+TEST(Api, valori_riservati_di_un_pacchetto) {
+    const Memoria m;
+    const Lettura l = leggi_pacchetto(m);
+    ASSERT_TRUE(l.riservati.count("luoghi.json"));
+    EXPECT_EQ(l.riservati.at("luoghi.json").personali, 25u);   // 5 case: nome, indirizzo, comune, coordinate...
+    EXPECT_EQ(l.riservati.at("luoghi.json").particolari, 0u);
+    EXPECT_EQ(l.riservati.at("turni.json").personali, 0u);
+    EXPECT_EQ(l.riservati.at("turni.json").particolari, 3u);   // competenze richieste
+    EXPECT_EQ(l.riservati.at("assenze.json").personali, 9u);   // 3 assenze: tipo, dal, al
+    EXPECT_FALSE(l.riservati.count("mezzi.json"));
+    EXPECT_FALSE(l.riservati.count("corse.json"));
+    Memoria senza_case;
+    senza_case.sostituisci("luoghi.json", "\"luoghi_privati\": [", "\"luoghi_privati_non_previsti\": [");
+    EXPECT_FALSE(leggi_pacchetto(senza_case).riservati.count("luoghi.json"));   // file non usato: non si conta
+}
+
 // Gli errori K-ERR non nominano mai un file di soli dati personali, in testo e in JSON.
 TEST(Api, errori_senza_file_riservati) {
     const ErroreKZero riservato(Errore::ValoreNonAmmesso, "x", Posizione{"assenze.json", 3, 5});

@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "kzero - controlla, versione 3",
-  "description": "Uscita di 'kzero controlla <cartella> --formato json': i problemi trovati nel pacchetto dati (errori e avvisi con codice K-CTR, spiegati in docs/controlli.md) e un riepilogo. Va sull'uscita standard anche quando ci sono errori nei dati; allora il codice di uscita e' 1. I messaggi e le posizioni seguono le classi dei dati: di base i dati personali sono sostituiti dal codice dell'elemento, quelli particolari non compaiono, una posizione non entra mai in un dato personale o particolare (si ferma all'elemento comune piu' vicino) e i problemi che rivelano un dato particolare (salute) non si elencano uno per uno: si contano in 'problemi_riservati'. Versione 3 (K-009): campi 'problemi_riservati' e 'posizione_completa_con'. Sostituisce la versione 2 (K-008), che non e' piu' prodotta.",
+  "description": "Uscita di 'kzero controlla <cartella> --formato json': i problemi trovati nel pacchetto dati (errori e avvisi con codice K-CTR, spiegati in docs/controlli.md) e un riepilogo. Va sull'uscita standard anche quando ci sono errori nei dati; allora il codice di uscita e' 1. I messaggi e le posizioni seguono le classi dei dati: di base i dati personali sono sostituiti dal codice dell'elemento, quelli particolari non compaiono, una posizione non entra mai in un dato personale o particolare (si ferma all'elemento comune piu' vicino) e i problemi che rivelano un dato particolare (salute) non si elencano uno per uno: si contano in 'problemi_riservati'. Versione 3 (K-009): campi 'problemi_riservati', 'posizione_completa_con' e 'dati_riservati_presenti'. Sostituisce la versione 2 (K-008), che non e' piu' prodotta.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -13,7 +13,8 @@
     "controlli_sul_contenuto",
     "problemi_riservati",
     "problemi",
-    "riepilogo"
+    "riepilogo",
+    "dati_riservati_presenti"
   ],
   "properties": {
     "schema": {
@@ -133,6 +134,59 @@
         "avvisi": {
           "type": "integer",
           "minimum": 0
+        }
+      }
+    },
+    "dati_riservati_presenti": {
+      "description": "Quali dati personali e particolari contiene il pacchetto: quanti valori di ogni classe (dalle classi degli schemi), mai i valori stessi; solo i file letti. Serve a sapere cosa e' coinvolto se il pacchetto va perso o finisce alla persona sbagliata (docs/sicurezza.md). File per file solo con --includi-dati-personali (il nome di un file di soli dati personali dice gia' qualcosa), altrimenti 'per_file' e' null.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "personali",
+        "particolari",
+        "per_file"
+      ],
+      "properties": {
+        "personali": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "particolari": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "per_file": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "file",
+                  "personali",
+                  "particolari"
+                ],
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "personali": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "particolari": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                }
+              }
+            }
+          ]
         }
       }
     }

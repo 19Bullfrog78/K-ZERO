@@ -8,6 +8,7 @@
 #include "controllo.hpp"
 #include "errori.hpp"
 #include "esecutori.hpp"
+#include "formato_dati.hpp"
 #include "riservatezza.hpp"
 
 namespace kzero::api {
@@ -67,7 +68,34 @@ Conteggi conteggi(const Resoconto& r) {
             r.quanti("turni.json", p.shifts.size())};
 }
 
-std::string in_testo(const Resoconto& r) {
+// Quali dati personali e particolari contiene il pacchetto (quanti valori, mai i valori): utile per sapere cosa e'
+// coinvolto se il pacchetto finisce nelle mani sbagliate (docs/sicurezza.md). Di base solo i totali; file per file con
+// --includi-dati-personali (il nome di un file di soli dati personali, es. assenze.json, dice gia' qualcosa).
+Lettura::ValoriRiservati totali_riservati(const Lettura& l) {
+    Lettura::ValoriRiservati t;
+    for (const auto& [file, v] : l.riservati) {
+        t.personali += v.personali;
+        t.particolari += v.particolari;
+    }
+    return t;
+}
+
+std::string valori_riservati_testo(const Lettura& l, const Visibilita& visibilita) {
+    const Lettura::ValoriRiservati tot = totali_riservati(l);
+    if (tot.personali + tot.particolari == 0) return "nessuno";
+    std::string t = std::to_string(tot.personali) + " valori personali e " + std::to_string(tot.particolari) + " particolari";
+    if (!visibilita.personali) return t + " (file per file: --includi-dati-personali)";
+    std::string per_file;
+    for (const FileDati& f : file_dati()) {
+        const auto it = l.riservati.find(f.file);
+        if (it == l.riservati.end()) continue;
+        per_file += (per_file.empty() ? "" : "; ") + f.file + " " + std::to_string(it->second.personali) + " personali e " +
+                    std::to_string(it->second.particolari) + " particolari";
+    }
+    return t + ": " + per_file;
+}
+
+std::string in_testo(const Resoconto& r, const Visibilita& visibilita) {
     std::string t;
     const kzero::Manifest& m = r.lettura.pacchetto.manifest;
     if (r.lettura.usato("pacchetto.json")) {
@@ -89,6 +117,7 @@ std::string in_testo(const Resoconto& r) {
     if (r.problemi.empty() && r.errori_riservati + r.avvisi_riservati == 0) t += "Nessun problema.\n";
     if (!r.contenuto_controllato)
         t += "Controlli sul contenuto non eseguiti: prima vanno corretti gli errori nella forma dei file.\n";
+    t += "Dati personali e particolari nel pacchetto: " + valori_riservati_testo(r.lettura, visibilita) + ".\n";
     const Conteggi c = conteggi(r);
     t += "Riepilogo: " + quanti_opz(c.aziende, "azienda", "aziende", "non lette") + ", " +
          quanti_opz(c.luoghi, "luogo", "luoghi", "non letti") + ", " + quanti_opz(c.servizi, "servizio", "servizi", "non letti") +
@@ -146,6 +175,18 @@ std::string in_json(const DefinizioneComando& comando, const Resoconto& r, const
     riepilogo["errori"] = r.errori;
     riepilogo["avvisi"] = r.avvisi;
     j["riepilogo"] = riepilogo;
+    const Lettura::ValoriRiservati tot = totali_riservati(r.lettura);
+    Json riservati = Json::object();
+    riservati["personali"] = tot.personali;
+    riservati["particolari"] = tot.particolari;
+    Json per_file = Json::array();
+    for (const FileDati& f : file_dati()) {
+        const auto it = r.lettura.riservati.find(f.file);
+        if (it != r.lettura.riservati.end())
+            per_file.push_back({{"file", f.file}, {"personali", it->second.personali}, {"particolari", it->second.particolari}});
+    }
+    riservati["per_file"] = v.personali ? per_file : Json(nullptr);
+    j["dati_riservati_presenti"] = riservati;
     return testo_json(j);
 }
 
@@ -161,7 +202,7 @@ Risultato esegui_controlla(const DefinizioneComando& comando, const Parametri& p
     const Visibilita visibilita{parametri.includi_dati_personali, parametri.includi_dati_particolari};
     const Resoconto r = controlla_pacchetto(CartellaSuDisco(cartella), visibilita);
     Risultato risultato;
-    risultato.uscita = parametri.formato == Formato::Json ? in_json(comando, r, visibilita) : in_testo(r);
+    risultato.uscita = parametri.formato == Formato::Json ? in_json(comando, r, visibilita) : in_testo(r, visibilita);
     risultato.codice = r.errori > 0 ? static_cast<int>(CodiceUscita::ErroreDati) : static_cast<int>(CodiceUscita::Riuscito);
     return risultato;
 }
