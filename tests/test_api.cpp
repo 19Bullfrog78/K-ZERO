@@ -324,6 +324,20 @@ TEST(Api, K_CTR_003_json_non_valido) {
     EXPECT_FALSE(lz.usato("assenze.json"));
     EXPECT_EQ(lz.problemi[0].where.line, 10);   // subito dopo le 9 righe del file
     EXPECT_EQ(lz.problemi[0].where.column, 1);
+
+    // Un numero troppo grande per essere letto: errore nei dati con riga e colonna, mai un errore interno, e il messaggio
+    // non ricopia il numero (trovato dal fuzzing, K-009).
+    Memoria enorme;
+    enorme.sostituisci("mezzi.json", "\"posti\": 19,", "\"posti\": 1e400,");
+    EXPECT_TRUE(problemi(enorme, {{Check::InvalidJson, 2, "mezzi.json", ""}}));
+    const Lettura le = leggi_pacchetto(enorme);
+    EXPECT_EQ(le.problemi[0].where.line, 83);
+    EXPECT_EQ(le.problemi[0].where.column, 16);
+    EXPECT_EQ(messaggio(enorme), "Il file non e' un JSON valido: alla riga 83, colonna 16 c'e' un numero troppo grande per essere "
+                                 "letto (es. 1e400). Il file non e' stato letto.");
+    Memoria nel_testo;   // dentro un testo tra virgolette non e' un numero
+    nel_testo.sostituisci("mezzi.json", "\"posti\": 19,", "\"nota\": \"9e999\", \"posti\": 1e999,");
+    EXPECT_EQ(leggi_pacchetto(nel_testo).problemi[0].where.column, 33);
 }
 
 TEST(Api, K_CTR_004_campo_ripetuto) {
@@ -501,6 +515,11 @@ TEST(Api, file_costruiti_per_rompere) {
         {"file vuoto", "rotazioni.json", "", Check::InvalidJson, ""},
         {"numero enorme", "rotazioni.json", con("rotazioni.json", "\"lunghezza\": 14,", "\"lunghezza\": 1e308,"), Check::SchemaViolation,
          "/rotazioni/0/lunghezza"},
+        // Trovato dal fuzzing (K-009): un numero oltre il massimo di un numero con decimali era un errore interno.
+        {"numero oltre ogni misura", "rotazioni.json", con("rotazioni.json", "\"lunghezza\": 14,", "\"lunghezza\": 1e400,"),
+         Check::InvalidJson, ""},
+        {"numero piccolissimo", "rotazioni.json", con("rotazioni.json", "\"lunghezza\": 14,", "\"lunghezza\": 1e-400,"),
+         Check::SchemaViolation, "/rotazioni/0/lunghezza"},
         {"numero lunghissimo", "rotazioni.json",
          con("rotazioni.json", "\"lunghezza\": 14,", "\"lunghezza\": 123456789012345678901234567890,"), Check::SchemaViolation,
          "/rotazioni/0/lunghezza"},

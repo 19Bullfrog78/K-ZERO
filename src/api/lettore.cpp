@@ -3,9 +3,12 @@
 
 #include <algorithm>
 #include <cerrno>
+#include <charconv>
 #include <fstream>
 #include <set>
 #include <stdexcept>
+#include <string_view>
+#include <tuple>
 
 #if defined(__unix__) || defined(__APPLE__)
 #define KZERO_LETTURA_POSIX 1
@@ -198,7 +201,53 @@ struct Analisi {
     std::optional<JsonDati> documento;
     std::vector<std::string> chiavi_ripetute;   // percorsi JSON delle chiavi ripetute
     int riga = 0, colonna = 0;                  // posizione dell'errore di sintassi
+    bool numero_enorme = false;                 // un numero troppo grande anche per un numero con decimali (es. 1e400)
 };
+
+// Riga e colonna del byte "fine" del testo (colonne contate in caratteri UTF-8).
+std::pair<int, int> riga_e_colonna(const std::string& testo, std::size_t fine) {
+    int riga = 1, colonna = 1;
+    for (std::size_t i = 0; i < fine && i < testo.size(); ++i) {
+        if (testo[i] == '\n') {
+            ++riga;
+            colonna = 1;
+        } else if ((static_cast<unsigned char>(testo[i]) & 0xC0) != 0x80) {
+            ++colonna;
+        }
+    }
+    return {riga, colonna};
+}
+
+// Il primo numero del JSON (fuori dai testi tra virgolette) che non sta in un numero con decimali, es. 1e400: la
+// libreria JSON lo rifiuta senza dire dove. Restituisce la sua posizione nel testo, o la fine se non c'e'.
+std::size_t numero_enorme(const std::string& t) {
+    bool in_testo = false;
+    for (std::size_t i = 0; i < t.size(); ++i) {
+        const char c = t[i];
+        if (in_testo) {
+            if (c == '\\') ++i;
+            else if (c == '"') in_testo = false;
+            continue;
+        }
+        if (c == '"') {
+            in_testo = true;
+            continue;
+        }
+        if (c != '-' && (c < '0' || c > '9')) continue;
+        std::size_t fine = i + 1;
+        while (fine < t.size() && std::string_view("0123456789+-.eE").find(t[fine]) != std::string_view::npos) ++fine;
+        double valore = 0.0;
+        const char* inizio = t.data() + i + (c == '-' ? 1 : 0);
+        const auto [p, errore] = std::from_chars(inizio, t.data() + fine, valore);
+        const std::string_view numero(t.data() + i, fine - i);
+        // Fuori misura per eccesso, non per difetto (1e-400 la libreria lo legge come zero).
+        if (errore == std::errc::result_out_of_range && numero.find("e-") == std::string_view::npos &&
+            numero.find("E-") == std::string_view::npos)
+            return i;
+        i = fine - 1;
+    }
+    return t.size();
+}
 
 // nlohmann/json tiene in silenzio l'ultimo valore di una chiave ripetuta: qui la si trova e la si segnala.
 Analisi analizza(const std::string& testo) {
@@ -245,16 +294,17 @@ Analisi analizza(const std::string& testo) {
         a.documento = JsonDati::parse(testo, richiamo);
     } catch (const JsonDati::parse_error& e) {
         a.documento.reset();
+        std::tie(a.riga, a.colonna) = riga_e_colonna(testo, e.byte > 0 ? e.byte - 1 : 0);
+    } catch (const JsonDati::out_of_range&) {
+        // Un numero troppo grande (es. 1e400): un errore nei dati, non un guasto del programma (trovato dal fuzzing).
+        a.documento.reset();
+        a.numero_enorme = true;
+        std::tie(a.riga, a.colonna) = riga_e_colonna(testo, numero_enorme(testo));
+    } catch (const JsonDati::exception&) {
+        // Qualunque altro rifiuto della libreria JSON: il file non si usa (nessun caso noto).
+        a.documento.reset();
         a.riga = 1;
         a.colonna = 1;
-        for (std::size_t i = 0; i + 1 < e.byte && i < testo.size(); ++i) {
-            if (testo[i] == '\n') {
-                ++a.riga;
-                a.colonna = 1;
-            } else if ((static_cast<unsigned char>(testo[i]) & 0xC0) != 0x80) {
-                ++a.colonna;
-            }
-        }
     }
     return a;
 }
@@ -342,7 +392,7 @@ public:
     }
     static Day data(const JsonDati& v) {
         const auto d = day_from_text(v.get<std::string>());
-        if (!d) throw std::logic_error("data non valida dopo il controllo dello schema: " + v.get<std::string>());
+        if (!d) throw std::logic_error("data non valida dopo il controllo dello schema");   // senza il valore: e' un dato
         return *d;
     }
     static std::optional<Day> data_opz(const JsonDati& o, const char* k) {
@@ -352,7 +402,7 @@ public:
     }
     static Minutes orario(const JsonDati& v) {
         const auto m = minutes_from_text(v.get<std::string>());
-        if (!m) throw std::logic_error("orario non valido dopo il controllo dello schema: " + v.get<std::string>());
+        if (!m) throw std::logic_error("orario non valido dopo il controllo dello schema");
         return *m;
     }
     static std::optional<Minutes> orario_opz(const JsonDati& o, const char* k) {
@@ -402,7 +452,7 @@ template <class E>
 E valore_di(const std::vector<std::pair<const char*, E>>& tabella, const std::string& testo) {
     for (const auto& [nome, e] : tabella)
         if (testo == nome) return e;
-    throw std::logic_error("valore non previsto dallo schema: " + testo);
+    throw std::logic_error("valore di un elenco fisso non previsto dallo schema");
 }
 
 const std::vector<std::pair<const char*, Grade>> kGradi = {
@@ -1518,15 +1568,7 @@ void leggi_file(const std::string& file, const std::string& testo, Lettura& out)
     // Un byte zero non puo' stare in un file JSON (nemmeno dentro un testo), e la libreria JSON lo prende per la fine del
     // file: un file valido seguito da zeri e da altro testo verrebbe letto a meta' (K-009, file rovinati o preparati).
     if (const std::size_t zero = testo.find('\0'); zero != std::string::npos) {
-        int riga = 1, colonna = 1;
-        for (std::size_t i = 0; i < zero; ++i) {
-            if (testo[i] == '\n') {
-                ++riga;
-                colonna = 1;
-            } else if ((static_cast<unsigned char>(testo[i]) & 0xC0) != 0x80) {
-                ++colonna;
-            }
-        }
+        const auto [riga, colonna] = riga_e_colonna(testo, zero);
         Problem p = problema(Check::InvalidJson, f.file, "", {number_param("riga", riga), number_param("colonna", colonna)}, 1);
         p.where.line = riga;
         p.where.column = colonna;
@@ -1535,7 +1577,8 @@ void leggi_file(const std::string& file, const std::string& testo, Lettura& out)
     }
     Analisi a = analizza(testo);
     if (!a.documento) {
-        Problem p = problema(Check::InvalidJson, f.file, "", {number_param("riga", a.riga), number_param("colonna", a.colonna)});
+        Problem p = problema(Check::InvalidJson, f.file, "", {number_param("riga", a.riga), number_param("colonna", a.colonna)},
+                             a.numero_enorme ? 2 : 0);
         p.where.line = a.riga;
         p.where.column = a.colonna;
         out.problemi.push_back(p);
