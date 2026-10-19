@@ -97,4 +97,9 @@ struct Lettura {
 
 Lettura leggi_pacchetto(const Sorgente& sorgente);
 
+// Legge un solo file del formato, gia' letto dalla sua sorgente (testo), e lo aggiunge alla lettura: codifica, JSON,
+// schema e versione, rispetto dello schema, conversione. Lo usa leggi_pacchetto per ogni file; le prove con dati
+// casuali (tests/fuzz) lo usano per cambiare un file alla volta senza rileggere gli altri.
+void leggi_file(const std::string& file, const std::string& testo, Lettura& lettura);
+
 }  // namespace kzero::api

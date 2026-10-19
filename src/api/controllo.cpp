@@ -47,8 +47,12 @@ std::optional<std::size_t> Resoconto::quanti(const std::string& file, std::size_
 }
 
 Resoconto controlla_pacchetto(const Sorgente& sorgente, const Visibilita& visibilita) {
+    return controlla_lettura(leggi_pacchetto(sorgente), visibilita);
+}
+
+Resoconto controlla_lettura(Lettura lettura, const Visibilita& visibilita) {
     Resoconto r;
-    r.lettura = leggi_pacchetto(sorgente);
+    r.lettura = std::move(lettura);
     std::vector<kzero::Problem> problemi = r.lettura.problemi;
     if (r.lettura.forma_valida()) {
         r.contenuto_controllato = true;

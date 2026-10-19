@@ -1,5 +1,5 @@
 # Prove automatiche: ctest --test-dir build --output-on-failure
-# Etichette: nucleo, api, programma, documentazione, architettura, schemi, scala, sicurezza.
+# Etichette: nucleo, api, programma, documentazione, architettura, schemi, scala, sicurezza, fuzz.
 include(GoogleTest)
 
 # --- Prove del nucleo (GoogleTest): ogni TEST si registra da solo --------------------
@@ -658,6 +658,34 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_NM AND CMAKE_OBJDUMP)
            COMMAND ${CMAKE_COMMAND} -DMODO=programma -DKZERO=$<TARGET_FILE:kzero> -DNM=${CMAKE_NM} -DOBJDUMP=${CMAKE_OBJDUMP}
                    -P ${CMAKE_CURRENT_SOURCE_DIR}/programma/rete.cmake)
   set_tests_properties(sicurezza.niente_rete_nel_programma PROPERTIES LABELS sicurezza)
+endif()
+
+# --- Fuzzing (K-009): prove con dati casuali e deformati (tests/fuzz, docs/sicurezza.md) -------------------------
+# I bersagli stanno in una libreria comune: libFuzzer li usa per cercare guasti (KZERO_FUZZ=ON, clang), rigioca_fuzz
+# per ripetere nelle prove normali ogni guasto gia' trovato (tests/fuzz/casi/<bersaglio>/<caso>) e i file del demo.
+add_library(kzero_bersagli_fuzz STATIC fuzz/bersagli.cpp)
+target_link_libraries(kzero_bersagli_fuzz PUBLIC kzero_api)
+target_compile_options(kzero_bersagli_fuzz PRIVATE ${KZERO_WARNINGS})
+add_executable(rigioca_fuzz fuzz/rigioca_fuzz.cpp)
+target_link_libraries(rigioca_fuzz PRIVATE kzero_bersagli_fuzz)
+target_compile_options(rigioca_fuzz PRIVATE ${KZERO_WARNINGS})
+add_test(NAME fuzz.semi COMMAND rigioca_fuzz --semi)
+set_tests_properties(fuzz.semi PROPERTIES LABELS fuzz)
+file(GLOB casi_fuzz LIST_DIRECTORIES true CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/fuzz/casi/*)
+foreach(cartella IN LISTS casi_fuzz)
+  if(IS_DIRECTORY ${cartella})
+    get_filename_component(bersaglio ${cartella} NAME)
+    add_test(NAME fuzz.casi.${bersaglio} COMMAND rigioca_fuzz ${bersaglio} ${cartella})
+    set_tests_properties(fuzz.casi.${bersaglio} PROPERTIES LABELS fuzz)
+  endif()
+endforeach()
+if(KZERO_FUZZ)
+  foreach(bersaglio pacchetto parametri date_e_orari)
+    add_executable(fuzz_${bersaglio} fuzz/fuzz_${bersaglio}.cpp)
+    target_link_libraries(fuzz_${bersaglio} PRIVATE kzero_bersagli_fuzz)
+    target_compile_options(fuzz_${bersaglio} PRIVATE ${KZERO_WARNINGS})
+    target_link_options(fuzz_${bersaglio} PRIVATE -fsanitize=fuzzer)
+  endforeach()
 endif()
 
 # --- Prova di scala: un pacchetto grande, generato con un seme fisso, controllato senza errori ------------

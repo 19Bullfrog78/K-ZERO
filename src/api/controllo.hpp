@@ -42,4 +42,7 @@ struct Resoconto {
 
 Resoconto controlla_pacchetto(const Sorgente& sorgente, const Visibilita& visibilita);
 
+// Lo stesso controllo su un pacchetto gia' letto (leggi_pacchetto o leggi_file).
+Resoconto controlla_lettura(Lettura lettura, const Visibilita& visibilita);
+
 }  // namespace kzero::api

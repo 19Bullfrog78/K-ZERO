@@ -24,6 +24,27 @@ else()
   endif()
 endif()
 
+# --- Prove di sicurezza (K-009): sanitizer e fuzzing ---------------------------------
+# KZERO_SANITIZER=ON: AddressSanitizer (memoria) e UndefinedBehaviorSanitizer (comportamenti non definiti) su tutto,
+# librerie comprese; il programma si ferma al primo problema. Lo usa il secondo lavoro del controllo GitHub.
+# KZERO_FUZZ=ON (solo clang): in piu' i bersagli del fuzzing con libFuzzer (tests/fuzz, CLAUDE.md).
+option(KZERO_SANITIZER "Compila con AddressSanitizer e UndefinedBehaviorSanitizer" OFF)
+option(KZERO_FUZZ "Compila anche i bersagli del fuzzing (libFuzzer, solo con clang)" OFF)
+if(KZERO_SANITIZER OR KZERO_FUZZ)
+  if(MSVC)
+    message(FATAL_ERROR "KZERO_SANITIZER e KZERO_FUZZ si usano su Linux con gcc o clang")
+  endif()
+  set(KZERO_FLAG_SANITIZER -fsanitize=address,undefined -fno-sanitize-recover=all -fno-omit-frame-pointer -g)
+  if(KZERO_FUZZ)
+    if(NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+      message(FATAL_ERROR "Il fuzzing con libFuzzer richiede clang: cmake -DCMAKE_CXX_COMPILER=clang++ -DKZERO_FUZZ=ON ...")
+    endif()
+    list(APPEND KZERO_FLAG_SANITIZER -fsanitize=fuzzer-no-link)
+  endif()
+  add_compile_options(${KZERO_FLAG_SANITIZER})
+  add_link_options(-fsanitize=address,undefined)
+endif()
+
 # --- Librerie esterne ------------------------------------------------------------
 # Versione fissata e impronta (SHA256) del file scaricato: la compilazione resta uguale nel tempo.
 # SYSTEM: gli avvisi delle librerie non contano come avvisi di K-Zero.

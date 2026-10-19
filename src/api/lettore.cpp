@@ -1471,6 +1471,76 @@ Problem problema(Check c, const std::string& file, std::string puntatore, std::v
 
 }  // namespace
 
+void leggi_file(const std::string& file, const std::string& testo, Lettura& out) {
+    const FileDati* trovato = file_dati_per_nome(file);
+    if (!trovato) throw std::logic_error("file che non fa parte del formato: " + file);
+    const FileDati& f = *trovato;
+    out.presenti.insert(f.file);
+    if (const auto codifica = codifica_sbagliata(testo)) {
+        Problem p = codifica->utf16 ? problema(Check::NotUtf8, f.file, "", {}, 1)
+                                    : problema(Check::NotUtf8, f.file, "",
+                                               {number_param("riga", codifica->riga), number_param("colonna", codifica->colonna)}, 0);
+        p.where.line = codifica->riga;
+        p.where.column = codifica->colonna;
+        out.problemi.push_back(p);
+        return;
+    }
+    Analisi a = analizza(testo);
+    if (!a.documento) {
+        Problem p = problema(Check::InvalidJson, f.file, "", {number_param("riga", a.riga), number_param("colonna", a.colonna)});
+        p.where.line = a.riga;
+        p.where.column = a.colonna;
+        out.problemi.push_back(p);
+        return;
+    }
+    if (!a.chiavi_ripetute.empty()) {
+        for (const std::string& p : a.chiavi_ripetute) out.problemi.push_back(problema(Check::DuplicateKey, f.file, p));
+        return;
+    }
+    const JsonDati& d = *a.documento;
+    if (!d.is_object() || !d.contains("schema") || !d.at("schema").is_string()) {
+        out.problemi.push_back(problema(Check::WrongSchema, f.file, d.is_object() ? "/schema" : "",
+                                        {text_param("atteso", f.schema)}, 0));
+        return;
+    }
+    if (d.at("schema").get<std::string>() != f.schema) {
+        out.problemi.push_back(problema(Check::WrongSchema, f.file, "/schema",
+                                        {text_param("trovato", d.at("schema").get<std::string>()), text_param("atteso", f.schema)}, 1));
+        return;
+    }
+    std::string supportate;
+    for (int v : f.versioni) supportate += (supportate.empty() ? "" : ", ") + std::to_string(v);
+    const auto versione = d.find("schema_versione");
+    if (versione == d.end() || !versione->is_number_integer()) {
+        out.problemi.push_back(problema(Check::UnsupportedVersion, f.file, versione == d.end() ? "" : "/schema_versione",
+                                        {text_param("supportate", supportate)}, 1));
+        return;
+    }
+    const long long v = versione->get<long long>();
+    if (std::find(f.versioni.begin(), f.versioni.end(), v) == f.versioni.end()) {
+        out.problemi.push_back(problema(Check::UnsupportedVersion, f.file, "/schema_versione",
+                                        {number_param("versione", v), text_param("supportate", supportate)}, 0));
+        return;
+    }
+    const std::vector<ErroreSchema> errori = valida(d, f.schema, static_cast<int>(v));
+    if (!errori.empty()) {
+        for (const ErroreSchema& e : errori) {
+            // Il valore sbagliato di un campo personale o particolare segue le classi dei dati.
+            Param dettaglio = text_param("dettaglio", e.messaggio);
+            const Classe classe = SchemiDati::incorporati().classe(f.schema, static_cast<int>(v), e.puntatore);
+            if (classe != Classe::Comune) {
+                dettaglio.sensitivity = classe == Classe::Personale ? Param::Sensitivity::Personal : Param::Sensitivity::Particular;
+                dettaglio.hidden = e.messaggio_senza_valore;
+            }
+            out.problemi.push_back(problema(Check::SchemaViolation, f.file, e.puntatore, {dettaglio}));
+        }
+        return;
+    }
+    converti(f.file, d, out.pacchetto);
+    indicizza(f.file, f.schema, static_cast<int>(v), d, out);
+    out.versioni[f.file] = static_cast<int>(v);
+}
+
 Lettura leggi_pacchetto(const Sorgente& sorgente) {
     Lettura out;
     std::set<std::string>& presenti = out.presenti;
@@ -1503,70 +1573,7 @@ Lettura leggi_pacchetto(const Sorgente& sorgente) {
             case FileLetto::Esito::NonNormale: out.problemi.push_back(problema(Check::NotRegularFile, f.file, "")); continue;
             case FileLetto::Esito::FuoriCartella: out.problemi.push_back(problema(Check::LinkOutsideFolder, f.file, "")); continue;
         }
-        const std::optional<std::string> testo = std::move(letto.testo);
-        if (const auto codifica = codifica_sbagliata(*testo)) {
-            Problem p = codifica->utf16 ? problema(Check::NotUtf8, f.file, "", {}, 1)
-                                        : problema(Check::NotUtf8, f.file, "",
-                                                   {number_param("riga", codifica->riga), number_param("colonna", codifica->colonna)}, 0);
-            p.where.line = codifica->riga;
-            p.where.column = codifica->colonna;
-            out.problemi.push_back(p);
-            continue;
-        }
-        Analisi a = analizza(*testo);
-        if (!a.documento) {
-            Problem p = problema(Check::InvalidJson, f.file, "", {number_param("riga", a.riga), number_param("colonna", a.colonna)});
-            p.where.line = a.riga;
-            p.where.column = a.colonna;
-            out.problemi.push_back(p);
-            continue;
-        }
-        if (!a.chiavi_ripetute.empty()) {
-            for (const std::string& p : a.chiavi_ripetute) out.problemi.push_back(problema(Check::DuplicateKey, f.file, p));
-            continue;
-        }
-        const JsonDati& d = *a.documento;
-        if (!d.is_object() || !d.contains("schema") || !d.at("schema").is_string()) {
-            out.problemi.push_back(problema(Check::WrongSchema, f.file, d.is_object() ? "/schema" : "",
-                                            {text_param("atteso", f.schema)}, 0));
-            continue;
-        }
-        if (d.at("schema").get<std::string>() != f.schema) {
-            out.problemi.push_back(problema(Check::WrongSchema, f.file, "/schema",
-                                            {text_param("trovato", d.at("schema").get<std::string>()), text_param("atteso", f.schema)}, 1));
-            continue;
-        }
-        std::string supportate;
-        for (int v : f.versioni) supportate += (supportate.empty() ? "" : ", ") + std::to_string(v);
-        const auto versione = d.find("schema_versione");
-        if (versione == d.end() || !versione->is_number_integer()) {
-            out.problemi.push_back(problema(Check::UnsupportedVersion, f.file, versione == d.end() ? "" : "/schema_versione",
-                                            {text_param("supportate", supportate)}, 1));
-            continue;
-        }
-        const long long v = versione->get<long long>();
-        if (std::find(f.versioni.begin(), f.versioni.end(), v) == f.versioni.end()) {
-            out.problemi.push_back(problema(Check::UnsupportedVersion, f.file, "/schema_versione",
-                                            {number_param("versione", v), text_param("supportate", supportate)}, 0));
-            continue;
-        }
-        const std::vector<ErroreSchema> errori = valida(d, f.schema, static_cast<int>(v));
-        if (!errori.empty()) {
-            for (const ErroreSchema& e : errori) {
-                // Il valore sbagliato di un campo personale o particolare segue le classi dei dati.
-                Param dettaglio = text_param("dettaglio", e.messaggio);
-                const Classe classe = SchemiDati::incorporati().classe(f.schema, static_cast<int>(v), e.puntatore);
-                if (classe != Classe::Comune) {
-                    dettaglio.sensitivity = classe == Classe::Personale ? Param::Sensitivity::Personal : Param::Sensitivity::Particular;
-                    dettaglio.hidden = e.messaggio_senza_valore;
-                }
-                out.problemi.push_back(problema(Check::SchemaViolation, f.file, e.puntatore, {dettaglio}));
-            }
-            continue;
-        }
-        converti(f.file, d, out.pacchetto);
-        indicizza(f.file, f.schema, static_cast<int>(v), d, out);
-        out.versioni[f.file] = static_cast<int>(v);
+        leggi_file(f.file, letto.testo, out);
     }
     return out;
 }
