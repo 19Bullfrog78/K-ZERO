@@ -81,6 +81,20 @@ Json in_json(const DefinizioneComando& comando, const Resoconto& r, const Vista&
     }
     j["luoghi"] = luoghi;
 
+    // Luoghi sensibili (riservatezza.hpp): servizi e corse sono un insieme solo, legati dai codici dei servizi e dei
+    // trasbordi. Prima si dichiara tutto quello che mostrano; l'elenco dei luoghi qui sopra non lega nessuno a un luogo.
+    LegameSensibile legame(&idx, vista.visibilita());
+    for (const auto& s : p.services)
+        for (const auto& g : s.groups)
+            for (const auto& q : g.passengers) {
+                legame.passeggero(q.code);
+                if (q.boarding) legame.luogo(q.boarding->place.code);
+                if (q.alighting) legame.luogo(q.alighting->place.code);
+            }
+    for (const auto& t : p.trips)
+        for (const auto& ps : t.passages) legame.luogo(ps.place.code);
+    const auto luogo_o_riservato = [&](const kzero::Code& luogo) { return legame.nasconde_luogo(luogo) ? Json(kRiservato) : Json(luogo); };
+
     Json servizi = Json::array();
     for (const auto& s : p.services) {
         Json x = Json::object();
@@ -93,23 +107,12 @@ Json in_json(const DefinizioneComando& comando, const Resoconto& r, const Vista&
         x["calendario"] = s.calendar.code;
         Json gruppi = Json::array();
         for (const auto& g : s.groups) {
-            // Luoghi sensibili (K-009): con il nome dei passeggeri e senza i dati particolari, il legame tra un passeggero
-            // e un luogo sensibile (la destinazione del suo gruppo, la salita, la discesa) e' riservato.
-            const bool legame_riservato =
-                visibile(Classe::Personale, vista.visibilita()) && !visibile(Classe::Particolare, vista.visibilita()) &&
-                std::any_of(g.passengers.begin(), g.passengers.end(), [](const kzero::Passenger& q) { return !q.name.empty(); });
-            const auto luogo_o_riservato = [&](const kzero::Code& luogo) {
-                const kzero::Place* l = idx.place(luogo);
-                return legame_riservato && l && l->sensitive ? Json(kRiservato) : Json(luogo);
-            };
             Json y = Json::object();
             y["codice"] = g.code;
             y["tipo"] = vista.campo(g.src, "tipo", nome_tipo_gruppo(g.type), g.code);
-            const kzero::School* scuola = g.school ? idx.school(g.school->code) : nullptr;
-            const kzero::Place* luogo_scuola = scuola ? idx.place(scuola->place.code) : nullptr;
-            y["scuola"] = !g.school                                                       ? Json(nullptr)
-                          : legame_riservato && luogo_scuola && luogo_scuola->sensitive ? Json(kRiservato)
-                                                                                        : Json(g.school->code);
+            y["scuola"] = !g.school                                ? Json(nullptr)
+                          : legame.nasconde_scuola(g.school->code) ? Json(kRiservato)
+                                                                   : Json(g.school->code);
             y["persone"] = g.counts == kzero::CountKind::Unknown ? Json(nullptr) : Json(g.total_boarding());
             y["fermate"] = g.stops.size();
             int carrozzine = 0, ausili = 0;
@@ -184,9 +187,11 @@ Json in_json(const DefinizioneComando& comando, const Resoconto& r, const Vista&
             Json y = Json::object();
             y["orario"] = orario(ps.time);
             if (ps.departure) y["partenza"] = orario(*ps.departure);
-            y["luogo"] = ps.place.code;
+            y["luogo"] = luogo_o_riservato(ps.place.code);
             const kzero::Place* luogo = idx.place(ps.place.code);
-            y["nome_luogo"] = luogo ? vista.campo(luogo->src, "nome", luogo->name, luogo->code) : Json(nullptr);
+            y["nome_luogo"] = legame.nasconde_luogo(ps.place.code) ? Json(kRiservato)
+                              : luogo                              ? vista.campo(luogo->src, "nome", luogo->name, luogo->code)
+                                                                   : Json(nullptr);
             y["transito"] = ps.transit;
             int salgono = 0, scendono = 0;
             for (const auto& c : ps.persons) {

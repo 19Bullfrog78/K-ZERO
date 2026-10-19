@@ -179,7 +179,7 @@
                     { "$ref": "#/definitions/riservato" }
                   ]
                 },
-                "scuola": { "type": ["string", "null"] },
+                "scuola": { "description": "Scuola o centro di destinazione. Luogo sensibile (K-009): con i dati personali e senza quelli particolari, se servizi e corse mostrano il nome di un passeggero o la sua casa, 'riservato'.", "type": ["string", "null"] },
                 "persone": {
                   "description": "Persone che salgono; null se i conteggi non sono noti.",
                   "type": ["integer", "null"],
@@ -208,9 +208,9 @@
                         "type": "string"
                       },
                       "stato": { "enum": ["attivo", "sospeso", "sbloccato"] },
-                      "salita": { "type": ["string", "null"] },
+                      "salita": { "description": "Luogo di salita. Luogo sensibile (K-009): con i dati personali e senza quelli particolari, se servizi e corse mostrano il nome di un passeggero o la sua casa, 'riservato'.", "type": ["string", "null"] },
                       "salita_bloccata": { "type": "boolean" },
-                      "discesa": { "type": ["string", "null"] },
+                      "discesa": { "description": "Luogo di discesa. Luogo sensibile (K-009): con i dati personali e senza quelli particolari, se servizi e corse mostrano il nome di un passeggero o la sua casa, 'riservato'.", "type": ["string", "null"] },
                       "motivo": {
                         "description": "Dato personale: di base al suo posto c'e' il codice.",
                         "type": ["string", "null"]
@@ -280,9 +280,9 @@
               "properties": {
                 "orario": { "$ref": "#/definitions/orario" },
                 "partenza": { "$ref": "#/definitions/orario" },
-                "luogo": { "type": "string", "minLength": 1 },
+                "luogo": { "description": "Codice del luogo. Luogo sensibile (K-009): con i dati personali e senza quelli particolari, se servizi e corse mostrano il nome di un passeggero o la sua casa, 'riservato'.", "type": "string", "minLength": 1 },
                 "nome_luogo": {
-                  "description": "Per i luoghi privati e' un dato personale: di base al suo posto c'e' il codice.",
+                  "description": "Per i luoghi privati e' un dato personale: di base al suo posto c'e' il codice. Per un luogo sensibile, come per 'luogo'.",
                   "type": ["string", "null"]
                 },
                 "transito": { "type": "boolean" },

@@ -9,6 +9,7 @@
 #include <stdexcept>
 
 #include "pacchetto.hpp"
+#include "riservatezza.hpp"
 #include "tempo.hpp"
 
 namespace kzero::api {
@@ -587,25 +588,18 @@ std::string Presentatore::messaggio(const kzero::Problem& p) const {
     const std::string& modello = personale != d.personali.end() && !visibile(Classe::Personale, dati_->visibilita)
                                      ? personale->second
                                      : d.messaggi[static_cast<std::size_t>(p.variant)];
-    // Luoghi sensibili (K-009): se il messaggio mostra il nome di un passeggero ma non i dati particolari, il legame tra
-    // il passeggero e un luogo sensibile (o una scuola o un centro in un luogo sensibile) e' un dato sulla salute.
-    bool legame_riservato = false;
-    if (dati_->indice && visibile(Classe::Personale, dati_->visibilita) && !visibile(Classe::Particolare, dati_->visibilita))
-        for (const kzero::Param& x : p.params)
-            if (x.kind == kzero::Param::Kind::Ref && x.element == kzero::Element::Passenger)
-                if (const kzero::Passenger* q = dati_->indice->passenger(x.text)) legame_riservato = legame_riservato || !q->name.empty();
-    const auto sensibile = [this](const kzero::Param& x) {
+    // Luoghi sensibili (riservatezza.hpp): l'insieme e' il messaggio. Se nomina un passeggero o la sua casa e non
+    // mostra i dati particolari, i luoghi sensibili che nomina (e le scuole o i centri che ci stanno) sono riservati.
+    LegameSensibile legame(dati_->indice ? &*dati_->indice : nullptr, dati_->visibilita);
+    for (const kzero::Param& x : p.params) {
+        if (x.kind != kzero::Param::Kind::Ref) continue;
+        if (x.element == kzero::Element::Passenger) legame.passeggero(x.text);
+        if (x.element == kzero::Element::Place) legame.luogo(x.text);
+    }
+    const auto sensibile = [&legame](const kzero::Param& x) {
         if (x.kind != kzero::Param::Kind::Ref) return false;
-        const kzero::Index& idx = *dati_->indice;
-        if (x.element == kzero::Element::Place) {
-            const kzero::Place* l = idx.place(x.text);
-            return l && l->sensitive;
-        }
-        if (x.element == kzero::Element::School) {
-            const kzero::School* sc = idx.school(x.text);
-            const kzero::Place* l = sc ? idx.place(sc->place.code) : nullptr;
-            return l && l->sensitive;
-        }
+        if (x.element == kzero::Element::Place) return legame.nasconde_luogo(x.text);
+        if (x.element == kzero::Element::School) return legame.nasconde_scuola(x.text);
         return false;
     };
     std::string out;
@@ -622,7 +616,7 @@ std::string Presentatore::messaggio(const kzero::Problem& p) const {
             (it->sensitivity == kzero::Param::Sensitivity::Personal && !visibile(Classe::Personale, dati_->visibilita)) ||
             (it->sensitivity == kzero::Param::Sensitivity::Particular && !visibile(Classe::Particolare, dati_->visibilita));
         std::string valore;
-        if (legame_riservato && sensibile(*it)) {
+        if (sensibile(*it)) {
             valore = kRiservato;
         } else if (nascosto) {
             valore = it->hidden.empty() ? std::string(kRiservato) : it->hidden;

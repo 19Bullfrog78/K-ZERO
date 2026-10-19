@@ -1,6 +1,8 @@
 // K-Zero API - riservatezza delle posizioni dei problemi (vedi riservatezza.hpp).
 #include "riservatezza.hpp"
 
+#include <algorithm>
+
 #include "formato_dati.hpp"
 
 namespace kzero::api {
@@ -87,6 +89,36 @@ bool file_riservato(const std::string& file) {
     if (!sv) return false;
     const auto livelli = SchemiDati::incorporati().livelli(sv->first, sv->second, "");
     return livelli.front().classe && *livelli.front().classe != Classe::Comune;
+}
+
+LegameSensibile::LegameSensibile(const kzero::Index* indice, const Visibilita& visibilita)
+    : indice_(indice),
+      attivo_(indice && visibile(Classe::Personale, visibilita) && !visibile(Classe::Particolare, visibilita) &&
+              std::any_of(indice->package().places.begin(), indice->package().places.end(),
+                          [](const kzero::Place& l) { return l.sensitive; })) {}
+
+void LegameSensibile::passeggero(const kzero::Code& codice) {
+    if (!attivo_ || riservato_) return;
+    const kzero::Passenger* q = indice_->passenger(codice);
+    riservato_ = q && !q->name.empty();
+}
+
+void LegameSensibile::luogo(const kzero::Code& codice) {
+    if (!attivo_ || riservato_) return;
+    const kzero::Place* l = indice_->place(codice);
+    riservato_ = l && l->type == kzero::PlaceType::DoorToDoor && (!l->name.empty() || !l->address.empty());
+}
+
+bool LegameSensibile::nasconde_luogo(const kzero::Code& luogo) const {
+    if (!riservato_) return false;
+    const kzero::Place* l = indice_->place(luogo);
+    return l && l->sensitive;
+}
+
+bool LegameSensibile::nasconde_scuola(const kzero::Code& scuola) const {
+    if (!riservato_) return false;
+    const kzero::School* s = indice_->school(scuola);
+    return s && nasconde_luogo(s->place.code);
 }
 
 }  // namespace kzero::api

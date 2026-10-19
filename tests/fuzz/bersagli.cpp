@@ -82,7 +82,8 @@ void prova_file_del_pacchetto(const std::string& file, const std::uint8_t* dati,
     leggi_file(file, testo, lettura);
     // Un file usato deve essere stato letto tutto: nessun byte zero (la libreria JSON lo prende per la fine del file).
     if (lettura.usato(file) && testo.find('\0') != std::string::npos) guasto(file + ": file con un byte zero usato lo stesso");
-    for (const Visibilita v : {Visibilita{}, Visibilita{true, true}}) {
+    // Di base, con i soli dati personali (la regola dei luoghi sensibili) e con tutti i dati.
+    for (const Visibilita v : {Visibilita{}, Visibilita{true, false}, Visibilita{true, true}}) {
         const Resoconto r = controlla_lettura(lettura, v);
         if (r.errori + r.avvisi != static_cast<int>(r.problemi.size()) + r.errori_riservati + r.avvisi_riservati)
             guasto("problemi contati e problemi elencati non coincidono");

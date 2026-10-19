@@ -106,7 +106,7 @@
           "x-kzero-classe": "comune"
         },
         "sensibile": {
-          "description": "Luogo sensibile: dire che una persona ci va lascia capire un dato sulla salute (es. un centro diurno, un centro di terapia). Lo sceglie chi scrive i dati: un doposcuola, anch'esso di tipo 'centro', di solito non lo e'. Quando un'uscita mostra il nome di un passeggero e non i dati particolari, il legame tra il passeggero e un luogo sensibile (destinazione, salita, discesa) diventa 'riservato'.",
+          "description": "Luogo sensibile: dire che una persona ci va lascia capire un dato sulla salute (es. un centro diurno, un centro di terapia). Lo sceglie chi scrive i dati: un doposcuola, anch'esso di tipo 'centro', di solito non lo e'. Quando un'uscita mostra il nome di un passeggero o la sua casa (punto porta a porta) e non i dati particolari, il luogo sensibile diventa 'riservato' dove compare insieme a loro (docs/formato-dati.md, 'Luoghi sensibili').",
           "type": "boolean",
           "x-kzero-classe": "comune"
         },

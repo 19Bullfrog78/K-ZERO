@@ -146,8 +146,8 @@ struct Place {
     std::optional<AccessLimits> limits;
     std::optional<TransferAuthorization> transfer;   // presente = punto di trasbordo autorizzato
     // Luogo sensibile (K-009, scelta di chi scrive i dati): dire che una persona ci va lascia capire un dato sulla
-    // salute (es. un centro diurno o di terapia). Nelle uscite che mostrano il nome di un passeggero senza i dati
-    // particolari, il legame tra il passeggero e questo luogo e' riservato.
+    // salute (es. un centro diurno o di terapia). Nelle uscite che lasciano riconoscere un passeggero (il nome o la
+    // casa) senza i dati particolari, il legame con questo luogo e' riservato (API: LegameSensibile).
     bool sensitive = false;
     std::string note;
     Source src;

@@ -1076,6 +1076,83 @@ TEST(Api, luoghi_sensibili_nei_messaggi) {
     EXPECT_TRUE(problemi(v1, {}));
 }
 
+// K-009, aggiunta 1: la regola sola dei luoghi sensibili. Una persona trasportata si riconosce dal nome del passeggero
+// o dalla sua casa (punto porta a porta con il nome o l'indirizzo); il personale (garage presso la casa di un autista)
+// no. Vale solo con i dati personali visibili e quelli particolari nascosti.
+TEST(Api, legame_con_i_luoghi_sensibili) {
+    const Memoria m;
+    const Lettura l = leggi_pacchetto(m);
+    const kzero::Index idx(l.pacchetto);
+    const auto riservato = [&idx](Visibilita v, const std::vector<std::string>& luoghi, const std::string& passeggero = "") {
+        LegameSensibile legame(&idx, v);
+        if (!passeggero.empty()) legame.passeggero(passeggero);
+        for (const std::string& x : luoghi) legame.luogo(x);
+        return legame.riservato();
+    };
+    const Visibilita personali{true, false};
+    EXPECT_TRUE(riservato(personali, {"L-CENTRO", "PP-01"}));
+    EXPECT_TRUE(riservato(personali, {"L-CENTRO"}, "P-D1"));
+    EXPECT_FALSE(riservato(personali, {"L-CENTRO", "PR-01", "L-RIMESSA-ALFA"}));   // il garage dell'autista non conta
+    EXPECT_FALSE(riservato(personali, {"L-CENTRO", "F-PRADELLO"}));
+    for (const Visibilita v : {Visibilita{}, Visibilita{true, true}, Visibilita{false, true}}) {
+        EXPECT_FALSE(riservato(v, {"L-CENTRO", "PP-01"}, "P-D1"));
+        EXPECT_FALSE(LegameSensibile(&idx, v).attivo());
+    }
+    LegameSensibile legame(&idx, personali);
+    EXPECT_FALSE(legame.nasconde_luogo("L-CENTRO"));   // nessuna persona riconosciuta (ancora)
+    legame.luogo("PP-02");
+    EXPECT_TRUE(legame.nasconde_luogo("L-CENTRO"));
+    EXPECT_TRUE(legame.nasconde_scuola("SC-CENTRO"));   // il centro diurno sta nel luogo sensibile
+    EXPECT_FALSE(legame.nasconde_luogo("L-MEDIE"));
+    EXPECT_FALSE(legame.nasconde_luogo("PP-02"));
+    EXPECT_FALSE(legame.nasconde_luogo("NON-ESISTE"));
+    EXPECT_TRUE(LegameSensibile(&idx, personali).attivo());
+    EXPECT_FALSE(LegameSensibile(nullptr, personali).attivo());
+    // Un pacchetto senza luoghi sensibili: la regola non ha nulla da nascondere.
+    Memoria senza_sensibili;
+    senza_sensibili.sostituisci("luoghi.json", ",\n      \"sensibile\": true", "");
+    const Lettura lss = leggi_pacchetto(senza_sensibili);
+    const kzero::Index idx_senza_sensibili(lss.pacchetto);
+    EXPECT_FALSE(LegameSensibile(&idx_senza_sensibili, personali).attivo());
+    // Una casa senza nome e senza indirizzo si vede solo con il codice, come di base: non lascia riconoscere nessuno.
+    Memoria senza_nome;
+    senza_nome.sostituisci("luoghi.json", "\"nome\": \"Casa Bianchi\",\n      \"indirizzo\": \"Via dei Larici 4\",\n      ", "");
+    const Lettura ls = leggi_pacchetto(senza_nome);
+    ASSERT_TRUE(ls.problemi.empty() || std::none_of(ls.problemi.begin(), ls.problemi.end(), [](const kzero::Problem& p) {
+                    return definizione_controllo(p.check).livello == Livello::Errore;
+                }));
+    const kzero::Index idx_senza_nome(ls.pacchetto);
+    LegameSensibile anonima(&idx_senza_nome, personali);
+    anonima.luogo("PP-01");
+    EXPECT_FALSE(anonima.riservato());
+    anonima.luogo("PP-02");
+    EXPECT_TRUE(anonima.riservato());
+}
+
+// Nei messaggi di kzero controlla l'insieme e' il messaggio: se nomina la casa di un passeggero e un luogo sensibile,
+// con i dati personali e senza quelli particolari il luogo sensibile e' riservato.
+TEST(Api, casa_e_luogo_sensibile_nei_messaggi) {
+    const Memoria m;
+    const Lettura l = leggi_pacchetto(m);
+    const auto messaggio = [&l](const std::string& da, const std::string& a, Visibilita v) {
+        const Presentatore p(&l.pacchetto, &l.versioni, v);
+        return p.messaggio(kzero::Problem{Check::TripPartsGap, 0, kzero::Source{},
+                                          {kzero::ref_param("corsa", kzero::Element::Trip, "C-DIS-1"),
+                                           kzero::ref_param("da", kzero::Element::Place, da), kzero::ref_param("a", kzero::Element::Place, a),
+                                           kzero::days_param("giorni", kzero::day_from_ymd(2026, 10, 22))}});
+    };
+    EXPECT_NE(messaggio("PP-01", "L-CENTRO", Visibilita{true, false}).find("da PP-01 (Casa Bianchi) a riservato,"), std::string::npos);
+    EXPECT_EQ(messaggio("PP-01", "L-CENTRO", Visibilita{true, false}).find("L-CENTRO"), std::string::npos);
+    // Di base la casa si vede solo con il codice: il messaggio resta com'era.
+    EXPECT_NE(messaggio("PP-01", "L-CENTRO", Visibilita{}).find("da PP-01 a L-CENTRO (Valfonda, Centro diurno Il Faro),"),
+              std::string::npos);
+    EXPECT_NE(messaggio("PP-01", "L-CENTRO", Visibilita{true, true}).find("da PP-01 (Casa Bianchi) a L-CENTRO"), std::string::npos);
+    // Una casa con un luogo non sensibile, o il garage di un autista con il centro: nessun cambiamento.
+    EXPECT_NE(messaggio("PP-01", "L-MEDIE", Visibilita{true, false}).find("da PP-01 (Casa Bianchi) a L-MEDIE"), std::string::npos);
+    EXPECT_NE(messaggio("PR-01", "L-CENTRO", Visibilita{true, false}).find("a L-CENTRO (Valfonda, Centro diurno Il Faro)"),
+              std::string::npos);
+}
+
 // Quali dati personali e particolari contiene un pacchetto, file per file (quanti valori, dalle classi degli schemi):
 // serve a dire cosa e' coinvolto se il pacchetto va perso. I file con soli dati comuni non compaiono.
 TEST(Api, valori_riservati_di_un_pacchetto) {
