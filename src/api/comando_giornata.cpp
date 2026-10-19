@@ -64,21 +64,39 @@ const char* modo_mezzo(kzero::VehicleSource s) {
     return "nessuno";
 }
 
-Json posizione(const kzero::Source& s) {
-    Json j = Json::object();
-    j["file"] = s.file;
-    j["puntatore"] = s.pointer;
-    return j;
-}
 
 // --- Il documento JSON ------------------------------------------------------------------------------------------
 
 class Giornata {
 public:
-    Giornata(const kzero::Planner& piano, const Vista& vista) : piano_(piano), idx_(piano.index()), vista_(vista) {}
+    Giornata(const kzero::Planner& piano, const Vista& vista)
+        : piano_(piano), idx_(piano.index()), vista_(vista), legame_(&idx_, vista.visibilita()) {}
 
-    Json luogo(const kzero::Code& codice) const {
+    // Luoghi sensibili (riservatezza.hpp): l'insieme e' l'intera giornata mostrata, perche' i turni sono legati dal
+    // mezzo, dalla persona, dai trasbordi e dall'assistente a bordo. Ogni luogo mostrato passa da luogo(), che lo
+    // dichiara: costruire una volta tutta la giornata dichiara tutto, prima di costruirla per davvero.
+    const LegameSensibile& legame() const { return legame_; }
+
+    // Dove e' scritta un'assegnazione, filtrata come le posizioni dei problemi (riservatezza.hpp): di base non entra mai
+    // in un dato personale o particolare; null se non si puo' mostrare.
+    Json posizione(const kzero::Source& s) const {
+        const PosizioneMostrata p = vista_.posizione(s);
+        if (p.posizione.file.empty()) return Json(nullptr);
         Json j = Json::object();
+        j["file"] = p.posizione.file;
+        j["puntatore"] = p.posizione.pointer;
+        return j;
+    }
+
+    // Un luogo: codice e nome (filtrato secondo la classe), oppure "riservato" tutti e due (luogo sensibile).
+    Json luogo(const kzero::Code& codice) const {
+        legame_.luogo(codice);
+        Json j = Json::object();
+        if (legame_.nasconde_luogo(codice)) {
+            j["codice"] = kRiservato;
+            j["nome"] = kRiservato;
+            return j;
+        }
         j["codice"] = codice;
         const kzero::Place* l = idx_.place(codice);
         j["nome"] = l ? vista_.campo(l->src, "nome", l->name, l->code) : Json(nullptr);
@@ -341,6 +359,7 @@ private:
     const kzero::Planner& piano_;
     const kzero::Index& idx_;
     const Vista& vista_;
+    mutable LegameSensibile legame_;
 };
 
 // Dettaglio di una persona (assenze) da mostrare solo con i dati personali.
@@ -375,6 +394,25 @@ Json in_json(const DefinizioneComando& comando, const Resoconto& r, const Parame
 
     const kzero::Person* sola_persona = par.persona.empty() ? nullptr : idx.person(par.persona);
     const kzero::Vehicle* solo_mezzo = par.mezzo.empty() ? nullptr : idx.vehicle(par.mezzo);
+    // I turni da mostrare: di una persona (fatti o previsti), di un mezzo (guidato, previsto, a bordo o scritto nel
+    // turno) oppure tutti.
+    const std::vector<kzero::ShiftDay> giorno = piano.day(d);
+    std::vector<const kzero::ShiftDay*> scelti;
+    for (const kzero::ShiftDay& sd : giorno) {
+        const auto e = [](const auto* x, const auto* y) { return x && y && x->code == y->code; };
+        const bool scritto = solo_mezzo && sd.shift->vehicle_mode == kzero::ShiftVehicleMode::Specific && sd.shift->vehicle &&
+                             sd.shift->vehicle->code == solo_mezzo->code;   // il mezzo scritto nel turno
+        if (sola_persona && !e(sd.person, sola_persona) && !e(sd.planned, sola_persona)) continue;
+        if (solo_mezzo && !e(sd.vehicle, solo_mezzo) && !e(sd.planned_vehicle, solo_mezzo) && !e(sd.aboard, solo_mezzo) && !scritto)
+            continue;
+        scelti.push_back(&sd);
+    }
+    // Luoghi sensibili: prima si dichiara tutto quello che la giornata mostra (vedi Giornata::legame).
+    if (g.legame().attivo()) {
+        if (sola_persona && sola_persona->base_place) (void)g.luogo(sola_persona->base_place->code);
+        for (const kzero::ShiftDay* sd : scelti) (void)g.turno(*sd);
+    }
+
     Json vista_json = Json::object();
     vista_json["tipo"] = sola_persona ? "persona" : solo_mezzo ? "mezzo" : "tutti";
     vista_json["codice"] = sola_persona ? Json(sola_persona->code) : solo_mezzo ? Json(solo_mezzo->code) : Json(nullptr);
@@ -409,13 +447,9 @@ Json in_json(const DefinizioneComando& comando, const Resoconto& r, const Parame
     long long fermi = 0;
     double pieni = 0.0, vuoti = 0.0;
     std::set<kzero::Code> persone, mezzi;
-    for (const kzero::ShiftDay& sd : piano.day(d)) {
+    for (const kzero::ShiftDay* p_sd : scelti) {
+        const kzero::ShiftDay& sd = *p_sd;
         const auto e = [](const auto* x, const auto* y) { return x && y && x->code == y->code; };
-        const bool scritto = solo_mezzo && sd.shift->vehicle_mode == kzero::ShiftVehicleMode::Specific && sd.shift->vehicle &&
-                             sd.shift->vehicle->code == solo_mezzo->code;   // il mezzo scritto nel turno
-        if (sola_persona && !e(sd.person, sola_persona) && !e(sd.planned, sola_persona)) continue;
-        if (solo_mezzo && !e(sd.vehicle, solo_mezzo) && !e(sd.planned_vehicle, solo_mezzo) && !e(sd.aboard, solo_mezzo) && !scritto)
-            continue;
         Json t = g.turno(sd);
         scoperti += t.at("scoperto").get<bool>() ? 1 : 0;
         senza_mezzo += t.at("senza_mezzo").get<bool>() ? 1 : 0;

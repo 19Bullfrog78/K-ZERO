@@ -41,6 +41,18 @@ Si parte da Alpinabus (3 minibus + 1 auto) e si deve poter crescere fino a 500 m
   `python3 -m venv ~/.kzero-strumenti && ~/.kzero-strumenti/bin/pip install --require-hashes -r tests/strumenti/check-jsonschema.txt`
   e poi `export PATH=~/.kzero-strumenti/bin:$PATH`. Senza lo strumento quelle prove non vengono registrate
   (CMake lo segnala); il controllo GitHub le rende obbligatorie (`-DKZERO_SCHEMI_OBBLIGATORI=ON`).
+- Prove con i sanitizer (AddressSanitizer e UndefinedBehaviorSanitizer, si fermano al primo problema; clang come nel
+  controllo GitHub): `CC=clang CXX=clang++ cmake -S . -B build-san -DKZERO_SANITIZER=ON -DKZERO_WERROR=ON
+  -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build-san && ctest --test-dir build-san --output-on-failure`
+- Fuzzing (prove con dati casuali e deformati, libFuzzer, solo clang; su Ubuntu serve il pacchetto libclang-rt-18-dev):
+  `CC=clang CXX=clang++ cmake -S . -B build-fuzz -DKZERO_FUZZ=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo &&
+  cmake --build build-fuzz --target fuzz_pacchetto fuzz_parametri fuzz_date_e_orari`, poi
+  `tests/fuzz/fuzz.sh build-fuzz <secondi per bersaglio> [cartella di lavoro] [bersagli]` (27 bersagli: `pacchetto-<file>`,
+  `parametri`, `date-e-orari`; nel controllo GitHub 20 secondi; in locale a lungo, es. `KZERO_FUZZ_PARALLELI=4
+  tests/fuzz/fuzz.sh build-fuzz 3600 ~/kzero-fuzz`). Un guasto lascia il file che lo provoca in
+  `<lavoro>/guasti/<bersaglio>/`: si corregge e il file va in `tests/fuzz/casi/<bersaglio>/` (diventa una prova normale).
+- Sicurezza (cosa protegge K-Zero, rischi, consigli, violazioni): docs/sicurezza.md; elenco dei componenti esterni:
+  docs/componenti.cdx.json (CycloneDX), da aggiornare a ogni libreria nuova o cambiata (una prova lo controlla).
 
 ## Principi guida
 - IMPORTANTE (Mauro, 13/10): K-Zero non si calibra su un'azienda ed e' personalizzabile dall'azienda il piu'
@@ -48,12 +60,16 @@ Si parte da Alpinabus (3 minibus + 1 auto) e si deve poter crescere fino a 500 m
   competenze, impostazioni) la scrive e la cambia l'utente nei dati; il programma la registra, la controlla e
   piu' avanti la proporra', ma non decide niente da solo e ogni scelta dell'utente vince. Alpinabus e' solo un
   esempio nei dati.
+- IMPORTANTE (Mauro, risposta 43), domande e AI: le domande all'utente le fara' il programma stesso, a scelta multipla,
+  senza AI, con le risposte salvate nei dati. Un assistente AI e' solo un aiuto facoltativo e di base non riceve ne'
+  nomi ne' dati sulla salute (le uscite di base sono gia' filtrate).
 - IMPORTANTE (Mauro, 18/10), sicurezza: il programma lavora sul PC e oggi nessun comando usa la rete; quando
   servira' (es. le distanze da Google Maps) lo fara' solo un adattatore separato, acceso con un parametro
   esplicito, che manda fuori il minimo (coordinate, mai nomi o altri dati delle persone), con un suo mandato.
   Non scrive file senza --scrivi; controlla ogni dato in ingresso con limiti di buon senso e rifiuta i file
   malformati senza bloccarsi; conserva il minimo dei dati personali. Il mandato "privacy e sicurezza di base"
-  viene prima di qualunque dato vero.
+  (K-009) viene prima di qualunque dato vero; la cassaforte dei dati personali (cifratura, utenti, registro degli
+  accessi) e' il mandato K-010. Dettagli e rischi che restano: docs/sicurezza.md.
 
 ## Regole di lavoro
 - IMPORTANTE: K-Zero è un software professionale: stabile, solido, preciso.
@@ -101,7 +117,15 @@ Si parte da Alpinabus (3 minibus + 1 auto) e si deve poter crescere fino a 500 m
   indirizzi, case, punti porta a porta, motivi scritti a mano), particolari (salute: esigenze, carrozzine,
   assistente necessario, servizio per disabili). Nelle uscite, testo e JSON allo stesso modo: di base i
   personali sono sostituiti dal codice e i particolari diventano "riservato"; si vedono solo con
-  `--includi-dati-personali` e `--includi-dati-particolari`. Vale anche nei messaggi.
+  `--includi-dati-personali` e `--includi-dati-particolari`. Vale anche nei messaggi, nelle posizioni (mai dentro un
+  dato personale o particolare: si fermano all'elemento comune piu' vicino, regola ricavata dagli schemi) e nei
+  problemi stessi (ogni controllo K-CTR dichiara cosa rivela; quelli sui dati sulla salute di base si contano
+  soltanto). Con i nomi dei passeggeri o le loro case e senza i dati particolari, il legame con un luogo sensibile e'
+  riservato in tutto l'insieme che l'uscita lega (il messaggio, servizi e corse, l'intera giornata): una regola sola,
+  `LegameSensibile` in src/api/riservatezza.hpp.
+- Ogni nuova uscita, messaggio, posizione o registro passa dal filtro delle classi; nessun dato personale nei registri
+  del programma. La lettura dei file e' blindata (solo file normali dentro la cartella del pacchetto, mai oltre il
+  massimo di byte): ogni nuovo lettore di file esterni (es. il file del CTA) la usa.
 - Due livelli di pacchetto: "solo numeri" (consigliato: conteggi, niente nomi, case, porta a porta, motivi)
   e "completo". Mai codice fiscale, telefoni, mail: il formato non ha campi per questi dati.
 - Problemi nei dati: codice fisso K-CTR-nnn (catalogo separato dai K-ERR, in docs/controlli.md, provato

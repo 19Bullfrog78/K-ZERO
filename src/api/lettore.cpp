@@ -2,10 +2,20 @@
 #include "lettore.hpp"
 
 #include <algorithm>
+#include <cerrno>
+#include <charconv>
 #include <fstream>
 #include <set>
-#include <sstream>
 #include <stdexcept>
+#include <string_view>
+#include <tuple>
+
+#if defined(__unix__) || defined(__APPLE__)
+#define KZERO_LETTURA_POSIX 1
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#endif
 
 #include "formato_dati.hpp"
 #include "risorse.hpp"
@@ -25,26 +35,128 @@ std::vector<Sorgente::Voce> CartellaSuDisco::voci() const {
     for (auto it = std::filesystem::directory_iterator(cartella_, ec); !ec && it != std::filesystem::directory_iterator();
          it.increment(ec)) {
         std::error_code ec_tipo;
+        // is_directory segue i collegamenti e non apre nulla: una "pipe" o un dispositivo non bloccano.
         v.push_back({it->path().filename().string(), it->is_directory(ec_tipo)});
     }
     std::sort(v.begin(), v.end(), [](const Voce& a, const Voce& b) { return a.nome < b.nome; });
     return v;
 }
 
-std::optional<std::string> CartellaSuDisco::leggi(const std::string& nome) const {
-    std::ifstream f(cartella_ / nome, std::ios::binary);
-    if (!f) return std::nullopt;
-    std::ostringstream testo;
-    testo << f.rdbuf();
-    if (f.bad()) return std::nullopt;
-    return testo.str();
+namespace {
+
+// Il percorso "dentro" (gia' risolto, senza collegamenti) sta nella cartella "base" (anche lei risolta)?
+bool dentro(const std::filesystem::path& percorso, const std::filesystem::path& base) {
+    auto p = percorso.begin();
+    for (auto b = base.begin(); b != base.end(); ++b, ++p) {
+        if (b->empty()) continue;   // "/" finale della cartella
+        if (p == percorso.end() || *p != *b) return false;
+    }
+    return true;
 }
 
-std::optional<std::uintmax_t> CartellaSuDisco::dimensione(const std::string& nome) const {
+// Legge al massimo "massimo" byte da una funzione che riempie un pezzo di memoria (read del sistema o di un
+// flusso): si chiede sempre al piu' quello che manca al massimo piu' uno, cosi' un file che cresce o che non
+// finisce mai si ferma subito dopo il massimo.
+template <class Leggi>
+FileLetto leggi_al_massimo(std::uintmax_t massimo, Leggi leggi_pezzo) {
+    FileLetto out;
+    std::string testo;
+    char pezzo[64 * 1024];
+    for (;;) {
+        const std::uintmax_t manca = massimo + 1 - testo.size();
+        const std::size_t chiesti = static_cast<std::size_t>(std::min<std::uintmax_t>(sizeof pezzo, manca));
+        const long long letti = leggi_pezzo(pezzo, chiesti);
+        if (letti < 0) return out;   // Illeggibile
+        if (letti == 0) break;
+        testo.append(pezzo, static_cast<std::size_t>(letti));
+        if (testo.size() > massimo) {
+            out.esito = FileLetto::Esito::TroppoGrande;
+            return out;
+        }
+    }
+    out.esito = FileLetto::Esito::Letto;
+    out.testo = std::move(testo);
+    return out;
+}
+
+}  // namespace
+
+FileLetto leggi_dal_disco(const std::filesystem::path& cartella, const std::string& nome, std::uintmax_t massimo) {
+    namespace fs = std::filesystem;
+    FileLetto out;
+    const fs::path percorso = cartella / nome;
     std::error_code ec;
-    const std::uintmax_t n = std::filesystem::file_size(cartella_ / nome, ec);
-    if (ec) return std::nullopt;
-    return n;
+    const fs::file_status proprio = fs::symlink_status(percorso, ec);
+    if (ec) return out;
+    fs::path vero = percorso;
+    if (fs::is_symlink(proprio)) {
+        // Un collegamento si segue fino in fondo; il file vero deve stare dentro la cartella del pacchetto, risolta
+        // anche lei (puo' essere a sua volta un collegamento, es. una cartella sincronizzata).
+        if (!fs::exists(percorso, ec)) {
+            out.esito = ec ? FileLetto::Esito::Illeggibile : FileLetto::Esito::CollegamentoRotto;
+            return out;
+        }
+        vero = fs::canonical(percorso, ec);
+        if (ec) return out;
+        const fs::path base = fs::canonical(cartella, ec);
+        if (ec) return out;
+        if (!dentro(vero, base)) {
+            out.esito = FileLetto::Esito::FuoriCartella;
+            return out;
+        }
+    }
+    const fs::file_status tipo = fs::status(vero, ec);
+    if (ec) return out;
+    if (!fs::is_regular_file(tipo)) {
+        out.esito = FileLetto::Esito::NonNormale;
+        return out;
+    }
+#if defined(KZERO_LETTURA_POSIX)
+    // O_NONBLOCK: se nel frattempo al posto del file e' comparsa una "pipe", l'apertura non resta in attesa.
+    const int fd = ::open(vero.c_str(), O_RDONLY | O_NOCTTY | O_NONBLOCK | O_CLOEXEC);
+    if (fd < 0) return out;
+    struct stat st {};
+    if (::fstat(fd, &st) != 0) {
+        ::close(fd);
+        return out;
+    }
+    if (!S_ISREG(st.st_mode)) {   // quello che e' stato aperto davvero
+        ::close(fd);
+        out.esito = FileLetto::Esito::NonNormale;
+        return out;
+    }
+    if (st.st_size > 0 && static_cast<std::uintmax_t>(st.st_size) > massimo) {   // non serve leggerlo
+        ::close(fd);
+        out.esito = FileLetto::Esito::TroppoGrande;
+        return out;
+    }
+    out = leggi_al_massimo(massimo, [fd](char* dove, std::size_t quanti) -> long long {
+        for (;;) {
+            const ssize_t n = ::read(fd, dove, quanti);
+            if (n >= 0) return static_cast<long long>(n);
+            if (errno != EINTR) return -1;
+        }
+    });
+    ::close(fd);
+    return out;
+#else
+    const std::uintmax_t dichiarata = fs::file_size(vero, ec);
+    if (!ec && dichiarata > massimo) {
+        out.esito = FileLetto::Esito::TroppoGrande;
+        return out;
+    }
+    std::ifstream f(vero, std::ios::binary);
+    if (!f) return out;
+    return leggi_al_massimo(massimo, [&f](char* dove, std::size_t quanti) -> long long {
+        f.read(dove, static_cast<std::streamsize>(quanti));
+        if (f.bad()) return -1;
+        return static_cast<long long>(f.gcount());
+    });
+#endif
+}
+
+FileLetto CartellaSuDisco::leggi(const std::string& nome, std::uintmax_t massimo) const {
+    return leggi_dal_disco(cartella_, nome, massimo);
 }
 
 std::vector<Sorgente::Voce> PacchettoIncorporato::voci() const {
@@ -58,10 +170,17 @@ std::vector<Sorgente::Voce> PacchettoIncorporato::voci() const {
     return v;
 }
 
-std::optional<std::string> PacchettoIncorporato::leggi(const std::string& nome) const {
+FileLetto PacchettoIncorporato::leggi(const std::string& nome, std::uintmax_t massimo) const {
+    FileLetto out;
     const auto testo = risorse::trova(cartella_ + "/" + nome);
-    if (!testo) return std::nullopt;
-    return std::string(*testo);
+    if (!testo) return out;
+    if (testo->size() > massimo) {
+        out.esito = FileLetto::Esito::TroppoGrande;
+        return out;
+    }
+    out.esito = FileLetto::Esito::Letto;
+    out.testo = std::string(*testo);
+    return out;
 }
 
 bool Lettura::forma_valida() const {
@@ -82,7 +201,53 @@ struct Analisi {
     std::optional<JsonDati> documento;
     std::vector<std::string> chiavi_ripetute;   // percorsi JSON delle chiavi ripetute
     int riga = 0, colonna = 0;                  // posizione dell'errore di sintassi
+    bool numero_enorme = false;                 // un numero troppo grande anche per un numero con decimali (es. 1e400)
 };
+
+// Riga e colonna del byte "fine" del testo (colonne contate in caratteri UTF-8).
+std::pair<int, int> riga_e_colonna(const std::string& testo, std::size_t fine) {
+    int riga = 1, colonna = 1;
+    for (std::size_t i = 0; i < fine && i < testo.size(); ++i) {
+        if (testo[i] == '\n') {
+            ++riga;
+            colonna = 1;
+        } else if ((static_cast<unsigned char>(testo[i]) & 0xC0) != 0x80) {
+            ++colonna;
+        }
+    }
+    return {riga, colonna};
+}
+
+// Il primo numero del JSON (fuori dai testi tra virgolette) che non sta in un numero con decimali, es. 1e400: la
+// libreria JSON lo rifiuta senza dire dove. Restituisce la sua posizione nel testo, o la fine se non c'e'.
+std::size_t numero_enorme(const std::string& t) {
+    bool in_testo = false;
+    for (std::size_t i = 0; i < t.size(); ++i) {
+        const char c = t[i];
+        if (in_testo) {
+            if (c == '\\') ++i;
+            else if (c == '"') in_testo = false;
+            continue;
+        }
+        if (c == '"') {
+            in_testo = true;
+            continue;
+        }
+        if (c != '-' && (c < '0' || c > '9')) continue;
+        std::size_t fine = i + 1;
+        while (fine < t.size() && std::string_view("0123456789+-.eE").find(t[fine]) != std::string_view::npos) ++fine;
+        double valore = 0.0;
+        const char* inizio = t.data() + i + (c == '-' ? 1 : 0);
+        const auto [p, errore] = std::from_chars(inizio, t.data() + fine, valore);
+        const std::string_view numero(t.data() + i, fine - i);
+        // Fuori misura per eccesso, non per difetto (1e-400 la libreria lo legge come zero).
+        if (errore == std::errc::result_out_of_range && numero.find("e-") == std::string_view::npos &&
+            numero.find("E-") == std::string_view::npos)
+            return i;
+        i = fine - 1;
+    }
+    return t.size();
+}
 
 // nlohmann/json tiene in silenzio l'ultimo valore di una chiave ripetuta: qui la si trova e la si segnala.
 Analisi analizza(const std::string& testo) {
@@ -129,16 +294,17 @@ Analisi analizza(const std::string& testo) {
         a.documento = JsonDati::parse(testo, richiamo);
     } catch (const JsonDati::parse_error& e) {
         a.documento.reset();
+        std::tie(a.riga, a.colonna) = riga_e_colonna(testo, e.byte > 0 ? e.byte - 1 : 0);
+    } catch (const JsonDati::out_of_range&) {
+        // Un numero troppo grande (es. 1e400): un errore nei dati, non un guasto del programma (trovato dal fuzzing).
+        a.documento.reset();
+        a.numero_enorme = true;
+        std::tie(a.riga, a.colonna) = riga_e_colonna(testo, numero_enorme(testo));
+    } catch (const JsonDati::exception&) {
+        // Qualunque altro rifiuto della libreria JSON: il file non si usa (nessun caso noto).
+        a.documento.reset();
         a.riga = 1;
         a.colonna = 1;
-        for (std::size_t i = 0; i + 1 < e.byte && i < testo.size(); ++i) {
-            if (testo[i] == '\n') {
-                ++a.riga;
-                a.colonna = 1;
-            } else if ((static_cast<unsigned char>(testo[i]) & 0xC0) != 0x80) {
-                ++a.colonna;
-            }
-        }
     }
     return a;
 }
@@ -226,7 +392,7 @@ public:
     }
     static Day data(const JsonDati& v) {
         const auto d = day_from_text(v.get<std::string>());
-        if (!d) throw std::logic_error("data non valida dopo il controllo dello schema: " + v.get<std::string>());
+        if (!d) throw std::logic_error("data non valida dopo il controllo dello schema");   // senza il valore: e' un dato
         return *d;
     }
     static std::optional<Day> data_opz(const JsonDati& o, const char* k) {
@@ -236,7 +402,7 @@ public:
     }
     static Minutes orario(const JsonDati& v) {
         const auto m = minutes_from_text(v.get<std::string>());
-        if (!m) throw std::logic_error("orario non valido dopo il controllo dello schema: " + v.get<std::string>());
+        if (!m) throw std::logic_error("orario non valido dopo il controllo dello schema");
         return *m;
     }
     static std::optional<Minutes> orario_opz(const JsonDati& o, const char* k) {
@@ -286,7 +452,7 @@ template <class E>
 E valore_di(const std::vector<std::pair<const char*, E>>& tabella, const std::string& testo) {
     for (const auto& [nome, e] : tabella)
         if (testo == nome) return e;
-    throw std::logic_error("valore non previsto dallo schema: " + testo);
+    throw std::logic_error("valore di un elenco fisso non previsto dallo schema");
 }
 
 const std::vector<std::pair<const char*, Grade>> kGradi = {
@@ -494,6 +660,7 @@ void luoghi(const JsonDati& d, Package& pk) {
                                                c.testo(t, "documento"), c.vero(t, "a_voce"), c.testo(t, "nota"),
                                                c.src(p + "/trasbordo")};
         }
+        x.sensitive = c.vero(l, "sensibile");   // versione 2
         x.note = c.testo(l, "nota");
         x.src = c.src(p);
         pk.places.push_back(x);
@@ -1327,18 +1494,161 @@ void converti(const std::string& file, const JsonDati& d, Package& pk) {
     throw std::logic_error("file del formato senza conversione: " + file);
 }
 
+// Indici generali di un file letto, ricavati con lo schema e non file per file: codici degli elementi degli elenchi
+// principali, e titolare degli elementi che appartengono a un altro (vedi Lettura).
+void indicizza(const std::string& file, const std::string& schema, int versione, const JsonDati& d, Lettura& out) {
+    for (const auto& [chiave, valore] : d.items()) {
+        if (!valore.is_array()) continue;
+        const std::string elenco = "/" + escape(chiave);
+        const auto livelli = SchemiDati::incorporati().livelli(schema, versione, elenco + "/0");
+        const JsonDati* titolare = livelli.size() == 3 ? livelli[2].titolare : nullptr;
+        const std::string campo = titolare ? titolare->at("campo").get<std::string>() : std::string();
+        auto& codici = out.codici[{file, chiave}];
+        for (std::size_t i = 0; i < valore.size(); ++i) {
+            const JsonDati& e = valore[i];
+            if (!e.is_object()) continue;
+            const auto c = e.find("codice");
+            if (c != e.end() && c->is_string()) codici.emplace(c->get<std::string>(), i);
+            const auto t = titolare ? e.find(campo) : e.end();
+            if (t != e.end() && t->is_string()) out.titolari[file][indice(elenco, i)] = t->get<std::string>();
+        }
+    }
+}
+
+// Conta i valori di un documento (gia' conforme allo schema) secondo la loro classe: la marcatura piu' vicina, come nel
+// filtro delle uscite. Un valore e' un testo, un numero o un vero/falso; gli oggetti e gli elenchi si attraversano.
+void conta_classi(const JsonDati& radice, const JsonDati& valore, const JsonDati& nodo, Classe classe, Lettura::ValoriRiservati& out,
+                  int profondita = 0) {
+    if (profondita > 64) return;   // lo schema dei file e' molto meno profondo
+    const JsonDati& definizione = nodo.is_object() && nodo.contains("$ref") ? SchemiDati::risolvi(radice, nodo) : nodo;
+    for (const JsonDati* n : {&definizione, &nodo})
+        if (n->is_object() && n->contains("x-kzero-classe")) {
+            const std::string c = n->at("x-kzero-classe").get<std::string>();
+            classe = c == "personale" ? Classe::Personale : c == "particolare" ? Classe::Particolare : Classe::Comune;
+        }
+    if (valore.is_object()) {
+        const auto props = definizione.find("properties");
+        for (const auto& [k, v] : valore.items()) {
+            const bool previsto = props != definizione.end() && props->contains(k);
+            conta_classi(radice, v, previsto ? props->at(k) : JsonDati::object(), classe, out, profondita + 1);
+        }
+        return;
+    }
+    if (valore.is_array()) {
+        const auto items = definizione.find("items");
+        for (const auto& v : valore)
+            conta_classi(radice, v, items != definizione.end() && items->is_object() ? *items : JsonDati::object(), classe, out,
+                         profondita + 1);
+        return;
+    }
+    if (classe == Classe::Personale) ++out.personali;
+    if (classe == Classe::Particolare) ++out.particolari;
+}
+
 Problem problema(Check c, const std::string& file, std::string puntatore, std::vector<Param> param = {}, int variante = 0) {
     return Problem{c, variante, Source{file, std::move(puntatore), 0, 0}, std::move(param)};
 }
 
 }  // namespace
 
+void leggi_file(const std::string& file, const std::string& testo, Lettura& out) {
+    const FileDati* trovato = file_dati_per_nome(file);
+    if (!trovato) throw std::logic_error("file che non fa parte del formato: " + file);
+    const FileDati& f = *trovato;
+    out.presenti.insert(f.file);
+    if (const auto codifica = codifica_sbagliata(testo)) {
+        Problem p = codifica->utf16 ? problema(Check::NotUtf8, f.file, "", {}, 1)
+                                    : problema(Check::NotUtf8, f.file, "",
+                                               {number_param("riga", codifica->riga), number_param("colonna", codifica->colonna)}, 0);
+        p.where.line = codifica->riga;
+        p.where.column = codifica->colonna;
+        out.problemi.push_back(p);
+        return;
+    }
+    // Un byte zero non puo' stare in un file JSON (nemmeno dentro un testo), e la libreria JSON lo prende per la fine del
+    // file: un file valido seguito da zeri e da altro testo verrebbe letto a meta' (K-009, file rovinati o preparati).
+    if (const std::size_t zero = testo.find('\0'); zero != std::string::npos) {
+        const auto [riga, colonna] = riga_e_colonna(testo, zero);
+        Problem p = problema(Check::InvalidJson, f.file, "", {number_param("riga", riga), number_param("colonna", colonna)}, 1);
+        p.where.line = riga;
+        p.where.column = colonna;
+        out.problemi.push_back(p);
+        return;
+    }
+    Analisi a = analizza(testo);
+    if (!a.documento) {
+        Problem p = problema(Check::InvalidJson, f.file, "", {number_param("riga", a.riga), number_param("colonna", a.colonna)},
+                             a.numero_enorme ? 2 : 0);
+        p.where.line = a.riga;
+        p.where.column = a.colonna;
+        out.problemi.push_back(p);
+        return;
+    }
+    if (!a.chiavi_ripetute.empty()) {
+        for (const std::string& p : a.chiavi_ripetute) out.problemi.push_back(problema(Check::DuplicateKey, f.file, p));
+        return;
+    }
+    const JsonDati& d = *a.documento;
+    if (!d.is_object() || !d.contains("schema") || !d.at("schema").is_string()) {
+        out.problemi.push_back(problema(Check::WrongSchema, f.file, d.is_object() ? "/schema" : "",
+                                        {text_param("atteso", f.schema)}, 0));
+        return;
+    }
+    if (d.at("schema").get<std::string>() != f.schema) {
+        out.problemi.push_back(problema(Check::WrongSchema, f.file, "/schema",
+                                        {text_param("trovato", d.at("schema").get<std::string>()), text_param("atteso", f.schema)}, 1));
+        return;
+    }
+    std::string supportate;
+    for (int v : f.versioni) supportate += (supportate.empty() ? "" : ", ") + std::to_string(v);
+    const auto versione = d.find("schema_versione");
+    if (versione == d.end() || !versione->is_number_integer()) {
+        out.problemi.push_back(problema(Check::UnsupportedVersion, f.file, versione == d.end() ? "" : "/schema_versione",
+                                        {text_param("supportate", supportate)}, 1));
+        return;
+    }
+    const long long v = versione->get<long long>();
+    if (std::find(f.versioni.begin(), f.versioni.end(), v) == f.versioni.end()) {
+        out.problemi.push_back(problema(Check::UnsupportedVersion, f.file, "/schema_versione",
+                                        {number_param("versione", v), text_param("supportate", supportate)}, 0));
+        return;
+    }
+    const std::vector<ErroreSchema> errori = valida(d, f.schema, static_cast<int>(v));
+    if (!errori.empty()) {
+        for (const ErroreSchema& e : errori) {
+            // Il valore sbagliato di un campo personale o particolare segue le classi dei dati.
+            Param dettaglio = text_param("dettaglio", e.messaggio);
+            const Classe classe = SchemiDati::incorporati().classe(f.schema, static_cast<int>(v), e.puntatore);
+            if (classe != Classe::Comune) {
+                dettaglio.sensitivity = classe == Classe::Personale ? Param::Sensitivity::Personal : Param::Sensitivity::Particular;
+                dettaglio.hidden = e.messaggio_senza_valore;
+            }
+            out.problemi.push_back(problema(Check::SchemaViolation, f.file, e.puntatore, {dettaglio}));
+        }
+        return;
+    }
+    converti(f.file, d, out.pacchetto);
+    indicizza(f.file, f.schema, static_cast<int>(v), d, out);
+    const JsonDati& schema = *SchemiDati::incorporati().schema(f.schema, static_cast<int>(v));
+    Lettura::ValoriRiservati valori;
+    conta_classi(schema, d, schema, Classe::Comune, valori);
+    if (valori.personali + valori.particolari > 0) out.riservati[f.file] = valori;
+    out.versioni[f.file] = static_cast<int>(v);
+}
+
 Lettura leggi_pacchetto(const Sorgente& sorgente) {
     Lettura out;
     std::set<std::string>& presenti = out.presenti;
+    std::set<std::string> cartelle;   // cartelle con il nome di un file del formato
     for (const auto& v : sorgente.voci()) {
-        if (!v.cartella && file_dati_per_nome(v.nome)) {
+        if (file_dati_per_nome(v.nome)) {
             presenti.insert(v.nome);
+            if (v.cartella) {
+                // Un errore proprio: il file c'e' (non mancano i suoi elementi), ma non si puo' leggere. Cosi' i
+                // controlli sul contenuto non partono e non si hanno errori a catena sui codici mancanti.
+                cartelle.insert(v.nome);
+                out.problemi.push_back(problema(Check::DirectoryInsteadOfFile, v.nome, "", {text_param("file", v.nome)}));
+            }
             continue;
         }
         out.problemi.push_back(problema(Check::UnknownFile, v.nome, "", {text_param("file", v.nome)}, v.cartella ? 1 : 0));
@@ -1346,79 +1656,19 @@ Lettura leggi_pacchetto(const Sorgente& sorgente) {
     if (!presenti.count("pacchetto.json")) out.problemi.push_back(problema(Check::MissingManifest, "pacchetto.json", ""));
 
     for (const FileDati& f : file_dati()) {
-        if (!presenti.count(f.file)) continue;
-        const std::optional<std::uintmax_t> byte = sorgente.dimensione(f.file);
-        if (byte && *byte > kMassimoMBFile * 1024 * 1024) {
-            out.problemi.push_back(problema(Check::FileTooBig, f.file, "", {number_param("massimo", static_cast<long long>(kMassimoMBFile))}));
-            continue;
+        if (!presenti.count(f.file) || cartelle.count(f.file)) continue;
+        FileLetto letto = sorgente.leggi(f.file, kMassimoByteFile);
+        switch (letto.esito) {
+            case FileLetto::Esito::Letto: break;
+            case FileLetto::Esito::TroppoGrande:
+                out.problemi.push_back(problema(Check::FileTooBig, f.file, "", {number_param("massimo", static_cast<long long>(kMassimoMBFile))}));
+                continue;
+            case FileLetto::Esito::Illeggibile: out.problemi.push_back(problema(Check::UnreadableFile, f.file, "")); continue;
+            case FileLetto::Esito::CollegamentoRotto: out.problemi.push_back(problema(Check::UnreadableFile, f.file, "", {}, 1)); continue;
+            case FileLetto::Esito::NonNormale: out.problemi.push_back(problema(Check::NotRegularFile, f.file, "")); continue;
+            case FileLetto::Esito::FuoriCartella: out.problemi.push_back(problema(Check::LinkOutsideFolder, f.file, "")); continue;
         }
-        const std::optional<std::string> testo = sorgente.leggi(f.file);
-        if (!testo) {
-            out.problemi.push_back(problema(Check::UnreadableFile, f.file, ""));
-            continue;
-        }
-        if (const auto codifica = codifica_sbagliata(*testo)) {
-            Problem p = codifica->utf16 ? problema(Check::NotUtf8, f.file, "", {}, 1)
-                                        : problema(Check::NotUtf8, f.file, "",
-                                                   {number_param("riga", codifica->riga), number_param("colonna", codifica->colonna)}, 0);
-            p.where.line = codifica->riga;
-            p.where.column = codifica->colonna;
-            out.problemi.push_back(p);
-            continue;
-        }
-        Analisi a = analizza(*testo);
-        if (!a.documento) {
-            Problem p = problema(Check::InvalidJson, f.file, "", {number_param("riga", a.riga), number_param("colonna", a.colonna)});
-            p.where.line = a.riga;
-            p.where.column = a.colonna;
-            out.problemi.push_back(p);
-            continue;
-        }
-        if (!a.chiavi_ripetute.empty()) {
-            for (const std::string& p : a.chiavi_ripetute) out.problemi.push_back(problema(Check::DuplicateKey, f.file, p));
-            continue;
-        }
-        const JsonDati& d = *a.documento;
-        if (!d.is_object() || !d.contains("schema") || !d.at("schema").is_string()) {
-            out.problemi.push_back(problema(Check::WrongSchema, f.file, d.is_object() ? "/schema" : "",
-                                            {text_param("atteso", f.schema)}, 0));
-            continue;
-        }
-        if (d.at("schema").get<std::string>() != f.schema) {
-            out.problemi.push_back(problema(Check::WrongSchema, f.file, "/schema",
-                                            {text_param("trovato", d.at("schema").get<std::string>()), text_param("atteso", f.schema)}, 1));
-            continue;
-        }
-        std::string supportate;
-        for (int v : f.versioni) supportate += (supportate.empty() ? "" : ", ") + std::to_string(v);
-        const auto versione = d.find("schema_versione");
-        if (versione == d.end() || !versione->is_number_integer()) {
-            out.problemi.push_back(problema(Check::UnsupportedVersion, f.file, versione == d.end() ? "" : "/schema_versione",
-                                            {text_param("supportate", supportate)}, 1));
-            continue;
-        }
-        const long long v = versione->get<long long>();
-        if (std::find(f.versioni.begin(), f.versioni.end(), v) == f.versioni.end()) {
-            out.problemi.push_back(problema(Check::UnsupportedVersion, f.file, "/schema_versione",
-                                            {number_param("versione", v), text_param("supportate", supportate)}, 0));
-            continue;
-        }
-        const std::vector<ErroreSchema> errori = valida(d, f.schema, static_cast<int>(v));
-        if (!errori.empty()) {
-            for (const ErroreSchema& e : errori) {
-                // Il valore sbagliato di un campo personale o particolare segue le classi dei dati.
-                Param dettaglio = text_param("dettaglio", e.messaggio);
-                const Classe classe = SchemiDati::incorporati().classe(f.schema, static_cast<int>(v), e.puntatore);
-                if (classe != Classe::Comune) {
-                    dettaglio.sensitivity = classe == Classe::Personale ? Param::Sensitivity::Personal : Param::Sensitivity::Particular;
-                    dettaglio.hidden = e.messaggio_senza_valore;
-                }
-                out.problemi.push_back(problema(Check::SchemaViolation, f.file, e.puntatore, {dettaglio}));
-            }
-            continue;
-        }
-        converti(f.file, d, out.pacchetto);
-        out.versioni[f.file] = static_cast<int>(v);
+        leggi_file(f.file, letto.testo, out);
     }
     return out;
 }

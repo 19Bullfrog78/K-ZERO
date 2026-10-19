@@ -11,7 +11,7 @@ const std::vector<FileDati>& file_dati() {
          "Elenchi e impostazioni di ogni azienda: attivita', assenze, fermi, competenze, norme, ricovero, abbinamento."},
         {"norme.json", "norme", {1}, false,
          "Norme di un paese: abilitazioni, usi dei mezzi, requisiti per guidare, usi per tipo di servizio, con la fonte."},
-        {"luoghi.json", "luoghi", {1}, false, "Luoghi pubblici (fermate, scuole, centri, rimesse...) e luoghi privati."},
+        {"luoghi.json", "luoghi", {1, 2}, false, "Luoghi pubblici (fermate, scuole, centri, rimesse...) e luoghi privati."},
         {"tratti.json", "tratti", {1}, false, "Tratti di strada tra due luoghi con i loro limiti."},
         {"regolamenti.json", "regolamenti", {1, 2}, false, "Regolamenti di un territorio o di un committente."},
         {"festivita.json", "festivita", {1}, false, "Calendari delle festivita' di un paese o di un territorio, con la fonte."},

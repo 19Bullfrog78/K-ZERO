@@ -83,7 +83,13 @@ Un file con un nome diverso da questi non viene letto (avviso K-CTR-008): di sol
   **masse** in tonnellate; **costi** nella valuta del manifesto.
 - **Testi**: una riga non vuota fino a 300 caratteri; le note (`nota`) fino a 2000 caratteri.
 - **Dimensione**: un file piu' grande di 256 MB non viene letto (errore K-CTR-053): e' certamente un errore, e
-  leggerlo potrebbe esaurire la memoria del PC.
+  leggerlo potrebbe esaurire la memoria del PC. La lettura si ferma appena passa il massimo, anche quando il sistema
+  non dice la dimensione o il file cresce mentre lo si legge.
+- **File normali dentro la cartella**: ogni file del pacchetto e' un file normale. Un dispositivo (es. `/dev/zero`),
+  una "pipe" o una cartella con il nome di un file del pacchetto non vengono letti (errori K-CTR-088 e K-CTR-090). Un
+  collegamento (link simbolico) si segue solo se porta a un file normale dentro la cartella del pacchetto, anche in una
+  sottocartella (altrimenti errore K-CTR-089); la cartella del pacchetto puo' essere a sua volta un collegamento (es.
+  una cartella sincronizzata).
 - **Numeri**: ogni numero ha un minimo e un massimo di buon senso (es. 1.000 posti per mezzo, 10.000 persone a
   una fermata, 1.440 minuti, 3.600 secondi, 100 m per una misura, 1.000.000 per i valori di un regolamento):
   un valore piu' grande e' certamente un errore di scrittura e il file viene rifiutato (K-CTR-007).
@@ -125,6 +131,12 @@ legge un assistente AI su server esterni: per questo di base non li mostra. L'in
 Un campo senza marcatura vale, per prudenza, come particolare: una prova controlla che tutti i campi
 abbiano la loro classe, che i dati personali stiano solo nei luoghi privati e nei passeggeri, e quali sono
 i dati particolari.
+
+Dal K-009 le stesse classi decidono anche le **posizioni** dei problemi (di base non entrano mai in un dato personale
+o particolare), quali problemi si contano soltanto (quelli sui dati sulla salute) e quanti dati personali e
+particolari ci sono in un pacchetto: docs/controlli.md e docs/sicurezza.md. Una marcatura puo' stare anche su un elemento
+intero o su un file intero (es. un'assenza): vale per tutto quello che contiene, tranne i campi marcati diversamente
+(es. il codice della persona). Un luogo pubblico puo' essere **sensibile** (luoghi.json, versione 2).
 
 ### Due livelli di pacchetto
 
@@ -249,7 +261,9 @@ Nel demo le norme italiane (`N-IT`): patenti e usi dal Codice della strada (artt
 ### luoghi.json
 
 Tutti i luoghi: `luoghi` (pubblici) e `luoghi_privati` (case di persone, dati personali). Schema:
-[docs/schema/luoghi.v1.schema.json](schema/luoghi.v1.schema.json).
+[docs/schema/luoghi.v2.schema.json](schema/luoghi.v2.schema.json); la versione 1
+([docs/schema/luoghi.v1.schema.json](schema/luoghi.v1.schema.json), senza `sensibile`) si legge ancora: per passare alla
+2 si scrive `"schema_versione": 2` e si segnano i luoghi sensibili.
 
 Tipi dei luoghi pubblici: `fermata` (fermata pubblica), `scuola`, `centro` (diurno, terapie, socio-educativo...),
 `rimessa`, `ricovero_esterno`, `punto_sosta` (dove il mezzo aspetta), `punto_trasbordo` (punto di trasbordo
@@ -268,6 +282,7 @@ autorizzato). Tipi dei luoghi privati: `porta_a_porta` (la casa del passeggero, 
 | `luoghi[].limiti_accesso` | no | comune | Misure e massa massime (`lunghezza_massima_m`, `larghezza_massima_m`, `altezza_massima_m`, `massa_massima_t`) e `divieti[]` |
 | `luoghi[].limiti_accesso.divieti[]` | no | comune | Divieto per un `mezzo` (codice) oppure per una `categoria` (M1, M2, M3), con il `motivo` (`cartello`, `esperienza` dell'autista, `altro`) e una `nota` |
 | `luoghi[].trasbordo` | no | comune | Presente = punto di trasbordo autorizzato: `autorizzato_da` (es. "CTA sentita la Provincia"), `data`, `documento` oppure `a_voce: true` (avviso K-CTR-043), `nota` |
+| `luoghi[].sensibile` | no | comune | Versione 2: `true` = luogo sensibile, cioe' dire che una persona ci va lascia capire un dato sulla salute (es. un centro diurno, un centro di terapia). Lo sceglie chi scrive i dati: un doposcuola, anch'esso di tipo `centro`, di solito non lo e' (sotto) |
 | `luoghi[].nota` | no | comune | Note |
 | `luoghi_privati[].codice` | si' | comune | Codice del luogo (resta visibile: e' quello che compare al posto dei dati personali) |
 | `luoghi_privati[].tipo` | si' | comune | `porta_a_porta` oppure `ricovero_esterno` |
@@ -280,6 +295,26 @@ autorizzato). Tipi dei luoghi privati: `porta_a_porta` (la casa del passeggero, 
 
 Un punto di trasbordo e' un luogo di tipo `punto_trasbordo`, oppure un altro luogo pubblico (es. un punto di
 sosta) con il blocco `trasbordo`. Una casa non e' mai un punto di trasbordo.
+
+**Luoghi sensibili** (K-009, con l'aggiunta 1). Il nome e la posizione di un centro diurno sono dati comuni (e' un luogo
+pubblico), ma "Bianchi Luca scende al centro diurno", o "la corsa passa da Casa Bianchi e arriva al centro diurno", e'
+un dato sulla salute di chi ci va. Una regola sola per tutte le uscite, testo e JSON allo stesso modo: quando si vedono i
+dati personali (`--includi-dati-personali`) ma non quelli particolari, in un **insieme** che lascia riconoscere una
+persona trasportata - il nome di un passeggero, oppure la sua casa (un punto porta a porta con il nome o l'indirizzo) -
+ogni luogo sensibile diventa `"riservato"`: il codice e il nome, e la scuola o il centro che ci sta. L'insieme e'
+quello che l'uscita lega con i codici che mostra:
+- `kzero controlla`: il messaggio di un problema;
+- `kzero dimostrazione`: servizi e corse insieme (sono legati dai codici dei servizi e dei trasbordi); l'elenco dei
+  luoghi no, perche' non lega nessuno a un luogo;
+- `kzero giornata`: tutta la giornata mostrata, in ognuna delle tre viste (tutti, un mezzo, una persona): corse e pezzi
+  di corsa, attivita', luogo di inizio e di fine dei turni, presa servizio. Un turno solo non basta: il luogo si
+  leggerebbe nel turno dopo dello stesso mezzo, in quello che riceve il trasbordo o in quello dell'assistente a bordo.
+
+Con `--includi-dati-particolari` si vede tutto; di base (senza dati personali) il luogo si vede, perche' passeggeri e case
+restano solo codici. Non riguarda il personale (lavorare in un centro, o il garage presso la casa di un autista, non e'
+un dato sulla salute di nessuno) ne' i conteggi. Nel demo il centro diurno `L-CENTRO` e' sensibile. I nomi e i codici
+liberi (servizi, gruppi, corse, turni, calendari, note) restano responsabilita' di chi scrive i dati: un nome come
+"Trasporto al centro diurno" accanto all'elenco dei passeggeri dice lo stesso (docs/sicurezza.md).
 
 ```json
 {
@@ -812,6 +847,10 @@ Assenze programmate delle persone. **Solo il tipo, mai la causa**: il formato no
 ```json
 { "persona": "P-A", "tipo": "FERIE", "dal": "2026-10-22", "al": "2026-10-23" }
 ```
+
+Che una persona abbia un'assenza e' gia' un dato personale: nello schema il file intero e ogni assenza sono marcati
+personali, e ogni assenza indica la persona a cui appartiene (`x-kzero-titolare`). Per questo, di base, la posizione di
+un problema su un'assenza e' la persona in `persone.json`, non `assenze.json` (docs/controlli.md).
 
 ### fermi.json
 

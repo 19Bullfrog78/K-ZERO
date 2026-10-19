@@ -179,7 +179,10 @@
       "additionalProperties": false,
       "required": ["codice", "nome"],
       "properties": {
-        "codice": { "$ref": "#/definitions/codice" },
+        "codice": {
+          "description": "Codice del luogo. Luogo sensibile (K-009): con i dati personali e senza quelli particolari, in una giornata che mostra la casa di un passeggero, 'riservato'. In quel caso anche il nome e' 'riservato'.",
+          "$ref": "#/definitions/codice"
+        },
         "nome": {
           "description": "Nome del luogo; per un luogo privato, di base, il codice. Valore visibile, oppure il codice dell'elemento (dato personale non mostrato) o 'riservato' (dato particolare non mostrato).",
           "type": ["string", "null"]
@@ -250,9 +253,9 @@
       "properties": {
         "orario": { "$ref": "#/definitions/orario" },
         "partenza": { "oneOf": [{ "$ref": "#/definitions/orario" }, { "type": "null" }] },
-        "luogo": { "$ref": "#/definitions/codice" },
+        "luogo": { "description": "Codice del luogo. Luogo sensibile (K-009): con i dati personali e senza quelli particolari, in una giornata che mostra la casa di un passeggero, 'riservato'.", "$ref": "#/definitions/codice" },
         "nome_luogo": {
-          "description": "Valore visibile, oppure il codice dell'elemento (dato personale non mostrato) o 'riservato' (dato particolare non mostrato).",
+          "description": "Valore visibile, oppure il codice dell'elemento (dato personale non mostrato) o 'riservato' (dato particolare non mostrato, o luogo sensibile come per 'luogo').",
           "type": ["string", "null"]
         },
         "transito": { "type": "boolean" },

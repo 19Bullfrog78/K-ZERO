@@ -114,6 +114,42 @@ const JsonDati* SchemiDati::sottoschema(const std::string& nome, int versione, c
     return s ? cammina(*s, puntatore, [](const JsonDati&) {}) : nullptr;
 }
 
+std::vector<SchemiDati::Livello> SchemiDati::livelli(const std::string& nome, int versione, const std::string& puntatore) const {
+    const std::vector<std::string> pezzi = parti(puntatore);
+    std::vector<Livello> out(pezzi.size() + 1);
+    const JsonDati* s = schema(nome, versione);
+    if (!s) return out;
+    const auto livello = [s](const JsonDati& n) {
+        Livello l;
+        l.previsto = true;
+        const JsonDati* d = n.is_object() && n.contains("$ref") ? &risolvi(*s, n) : &n;
+        for (const JsonDati* x : {d, &n}) {   // la marcatura accanto al campo vale piu' di quella della definizione
+            if (const auto c = marcatura(*x)) l.classe = c;
+            if (x->is_object() && x->contains("x-kzero-titolare")) l.titolare = &x->at("x-kzero-titolare");
+        }
+        return std::make_pair(l, d);
+    };
+    auto [radice, nodo] = livello(*s);
+    out[0] = radice;
+    for (std::size_t i = 0; i < pezzi.size(); ++i) {
+        const std::string& p = pezzi[i];
+        const JsonDati* figlio = nullptr;
+        if (nodo->is_object()) {
+            const auto props = nodo->find("properties");
+            const auto items = nodo->find("items");
+            if (props != nodo->end() && props->contains(p)) figlio = &props->at(p);
+            else if (items != nodo->end() && items->is_object() && !p.empty() &&
+                     p.find_first_not_of("0123456789") == std::string::npos)
+                figlio = &*items;
+        }
+        if (!figlio) break;   // da qui in poi: non previsto dallo schema
+        auto [l, d] = livello(*figlio);
+        out[i + 1] = l;
+        nodo = d;
+    }
+    return out;
+}
+
 Classe SchemiDati::classe(const std::string& nome, int versione, const std::string& puntatore) const {
     const JsonDati* s = schema(nome, versione);
     if (!s) return Classe::Particolare;

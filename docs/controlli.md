@@ -2,7 +2,8 @@
 
 `kzero controlla <cartella>` controlla un pacchetto dati (spiegato in [formato-dati.md](formato-dati.md))
 e scrive un resoconto in testo o in JSON (schema `controlla`, file
-[schema/controlla.v2.schema.json](schema/controlla.v2.schema.json); la versione 1, del K-007, non e' piu' prodotta).
+[schema/controlla.v3.schema.json](schema/controlla.v3.schema.json); le versioni 1, del K-007, e 2, del K-008, non sono piu'
+prodotte).
 
 Ogni problema ha:
 - un **livello**: **errore** (il dato e' sbagliato e va corretto) oppure **avviso** (il dato e' accettabile,
@@ -17,13 +18,18 @@ Come si legge il resoconto:
 - prima gli errori, poi gli avvisi; ciascuno in ordine di file (nell'ordine del formato) e di posizione;
   stesso pacchetto = stesso resoconto, byte per byte;
 - in fondo un **riepilogo**: aziende, luoghi, servizi, corse, mezzi, persone, turni, errori, avvisi;
+- prima del riepilogo, **quali dati personali e particolari contiene il pacchetto** (K-009): quanti valori di ogni
+  classe, contati con le classi degli schemi, mai i valori stessi (es. "248 valori personali e 37 particolari"); file per
+  file con `--includi-dati-personali`. Serve a sapere cosa e' coinvolto se il pacchetto va perso o finisce alla persona
+  sbagliata (docs/sicurezza.md). In JSON e' il campo `dati_riservati_presenti`;
 - **codice di uscita 0** se non ci sono errori (gli avvisi non bloccano), **1** se c'e' almeno un errore;
-- prima si controlla la **forma** dei file (K-CTR-001 ... K-CTR-008, K-CTR-048 e K-CTR-053): un file con un errore di
-  forma non viene usato, e finche' c'e' un errore di forma i controlli sul **contenuto** (gli altri codici)
+- prima si controlla la **forma** dei file (K-CTR-001 ... K-CTR-008, K-CTR-048, K-CTR-053 e K-CTR-088 ... K-CTR-090): un
+  file con un errore di forma non viene usato, e finche' c'e' un errore di forma i controlli sul **contenuto** (gli altri codici)
   non si fanno, perche' darebbero risultati falsati. Il resoconto lo dice;
 - i messaggi seguono le **classi dei dati**: di base, al posto di un dato personale (es. il nome di una casa)
   c'e' il codice dell'elemento e i dati particolari non compaiono; si vedono con `--includi-dati-personali`
-  e `--includi-dati-particolari`;
+  e `--includi-dati-particolari`. Dal K-009 anche le posizioni, e i problemi sui dati sulla salute non si elencano uno
+  per uno (sezione "Dati personali e particolari nei problemi", qui sotto);
 - il programma non usa l'orologio: le date sono quelle del pacchetto.
 
 I testi dei messaggi stanno tutti in un unico catalogo (`src/api/controlli_catalogo.cpp`), separato dai
@@ -37,13 +43,68 @@ Errore K-CTR-017 (corse.json, /corse/3/passaggi/2): Nella corsa C-RM-1 (Ritorno 
 Avviso K-CTR-035 (luoghi.json, /luoghi/5): Il luogo F-CASTELROVO-ALTO (Castelrovo, Alto) non ha le coordinate: serviranno al calcolo delle distanze.
 Avviso K-CTR-043 (luoghi.json, /luoghi/17/trasbordo): Il punto di trasbordo L-TRASB-CROCE (Croce di Pradello, parcheggio) e' autorizzato solo a voce: manca il documento.
 Avviso K-CTR-050 (mezzi.json, /mezzi/6/autorizzazioni_uso/0): L'autorizzazione del mezzo ALFA-05 (AA 105 AA) all'uso NCC (distrazione) scade il 2027-06-30, dentro il periodo del pacchetto: dopo quella data il mezzo non puo' fare i servizi che chiedono quell'uso.
-Avviso K-CTR-050 (persone.json, /persone/2/abilitazioni/2): Un'abilitazione o un'autorizzazione della persona P-C scade dentro il periodo del pacchetto (dati personali: riservati).
-Avviso K-CTR-078 (persone.json, /persone/2/abilitazioni/2): Il turno T-SECONDO (Secondo) e' scoperto in 8 giorni tra il 2027-07-07 e il 2027-08-25 (i primi: 2027-07-07, 2027-07-14, 2027-07-21, 2027-07-28, 2027-08-04, 2027-08-11...): la persona prevista P-C non puo' farlo (dati personali: riservati). Rimedio: un'assegnazione del singolo giorno.
-Avviso K-CTR-078 (assenze.json, /assenze/2): Il turno T-PRIMO (Primo) e' scoperto il 2026-11-20: la persona prevista P-B non puo' farlo (dati personali: riservati). Rimedio: un'assegnazione del singolo giorno.
+Avviso K-CTR-078 (persone.json, /persone/1; il punto preciso con --includi-dati-personali): Il turno T-PRIMO (Primo) e' scoperto il 2026-11-20: la persona prevista P-B non puo' farlo (dati personali: riservati). Rimedio: un'assegnazione del singolo giorno.
+Avviso K-CTR-050 (persone.json, /persone/2; il punto preciso con --includi-dati-personali): Un'abilitazione o un'autorizzazione della persona P-C scade dentro il periodo del pacchetto (dati personali: riservati).
+Avviso K-CTR-078 (persone.json, /persone/2; il punto preciso con --includi-dati-personali): Il turno T-SECONDO (Secondo) e' scoperto in 8 giorni tra il 2027-07-07 e il 2027-08-25 (i primi: 2027-07-07, 2027-07-14, 2027-07-21, 2027-07-28, 2027-08-04, 2027-08-11...): la persona prevista P-C non puo' farlo (dati personali: riservati). Rimedio: un'assegnazione del singolo giorno.
 Avviso K-CTR-082 (servizi_fissi.json, /servizi_fissi/2): Nel turno T-SCUOLA-1 (Scuola 1) la persona P-E guida il mezzo ALFA-07 (AA 107 AA), non il suo mezzo abituale (abbinamento preferito), dal 2026-10-19 al 2026-10-20 (2 giorni).
 Avviso K-CTR-036: Il pacchetto non ha i tempi di sosta (file tempi_sosta.json): serviranno al calcolo.
+Dati personali e particolari nel pacchetto: 248 valori personali e 37 particolari (file per file: --includi-dati-personali).
 Riepilogo: 2 aziende, 23 luoghi, 9 servizi, 26 corse, 10 mezzi, 12 persone, 18 turni; 1 errore, 8 avvisi.
 ```
+
+## Dati personali e particolari nei problemi (K-009)
+
+Un problema puo' far capire un dato anche quando il suo messaggio e' filtrato: il codice K-CTR-047 dice da solo che
+un passeggero ha bisogno dell'assistente, la posizione `/persone/2/abilitazioni/2` dice che si parla di una patente,
+`assenze.json /assenze/2` dice che la persona e' assente. Per questo la regola vale per il problema intero, non solo
+per il testo, ed e' uguale in testo e in JSON.
+
+**Cosa rivela un problema.** Ogni controllo del catalogo dichiara cosa rivela in se' (che ci sia, il suo codice, il
+messaggio di base): nessun dato personale ne' particolare, un dato **personale**, oppure un dato **particolare**
+(salute); se serve, variante per variante del messaggio. Una prova controlla che tutti lo dichiarino e che la tabella
+qui sotto coincida con il programma. Conta poi anche il dato in cui sta la posizione: un problema rivela il piu'
+riservato tra cio' che dichiara il controllo e la **classe del dato in cui sta la sua posizione** (la piu' riservata
+marcata lungo il percorso JSON, dagli schemi). Es. un codice inesistente (K-CTR-010) scritto tra le competenze richieste
+da un servizio, che sono un dato particolare, rivela un dato particolare.
+
+**Problemi sui dati particolari.** Di base non si elencano uno per uno: una riga sola, senza codice ne' posizione, con
+quanti errori e quanti avvisi sono e il rimedio:
+
+```
+Problemi sui dati particolari (salute), non elencati uno per uno: 1 errore e nessun avviso. Per vederli: --includi-dati-particolari.
+```
+
+In JSON e' il campo `problemi_riservati` (`errori`, `avvisi`). Contano lo stesso: sono nel riepilogo, il codice di
+uscita non cambia e `kzero giornata` resta bloccata se sono errori (K-ERR-018). Con `--includi-dati-particolari` si
+elencano come gli altri.
+
+**Posizioni.** Di base la posizione di un problema non entra mai in un dato personale o particolare: si ferma
+all'**elemento comune piu' vicino** (es. la persona in persone.json, non la sua abilitazione; il gruppo o la fermata in
+servizi.json, non le sue carrozzine). Un file di soli dati personali (oggi `assenze.json`, marcato tutto intero come
+personale nel suo schema) non compare mai: un problema su un'assenza ha la posizione della persona assente in
+persone.json (marcatura `x-kzero-titolare` dello schema); se la persona non si trova, la posizione non si mostra. La
+regola si ricava dalle classi degli schemi (`x-kzero-classe`), non da un elenco di casi scritto a mano. Quando la
+posizione e' ridotta, il testo lo dice ("il punto preciso con --includi-dati-personali") e in JSON c'e' il campo
+`posizione_completa_con`; con quel parametro (o `--includi-dati-particolari`, secondo il dato) si vede la posizione
+completa. Un campo non previsto dallo schema (es. un nome scritto male) prende la classe dell'elemento che lo contiene:
+il nome di un campo non e' un dato. La stessa regola vale per le posizioni mostrate da `kzero giornata`; gli errori del
+programma (K-ERR), che non hanno percorsi JSON, non nominano mai un file di soli dati personali.
+
+Controlli che rivelano un dato personale o particolare (gli altri non ne rivelano nessuno; la loro posizione segue
+comunque la regola qui sopra):
+
+| Codice | Rivela | Quando | Cosa |
+|---|---|---|---|
+| K-CTR-019 | personale | alcuni casi | il nome, la casa o una nota scritta a mano di una persona |
+| K-CTR-031 | particolare | alcuni casi | carrozzine e ausili piegati che non corrispondono ai passeggeri |
+| K-CTR-047 | particolare | tutti i casi | l'assistente di cui ha bisogno un passeggero |
+| K-CTR-050 | personale | alcuni casi | la scadenza di un'abilitazione o di un'autorizzazione di una persona |
+| K-CTR-067 | personale | alcuni casi | assenza, disponibilita', abilitazione o autorizzazione scaduta di una persona |
+| K-CTR-068 | personale | tutti i casi | l'abilitazione o l'autorizzazione che una persona non ha |
+| K-CTR-071 | particolare | tutti i casi | la competenza richiesta da un turno o da un servizio (puo' far capire chi viaggia) |
+| K-CTR-076 | personale | tutti i casi | i ruoli di una persona |
+| K-CTR-078 | personale | alcuni casi | assenza, disponibilita', abilitazione o autorizzazione scaduta di una persona |
+| K-CTR-081 | personale | tutti i casi | le preferenze di una persona |
 
 Non sono in questo catalogo (arriveranno con la verifica delle regole e con il mandato "orari di lavoro"):
 posti a bordo, attese massime sulle corse, limiti di accesso confrontati con i mezzi, tempi per andare da un
@@ -83,8 +144,8 @@ Un nuovo controllo prende il codice successivo all'ultimo.
 | Codice | Livello | Descrizione | Quando succede | Cosa fare |
 |---|---|---|---|---|
 | K-CTR-001 | errore | Manca il manifesto | La cartella non contiene `pacchetto.json`. | Aggiungere il manifesto (vedi formato-dati.md). |
-| K-CTR-002 | errore | File illeggibile | Un file del pacchetto c'e' ma non si riesce a leggere (permessi, disco). | Controllare i permessi del file e riprovare. |
-| K-CTR-003 | errore | JSON non valido | Il file non e' JSON valido: virgola o parentesi mancante, virgolette non chiuse... Riga e colonna indicano dove il programma se ne accorge: l'errore e' li' o poco prima. | Correggere la scrittura del file alla riga indicata o subito prima. |
+| K-CTR-002 | errore | File illeggibile | Un file del pacchetto c'e' ma non si riesce a leggere (permessi, disco), oppure e' un collegamento (link) che non porta a nessun file. | Controllare i permessi del file e riprovare; rifare il collegamento o mettere al suo posto il file. |
+| K-CTR-003 | errore | JSON non valido | Il file non e' JSON valido: virgola o parentesi mancante, virgolette non chiuse... Riga e colonna indicano dove il programma se ne accorge: l'errore e' li' o poco prima. Anche un byte zero in qualunque punto del file (un file rovinato, es. dopo uno spegnimento improvviso: senza questo controllo un file valido seguito da zeri e da altro testo sarebbe letto a meta'), e un numero troppo grande per essere letto (es. `1e400`). Il messaggio non riporta il testo del file. | Correggere la scrittura del file alla riga indicata o subito prima; un file rovinato va ripreso da una copia. |
 | K-CTR-004 | errore | Campo ripetuto | Lo stesso campo compare due volte nello stesso oggetto (il JSON lo permetterebbe, ma uno dei due valori andrebbe perso in silenzio). | Tenere un solo valore. |
 | K-CTR-005 | errore | Schema del file sbagliato o mancante | Manca il campo `schema`, oppure dichiara uno schema diverso da quello del file (es. `luoghi.json` con lo schema `fermate`). | Scrivere lo schema giusto per quel file (tabella in formato-dati.md). |
 | K-CTR-006 | errore | Versione dello schema non supportata | La `schema_versione` del file non e' tra quelle che questo programma sa leggere, oppure manca. Il file non viene letto, nemmeno in parte. | Usare un programma aggiornato, oppure scrivere il file nella versione indicata nel messaggio. |
@@ -134,7 +195,7 @@ Un nuovo controllo prende il codice successivo all'ultimo.
 | K-CTR-050 | avviso | Scadenza dentro il periodo del pacchetto | Un'autorizzazione con una scadenza finisce prima dell'ultimo giorno del periodo del pacchetto: l'autorizzazione di un mezzo a un uso in piu' (distrazione); un'abilitazione o un'autorizzazione del committente di una persona. Dopo quella data cio' che la richiede non si puo' piu' fare. | Rinnovarla in tempo e scrivere la nuova scadenza. |
 | K-CTR-051 | avviso | Mezzo senza l'uso della carta di circolazione | Le norme del paese dell'azienda dicono quali usi dei mezzi servono (per tipo di servizio o per i requisiti di guida), ma il mezzo non ha l'`uso`: quei controlli non si possono fare. | Scrivere l'uso della carta di circolazione del mezzo. |
 | K-CTR-052 | avviso | Azienda senza le norme del paese | I dati dell'azienda usano cose che si controllano con le norme del paese (uso dei mezzi, distrazioni, abilitazioni delle persone, autisti dei turni), ma l'azienda non indica le sue norme in `aziende.json`. | Indicare le norme dell'azienda (campo `norme` in aziende.json). |
-| K-CTR-053 | errore | File troppo grande | Il file e' piu' grande di 256 MB: e' certamente un errore (un file sbagliato o prodotto da un altro programma), e leggerlo potrebbe esaurire la memoria del PC. Il file non viene letto. | Controllare il file: un pacchetto vero sta in pochi MB per file. |
+| K-CTR-053 | errore | File troppo grande | Il file e' piu' grande di 256 MB: e' certamente un errore (un file sbagliato o prodotto da un altro programma), e leggerlo potrebbe esaurire la memoria del PC. Il file non viene letto, o la lettura si ferma appena passa il massimo (anche quando il sistema non dice la dimensione o il file cresce mentre lo si legge). | Controllare il file: un pacchetto vero sta in pochi MB per file. |
 | K-CTR-054 | errore | Pezzo di corsa che non si trova nella corsa | Un turno fa solo un pezzo di una corsa (cambio dell'autista a meta' corsa), ma il luogo in cui il pezzo comincia o finisce non e' tra i passaggi della corsa; oppure la corsa ci passa piu' volte e non c'e' l'orario per dire quale passaggio; oppure il pezzo finisce prima di cominciare. | Correggere il luogo, o aggiungere l'orario del passaggio (`da.orario`, `a.orario`). |
 | K-CTR-055 | errore | Corse e attivita' di un turno fuori ordine o sovrapposte | Nel turno un elemento (corsa o attivita') comincia prima del precedente: vanno scritti in ordine di orario. Oppure, in un giorno, un elemento comincia prima che finisca il precedente (es. pulizia 13:00-14:30 e corsa alle 14:00). | Riordinare gli elementi o correggere gli orari. |
 | K-CTR-056 | errore | Mezzo del turno che non va con il suo ruolo | Un turno da autista con delle corse ha il mezzo "nessuno"; un turno da assistente o da secondo autista ha un mezzo (il suo mezzo e' quello del turno dell'autista); un turno con il mezzo abituale e' fatto da una persona che non ha un mezzo abituale. | Correggere il mezzo del turno o il mezzo abituale della persona. |
@@ -169,3 +230,6 @@ Un nuovo controllo prende il codice successivo all'ultimo.
 | K-CTR-085 | avviso | Mezzo mai usato che non e' di scorta | Un mezzo (non ipotetico) non e' in nessun turno nel periodo e non e' segnato come mezzo di scorta (`scorta: true`). Si controlla solo se il pacchetto ha dei turni. | Segnarlo come mezzo di scorta, o toglierlo. |
 | K-CTR-086 | avviso | Corsa con l'assistente dell'azienda senza persona assegnata | Una corsa ha l'assistente a bordo fornito dall'azienda (dal turno o dal contratto), ma nessun turno da assistente con una persona copre quella corsa quel giorno. | Aggiungere il turno da assistente con la persona. |
 | K-CTR-087 | avviso | Assistente fornito da chi il contratto non dice | Il turno dice che l'assistente di una corsa lo fornisce l'azienda (o il committente), ma il contratto dice l'altro; oppure c'e' un turno da assistente dell'azienda su una corsa in cui il contratto dice che l'assistente e' del committente. La scelta scritta nel turno vince, ma va guardata. | Correggere il turno o il contratto. |
+| K-CTR-088 | errore | Non e' un file normale | Al posto di un file del pacchetto c'e' qualcosa che non e' un file normale: un dispositivo del sistema (es. `/dev/zero`, che non finisce mai), una "pipe", o un collegamento che porta a una di queste cose. Leggerlo potrebbe bloccare il programma o esaurire la memoria: non viene letto. | Mettere al suo posto il file di dati. |
+| K-CTR-089 | errore | Collegamento a un file fuori dalla cartella del pacchetto | Il file e' un collegamento (link simbolico) a un file che sta fuori dalla cartella del pacchetto: il pacchetto deve contenere tutti i suoi dati, e un collegamento preparato apposta potrebbe far leggere al programma un file qualsiasi del PC. Non viene letto. Un collegamento a un file dentro la cartella (anche in una sottocartella) va bene, e la cartella del pacchetto puo' essere a sua volta un collegamento (es. una cartella sincronizzata). | Copiare il file dentro la cartella del pacchetto. |
+| K-CTR-090 | errore | Cartella al posto di un file del pacchetto | Nella cartella del pacchetto c'e' una cartella con il nome di un file del formato (es. `persone.json`). Il file conta come presente ma non letto: i controlli sul contenuto non partono, cosi' non ci sono errori a catena sui codici che quel file avrebbe dato. | Togliere o rinominare la cartella e mettere al suo posto il file. |

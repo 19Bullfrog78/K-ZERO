@@ -3,6 +3,7 @@
   "title": "K-Zero - file di dati assenze.json, versione 1",
   "description": "Assenze programmate delle persone (file assenze.json): persona, periodo, tipo dall'elenco dell'azienda (es. ferie, permesso, formazione). Mai la causa: una malattia e' un dato sulla salute e per pianificare non serve, quindi il formato non ha un campo per scriverla. Dati personali.",
   "type": "object",
+  "x-kzero-classe": "personale",
   "additionalProperties": false,
   "required": ["schema", "schema_versione", "assenze"],
   "properties": {
@@ -11,7 +12,10 @@
     "assenze": {
       "type": "array",
       "items": {
+        "description": "Un'assenza: che ci sia e' gia' un dato personale della persona. Nelle uscite di base la posizione di un problema su un'assenza diventa la persona in persone.json (x-kzero-titolare).",
         "type": "object",
+        "x-kzero-classe": "personale",
+        "x-kzero-titolare": { "campo": "persona", "file": "persone.json", "elenco": "persone" },
         "additionalProperties": false,
         "required": ["persona", "tipo", "dal", "al"],
         "properties": {

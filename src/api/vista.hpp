@@ -7,13 +7,11 @@
 #include <string>
 
 #include "lettore.hpp"
+#include "riservatezza.hpp"
 #include "schemi_dati.hpp"
 #include "uscita.hpp"
 
 namespace kzero::api {
-
-// La classe piu' riservata tra due.
-Classe piu_riservata(Classe a, Classe b);
 
 // Filtro delle classi dei dati per i campi degli elementi di un pacchetto letto.
 class Vista {
@@ -31,6 +29,9 @@ public:
 
     // Valore di una classe nota: visibile, oppure sostituito dal codice (personale) o da "riservato".
     Json filtra(Classe c, Json valore, const std::string& codice) const;
+
+    // Una posizione nei file del pacchetto, filtrata come quelle dei problemi (riservatezza.hpp).
+    PosizioneMostrata posizione(const kzero::Source& s) const { return mostra_posizione(s, lettura_, visibilita_); }
 
 private:
     const Lettura& lettura_;

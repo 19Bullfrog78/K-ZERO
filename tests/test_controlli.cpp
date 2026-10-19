@@ -76,9 +76,12 @@ void solo_avvisi_voluti(const std::vector<Problem>& v) {
         {Check::RecurringShiftPersonFact, "/assenze/2"},
         {Check::PairingNotRespected, "/servizi_fissi/2"},
     };
-    for (const auto& [c, puntatore] : attesi)
+    for (const auto& atteso : attesi) {
+        const Check c = atteso.first;
+        const std::string& puntatore = atteso.second;   // C++17: una lambda non cattura i nomi di [c, puntatore]
         EXPECT_TRUE(std::any_of(v.begin(), v.end(), [&](const Problem& x) { return x.check == c && x.where.pointer == puntatore; }))
             << api::definizione_controllo(c).codice << " " << puntatore << elenco(v);
+    }
     for (const Problem& x : v) EXPECT_EQ(api::definizione_controllo(x.check).livello, api::Livello::Avviso) << elenco(v);
 }
 
@@ -781,5 +784,8 @@ TEST(Controlli, catalogo_coperto) {
     EXPECT_EQ(api::definizione_controllo(Check::DriverWithoutLicence).codice, "K-CTR-068");
     EXPECT_EQ(api::definizione_controllo(Check::ShiftUncovered).codice, "K-CTR-077");
     EXPECT_EQ(api::definizione_controllo(Check::EscortProviderDiffers).codice, "K-CTR-087");
-    EXPECT_EQ(api::catalogo_controlli().size(), 87u);
+    EXPECT_EQ(api::definizione_controllo(Check::NotRegularFile).codice, "K-CTR-088");   // K-009: lettura blindata
+    EXPECT_EQ(api::definizione_controllo(Check::LinkOutsideFolder).codice, "K-CTR-089");
+    EXPECT_EQ(api::definizione_controllo(Check::DirectoryInsteadOfFile).codice, "K-CTR-090");
+    EXPECT_EQ(api::catalogo_controlli().size(), 90u);
 }

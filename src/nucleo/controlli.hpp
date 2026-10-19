@@ -23,6 +23,9 @@ enum class Check {
     UnknownFile,
     NotUtf8,
     FileTooBig,
+    NotRegularFile,           // K-009: lettura blindata
+    LinkOutsideFolder,
+    DirectoryInsteadOfFile,
     // Turni (K-008): errori.
     ShiftPartInvalid,
     ShiftItemsOrder,

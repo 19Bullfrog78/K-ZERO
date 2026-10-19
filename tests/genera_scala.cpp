@@ -31,7 +31,8 @@ constexpr int kServizi = 2000;
 constexpr int kCorsePerServizio = 5;    // 10.000 corse
 constexpr int kFermatePerCorsa = 4;
 constexpr int kFermate = kComuni * kFermatePerComune;
-constexpr int kCorsePerAzienda = kServizi / kAziende * kCorsePerServizio;   // 1.000
+constexpr int kCorsePerAzienda = kServizi / kAziende * kCorsePerServizio;
+static_assert(kCorsePerAzienda == 1000, "la prova di scala ha 1.000 corse per azienda (DIARIO.md)");
 constexpr int kFasciaMinuti = 55;                // ogni corsa sta in una fascia: dura al massimo 52 minuti
 constexpr int kFascePerMattino = 8;              // fasce 0-7 il mattino, 8-16 il pomeriggio
 constexpr int kTurniPerAzienda = 2 * kMezziPerAzienda;   // 120

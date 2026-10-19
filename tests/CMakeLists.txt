@@ -1,5 +1,5 @@
 # Prove automatiche: ctest --test-dir build --output-on-failure
-# Etichette: nucleo, api, programma, documentazione, architettura, schemi, scala.
+# Etichette: nucleo, api, programma, documentazione, architettura, schemi, scala, sicurezza, fuzz.
 include(GoogleTest)
 
 # --- Prove del nucleo (GoogleTest): ogni TEST si registra da solo --------------------
@@ -129,10 +129,28 @@ kzero_prova(descrivi_json USCITA 0 FORMATO json SCHEMA descrivi ARGOMENTI descri
 kzero_prova(dimostrazione_testo USCITA 0 FORMATO testo ATTESO ${CMAKE_CURRENT_SOURCE_DIR}/attesi/dimostrazione.txt
             CONTIENE ${FERMATE_PUBBLICHE} NON_CONTIENE ${DATI_PERSONALI} "Deambulatore"
             ARGOMENTI dimostrazione)
+# Luoghi sensibili (K-009): con il nome dei passeggeri e senza i dati particolari, il legame tra un passeggero e il
+# centro diurno (luogo sensibile del demo) e' riservato: la discesa e la scuola del gruppo. Con i dati particolari, o
+# senza i nomi, si vede.
 kzero_prova(dimostrazione_testo_con_interruttore USCITA 0 FORMATO testo
             ATTESO ${CMAKE_CURRENT_SOURCE_DIR}/attesi/dimostrazione_dati_personali.txt
-            CONTIENE ${DATI_PERSONALI} ${FERMATE_PUBBLICHE} NON_CONTIENE "Deambulatore"
+            CONTIENE ${DATI_PERSONALI} ${FERMATE_PUBBLICHE} "Bianchi Luca  attivo  sale a PP-01, scende a riservato"
+                     "gruppo G-DIS  tipo: riservato  scuola riservato"
+                     # K-009, aggiunta 1: nelle corse con la casa di un passeggero il centro e' riservato; la corsa con
+                     # una casa e nessun luogo sensibile resta com'e'.
+                     "   07:52  PP-01  Casa Bianchi  salgono 1" "   08:52  riservato  scendono 3"
+                     "   08:05  PP-03  Casa Neri  salgono 1"
+            NON_CONTIENE "Deambulatore" "scende a L-CENTRO" "scuola SC-CENTRO" "L-CENTRO  Valfonda"
             ARGOMENTI dimostrazione --includi-dati-personali)
+kzero_prova(dimostrazione_luogo_sensibile_con_tutti_i_dati USCITA 0 FORMATO testo
+            CONTIENE "Bianchi Luca  attivo  sale a PP-01, scende a L-CENTRO" "gruppo G-DIS  tipo: disabili  scuola SC-CENTRO"
+                     "   08:52  L-CENTRO  Valfonda, Centro diurno Il Faro  scendono 3"
+            NON_CONTIENE "scende a riservato" "scuola riservato" "  riservato  scendono"
+            ARGOMENTI dimostrazione --includi-dati-personali --includi-dati-particolari)
+kzero_prova(dimostrazione_luogo_sensibile_senza_nomi USCITA 0 FORMATO testo
+            CONTIENE "passeggero P-D1  attivo  sale a PP-01, scende a L-CENTRO" "scuola SC-CENTRO"
+            NON_CONTIENE "Bianchi Luca" "scende a riservato"
+            ARGOMENTI dimostrazione)
 kzero_prova(dimostrazione_testo_dati_particolari USCITA 0 FORMATO testo
             CONTIENE "Deambulatore" "tipo: disabili" "categoria: ibrido" ${FERMATE_PUBBLICHE} NON_CONTIENE ${DATI_PERSONALI}
             ARGOMENTI dimostrazione --includi-dati-particolari)
@@ -141,8 +159,9 @@ kzero_prova(dimostrazione_json USCITA 0 FORMATO json SCHEMA dimostrazione
             NON_CONTIENE ${DATI_PERSONALI} ${DATI_PARTICOLARI}
             ARGOMENTI dimostrazione --formato json)
 kzero_prova(dimostrazione_json_dati_personali USCITA 0 FORMATO json SCHEMA dimostrazione
-            CONTIENE "\"dati_personali_inclusi\": true" ${DATI_PERSONALI} ${FERMATE_PUBBLICHE}
-            NON_CONTIENE ${DATI_PARTICOLARI}
+            CONTIENE "\"dati_personali_inclusi\": true" ${DATI_PERSONALI} ${FERMATE_PUBBLICHE} "\"discesa\": \"riservato\""
+                     "\"luogo\": \"riservato\"" "\"luogo\": \"PP-03\""
+            NON_CONTIENE ${DATI_PARTICOLARI} "\"discesa\": \"L-CENTRO\"" "\"scuola\": \"SC-CENTRO\"" "\"luogo\": \"L-CENTRO\""
             ARGOMENTI dimostrazione --includi-dati-personali --formato json)
 kzero_prova(dimostrazione_json_dati_particolari USCITA 0 FORMATO json SCHEMA dimostrazione
             CONTIENE "\"dati_particolari_inclusi\": true" ${DATI_PARTICOLARI} ${FERMATE_PUBBLICHE}
@@ -154,10 +173,14 @@ kzero_prova(dimostrazione_json_tutti_i_dati USCITA 0 FORMATO json SCHEMA dimostr
 
 # kzero controlla sui pacchetti di esempio: nessun errore (uscita 0), solo gli avvisi voluti (dal K-008 anche due
 # scadenze nel periodo, due turni scoperti per un fatto con le date e il mezzo di scorta al posto di quello abituale).
+# Dal K-009 di base una posizione non entra in un dato personale: l'abilitazione che scade (/persone/2/abilitazioni/2)
+# diventa la persona (/persone/2), l'assenza (assenze.json /assenze/2) la persona assente (/persone/1).
 set(AVVISI_DEMO "K-CTR-035|luoghi.json|/luoghi/5" "K-CTR-043|luoghi.json|/luoghi/17/trasbordo" "K-CTR-036||"
-    "K-CTR-050|mezzi.json|/mezzi/6/autorizzazioni_uso/0" "K-CTR-050|persone.json|/persone/2/abilitazioni/2"
-    "K-CTR-078|persone.json|/persone/2/abilitazioni/2" "K-CTR-078|assenze.json|/assenze/2"
+    "K-CTR-050|mezzi.json|/mezzi/6/autorizzazioni_uso/0" "K-CTR-050|persone.json|/persone/2"
+    "K-CTR-078|persone.json|/persone/2" "K-CTR-078|persone.json|/persone/1"
     "K-CTR-082|servizi_fissi.json|/servizi_fissi/2")
+set(AVVISI_DEMO_COMPLETI "K-CTR-050|persone.json|/persone/2/abilitazioni/2" "K-CTR-078|persone.json|/persone/2/abilitazioni/2"
+    "K-CTR-078|assenze.json|/assenze/2")
 set(luoghi_demo 23)          # 18 luoghi pubblici e 5 privati
 set(luoghi_demo-numeri 18)   # "solo numeri": nessun luogo privato
 foreach(pacchetto demo demo-numeri)
@@ -166,13 +189,24 @@ foreach(pacchetto demo demo-numeri)
               # Il riepilogo in due pezzi: in CMake il punto e virgola separa gli elementi di un elenco.
               CONTIENE "Riepilogo: 2 aziende, ${luoghi_${pacchetto}} luoghi, 9 servizi, 26 corse, 10 mezzi, 12 persone, 18 turni"
                        " 0 errori, 8 avvisi."
-              PROBLEMI ${AVVISI_DEMO} NON_CONTIENE "Errore K-CTR"
+              PROBLEMI ${AVVISI_DEMO} NON_CONTIENE "Errore K-CTR" "abilitazioni" "assenze.json" "Problemi sui dati particolari"
               ARGOMENTI controlla ${PROJECT_SOURCE_DIR}/esempi/${pacchetto})
   kzero_prova(controlla_${n}_json USCITA 0 FORMATO json SCHEMA controlla
-              CONTIENE "\"errori\": 0" "\"avvisi\": 8" PROBLEMI ${AVVISI_DEMO}
+              CONTIENE "\"errori\": 0" "\"avvisi\": 8" "\"posizione_completa_con\": \"--includi-dati-personali\""
+              PROBLEMI ${AVVISI_DEMO} NON_CONTIENE "abilitazioni" "assenze.json"
               ARGOMENTI controlla ${PROJECT_SOURCE_DIR}/esempi/${pacchetto} --formato json)
 endforeach()
+kzero_prova(controlla_demo_dati_personali USCITA 0 FORMATO testo PROBLEMI ${AVVISI_DEMO_COMPLETI} NON_CONTIENE "il punto preciso"
+            CONTIENE "Dati personali e particolari nel pacchetto: 248 valori personali e 37 particolari: luoghi.json 25 personali"
+                     "assenze.json 9 personali e 0 particolari"
+            ARGOMENTI controlla ${PROJECT_SOURCE_DIR}/esempi/demo --includi-dati-personali)
+# Quali dati personali e particolari ci sono nel pacchetto (es. se va perso): di base solo i totali.
+kzero_prova(controlla_demo_dati_presenti USCITA 0 FORMATO testo
+            CONTIENE "Dati personali e particolari nel pacchetto: 248 valori personali e 37 particolari (file per file: --includi-dati-personali)."
+            NON_CONTIENE "assenze.json"
+            ARGOMENTI controlla ${PROJECT_SOURCE_DIR}/esempi/demo)
 kzero_prova(controlla_demo_tutti_i_dati USCITA 0 FORMATO json SCHEMA controlla
+            PROBLEMI ${AVVISI_DEMO_COMPLETI} NON_CONTIENE "posizione_completa_con"
             CONTIENE "\"dati_personali_inclusi\": true" "\"dati_particolari_inclusi\": true"
             ARGOMENTI controlla ${PROJECT_SOURCE_DIR}/esempi/demo --includi-dati-personali --includi-dati-particolari
                       --formato json)
@@ -269,9 +303,17 @@ kzero_rotto(rotto_abilitazione_inesistente_nelle_norme FORMATO testo
             CONTIENE "Il codice D2 non esiste tra le abilitazioni delle norme N-IT")
 kzero_rotto(rotto_uso_del_mezzo_inesistente FORMATO json MODIFICA IMPOSTA mezzi.json /mezzi/0/uso "\"NOLEGGIO\""
             PROBLEMI "K-CTR-010|mezzi.json|/mezzi/0/uso")
+# Le competenze richieste da un servizio sono un dato particolare (possono far capire chi viaggia): dal K-009 di base
+# il problema non si elenca, si conta soltanto (con i 4 K-CTR-071 delle persone che non hanno la competenza scritta
+# male); con --includi-dati-particolari si vede tutto.
 kzero_rotto(rotto_competenza_inesistente FORMATO testo MODIFICA IMPOSTA servizi.json /servizi/3/competenze_richieste/0 "\"PEDANE\""
+            CONTIENE "Problemi sui dati particolari (salute), non elencati uno per uno: 5 errori e nessun avviso. Per vederli: --includi-dati-particolari."
+            NON_CONTIENE "PEDANE" "K-CTR-010" "K-CTR-071" "competenze_richieste")
+kzero_prova(rotto_competenza_inesistente_dati_particolari USCITA 1 FORMATO testo RESOCONTO BASE ${KZERO_DEMO}
+            MODIFICA IMPOSTA servizi.json /servizi/3/competenze_richieste/0 "\"PEDANE\""
             PROBLEMI "K-CTR-010|servizi.json|/servizi/3/competenze_richieste/0"
-            CONTIENE "Il codice PEDANE non esiste tra le competenze dell'azienda ALFA")
+            CONTIENE "Il codice PEDANE non esiste tra le competenze dell'azienda ALFA" NON_CONTIENE "Problemi sui dati particolari"
+            ARGOMENTI controlla @PACCHETTO@ --includi-dati-particolari)
 kzero_rotto(rotto_impostazioni_azienda_ripetute FORMATO testo MODIFICA IMPOSTA aziende.json /aziende/1/azienda "\"ALFA\""
             PROBLEMI "K-CTR-009|aziende.json|/aziende/1")
 kzero_rotto(rotto_distrazione_rovesciata FORMATO testo
@@ -283,15 +325,19 @@ kzero_rotto(rotto_persona_doppia FORMATO testo MODIFICA IMPOSTA persone.json /pe
             PROBLEMI "K-CTR-009|persone.json|/persone/1")
 kzero_rotto(rotto_abilitazione_della_persona_inesistente FORMATO testo
             MODIFICA IMPOSTA persone.json /persone/0/abilitazioni/1/tipo "\"D2\""
-            PROBLEMI "K-CTR-010|persone.json|/persone/0/abilitazioni/1/tipo"
+            PROBLEMI "K-CTR-010|persone.json|/persone/0"
             CONTIENE "Il codice scritto in un dato personale (riservato) non esiste tra le abilitazioni delle norme N-IT"
             NON_CONTIENE "D2" "Rossi Mario")
 kzero_rotto(rotto_tipo_di_assenza_inesistente FORMATO json MODIFICA IMPOSTA assenze.json /assenze/0/tipo "\"MALATTIA\""
-            PROBLEMI "K-CTR-010|assenze.json|/assenze/0/tipo" NON_CONTIENE "MALATTIA")
+            PROBLEMI "K-CTR-010|persone.json|/persone/0" NON_CONTIENE "MALATTIA" "assenze")
+kzero_prova(rotto_tipo_di_assenza_inesistente_dati_personali USCITA 1 FORMATO json SCHEMA controlla RESOCONTO BASE ${KZERO_DEMO}
+            MODIFICA IMPOSTA assenze.json /assenze/0/tipo "\"MALATTIA\""
+            PROBLEMI "K-CTR-010|assenze.json|/assenze/0/tipo" CONTIENE "MALATTIA"
+            ARGOMENTI controlla @PACCHETTO@ --includi-dati-personali --formato json)
 kzero_rotto(rotto_tipo_di_fermo_inesistente FORMATO testo MODIFICA IMPOSTA fermi.json /fermi/0/tipo "\"OFFICINA\""
             PROBLEMI "K-CTR-010|fermi.json|/fermi/0/tipo" CONTIENE "Il codice OFFICINA non esiste tra i tipi di fermo dell'azienda ALFA")
 kzero_rotto(rotto_assenza_rovesciata FORMATO testo MODIFICA IMPOSTA assenze.json /assenze/0/al "\"2026-10-21\""
-            PROBLEMI "K-CTR-012|assenze.json|/assenze/0" NON_CONTIENE "2026-10-21" "2026-10-22" "2026-10-23")
+            PROBLEMI "K-CTR-012|persone.json|/persone/0" NON_CONTIENE "2026-10-21" "2026-10-22" "2026-10-23" "assenze")
 # Caso reale: "16.08" scritto tra 12.05 e 12.19.
 kzero_rotto(rotto_orario_indietro FORMATO testo MODIFICA IMPOSTA corse.json /corse/3/passaggi/2/orario "\"16:08\""
             PROBLEMI "K-CTR-017|corse.json|/corse/3/passaggi/2"
@@ -314,6 +360,38 @@ kzero_rotto(rotto_attesa_fuori_regolamento FORMATO testo
 kzero_rotto(rotto_mezzo_massimo_sotto_il_minimo FORMATO testo
             MODIFICA IMPOSTA contratti.json /contratti/2/regole/posti_massimi 20
             PROBLEMI "K-CTR-022|contratti.json|/contratti/2/regole")
+# --- Lettura blindata (K-009) ------------------------------------------------------------
+# Si legge solo un file normale dentro la cartella del pacchetto, mai piu' di 256 MB; una cartella con il nome di un
+# file del pacchetto e' un errore proprio. Nessun errore a catena: il file c'e' ma non si usa, e i controlli sul
+# contenuto non partono. TIMEOUT: se il programma restasse in attesa (una pipe, /dev/zero), la prova fallisce subito.
+kzero_rotto(rotto_cartella_al_posto_del_file FORMATO testo MODIFICA CARTELLA persone.json
+            PROBLEMI "K-CTR-090|persone.json" CONTIENE "Controlli sul contenuto non eseguiti" " 1 errore, 0 avvisi."
+            NON_CONTIENE "K-CTR-010" "K-CTR-008")
+if(NOT WIN32)
+  kzero_rotto(rotto_pipe_al_posto_del_file FORMATO testo MODIFICA PIPE persone.json
+              PROBLEMI "K-CTR-088|persone.json" CONTIENE "Controlli sul contenuto non eseguiti" NON_CONTIENE "K-CTR-010")
+  kzero_rotto(rotto_collegamento_a_dev_zero FORMATO json MODIFICA COLLEGA persone.json /dev/zero
+              PROBLEMI "K-CTR-089|persone.json" CONTIENE "\"errori\": 1,")
+  kzero_rotto(rotto_collegamento_fuori_dalla_cartella FORMATO testo MODIFICA COLLEGA persone.json @FUORI@
+              PROBLEMI "K-CTR-089|persone.json" NON_CONTIENE "K-CTR-010")
+  kzero_rotto(rotto_collegamento_che_non_porta_a_nulla FORMATO testo MODIFICA COLLEGA persone.json archivio/non-c-e.json
+              PROBLEMI "K-CTR-002|persone.json" CONTIENE "non porta a nessun file")
+  # Un collegamento a un file normale dentro la cartella si segue: il pacchetto e' quello del demo (piu' l'avviso
+  # sulla sottocartella "archivio", che non fa parte del formato).
+  kzero_prova(collegamento_dentro_la_cartella USCITA 0 FORMATO testo BASE ${KZERO_DEMO} MODIFICA COLLEGA persone.json @DENTRO@
+              PROBLEMI "K-CTR-008|archivio" CONTIENE " 0 errori, 9 avvisi."
+              ARGOMENTI controlla @PACCHETTO@)
+  kzero_prova(giornata_con_una_pipe USCITA 1 FORMATO testo ERRORE K-ERR-018 BASE ${KZERO_DEMO} MODIFICA PIPE turni.json
+              ARGOMENTI giornata @PACCHETTO@ --data 2026-10-22)
+  # Un file di 256 MB e un byte (zeri "sparsi": non occupano il disco): non si legge, nemmeno in parte.
+  kzero_rotto(rotto_file_troppo_grande FORMATO testo MODIFICA ALLUNGA persone.json 268435457
+              PROBLEMI "K-CTR-053|persone.json" CONTIENE "piu' grande di 256 MB" NON_CONTIENE "K-CTR-048" "K-CTR-003")
+  foreach(prova rotto_file_troppo_grande rotto_pipe_al_posto_del_file rotto_collegamento_a_dev_zero rotto_collegamento_fuori_dalla_cartella
+                rotto_collegamento_che_non_porta_a_nulla collegamento_dentro_la_cartella giornata_con_una_pipe)
+    set_tests_properties(programma.${prova} PROPERTIES TIMEOUT 60)
+  endforeach()
+endif()
+
 # --- kzero giornata (K-008) ----------------------------------------------------------
 # Le tre giornate chieste dal mandato, confrontate con le uscite attese: una persona e un mezzo in un giovedi' (il
 # giorno della sostituzione di P-A) e una persona in un giorno festivo (orario festivo della linea di Beta).
@@ -342,12 +420,69 @@ kzero_prova(giornata_tutti_i_dati_json USCITA 0 FORMATO json SCHEMA giornata
             ARGOMENTI ${GIORNATA_DEMO} --data 2026-10-22 --includi-dati-personali --includi-dati-particolari --formato json)
 kzero_prova(giornata_demo_numeri USCITA 0 FORMATO json SCHEMA giornata CONTIENE "\"livello\": \"solo_numeri\""
             ARGOMENTI giornata ${PROJECT_SOURCE_DIR}/esempi/demo-numeri --data 2026-10-22 --formato json)
+
+# K-009, aggiunta 1: case dei passeggeri e luoghi sensibili. Con i dati personali e senza quelli particolari, una
+# giornata che mostra la casa di un passeggero (punto porta a porta con il nome) non mostra il luogo sensibile (il
+# centro diurno L-CENTRO) in nessun punto: corse, attivita' (il trasferimento a vuoto), inizio e fine, presa servizio.
+# Nelle tre viste, in testo e in JSON. "CAL-CENTRO" e' il codice di un calendario: si cerca " L-CENTRO" e "\"L-CENTRO\"".
+set(LUOGO_SENSIBILE_TESTO " L-CENTRO" "Centro diurno Il Faro")
+set(LUOGO_SENSIBILE_JSON "\"L-CENTRO\"" "Valfonda, Centro diurno")
+kzero_prova(giornata_mezzo_casa_e_centro USCITA 0 FORMATO testo
+            ATTESO ${CMAKE_CURRENT_SOURCE_DIR}/attesi/giornata_mezzo_dati_personali.txt
+            CONTIENE "07:52  PP-01  Casa Bianchi  salgono 1" "08:52  riservato  scendono 3"
+                     "Trasferimento a vuoto (VUOTO), da riservato a L-RIMESSA-ALFA"
+            NON_CONTIENE ${LUOGO_SENSIBILE_TESTO}
+            ARGOMENTI ${GIORNATA_DEMO} --data 2026-10-22 --mezzo ALFA-03 --includi-dati-personali)
+foreach(caso "mezzo;--mezzo;ALFA-03" "persona;--persona;P-C" "tutti")
+  list(POP_FRONT caso vista)
+  kzero_prova(giornata_${vista}_casa_e_centro_testo USCITA 0 FORMATO testo
+              CONTIENE "PP-01  Casa Bianchi" "08:52  riservato  scendono 3" "da riservato a L-RIMESSA-ALFA"
+              NON_CONTIENE ${LUOGO_SENSIBILE_TESTO}
+              ARGOMENTI ${GIORNATA_DEMO} --data 2026-10-22 ${caso} --includi-dati-personali)
+  kzero_prova(giornata_${vista}_casa_e_centro_json USCITA 0 FORMATO json SCHEMA giornata
+              CONTIENE "Casa Bianchi" "\"luogo\": \"riservato\"" "\"codice\": \"riservato\""
+              NON_CONTIENE ${LUOGO_SENSIBILE_JSON}
+              ARGOMENTI ${GIORNATA_DEMO} --data 2026-10-22 ${caso} --includi-dati-personali --formato json)
+  # Con i dati particolari il centro si vede, e anche di base (la casa si vede solo con il codice).
+  kzero_prova(giornata_${vista}_casa_e_centro_tutti_i_dati USCITA 0 FORMATO testo
+              CONTIENE "PP-01  Casa Bianchi" "08:52  L-CENTRO  Valfonda, Centro diurno Il Faro  scendono 3"
+                       "da L-CENTRO (Valfonda, Centro diurno Il Faro) a L-RIMESSA-ALFA"
+              ARGOMENTI ${GIORNATA_DEMO} --data 2026-10-22 ${caso} --includi-dati-personali --includi-dati-particolari)
+  kzero_prova(giornata_${vista}_casa_e_centro_di_base_json USCITA 0 FORMATO json SCHEMA giornata
+              CONTIENE "\"luogo\": \"L-CENTRO\"" "\"luogo\": \"PP-01\"" NON_CONTIENE "Casa Bianchi"
+              ARGOMENTI ${GIORNATA_DEMO} --data 2026-10-22 ${caso} --formato json)
+endforeach()
+# Una corsa con una casa e nessun luogo sensibile resta com'e' (l'auto elettrica, ramo di Montebrino).
+kzero_prova(giornata_casa_senza_luogo_sensibile USCITA 0 FORMATO testo
+            CONTIENE "08:05  PP-03  Casa Neri  salgono 1" "08:25  L-TRASB-PONTE  Ponte di Sorgenta, piazzale  consegna il trasbordo T-01"
+                     "Comincia a PR-01 (Garage presso l'abitazione di un autista)"
+            NON_CONTIENE "riservato  "
+            ARGOMENTI ${GIORNATA_DEMO} --data 2026-10-22 --mezzo ALFA-04 --includi-dati-personali)
+# Luogo di inizio e di fine, presa servizio e attivita': con la rimessa segnata sensibile (solo in questa prova) la
+# giornata di P-C non la mostra da nessuna parte, neppure nel turno della sera, che non porta nessuno a casa.
+kzero_prova(giornata_inizio_e_fine_in_un_luogo_sensibile USCITA 0 FORMATO testo BASE ${KZERO_DEMO}
+            MODIFICA IMPOSTA luoghi.json /luoghi/0/sensibile true
+            CONTIENE "presa servizio a riservato" "Comincia a riservato, finisce a riservato"
+                     "Presa servizio con il controllo del mezzo (PRESA), a riservato" "07:40  riservato  sale l'assistente"
+                     "Spostamento della persona senza il mezzo (A-PIEDI), da riservato a F-VALFONDA-PIAZZA"
+            NON_CONTIENE "L-RIMESSA-ALFA" "rimessa Autoservizi Alfa"
+            ARGOMENTI giornata @PACCHETTO@ --data 2026-10-22 --persona P-C --includi-dati-personali)
+kzero_prova(giornata_inizio_e_fine_in_un_luogo_sensibile_json USCITA 0 FORMATO json SCHEMA giornata BASE ${KZERO_DEMO}
+            MODIFICA IMPOSTA luoghi.json /luoghi/0/sensibile true
+            CONTIENE "\"codice\": \"riservato\"" "\"luogo\": \"riservato\"" "Casa Bianchi"
+            NON_CONTIENE "L-RIMESSA-ALFA" "rimessa Autoservizi Alfa"
+            ARGOMENTI giornata @PACCHETTO@ --data 2026-10-22 --persona P-C --includi-dati-personali --formato json)
+# Un luogo sensibile in una giornata senza case di passeggeri si vede (la scuola media, segnata sensibile solo qui).
+kzero_prova(giornata_luogo_sensibile_senza_case USCITA 0 FORMATO testo BASE ${KZERO_DEMO}
+            MODIFICA IMPOSTA luoghi.json /luoghi/11/sensibile true
+            CONTIENE "Persona P-F" "L-MEDIE  Valfonda, Scuola media  scendono 8" NON_CONTIENE "riservato  " "PP-0"
+            ARGOMENTI giornata @PACCHETTO@ --data 2026-10-22 --persona P-F --includi-dati-personali)
 # Principio del punto 12: un fatto con le date su un turno ricorrente e' un avviso in kzero controlla, e in kzero
 # giornata quel giorno il turno e' scoperto o senza mezzo, con il motivo. Lo stesso fatto su un'assegnazione del
 # singolo giorno e' un errore: kzero giornata non mostra nulla.
 kzero_prova(avviso_assenza_senza_sostituzione USCITA 0 FORMATO testo BASE ${KZERO_DEMO}
             MODIFICA TOGLI assegnazioni.json /assegnazioni/3
-            PROBLEMI "K-CTR-078|assenze.json|/assenze/0" CONTIENE " 0 errori, 9 avvisi."
+            PROBLEMI "K-CTR-078|persone.json|/persone/0" CONTIENE " 0 errori, 9 avvisi." NON_CONTIENE "assenze.json"
             ARGOMENTI controlla @PACCHETTO@)
 kzero_prova(giornata_assenza_senza_sostituzione USCITA 0 FORMATO testo BASE ${KZERO_DEMO}
             MODIFICA TOGLI assegnazioni.json /assegnazioni/3
@@ -493,7 +628,7 @@ kzero_prova(avviso_azienda_senza_norme USCITA 0 FORMATO testo BASE ${KZERO_DEMO}
             ARGOMENTI controlla @PACCHETTO@)
 kzero_prova(avviso_abilitazione_che_scade USCITA 0 FORMATO testo BASE ${KZERO_DEMO}
             MODIFICA IMPOSTA persone.json /persone/2/abilitazioni/2/scadenza "\"2027-03-31\""
-            PROBLEMI "K-CTR-050|persone.json|/persone/2/abilitazioni/2"
+            PROBLEMI "K-CTR-050|persone.json|/persone/2"
             CONTIENE "Un'abilitazione o un'autorizzazione della persona P-C scade dentro il periodo del pacchetto"
             NON_CONTIENE "CQC" "2027-03-31" "Verdi Carlo"
             ARGOMENTI controlla @PACCHETTO@)
@@ -515,18 +650,19 @@ kzero_prova(classi_trasbordo_in_una_casa_dati_personali USCITA 1 FORMATO json SC
             MODIFICA IMPOSTA corse.json /corse/4/passaggi/2/luogo "\"PP-01\""
             PROBLEMI "K-CTR-023|corse.json|/corse/4/passaggi/2/trasbordi/0" CONTIENE "PP-01 (Casa Bianchi)"
             ARGOMENTI controlla @PACCHETTO@ --includi-dati-personali --formato json)
+# Dal K-009 un problema che rivela un dato particolare (carrozzine, assistente, tipo "disabili") di base non si elenca:
+# una riga sola, senza codice ne' posizione, con quanti errori e avvisi sono; il codice di uscita non cambia.
 kzero_rotto(classi_carrozzine FORMATO testo MODIFICA IMPOSTA servizi.json /servizi/3/domanda/gruppi/0/fermate/0/carrozzine 0
-            PROBLEMI "K-CTR-031|servizi.json|/servizi/3/domanda/gruppi/0/fermate/0" CONTIENE "un dato particolare (riservato)"
-            NON_CONTIENE "carrozzin")
+            CONTIENE "Problemi sui dati particolari (salute), non elencati uno per uno: 1 errore e nessun avviso." " 1 errore, 8 avvisi."
+            NON_CONTIENE "carrozzin" "K-CTR-031" "/servizi/3/domanda")
 kzero_prova(classi_carrozzine_dati_particolari USCITA 1 FORMATO testo RESOCONTO BASE ${KZERO_DEMO}
             MODIFICA IMPOSTA servizi.json /servizi/3/domanda/gruppi/0/fermate/0/carrozzine 0
             PROBLEMI "K-CTR-031|servizi.json|/servizi/3/domanda/gruppi/0/fermate/0" CONTIENE "le persone sedute sulla carrozzina non corrispondono"
             ARGOMENTI controlla @PACCHETTO@ --includi-dati-particolari)
 kzero_rotto(classi_assistente FORMATO testo
             MODIFICA IMPOSTA servizi.json /servizi/3/domanda/gruppi/0/assistente_richiesto false
-            PROBLEMI "K-CTR-047|servizi.json|/servizi/3/domanda/gruppi/0/passeggeri/0"
-            CONTIENE "Il passeggero P-D1 ha un dato particolare (riservato) che il gruppo G-DIS"
-            NON_CONTIENE "assistente" "Bianchi Luca")
+            CONTIENE "Problemi sui dati particolari (salute), non elencati uno per uno: 1 errore e nessun avviso."
+            NON_CONTIENE "assistente" "Bianchi Luca" "K-CTR-047" "P-D1" "passeggeri")
 kzero_prova(classi_assistente_dati_particolari USCITA 1 FORMATO json SCHEMA controlla RESOCONTO BASE ${KZERO_DEMO}
             MODIFICA IMPOSTA servizi.json /servizi/3/domanda/gruppi/0/assistente_richiesto false
             PROBLEMI "K-CTR-047|servizi.json|/servizi/3/domanda/gruppi/0/passeggeri/0"
@@ -534,7 +670,7 @@ kzero_prova(classi_assistente_dati_particolari USCITA 1 FORMATO json SCHEMA cont
             ARGOMENTI controlla @PACCHETTO@ --includi-dati-particolari --formato json)
 kzero_rotto(classi_valore_particolare_nello_schema FORMATO json
             MODIFICA IMPOSTA servizi.json /servizi/3/domanda/gruppi/0/tipo "\"disabili_gravi\""
-            PROBLEMI "K-CTR-007|servizi.json|/servizi/3/domanda/gruppi/0/tipo" NON_CONTIENE "disabili_gravi")
+            CONTIENE "\"problemi_riservati\": {\n    \"errori\": 1," NON_CONTIENE "disabili_gravi" "K-CTR-007" "/servizi/3")
 kzero_prova(classi_valore_particolare_nello_schema_mostrato USCITA 1 FORMATO testo RESOCONTO BASE ${KZERO_DEMO}
             MODIFICA IMPOSTA servizi.json /servizi/3/domanda/gruppi/0/tipo "\"disabili_gravi\""
             PROBLEMI "K-CTR-007|servizi.json|/servizi/3/domanda/gruppi/0/tipo" CONTIENE "\"disabili_gravi\""
@@ -582,6 +718,65 @@ add_test(NAME architettura.nucleo_senza_stampa
          COMMAND ${CMAKE_COMMAND} -DSORGENTI=${PROJECT_SOURCE_DIR}
                  -P ${CMAKE_CURRENT_SOURCE_DIR}/programma/architettura.cmake)
 set_tests_properties(architettura.nucleo_senza_stampa PROPERTIES LABELS architettura)
+
+# --- Sicurezza (K-009): niente rete -----------------------------------------------------------------------------
+# Il programma compilato non importa funzioni di rete (Linux: simboli ELF) e nessun sorgente include intestazioni o
+# librerie di rete. Vedi docs/sicurezza.md.
+add_test(NAME sicurezza.niente_rete_nei_sorgenti
+         COMMAND ${CMAKE_COMMAND} -DMODO=sorgenti -DSORGENTI=${PROJECT_SOURCE_DIR}
+                 -P ${CMAKE_CURRENT_SOURCE_DIR}/programma/rete.cmake)
+set_tests_properties(sicurezza.niente_rete_nei_sorgenti PROPERTIES LABELS sicurezza)
+# Sul programma vero: con i sanitizer il programma contiene anche le loro librerie, che intercettano le funzioni di
+# rete del sistema (e si collegano a libresolv) senza che K-Zero le usi.
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_NM AND CMAKE_OBJDUMP AND NOT KZERO_SANITIZER AND NOT KZERO_FUZZ)
+  add_test(NAME sicurezza.niente_rete_nel_programma
+           COMMAND ${CMAKE_COMMAND} -DMODO=programma -DKZERO=$<TARGET_FILE:kzero> -DNM=${CMAKE_NM} -DOBJDUMP=${CMAKE_OBJDUMP}
+                   -P ${CMAKE_CURRENT_SOURCE_DIR}/programma/rete.cmake)
+  set_tests_properties(sicurezza.niente_rete_nel_programma PROPERTIES LABELS sicurezza)
+endif()
+
+# Protezioni del compilatore nella versione di rilascio per Linux (DECISIONI.md).
+if(KZERO_PROTEZIONI_ATTIVE AND CMAKE_READELF AND CMAKE_NM)
+  add_test(NAME sicurezza.protezioni_del_compilatore
+           COMMAND ${CMAKE_COMMAND} -DKZERO=$<TARGET_FILE:kzero> -DREADELF=${CMAKE_READELF} -DNM=${CMAKE_NM}
+                   -P ${CMAKE_CURRENT_SOURCE_DIR}/programma/protezioni.cmake)
+  set_tests_properties(sicurezza.protezioni_del_compilatore PROPERTIES LABELS sicurezza)
+endif()
+
+# Elenco dei componenti esterni (docs/componenti.cdx.json, CycloneDX): coincide con le versioni e le impronte fissate in
+# CMakeLists.txt e in tests/strumenti/check-jsonschema.txt.
+add_test(NAME sicurezza.elenco_dei_componenti
+         COMMAND ${CMAKE_COMMAND} -DSORGENTI=${PROJECT_SOURCE_DIR} -DVERSIONE=${PROJECT_VERSION}
+                 -P ${CMAKE_CURRENT_SOURCE_DIR}/programma/componenti.cmake)
+set_tests_properties(sicurezza.elenco_dei_componenti PROPERTIES LABELS sicurezza)
+
+# --- Fuzzing (K-009): prove con dati casuali e deformati (tests/fuzz, docs/sicurezza.md) -------------------------
+# I bersagli stanno in una libreria comune: libFuzzer li usa per cercare guasti (KZERO_FUZZ=ON, clang), rigioca_fuzz
+# per ripetere nelle prove normali ogni guasto gia' trovato (tests/fuzz/casi/<bersaglio>/<caso>) e i file del demo.
+add_library(kzero_bersagli_fuzz STATIC fuzz/bersagli.cpp)
+target_link_libraries(kzero_bersagli_fuzz PUBLIC kzero_api)
+target_compile_options(kzero_bersagli_fuzz PRIVATE ${KZERO_WARNINGS})
+add_executable(rigioca_fuzz fuzz/rigioca_fuzz.cpp)
+target_link_libraries(rigioca_fuzz PRIVATE kzero_bersagli_fuzz)
+target_compile_options(rigioca_fuzz PRIVATE ${KZERO_WARNINGS})
+add_test(NAME fuzz.semi COMMAND rigioca_fuzz --semi)
+set_tests_properties(fuzz.semi PROPERTIES LABELS fuzz)
+file(GLOB casi_fuzz LIST_DIRECTORIES true CONFIGURE_DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/fuzz/casi/*)
+foreach(cartella IN LISTS casi_fuzz)
+  if(IS_DIRECTORY ${cartella})
+    get_filename_component(bersaglio ${cartella} NAME)
+    add_test(NAME fuzz.casi.${bersaglio} COMMAND rigioca_fuzz ${bersaglio} ${cartella})
+    set_tests_properties(fuzz.casi.${bersaglio} PROPERTIES LABELS fuzz)
+  endif()
+endforeach()
+if(KZERO_FUZZ)
+  foreach(bersaglio pacchetto parametri date_e_orari)
+    add_executable(fuzz_${bersaglio} fuzz/fuzz_${bersaglio}.cpp)
+    target_link_libraries(fuzz_${bersaglio} PRIVATE kzero_bersagli_fuzz)
+    target_compile_options(fuzz_${bersaglio} PRIVATE ${KZERO_WARNINGS})
+    target_link_options(fuzz_${bersaglio} PRIVATE -fsanitize=fuzzer)
+  endforeach()
+endif()
 
 # --- Prova di scala: un pacchetto grande, generato con un seme fisso, controllato senza errori ------------
 # Il tempo e la memoria si misurano a parte (DIARIO.md): le macchine del controllo GitHub variano.

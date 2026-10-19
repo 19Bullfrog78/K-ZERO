@@ -2,6 +2,8 @@
 #include "errori.hpp"
 
 #include <algorithm>
+
+#include "riservatezza.hpp"
 #include <stdexcept>
 #include <utility>
 
@@ -92,6 +94,17 @@ Json posizione_in_json(const Posizione& p) {
 
 }  // namespace
 
+namespace {
+
+// Gli errori del programma non sanno quali parametri sono stati scritti: la loro posizione non nomina mai un file di
+// dati che, tutto intero, e' un dato personale o particolare (es. assenze.json). Vedi riservatezza.hpp.
+std::optional<Posizione> posizione_mostrata(const ErroreKZero& e) {
+    if (!e.posizione() || file_riservato(e.posizione()->file)) return std::nullopt;
+    return e.posizione();
+}
+
+}  // namespace
+
 std::string testo_errori(const std::vector<ErroreKZero>& errori, Formato formato) {
     if (formato == Formato::Json) {
         Json j = documento(schema_errore());
@@ -101,8 +114,8 @@ std::string testo_errori(const std::vector<ErroreKZero>& errori, Formato formato
             Json voce = Json::object();
             voce["codice"] = e.definizione().codice;
             voce["messaggio"] = e.messaggio();
-            if (e.posizione()) {
-                Json pos = posizione_in_json(*e.posizione());
+            if (const auto p = posizione_mostrata(e)) {
+                Json pos = posizione_in_json(*p);
                 if (!pos.empty()) voce["posizione"] = pos;
             }
             elenco.push_back(voce);
@@ -113,8 +126,8 @@ std::string testo_errori(const std::vector<ErroreKZero>& errori, Formato formato
     std::string testo;
     for (const auto& e : errori) {
         testo += "Errore " + e.definizione().codice;
-        if (e.posizione()) {
-            const std::string pos = posizione_in_testo(*e.posizione());
+        if (const auto p = posizione_mostrata(e)) {
+            const std::string pos = posizione_in_testo(*p);
             if (!pos.empty()) testo += " (" + pos + ")";
         }
         testo += ": " + e.messaggio() + "\n";

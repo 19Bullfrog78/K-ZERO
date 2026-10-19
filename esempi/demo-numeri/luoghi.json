@@ -1,6 +1,6 @@
 {
   "schema": "luoghi",
-  "schema_versione": 1,
+  "schema_versione": 2,
   "luoghi": [
     {
       "codice": "L-RIMESSA-ALFA",
@@ -131,7 +131,8 @@
       "tipo": "centro",
       "nome": "Valfonda, Centro diurno Il Faro",
       "comune": "Valfonda",
-      "coordinate": { "lat": 46.3958, "lon": 11.052 }
+      "coordinate": { "lat": 46.3958, "lon": 11.052 },
+      "sensibile": true
     },
     {
       "codice": "L-TRASB-PONTE",

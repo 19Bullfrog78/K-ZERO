@@ -7,8 +7,6 @@
 
 namespace kzero::api {
 
-Classe piu_riservata(Classe a, Classe b) { return static_cast<int>(a) >= static_cast<int>(b) ? a : b; }
-
 Classe Vista::classe(const kzero::Source& elemento, const std::string& campo) const {
     const auto v = lettura_.versioni.find(elemento.file);
     if (v == lettura_.versioni.end()) return Classe::Particolare;

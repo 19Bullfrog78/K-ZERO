@@ -3,6 +3,7 @@
 // (controlli sulla forma dei file), messaggi in italiano, classi dei dati e loro filtro.
 // Le prove che lanciano il programma vero stanno in tests/programma.
 #include <algorithm>
+#include <filesystem>
 #include <functional>
 #include <fstream>
 #include <map>
@@ -15,6 +16,10 @@
 
 #include <gtest/gtest.h>
 
+#if defined(__unix__)
+#include <sys/stat.h>
+#endif
+
 #include "api.hpp"
 #include "comandi.hpp"
 #include "controlli_catalogo.hpp"
@@ -23,6 +28,7 @@
 #include "formato_dati.hpp"
 #include "lettore.hpp"
 #include "parametri.hpp"
+#include "riservatezza.hpp"
 #include "schemi_dati.hpp"
 #include "uscita.hpp"
 #include "validazione.hpp"
@@ -201,7 +207,7 @@ class Memoria : public Sorgente {
 public:
     Memoria() {
         const PacchettoIncorporato demo("esempi/demo");
-        for (const auto& v : demo.voci()) file[v.nome] = demo.leggi(v.nome);
+        for (const auto& v : demo.voci()) file[v.nome] = demo.leggi(v.nome, kMassimoByteFile).testo;
     }
     std::vector<Voce> voci() const override {
         std::vector<Voce> v;
@@ -210,9 +216,23 @@ public:
         std::sort(v.begin(), v.end(), [](const Voce& a, const Voce& b) { return a.nome < b.nome; });
         return v;
     }
-    std::optional<std::string> leggi(const std::string& nome) const override {
+    FileLetto leggi(const std::string& nome, std::uintmax_t massimo) const override {
+        FileLetto out;
+        const auto finto = esiti.find(nome);
+        if (finto != esiti.end()) {
+            out.esito = finto->second;
+            return out;
+        }
         const auto it = file.find(nome);
-        return it == file.end() ? std::nullopt : it->second;
+        if (it == file.end() || !it->second) return out;   // illeggibile
+        const auto grande = grandi.find(nome);
+        if ((grande != grandi.end() && grande->second > massimo) || it->second->size() > massimo) {
+            out.esito = FileLetto::Esito::TroppoGrande;
+            return out;
+        }
+        out.esito = FileLetto::Esito::Letto;
+        out.testo = *it->second;
+        return out;
     }
     // Sostituisce un testo che compare una volta sola nel file.
     void sostituisci(const std::string& nome, const std::string& vecchio, const std::string& nuovo) {
@@ -223,15 +243,10 @@ public:
         t.replace(i, vecchio.size(), nuovo);
     }
 
-    std::optional<std::uintmax_t> dimensione(const std::string& nome) const override {
-        const auto it = grandi.find(nome);
-        if (it != grandi.end()) return it->second;
-        return std::nullopt;
-    }
-
     std::map<std::string, std::optional<std::string>> file;   // nessun valore = illeggibile
     std::vector<std::string> cartelle;
     std::map<std::string, std::uintmax_t> grandi;   // dimensione finta (byte) di alcuni file
+    std::map<std::string, FileLetto::Esito> esiti;  // esito finto della lettura di alcuni file (es. non normale)
 };
 
 struct Atteso {
@@ -270,7 +285,8 @@ TEST(Api, pacchetto_demo_letto) {
     EXPECT_TRUE(l.problemi.empty());
     EXPECT_TRUE(l.forma_valida());
     EXPECT_EQ(l.versioni.size(), 24u);   // tutti i file del formato tranne tempi_sosta.json
-    for (const char* f : {"calendari.json", "regolamenti.json", "servizi.json", "mezzi.json"}) EXPECT_EQ(l.versioni.at(f), 2) << f;
+    for (const char* f : {"calendari.json", "regolamenti.json", "servizi.json", "mezzi.json", "luoghi.json"})
+        EXPECT_EQ(l.versioni.at(f), 2) << f;
     EXPECT_EQ(l.pacchetto.trips.size(), 26u);
 }
 
@@ -299,6 +315,29 @@ TEST(Api, K_CTR_003_json_non_valido) {
     EXPECT_EQ(l.problemi[0].where.line, 84);     // la riga dopo la virgola mancante: "alimentazione"...
     EXPECT_EQ(l.problemi[0].where.column, 21);   // ...letto fino in fondo prima di accorgersi dell'errore
     EXPECT_FALSE(l.usato("mezzi.json"));   // mai letto a meta'
+
+    // Un byte zero: la libreria JSON lo prenderebbe per la fine del file e leggerebbe solo la parte prima (K-009).
+    Memoria zero;
+    zero.file["assenze.json"] = *zero.file.at("assenze.json") + std::string(1, '\0') + "{ \"altro\": 1 }";
+    EXPECT_TRUE(problemi(zero, {{Check::InvalidJson, 1, "assenze.json", ""}}));
+    const Lettura lz = leggi_pacchetto(zero);
+    EXPECT_FALSE(lz.usato("assenze.json"));
+    EXPECT_EQ(lz.problemi[0].where.line, 10);   // subito dopo le 9 righe del file
+    EXPECT_EQ(lz.problemi[0].where.column, 1);
+
+    // Un numero troppo grande per essere letto: errore nei dati con riga e colonna, mai un errore interno, e il messaggio
+    // non ricopia il numero (trovato dal fuzzing, K-009).
+    Memoria enorme;
+    enorme.sostituisci("mezzi.json", "\"posti\": 19,", "\"posti\": 1e400,");
+    EXPECT_TRUE(problemi(enorme, {{Check::InvalidJson, 2, "mezzi.json", ""}}));
+    const Lettura le = leggi_pacchetto(enorme);
+    EXPECT_EQ(le.problemi[0].where.line, 83);
+    EXPECT_EQ(le.problemi[0].where.column, 16);
+    EXPECT_EQ(messaggio(enorme), "Il file non e' un JSON valido: alla riga 83, colonna 16 c'e' un numero troppo grande per essere "
+                                 "letto (es. 1e400). Il file non e' stato letto.");
+    Memoria nel_testo;   // dentro un testo tra virgolette non e' un numero
+    nel_testo.sostituisci("mezzi.json", "\"posti\": 19,", "\"nota\": \"9e999\", \"posti\": 1e999,");
+    EXPECT_EQ(leggi_pacchetto(nel_testo).problemi[0].where.column, 33);
 }
 
 TEST(Api, K_CTR_004_campo_ripetuto) {
@@ -343,6 +382,115 @@ TEST(Api, K_CTR_053_file_troppo_grande) {
     EXPECT_TRUE(problemi(n, {}));
 }
 
+namespace {
+
+// Cartella temporanea per le prove sul disco: <temp>/kzero-lettura-<numero>/{pacchetto,fuori}, tolta alla fine.
+class CartellaProva {
+public:
+    CartellaProva() {
+        namespace fs = std::filesystem;
+        for (int i = 0;; ++i) {
+            radice = fs::temp_directory_path() / ("kzero-lettura-" + std::to_string(i));
+            std::error_code ec;
+            if (fs::create_directory(radice, ec)) break;
+        }
+        fs::create_directories(pacchetto());
+        fs::create_directories(fuori());
+        fs::create_directories(pacchetto() / "archivio");
+    }
+    ~CartellaProva() {
+        std::error_code ec;
+        std::filesystem::remove_all(radice, ec);
+    }
+    std::filesystem::path pacchetto() const { return radice / "pacchetto"; }
+    std::filesystem::path fuori() const { return radice / "fuori"; }
+    static void scrivi(const std::filesystem::path& f, const std::string& testo) {
+        std::ofstream o(f, std::ios::binary);
+        o << testo;
+    }
+    std::filesystem::path radice;
+};
+
+}  // namespace
+
+// Lettura blindata (K-009): si legge solo un file normale e mai piu' del massimo di byte; un collegamento si segue
+// solo se porta a un file normale dentro la cartella del pacchetto.
+TEST(Api, lettura_blindata_dal_disco) {
+    namespace fs = std::filesystem;
+    using E = FileLetto::Esito;
+    const CartellaProva c;
+    const fs::path p = c.pacchetto();
+    CartellaProva::scrivi(p / "mezzi.json", "12345");
+    EXPECT_EQ(leggi_dal_disco(p, "mezzi.json", 5).esito, E::Letto);
+    EXPECT_EQ(leggi_dal_disco(p, "mezzi.json", 5).testo, "12345");
+    EXPECT_EQ(leggi_dal_disco(p, "mezzi.json", 4).esito, E::TroppoGrande);   // un byte oltre il massimo
+    CartellaProva::scrivi(p / "vuoto.json", "");
+    EXPECT_EQ(leggi_dal_disco(p, "vuoto.json", 5).esito, E::Letto);
+    EXPECT_EQ(leggi_dal_disco(p, "non-esiste.json", 5).esito, E::Illeggibile);
+    fs::create_directory(p / "persone.json");
+    EXPECT_EQ(leggi_dal_disco(p, "persone.json", 5).esito, E::NonNormale);   // una cartella
+    // Un file grande piu' del pezzo letto in una volta (64 KB): letto tutto, o fermato al massimo.
+    CartellaProva::scrivi(p / "corse.json", std::string(200000, 'x'));
+    EXPECT_EQ(leggi_dal_disco(p, "corse.json", 200000).testo.size(), 200000u);
+    EXPECT_EQ(leggi_dal_disco(p, "corse.json", 199999).esito, E::TroppoGrande);
+#if defined(__unix__)
+    // Una "pipe" al posto del file: rifiutata subito, senza restare in attesa di chi scrive.
+    ASSERT_EQ(::mkfifo((p / "turni.json").c_str(), 0600), 0);
+    EXPECT_EQ(leggi_dal_disco(p, "turni.json", 5).esito, E::NonNormale);
+    // Collegamenti: a un file fuori dalla cartella, a /dev/zero, a un file dentro, a nessun file, a una cartella.
+    CartellaProva::scrivi(c.fuori() / "luoghi.json", "{}");
+    fs::create_symlink(c.fuori() / "luoghi.json", p / "luoghi.json");
+    EXPECT_EQ(leggi_dal_disco(p, "luoghi.json", 5).esito, E::FuoriCartella);
+    fs::create_symlink("../fuori/luoghi.json", p / "tratti.json");
+    EXPECT_EQ(leggi_dal_disco(p, "tratti.json", 5).esito, E::FuoriCartella);
+    fs::create_symlink("/dev/zero", p / "rimesse.json");
+    EXPECT_EQ(leggi_dal_disco(p, "rimesse.json", 5).esito, E::FuoriCartella);
+    CartellaProva::scrivi(p / "archivio" / "fermi-2026.json", "{}");
+    fs::create_symlink("archivio/fermi-2026.json", p / "fermi.json");
+    EXPECT_EQ(leggi_dal_disco(p, "fermi.json", 5).esito, E::Letto);
+    EXPECT_EQ(leggi_dal_disco(p, "fermi.json", 5).testo, "{}");
+    fs::create_symlink("archivio/non-c-e.json", p / "blocchi.json");
+    EXPECT_EQ(leggi_dal_disco(p, "blocchi.json", 5).esito, E::CollegamentoRotto);
+    fs::create_symlink("archivio", p / "norme.json");
+    EXPECT_EQ(leggi_dal_disco(p, "norme.json", 5).esito, E::NonNormale);
+    // La cartella del pacchetto stessa puo' essere un collegamento (es. una cartella sincronizzata).
+    fs::create_directory_symlink(p, c.radice / "collegata");
+    EXPECT_EQ(leggi_dal_disco(c.radice / "collegata", "fermi.json", 5).esito, E::Letto);
+    EXPECT_EQ(leggi_dal_disco(c.radice / "collegata", "luoghi.json", 5).esito, E::FuoriCartella);
+#endif
+#if defined(__linux__)
+    // Un file che il sistema dice vuoto ma che ha un contenuto (i file di /proc, come un file che cresce mentre lo si
+    // legge): la lettura non si fida della dimensione e si ferma comunque un byte dopo il massimo.
+    EXPECT_EQ(leggi_dal_disco("/proc/self", "status", 100).esito, E::TroppoGrande);
+    const FileLetto stato = leggi_dal_disco("/proc/self", "status", 1024 * 1024);
+    EXPECT_EQ(stato.esito, E::Letto);
+    EXPECT_GT(stato.testo.size(), 100u);
+#endif
+}
+
+// Gli esiti della lettura diventano problemi di forma con il loro codice; una cartella con il nome di un file del
+// pacchetto e' un errore proprio, senza errori a catena sui codici che quel file avrebbe dato.
+TEST(Api, K_CTR_088_089_090_lettura_blindata) {
+    Memoria non_normale;
+    non_normale.esiti["persone.json"] = FileLetto::Esito::NonNormale;
+    EXPECT_TRUE(problemi(non_normale, {{Check::NotRegularFile, 0, "persone.json", ""}}));
+    Memoria fuori;
+    fuori.esiti["persone.json"] = FileLetto::Esito::FuoriCartella;
+    EXPECT_TRUE(problemi(fuori, {{Check::LinkOutsideFolder, 0, "persone.json", ""}}));
+    Memoria rotto;
+    rotto.esiti["persone.json"] = FileLetto::Esito::CollegamentoRotto;
+    EXPECT_TRUE(problemi(rotto, {{Check::UnreadableFile, 1, "persone.json", ""}}));
+    Memoria cartella;
+    cartella.file.erase("persone.json");
+    cartella.cartelle.push_back("persone.json");
+    EXPECT_TRUE(problemi(cartella, {{Check::DirectoryInsteadOfFile, 0, "persone.json", ""}}));
+    const Resoconto r = controlla_pacchetto(cartella, Visibilita{});
+    EXPECT_FALSE(r.contenuto_controllato);
+    EXPECT_EQ(r.errori, 1);   // nessun K-CTR-010 sulle persone che mancherebbero
+    EXPECT_EQ(r.problemi.front().messaggio, "C'e' una cartella che si chiama persone.json, come un file del pacchetto: il file "
+                                            "non e' stato letto. Togliere o rinominare la cartella e mettere al suo posto il file.");
+}
+
 // File costruiti apposta per rompere il programma (K-008, sui file nuovi): annidamenti profondissimi, numeri e testi
 // enormi, orari e date impossibili, file vuoti. Ogni caso finisce subito con il codice giusto, il file non si usa e
 // il programma non si blocca. Un file con il segno BOM di UTF-8 all'inizio si legge (lo scrive il Blocco note).
@@ -367,6 +515,11 @@ TEST(Api, file_costruiti_per_rompere) {
         {"file vuoto", "rotazioni.json", "", Check::InvalidJson, ""},
         {"numero enorme", "rotazioni.json", con("rotazioni.json", "\"lunghezza\": 14,", "\"lunghezza\": 1e308,"), Check::SchemaViolation,
          "/rotazioni/0/lunghezza"},
+        // Trovato dal fuzzing (K-009): un numero oltre il massimo di un numero con decimali era un errore interno.
+        {"numero oltre ogni misura", "rotazioni.json", con("rotazioni.json", "\"lunghezza\": 14,", "\"lunghezza\": 1e400,"),
+         Check::InvalidJson, ""},
+        {"numero piccolissimo", "rotazioni.json", con("rotazioni.json", "\"lunghezza\": 14,", "\"lunghezza\": 1e-400,"),
+         Check::SchemaViolation, "/rotazioni/0/lunghezza"},
         {"numero lunghissimo", "rotazioni.json",
          con("rotazioni.json", "\"lunghezza\": 14,", "\"lunghezza\": 123456789012345678901234567890,"), Check::SchemaViolation,
          "/rotazioni/0/lunghezza"},
@@ -584,7 +737,7 @@ TEST(Api, messaggi_senza_due_punti) {
             const Presentatore presentatore(&l.pacchetto, &l.versioni, v);
             for (const DefinizioneControllo& d : catalogo_controlli()) {
                 std::vector<std::string> modelli = d.messaggi;
-                for (const auto& [variante, modello] : d.riservati) modelli.push_back(modello);
+                for (const auto& [variante, modello] : d.personali) modelli.push_back(modello);
                 for (std::size_t variante = 0; variante < d.messaggi.size(); ++variante) {
                     kzero::Problem p{d.controllo, static_cast<int>(variante), kzero::Source{}, {}};
                     for (const std::string& modello : modelli)
@@ -738,6 +891,296 @@ TEST(Api, classi_marcate_negli_schemi) {
         "turni/turni/*/competenze_richieste/*",   // come per i servizi: una competenza puo' far capire chi viaggia
     };
     EXPECT_EQ(particolari, attesi);
+}
+
+// --- Dati personali e particolari nei problemi (K-009) -----------------------------------------------------------
+
+// La classe del dato in cui sta una posizione e' la piu' riservata marcata lungo il percorso; di base la posizione si
+// ferma all'elemento comune piu' vicino e un'assenza (file di soli dati personali) diventa la persona assente.
+TEST(Api, posizioni_e_classi_dei_dati) {
+    const Memoria m;
+    const Lettura l = leggi_pacchetto(m);
+    const auto classe = [&l](const std::string& file, const std::string& puntatore) {
+        return classe_della_posizione(kzero::Source{file, puntatore, 0, 0}, l);
+    };
+    EXPECT_EQ(classe("persone.json", "/persone/2"), Classe::Comune);
+    EXPECT_EQ(classe("persone.json", "/persone/2/abilitazioni/2"), Classe::Personale);
+    EXPECT_EQ(classe("assenze.json", "/assenze/2/persona"), Classe::Personale);   // dentro un'assenza
+    EXPECT_EQ(classe("assenze.json", ""), Classe::Personale);
+    EXPECT_EQ(classe("servizi.json", "/servizi/3/domanda/gruppi/0/fermate/0/carrozzine"), Classe::Particolare);
+    EXPECT_EQ(classe("servizi.json", "/servizi/3/domanda/gruppi/0/fermate/0/salgono"), Classe::Comune);
+    EXPECT_EQ(classe("luoghi.json", "/luoghi_privati/0/nome"), Classe::Personale);
+    EXPECT_EQ(classe("luoghi.json", "/luoghi_privati/0"), Classe::Comune);
+    EXPECT_EQ(classe("mezzi.json", "/mezzi/5/codice_fiscale"), Classe::Comune);   // un campo non previsto: il suo contenitore
+    EXPECT_EQ(classe("fermate.json", "/x"), Classe::Comune);                      // non fa parte del formato
+
+    const auto mostra = [&l](const std::string& file, const std::string& puntatore, Visibilita v) {
+        return mostra_posizione(kzero::Source{file, puntatore, 0, 0}, l, v);
+    };
+    const Visibilita base{}, personali{true, false}, tutti{true, true};
+    PosizioneMostrata p = mostra("persone.json", "/persone/2/abilitazioni/2", base);
+    EXPECT_EQ(p.posizione.file, "persone.json");
+    EXPECT_EQ(p.posizione.pointer, "/persone/2");
+    EXPECT_EQ(p.ridotta, Classe::Personale);
+    p = mostra("persone.json", "/persone/2/abilitazioni/2", personali);
+    EXPECT_EQ(p.posizione.pointer, "/persone/2/abilitazioni/2");
+    EXPECT_FALSE(p.ridotta);
+    p = mostra("assenze.json", "/assenze/2", base);   // P-B, la seconda persona
+    EXPECT_EQ(p.posizione.file, "persone.json");
+    EXPECT_EQ(p.posizione.pointer, "/persone/1");
+    EXPECT_EQ(p.ridotta, Classe::Personale);
+    p = mostra("assenze.json", "/assenze/0/tipo", base);   // P-A
+    EXPECT_EQ(p.posizione.pointer, "/persone/0");
+    p = mostra("assenze.json", "/assenze/2", personali);
+    EXPECT_EQ(p.posizione.file, "assenze.json");
+    EXPECT_EQ(p.posizione.pointer, "/assenze/2");
+    p = mostra("assenze.json", "", base);   // tutto il file: nessuna posizione
+    EXPECT_TRUE(p.posizione.file.empty());
+    EXPECT_EQ(p.ridotta, Classe::Personale);
+    p = mostra("assenze.json", "/assenze/9", base);   // nessuna persona a cui ricondurla: nessuna posizione
+    EXPECT_TRUE(p.posizione.file.empty());
+    p = mostra("servizi.json", "/servizi/3/domanda/gruppi/0/fermate/0/carrozzine", personali);
+    EXPECT_EQ(p.posizione.pointer, "/servizi/3/domanda/gruppi/0/fermate/0");
+    EXPECT_EQ(p.ridotta, Classe::Particolare);
+    p = mostra("servizi.json", "/servizi/3/domanda/gruppi/0/fermate/0/carrozzine", tutti);
+    EXPECT_EQ(p.posizione.pointer, "/servizi/3/domanda/gruppi/0/fermate/0/carrozzine");
+    p = mostra("luoghi.json", "/luoghi_privati/0/nome", base);
+    EXPECT_EQ(p.posizione.pointer, "/luoghi_privati/0");
+    p = mostra("corse.json", "/corse/3/passaggi/2", base);   // dati comuni: invariata
+    EXPECT_EQ(p.posizione.pointer, "/corse/3/passaggi/2");
+    EXPECT_FALSE(p.ridotta);
+    // Un file di soli dati personali non letto (errore di forma): l'assenza non si riconduce a nessuno.
+    Memoria rotto;
+    rotto.sostituisci("assenze.json", "\"schema_versione\": 1,", "\"schema_versione\": 7,");
+    const Lettura lr = leggi_pacchetto(rotto);
+    EXPECT_TRUE(mostra_posizione(kzero::Source{"assenze.json", "/assenze/2", 0, 0}, lr, base).posizione.file.empty());
+}
+
+// Di base nessuna posizione mostrata entra in un dato personale o particolare, in nessun problema: la prova guarda il
+// demo e alcuni pacchetti rotti, su dati comuni, personali e particolari.
+TEST(Api, posizioni_mostrate_solo_su_dati_comuni) {
+    std::vector<Memoria> casi(5);
+    casi[1].sostituisci("assenze.json", "\"tipo\": \"FORMAZIONE\"", "\"tipo\": \"MALATTIA\"");
+    casi[2].sostituisci("servizi.json", "\"assistente_richiesto\": true", "\"assistente_richiesto\": false");
+    casi[3].sostituisci("persone.json", "\"tipo\": \"CQC-P\", \"scadenza\": \"2027-06-30\"", "\"tipo\": \"CQC-P\", \"scadenza\": \"2026-12-31\"");
+    casi[4].file["assenze.json"] = "{ non e' JSON";
+    int problemi_visti = 0;
+    for (const Memoria& m : casi)
+        for (const Visibilita v : {Visibilita{}, Visibilita{true, false}, Visibilita{false, true}}) {
+            const Resoconto r = controlla_pacchetto(m, v);
+            for (const ProblemaPresentato& p : r.problemi) {
+                ++problemi_visti;
+                if (p.posizione.file.empty()) continue;
+                const Classe c = classe_della_posizione(p.posizione, r.lettura);
+                EXPECT_TRUE(visibile(c, v)) << p.codice << " " << p.posizione.file << " " << p.posizione.pointer;
+                if (!v.personali) {
+                    EXPECT_NE(p.posizione.file, "assenze.json") << p.codice;
+                }
+            }
+        }
+    EXPECT_GT(problemi_visti, 30);
+}
+
+// Un problema che rivela un dato particolare (es. l'assistente di cui ha bisogno un passeggero) di base non si
+// elenca: si conta soltanto, e conta lo stesso negli errori.
+TEST(Api, problemi_sui_dati_particolari_contati_e_non_elencati) {
+    Memoria m;
+    m.sostituisci("servizi.json", "\"assistente_richiesto\": true", "\"assistente_richiesto\": false");
+    const Resoconto base = controlla_pacchetto(m, Visibilita{});
+    EXPECT_EQ(base.errori, 1);
+    EXPECT_EQ(base.errori_riservati, 1);
+    EXPECT_EQ(base.avvisi_riservati, 0);
+    for (const auto& p : base.problemi) EXPECT_NE(p.codice, "K-CTR-047");
+    const Resoconto personali = controlla_pacchetto(m, Visibilita{true, false});
+    EXPECT_EQ(personali.errori_riservati, 1);   // i dati personali non bastano
+    const Resoconto particolari = controlla_pacchetto(m, Visibilita{false, true});
+    EXPECT_EQ(particolari.errori, 1);
+    EXPECT_EQ(particolari.errori_riservati, 0);
+    ASSERT_FALSE(particolari.problemi.empty());
+    EXPECT_EQ(particolari.problemi.front().codice, "K-CTR-047");
+    EXPECT_EQ(particolari.problemi.front().messaggio,
+              "Il passeggero P-D1 ha bisogno dell'assistente a bordo, ma il gruppo G-DIS (Centro diurno, andata) non richiede "
+              "l'assistente.");
+}
+
+// Ogni controllo dichiara cosa rivela in se'; una variante con un messaggio per i dati personali rivela almeno un dato
+// personale; le varianti dichiarate esistono. L'elenco di docs/controlli.md coincide con il catalogo.
+TEST(Api, controlli_dichiarano_cosa_rivelano) {
+    std::map<std::string, std::string> attese;   // "K-CTR-nnn | classe" -> "tutti i casi" / "alcuni casi"
+    for (const DefinizioneControllo& d : catalogo_controlli()) {
+        for (const auto& [variante, c] : d.rivela_varianti) {
+            EXPECT_GE(variante, 0) << d.codice;
+            EXPECT_LT(static_cast<std::size_t>(variante), d.messaggi.size()) << d.codice;
+            EXPECT_NE(c, d.rivela) << d.codice << ": variante uguale alla dichiarazione del controllo";
+        }
+        for (const auto& [variante, modello] : d.personali) {
+            EXPECT_NE(d.rivela_variante(variante), Classe::Comune) << d.codice << " variante " << variante;
+            EXPECT_LT(static_cast<std::size_t>(variante), d.messaggi.size()) << d.codice;
+        }
+        for (const Classe c : {Classe::Personale, Classe::Particolare}) {
+            std::size_t quante = 0;
+            for (std::size_t v = 0; v < d.messaggi.size(); ++v) quante += d.rivela_variante(static_cast<int>(v)) == c;
+            if (quante == 0) continue;
+            attese[d.codice + " | " + (c == Classe::Personale ? "personale" : "particolare")] =
+                quante == d.messaggi.size() ? "tutti i casi" : "alcuni casi";
+        }
+    }
+    EXPECT_EQ(definizione_controllo(Check::AssistantNotRequested).rivela, Classe::Particolare);
+    EXPECT_EQ(definizione_controllo(Check::CountsDifferFromPassengers).rivela_variante(2), Classe::Particolare);
+    EXPECT_EQ(definizione_controllo(Check::CountsDifferFromPassengers).rivela_variante(0), Classe::Comune);
+
+    std::ifstream f(KZERO_CARTELLA_PROVE "/../docs/controlli.md", std::ios::binary);
+    ASSERT_TRUE(f.good());
+    std::map<std::string, std::string> trovate;
+    const std::regex riga(R"(^\| (K-CTR-[0-9]{3}) \| (personale|particolare) \| (tutti i casi|alcuni casi) \|.*)");
+    for (std::string r; std::getline(f, r);) {
+        if (!r.empty() && r.back() == '\r') r.pop_back();
+        std::smatch m;
+        if (std::regex_match(r, m, riga)) trovate[m[1].str() + " | " + m[2].str()] = m[3].str();
+    }
+    EXPECT_EQ(trovate, attese);
+}
+
+// Luoghi sensibili (K-009): un messaggio che mostra il nome di un passeggero senza i dati particolari non lo lega a un
+// luogo sensibile (il centro diurno del demo); senza il nome, o con i dati particolari, il luogo si vede. Un luogo non
+// sensibile si vede sempre.
+TEST(Api, luoghi_sensibili_nei_messaggi) {
+    const Memoria m;
+    const Lettura l = leggi_pacchetto(m);
+    ASSERT_EQ(l.versioni.at("luoghi.json"), 2);
+    const auto messaggio = [&l](const std::string& luogo, Visibilita v) {
+        const Presentatore p(&l.pacchetto, &l.versioni, v);
+        return p.messaggio(kzero::Problem{Check::CountsDifferFromPassengers, 3, kzero::Source{},
+                                          {kzero::ref_param("passeggero", kzero::Element::Passenger, "P-D1"),
+                                           kzero::ref_param("luogo", kzero::Element::Place, luogo),
+                                           kzero::ref_param("gruppo", kzero::Element::Group, "G-DIS")}});
+    };
+    EXPECT_EQ(messaggio("L-CENTRO", Visibilita{true, false}),
+              "Il passeggero P-D1 (Bianchi Luca) sale o scende a riservato, che non e' tra le fermate del gruppo G-DIS (Centro "
+              "diurno, andata).");
+    EXPECT_NE(messaggio("L-CENTRO", Visibilita{}).find("sale o scende a L-CENTRO (Valfonda, Centro diurno Il Faro)"), std::string::npos);
+    EXPECT_NE(messaggio("L-CENTRO", Visibilita{true, true}).find("(Bianchi Luca) sale o scende a L-CENTRO"), std::string::npos);
+    EXPECT_NE(messaggio("L-MEDIE", Visibilita{true, false}).find("(Bianchi Luca) sale o scende a L-MEDIE"), std::string::npos);
+    // Una scuola o un centro in un luogo sensibile vale come il luogo.
+    const Presentatore personali(&l.pacchetto, &l.versioni, Visibilita{true, false});
+    const std::string con_scuola = personali.messaggio(kzero::Problem{
+        Check::WaitOutsideRegulation, 0, kzero::Source{},
+        {kzero::ref_param("passeggero", kzero::Element::Passenger, "P-D1"), kzero::ref_param("scuola", kzero::Element::School, "SC-CENTRO"),
+         kzero::ref_param("regolamento", kzero::Element::Regulation, "R-TN"), kzero::ref_param("contratto", kzero::Element::Contract, "CT-SCU"),
+         kzero::number_param("minuti", 30), kzero::number_param("massimo", 25)}});
+    EXPECT_NE(con_scuola.find("L'attesa concordata con riservato"), std::string::npos) << con_scuola;
+    // Un pacchetto con i luoghi nella versione 1 (senza "sensibile") si legge ancora.
+    Memoria v1;
+    v1.sostituisci("luoghi.json", "\"schema_versione\": 2,", "\"schema_versione\": 1,");
+    v1.sostituisci("luoghi.json", ",\n      \"sensibile\": true", "");
+    EXPECT_TRUE(problemi(v1, {}));
+}
+
+// K-009, aggiunta 1: la regola sola dei luoghi sensibili. Una persona trasportata si riconosce dal nome del passeggero
+// o dalla sua casa (punto porta a porta con il nome o l'indirizzo); il personale (garage presso la casa di un autista)
+// no. Vale solo con i dati personali visibili e quelli particolari nascosti.
+TEST(Api, legame_con_i_luoghi_sensibili) {
+    const Memoria m;
+    const Lettura l = leggi_pacchetto(m);
+    const kzero::Index idx(l.pacchetto);
+    const auto riservato = [&idx](Visibilita v, const std::vector<std::string>& luoghi, const std::string& passeggero = "") {
+        LegameSensibile legame(&idx, v);
+        if (!passeggero.empty()) legame.passeggero(passeggero);
+        for (const std::string& x : luoghi) legame.luogo(x);
+        return legame.riservato();
+    };
+    const Visibilita personali{true, false};
+    EXPECT_TRUE(riservato(personali, {"L-CENTRO", "PP-01"}));
+    EXPECT_TRUE(riservato(personali, {"L-CENTRO"}, "P-D1"));
+    EXPECT_FALSE(riservato(personali, {"L-CENTRO", "PR-01", "L-RIMESSA-ALFA"}));   // il garage dell'autista non conta
+    EXPECT_FALSE(riservato(personali, {"L-CENTRO", "F-PRADELLO"}));
+    for (const Visibilita v : {Visibilita{}, Visibilita{true, true}, Visibilita{false, true}}) {
+        EXPECT_FALSE(riservato(v, {"L-CENTRO", "PP-01"}, "P-D1"));
+        EXPECT_FALSE(LegameSensibile(&idx, v).attivo());
+    }
+    LegameSensibile legame(&idx, personali);
+    EXPECT_FALSE(legame.nasconde_luogo("L-CENTRO"));   // nessuna persona riconosciuta (ancora)
+    legame.luogo("PP-02");
+    EXPECT_TRUE(legame.nasconde_luogo("L-CENTRO"));
+    EXPECT_TRUE(legame.nasconde_scuola("SC-CENTRO"));   // il centro diurno sta nel luogo sensibile
+    EXPECT_FALSE(legame.nasconde_luogo("L-MEDIE"));
+    EXPECT_FALSE(legame.nasconde_luogo("PP-02"));
+    EXPECT_FALSE(legame.nasconde_luogo("NON-ESISTE"));
+    EXPECT_TRUE(LegameSensibile(&idx, personali).attivo());
+    EXPECT_FALSE(LegameSensibile(nullptr, personali).attivo());
+    // Un pacchetto senza luoghi sensibili: la regola non ha nulla da nascondere.
+    Memoria senza_sensibili;
+    senza_sensibili.sostituisci("luoghi.json", ",\n      \"sensibile\": true", "");
+    const Lettura lss = leggi_pacchetto(senza_sensibili);
+    const kzero::Index idx_senza_sensibili(lss.pacchetto);
+    EXPECT_FALSE(LegameSensibile(&idx_senza_sensibili, personali).attivo());
+    // Una casa senza nome e senza indirizzo si vede solo con il codice, come di base: non lascia riconoscere nessuno.
+    Memoria senza_nome;
+    senza_nome.sostituisci("luoghi.json", "\"nome\": \"Casa Bianchi\",\n      \"indirizzo\": \"Via dei Larici 4\",\n      ", "");
+    const Lettura ls = leggi_pacchetto(senza_nome);
+    ASSERT_TRUE(ls.problemi.empty() || std::none_of(ls.problemi.begin(), ls.problemi.end(), [](const kzero::Problem& p) {
+                    return definizione_controllo(p.check).livello == Livello::Errore;
+                }));
+    const kzero::Index idx_senza_nome(ls.pacchetto);
+    LegameSensibile anonima(&idx_senza_nome, personali);
+    anonima.luogo("PP-01");
+    EXPECT_FALSE(anonima.riservato());
+    anonima.luogo("PP-02");
+    EXPECT_TRUE(anonima.riservato());
+}
+
+// Nei messaggi di kzero controlla l'insieme e' il messaggio: se nomina la casa di un passeggero e un luogo sensibile,
+// con i dati personali e senza quelli particolari il luogo sensibile e' riservato.
+TEST(Api, casa_e_luogo_sensibile_nei_messaggi) {
+    const Memoria m;
+    const Lettura l = leggi_pacchetto(m);
+    const auto messaggio = [&l](const std::string& da, const std::string& a, Visibilita v) {
+        const Presentatore p(&l.pacchetto, &l.versioni, v);
+        return p.messaggio(kzero::Problem{Check::TripPartsGap, 0, kzero::Source{},
+                                          {kzero::ref_param("corsa", kzero::Element::Trip, "C-DIS-1"),
+                                           kzero::ref_param("da", kzero::Element::Place, da), kzero::ref_param("a", kzero::Element::Place, a),
+                                           kzero::days_param("giorni", kzero::day_from_ymd(2026, 10, 22))}});
+    };
+    EXPECT_NE(messaggio("PP-01", "L-CENTRO", Visibilita{true, false}).find("da PP-01 (Casa Bianchi) a riservato,"), std::string::npos);
+    EXPECT_EQ(messaggio("PP-01", "L-CENTRO", Visibilita{true, false}).find("L-CENTRO"), std::string::npos);
+    // Di base la casa si vede solo con il codice: il messaggio resta com'era.
+    EXPECT_NE(messaggio("PP-01", "L-CENTRO", Visibilita{}).find("da PP-01 a L-CENTRO (Valfonda, Centro diurno Il Faro),"),
+              std::string::npos);
+    EXPECT_NE(messaggio("PP-01", "L-CENTRO", Visibilita{true, true}).find("da PP-01 (Casa Bianchi) a L-CENTRO"), std::string::npos);
+    // Una casa con un luogo non sensibile, o il garage di un autista con il centro: nessun cambiamento.
+    EXPECT_NE(messaggio("PP-01", "L-MEDIE", Visibilita{true, false}).find("da PP-01 (Casa Bianchi) a L-MEDIE"), std::string::npos);
+    EXPECT_NE(messaggio("PR-01", "L-CENTRO", Visibilita{true, false}).find("a L-CENTRO (Valfonda, Centro diurno Il Faro)"),
+              std::string::npos);
+}
+
+// Quali dati personali e particolari contiene un pacchetto, file per file (quanti valori, dalle classi degli schemi):
+// serve a dire cosa e' coinvolto se il pacchetto va perso. I file con soli dati comuni non compaiono.
+TEST(Api, valori_riservati_di_un_pacchetto) {
+    const Memoria m;
+    const Lettura l = leggi_pacchetto(m);
+    ASSERT_TRUE(l.riservati.count("luoghi.json"));
+    EXPECT_EQ(l.riservati.at("luoghi.json").personali, 25u);   // 5 case: nome, indirizzo, comune, coordinate...
+    EXPECT_EQ(l.riservati.at("luoghi.json").particolari, 0u);
+    EXPECT_EQ(l.riservati.at("turni.json").personali, 0u);
+    EXPECT_EQ(l.riservati.at("turni.json").particolari, 3u);   // competenze richieste
+    EXPECT_EQ(l.riservati.at("assenze.json").personali, 9u);   // 3 assenze: tipo, dal, al
+    EXPECT_FALSE(l.riservati.count("mezzi.json"));
+    EXPECT_FALSE(l.riservati.count("corse.json"));
+    Memoria senza_case;
+    senza_case.sostituisci("luoghi.json", "\"luoghi_privati\": [", "\"luoghi_privati_non_previsti\": [");
+    EXPECT_FALSE(leggi_pacchetto(senza_case).riservati.count("luoghi.json"));   // file non usato: non si conta
+}
+
+// Gli errori K-ERR non nominano mai un file di soli dati personali, in testo e in JSON.
+TEST(Api, errori_senza_file_riservati) {
+    const ErroreKZero riservato(Errore::ValoreNonAmmesso, "x", Posizione{"assenze.json", 3, 5});
+    EXPECT_EQ(testo_errori({riservato}, Formato::Testo), "Errore K-ERR-006: x\n");
+    EXPECT_EQ(testo_errori({riservato}, Formato::Json).find("assenze"), std::string::npos);
+    const ErroreKZero comune(Errore::ValoreNonAmmesso, "x", Posizione{"mezzi.json", 3, 5});
+    EXPECT_EQ(testo_errori({comune}, Formato::Testo), "Errore K-ERR-006 (mezzi.json, riga 3, colonna 5): x\n");
+    EXPECT_TRUE(file_riservato("assenze.json"));
+    EXPECT_FALSE(file_riservato("persone.json"));
+    EXPECT_FALSE(file_riservato("mezzi.csv"));
 }
 
 // Filtro delle tre classi nei messaggi: il nome di una fermata pubblica si vede sempre, quello di una casa

@@ -68,11 +68,12 @@ Il programma e' diviso in tre piani, uno sopra l'altro:
 | `vista.cpp` | Strumenti comuni ai comandi che mostrano i dati (dimostrazione, giornata): filtro delle classi dei dati, etichette, numeri e durate in italiano. |
 | `esegui.cpp` | Dalla riga di comando all'esito: prepara tutto in memoria (`esegui`), poi lo scrive (`consegna`). Cosi' un errore non lascia mai un risultato a meta'. |
 | `formato_dati.cpp` | Elenco dei file di un pacchetto, con lo schema e le versioni che il programma sa leggere. |
-| `lettore.cpp` | Lettura di un pacchetto: JSON valido e senza campi ripetuti, schema e versione giusti, rispetto dello schema; poi la conversione nel modello del nucleo. Un file con un errore di forma non viene usato. |
+| `lettore.cpp` | Lettura di un pacchetto: dal K-009 lettura blindata (solo file normali dentro la cartella, mai oltre il massimo di byte), poi JSON valido e senza campi ripetuti, schema e versione giusti, rispetto dello schema; poi la conversione nel modello del nucleo e quanti valori personali e particolari ci sono. Un file con un errore di forma non viene usato. |
+| `riservatezza.cpp` | (K-009) Classe del dato in cui sta una posizione e posizione da mostrare: di base non entra mai in un dato personale o particolare, si ferma all'elemento comune piu' vicino (un'assenza diventa la persona). Regola ricavata dalle classi degli schemi. Legame con i luoghi sensibili (`LegameSensibile`, K-009 aggiunta 1): la regola sola usata da controlla, dimostrazione e giornata. |
 | `validazione.cpp` | Controllo con gli schemi (libreria valijson) e messaggi della libreria tradotti in italiano. |
 | `schemi_dati.cpp` | Schemi dei file di dati incorporati nel programma e **classe di ogni campo** (comune, personale, particolare), letta dalla marcatura dello schema. |
-| `controlli_catalogo.cpp` | Catalogo dei controlli K-CTR: codice, livello, descrizione e testo dei messaggi (unico posto da tradurre). Presenta i messaggi seguendo le classi dei dati. |
-| `controllo.cpp` | Controllo completo di un pacchetto: forma, poi contenuto; ordine stabile dei problemi. |
+| `controlli_catalogo.cpp` | Catalogo dei controlli K-CTR: codice, livello, cosa rivela il problema in se' (nessun dato, un dato personale o particolare), descrizione e testo dei messaggi (unico posto da tradurre). Presenta i messaggi seguendo le classi dei dati e i luoghi sensibili. |
+| `controllo.cpp` | Controllo completo di un pacchetto: forma, poi contenuto; ordine stabile dei problemi; i problemi che rivelano un dato particolare si contano soltanto, se non si chiede di vederli. |
 
 - **I file incorporati**: gli schemi di `docs/schema` e il pacchetto dimostrativo `esempi/demo` entrano
   nel programma quando si compila (`cmake/incorpora.cmake`). Cosi' `kzero` controlla i dati sempre con
@@ -82,7 +83,7 @@ Il programma e' diviso in tre piani, uno sopra l'altro:
 
 ## Piano 3 - Adattatori
 
-- **Interfaccia per persone** (K-009: programma per Windows da scaricare) ed eventuale **adattatore MCP**
+- **Interfaccia per persone** (programma per Windows da scaricare, con un suo mandato) ed eventuale **adattatore MCP**
   per gli assistenti AI.
 - **Nessuna logica negli adattatori**: chiamano i comandi dell'API e mostrano i risultati. Se serve una
   funzione nuova, nasce come comando dell'API; cosi' nessuna funzione e' raggiungibile solo da un menu.
@@ -100,7 +101,8 @@ Il programma e' diviso in tre piani, uno sopra l'altro:
    dell'elemento) ne' particolari (al loro posto c'e' `"riservato"`). Un agente AI deve usare il JSON.
 5. Per i dati: `kzero controlla <cartella> --formato json` controlla un pacchetto e dice cosa correggere,
    con codice K-CTR e posizione (file + percorso JSON); i problemi dei turni ripetuti in molti giorni hanno i
-   giorni nel campo `giorni`.
+   giorni nel campo `giorni`. Di base i problemi sui dati sulla salute sono solo contati (`problemi_riservati`) e le
+   posizioni si fermano ai dati comuni (`posizione_completa_con` dice quale parametro mostra quella completa).
 6. Per un giorno: `kzero giornata <cartella> --data AAAA-MM-GG --formato json` (con `--persona` o `--mezzo` per
    una sola persona o un solo mezzo) da' i turni del giorno con chi li fa, da dove viene l'assegnazione, il mezzo,
    corse e attivita' in ordine, tempi fermi, km e i turni scoperti o senza mezzo con il motivo. Se il pacchetto ha
@@ -125,16 +127,24 @@ Scelte di dettaglio:
 
 ## Sicurezza
 
-Principio deciso da Mauro (18/10), scritto anche in CLAUDE.md:
-- il programma lavora sul PC e **oggi nessun comando usa la rete**. Quando servira' (es. le distanze da Google
-  Maps), lo fara' solo un adattatore separato, acceso con un parametro esplicito, che manda fuori il minimo
-  (coordinate, mai nomi o altri dati delle persone), con un suo mandato;
-- nessun file scritto senza `--scrivi`;
-- ogni dato in ingresso e' controllato con limiti di buon senso (un massimo per ogni numero e testo, file oltre
-  256 MB rifiutati, file malformati o in un'altra codifica rifiutati senza blocchi; una prova costruisce file
-  apposta per rompere il programma);
+Spiegazione completa in [sicurezza.md](sicurezza.md): cosa protegge K-Zero e da chi, le misure, i rischi che restano,
+i consigli per chi lo usa, cosa fare in caso di violazione. In breve, principi decisi da Mauro (12/10 e 18/10), scritti
+anche in CLAUDE.md:
+- il programma lavora sul PC e **nessun comando usa la rete** (due prove: simboli del programma compilato e sorgenti).
+  Quando servira' (es. le distanze da Google Maps), lo fara' solo un adattatore separato, acceso con un parametro
+  esplicito, che manda fuori il minimo (coordinate, mai nomi o altri dati delle persone), con un suo mandato;
+- nessun file scritto senza `--scrivi`; nessun dato personale nei registri del programma (oggi non ne tiene);
+- ogni dato in ingresso e' controllato con limiti di buon senso e la **lettura e' blindata** (K-009): solo file normali
+  dentro la cartella del pacchetto, mai oltre 256 MB anche se il file non dice la dimensione o cresce; file malformati
+  rifiutati senza blocchi;
+- ogni uscita, messaggio, posizione o registro passa dal **filtro delle classi** dei dati (sotto e docs/controlli.md);
 - si conserva il minimo dei dati personali (nessun campo per codice fiscale, telefoni, mail, cause di assenza);
-- il mandato "privacy e sicurezza di base" viene prima di qualunque dato vero.
+- **prove di sicurezza** a ogni proposta: sanitizer (AddressSanitizer, UndefinedBehaviorSanitizer) e fuzzing
+  (libFuzzer); **protezioni del compilatore** nelle versioni di rilascio; **componenti fissati** ed elencati in
+  [componenti.cdx.json](componenti.cdx.json) (CycloneDX);
+- le domande all'utente le fara' il programma stesso, a scelta multipla, senza AI; un assistente AI e' solo un aiuto
+  facoltativo e di base non riceve ne' nomi ne' dati sulla salute;
+- i dati personali saranno cifrati, con piu' utenti e un registro degli accessi, con il mandato K-010.
 
 ## Dati: tre classi, due livelli
 
@@ -153,7 +163,11 @@ Il filtro delle uscite parte dalla marcatura dello schema ed e' **uguale per tes
 personale e' sostituito dal codice del suo elemento, un dato particolare diventa `"riservato"`; con
 `--includi-dati-personali` e `--includi-dati-particolari` compaiono. Vale anche nei messaggi dei controlli
 (es. il nome di una casa, il valore sbagliato di un campo particolare). Un campo senza marcatura vale come
-particolare, per prudenza; una prova controlla che tutti i campi siano marcati.
+particolare, per prudenza; una prova controlla che tutti i campi siano marcati. Dal K-009 vale anche per il problema
+intero (un problema che rivela un dato sulla salute di base si conta soltanto), per le posizioni (mai dentro un dato
+personale o particolare: si fermano all'elemento comune piu' vicino; un'assenza diventa la persona, marcatura
+`x-kzero-titolare`) e per i **luoghi sensibili** (il legame tra un passeggero, o la sua casa, e un centro diurno e'
+riservato senza i dati particolari; una regola sola, `LegameSensibile` in riservatezza.hpp).
 
 Il **livello** del pacchetto ("solo numeri", consigliato, oppure "completo") dice se ci possono essere
 passeggeri uno per uno e case; un pacchetto "solo numeri" che li contiene e' un errore (K-CTR-019).
@@ -196,6 +210,8 @@ docs/formato-dati.md e docs/schema coincidano con il programma.
 | `programma` | Lanciano `kzero` due volte: codice di uscita, K-ERR per i parametri sbagliati, JSON valido, uscite identiche byte per byte, dati personali e particolari assenti di base e presenti con il parametro, `kzero controlla` sui pacchetti di esempio e su un pacchetto rotto per ogni errore (il demo con un solo valore cambiato), due regolamenti con esiti diversi. |
 | `documentazione` | docs/errori.md, docs/controlli.md, docs/formato-dati.md e docs/schema coincidono con `kzero descrivi`; la tabella delle lettere di docs/formato-dati.md coincide con il programma. |
 | `architettura` | Il nucleo non stampa e non legge la riga di comando. |
+| `sicurezza` | (K-009) Niente rete nel programma compilato e nei sorgenti; protezioni del compilatore nella versione di rilascio per Linux; l'elenco dei componenti (docs/componenti.cdx.json) coincide con le versioni e le impronte fissate. |
+| `fuzz` | (K-009) Ogni file del demo nel suo bersaglio di fuzzing e ogni caso gia' trovato dal fuzzing (tests/fuzz/casi), rigiocati come prove normali. Il fuzzing vero (libFuzzer, `-DKZERO_FUZZ=ON`) gira nel controllo GitHub per un tempo fisso e in locale a lungo (CLAUDE.md). |
 | `schemi` | Con lo strumento standard check-jsonschema: schemi validi per draft-07; ogni uscita JSON delle prove e ogni file dei pacchetti di esempio rispetta lo schema che dichiara. |
 | `scala` | Un pacchetto grande generato con un seme fisso (600 mezzi, 5.000 fermate, 10.000 corse; dal K-008 1.320 persone, 1.200 turni, rotazioni di lunghezze diverse, un anno di festivita') passa `kzero controlla` senza errori e `kzero giornata` su una data. Tempo e memoria si annotano nel DIARIO, non sono una soglia della prova. |
 
@@ -203,13 +219,15 @@ docs/formato-dati.md e docs/schema coincidano con il programma.
 
 - Classi dei dati: i nomi di scuole e centri, dei servizi e dei gruppi sono dati comuni (come chiede il
   formato) ma sono testi liberi: un nome come "Centro diurno" o un centro di tipo "terapie" lasciano intuire
-  un dato sulla salute. Chi scrive i dati deve evitare nomi che rivelano dati personali o particolari.
+  un dato sulla salute. Chi scrive i dati deve evitare nomi che rivelano dati personali o particolari
+  (docs/sicurezza.md, con esempi).
 - Ricerca: le lettere di altri alfabeti (greco, cirillico...) non vengono ricondotte all'alfabeto latino.
 - Ora legale: gli orari sono orari dell'orologio; nei due giorni del cambio una corsa che attraversa le
   02:00-03:00 dura un'ora in piu' o in meno di quanto risulta (docs/formato-dati.md).
 - I messaggi della libreria di validazione sono in inglese e vengono tradotti: un messaggio che la
   traduzione non conosce compare come "non rispetta lo schema (...)" con il testo originale.
-- Windows (K-009): argomenti con lettere accentate e a capo "CR LF" sono da sistemare e provare li'.
+- Windows (mandato del programma per Windows): argomenti con lettere accentate e a capo "CR LF" sono da sistemare e
+  provare li'; anche le prove della lettura blindata e le protezioni del compilatore per Windows (docs/sicurezza.md).
 - Stesso input = stesso output vale a parita' di programma e di sistema. Tra sistemi diversi i valori
   calcolati con decimali potrebbero differire all'ultima cifra: per questo il JSON li arrotonda.
 - `kzero giornata` rifa' tutti i controlli del pacchetto prima di mostrare un giorno (con errori non mostra

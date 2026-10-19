@@ -1,0 +1,14 @@
+{
+  "schema": "tempi_sosta",
+  "schema_versione": 1,
+  "tempi": {
+    "fissa_per_fermata_secondi": 20,
+    "per_passeggero": [
+      { "tipo": "studente", "salita_secondi": 4, "discesa_secondi": 3 },
+      { "tipo": "infanzia", "salita_secondi": 10, "discesa_secondi": 8 },
+      { "tipo": "disabile", "salita_secondi": 60, "discesa_secondi": 60 }
+    ],
+    "scarico_a_scuola_secondi": 120,
+    "nota": "Seme del fuzzing: valori inventati."
+  }
+}

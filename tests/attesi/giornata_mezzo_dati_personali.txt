@@ -1,0 +1,29 @@
+Giornata del 2026-10-22, giovedi' - pacchetto DEMO-2026 "Pacchetto dimostrativo K-Zero" (dati inventati)
+Mezzo ALFA-03 (AA 103 AA, M2, 12 posti, uso NCC), azienda ALFA
+Festivita': nessuna.
+Controllo del pacchetto: nessun errore, 8 avvisi (dettagli con kzero controlla).
+Dati personali: mostrati; dati particolari: riservati.
+
+T-DIS "Centro diurno"  07:25-09:35 (2 ore e 10 minuti)  azienda ALFA, autista
+   Persona: P-C Verdi Carlo, assegnazione del singolo giorno (assegnazioni.json /assegnazioni/2)
+   Mezzo: ALFA-03 (AA 103 AA, M2, 12 posti, uso NCC), scritto nel turno
+   Calendario CAL-CENTRO "Centro diurno: lunedi', mercoledi' e giovedi'"; il turno c'e' in 139 giorni del periodo
+   Competenze richieste: riservato
+   Comincia a L-RIMESSA-ALFA (Valfonda, rimessa Autoservizi Alfa), finisce a L-RIMESSA-ALFA (Valfonda, rimessa Autoservizi Alfa)
+   Nota: Il mattino del secondo, con il mezzo attrezzato: poi il secondo cambia mezzo.
+   07:25-07:38  Presa servizio con il controllo del mezzo (PRESA), a L-RIMESSA-ALFA (Valfonda, rimessa Autoservizi Alfa)
+                (fermo 2 minuti)
+   07:40-08:52  corsa C-DIS-1 "Centro diurno, giro principale"
+                servizi S-DIS (tipo riservato, contratto CT-SCU, committente CVA)
+                calendario CAL-CENTRO "Centro diurno: lunedi', mercoledi' e giovedi'", 139 giorni nel periodo; km a pieno 20,3, a vuoto 5,5; assistente fornito dal committente
+      07:40  L-RIMESSA-ALFA  Valfonda, rimessa Autoservizi Alfa  sale l'assistente  a bordo 0
+      07:52  PP-01  Casa Bianchi  salgono 1  km a vuoto 5,5  a bordo 1
+      08:05  PP-02  Casa Verdi  salgono 1  km a pieno 4,8  a bordo 2
+      08:20  L-TRASB-PONTE  Ponte di Sorgenta, piazzale  riparte 08:30  riceve il trasbordo T-01 (1)  km a pieno 6,1  a bordo 3
+      08:52  riservato  scendono 3  scende l'assistente  km a pieno 9,4  a bordo 0
+                (fermo 3 minuti)
+   08:55-09:05  Trasferimento a vuoto (VUOTO), da riservato a L-RIMESSA-ALFA (Valfonda, rimessa Autoservizi Alfa), km a vuoto 1
+   09:05-09:35  Pulizia del mezzo (PULIZIA), a L-RIMESSA-ALFA (Valfonda, rimessa Autoservizi Alfa)
+   Totale del turno: km a pieno 20,3, a vuoto 6,5; fermo 5 minuti.
+
+Totali: 1 turno (nessuno scoperto, nessuno senza mezzo), 1 persona, 1 mezzo; km a pieno 20,3, a vuoto 6,5 (dei mezzi guidati: solo questo mezzo); fermi 5 minuti.
