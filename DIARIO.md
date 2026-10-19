@@ -125,6 +125,46 @@
   in 9,4 secondi con 131 MB (rifa' tutti i controlli). Macchina di prova: 4 processori Xeon a 2,8 GHz. Non e' una
   soglia delle prove.
 
+- 2026-10-19 - K-009 (programma, proposta "K-009: sicurezza di base"): **lettura dei file blindata** (solo file normali;
+  collegamenti seguiti solo se portano a un file normale dentro la cartella del pacchetto, anche se la cartella e' a sua
+  volta un collegamento; mai piu' di 256 MB, leggendo fino al massimo piu' uno anche se il sistema non dice la dimensione;
+  una cartella con il nome di un file e' un errore proprio; nuovi K-CTR-088, 089, 090; un byte zero o un numero
+  troppo grande sono un K-CTR-003). **Messaggi e posizioni**: ogni controllo dichiara cosa rivela (nessun dato,
+  personale, particolare; anche variante per variante); di base i problemi sui dati sulla salute sono una riga sola con
+  quanti errori e avvisi sono; le posizioni non entrano mai in un dato personale o particolare (regola ricavata dagli
+  schemi; un'assenza diventa la persona); controlla 3 con i problemi riservati, la posizione completa con il parametro
+  e quanti dati personali e particolari ci sono nel pacchetto; vale anche per giornata ed errori K-ERR. **Luoghi
+  sensibili** (luoghi versione 2; il centro diurno del demo): con il nome del passeggero e senza i dati particolari il
+  legame con il luogo e' riservato. **Niente rete** provato sul programma compilato e sui sorgenti. **Controllo GitHub**
+  con tre lavori: prove normali, sanitizer (AddressSanitizer e UndefinedBehaviorSanitizer, clang 18, tutte le prove) e
+  fuzzing (libFuzzer, 27 bersagli: ogni tipo di file del pacchetto, la riga di comando, date e orari; 20 secondi
+  ciascuno). **Protezioni del compilatore** nella versione di rilascio per Linux. **Elenco dei componenti**
+  docs/componenti.cdx.json (CycloneDX 1.5). Nuovo docs/sicurezza.md; principi e comandi in CLAUDE.md.
+  Prove: 489 su 489 (144 nucleo, 42 API, 167 sul programma, di cui 4 sulla prova di scala, 1 documentazione,
+  1 architettura, 179 sugli schemi, 4 di sicurezza, 3 rigiocate dal fuzzing; alcune prove hanno due etichette); con i
+  sanitizer 487 su 487 (senza le 2 prove sul programma di rilascio: protezioni e simboli di rete). Le 457 prove di prima
+  ci sono ancora; adattate quelle che si aspettavano una posizione dentro un dato personale (es. /persone/2/abilitazioni/2
+  diventa /persone/2) o un problema sui dati sulla salute elencato di base (ora contato nella riga riassuntiva),
+  l'uscita attesa della dimostrazione con i dati personali (luogo sensibile) e il conteggio dei controlli.
+  Fuzzing in locale (4 processori Xeon a 2,1 GHz): tre giri su tutti i 27 bersagli, 60, 600 e 120 secondi per
+  bersaglio (l'ultimo sul codice finale), circa 5 ore e 50 minuti di fuzzing in tutto: 2.013.232 file del pacchetto
+  deformati, 636.687 righe di comando, 34.376.180 date e orari. Guasti trovati e corretti:
+  1. fuzzing, fermi.json: un numero oltre ogni misura (es. 1e400) faceva uscire il programma con un errore interno
+     (K-ERR-009, codice 3) che ricopiava il numero letto dal file; ora e' un K-CTR-003 con riga e colonna, e il caso e'
+     una prova normale (tests/fuzz/casi);
+  2. preparando un sabotaggio: un file valido seguito da un byte zero e da altro testo era letto a meta' (la libreria JSON
+     prende lo zero per la fine del file); ora e' un K-CTR-003, e il fuzzing controlla che non succeda piu';
+  3. AddressSanitizer: nelle prove dei turni del K-008 un puntatore a un turno di un elenco gia' distrutto (uso di
+     memoria liberata, prove verdi per caso); ora un elenco temporaneo e' rifiutato gia' alla compilazione;
+  4. clang: una lambda che catturava una structured binding (ammesso solo da C++20) e una costante non usata nelle
+     prove; gcc 13 con i sanitizer da' un falso avviso dentro <regex>, per questo i sanitizer usano clang.
+  Sabotaggio (prove rosse; tra parentesi le prove sugli schemi di quelle uscite, non eseguite): lettura oltre il massimo
+  2; file non normale accettato 2; problema sulla salute elencato di base con codice e posizione 5 (1); posizione dentro
+  un dato personale mostrata di base 15 (3), compresi i casi rigiocati dal fuzzing; luogo sensibile mostrato con il nome
+  del passeggero 3 (1); una funzione di rete aggiunta apposta (socket) 2. Tutti scoperti.
+  Prova di scala: kzero controlla 4,3 secondi con 132 MB, kzero giornata di tutti 5,2 secondi con 249 MB (macchina di
+  prova: 4 processori Xeon a 2,1 GHz). Non e' una soglia delle prove.
+
 ## Bug e limiti noti
 - Pause a casa: la regola (dai quanti minuti, entro quanti km da casa, deviazione massima) non e' ancora nei dati;
   senza regola check_home_breaks non giudica. La deviazione massima non e' ancora usata. La regola la scrivera' il
@@ -136,20 +176,28 @@
 - Le regole dei regolamenti (attese sulle corse, posti a bordo, assistente, passeggeri in piedi, limiti di accesso
   dei mezzi) sono nei dati ma non sono ancora verificate sui giri: arriveranno con la verifica delle regole,
   dopo il K-008.
-- I nomi di scuole, centri, servizi e gruppi sono dati comuni ma testi liberi: un nome come "Centro diurno" lascia
-  intuire un dato sulla salute. Chi scrive i dati deve evitare nomi che rivelano dati personali o particolari.
+- I nomi di scuole, centri, servizi, gruppi, corse, turni, calendari, le note e i codici sono dati comuni ma testi liberi:
+  un nome come "Centro diurno" lascia intuire un dato sulla salute. Chi scrive i dati deve evitare nomi che rivelano dati
+  personali o particolari (docs/sicurezza.md, con esempi). Il demo, scritto prima, ne ha (S-DIS, "Centro diurno,
+  andata"): restano perche' i dati sono inventati e le prove li usano.
 - Ricerca dei luoghi: le lettere di altri alfabeti (greco, cirillico...) non vengono ricondotte all'alfabeto latino.
 - Ora legale: nei due giorni del cambio una corsa che attraversa le 02:00-03:00 dura un'ora in piu' o in meno di
   quanto risulta dagli orari (docs/formato-dati.md). Vale anche per i turni: nella notte del 25/10/2026 un turno
   che attraversa le 02:00-03:00 (es. una reperibilita' notturna) dura un'ora in piu' di quanto dicono inizio e fine. Da tenere presente nel
   mandato "orari di lavoro".
-- Su Windows (K-009) sono da sistemare e provare gli argomenti con lettere accentate e gli a capo CR LF.
-- Con --includi-dati-personali senza --includi-dati-particolari, il nome del passeggero insieme alla sua destinazione
-  (es. il centro diurno) lascia intuire un dato sulla salute: da trattare nel mandato sulla riservatezza.
+- Su Windows (mandato del programma per Windows) sono da sistemare e provare gli argomenti con lettere accentate e gli a
+  capo CR LF, e da provare la lettura blindata (pipe, dispositivi, collegamenti e scorciatoie, cartelle sincronizzate come
+  OneDrive con i "file su richiesta") e le protezioni del compilatore equivalenti (/GS, /guard:cf, /DYNAMICBASE,
+  /HIGHENTROPYVA, /NXCOMPAT): oggi sono provate solo su Linux.
+- Sicurezza (docs/sicurezza.md): i file dei pacchetti sono in chiaro sul disco, con un solo utente e senza registro degli
+  accessi, fino al mandato K-010 "cassaforte dei dati personali". Con --includi-dati-personali chi legge tutta un'uscita
+  puo' ancora collegare un passeggero ai luoghi attraverso i codici (gruppo, servizio, corse): il filtro dei luoghi
+  sensibili toglie solo i legami diretti. Un file vicino ai 256 MB preparato apposta puo' occupare diversi GB di memoria
+  mentre lo si legge. Un collegamento fisso (hard link) non si distingue da un file normale, e chi ha gia' accesso al PC
+  puo' cambiare un file mentre lo si legge. Le librerie del sistema (C e C++) non sono nell'elenco dei componenti; che
+  l'elenco rispetti lo schema CycloneDX e' controllato solo in locale, non nelle prove.
 - K-CTR-018 (fermata ambigua) puo' essere troppo severo con i dati veri: fermate con lo stesso nome sui due lati
   della strada, "Bahnhof" in ogni paese. Da rivedere con il lettore GTFS.
-- Il codice K-CTR-047 compare anche quando il messaggio e' filtrato: chi conosce il catalogo capisce che si parla
-  dell'assistente. Il messaggio di base non lo nomina; il codice resta, perche' serve a correggere il dato.
 - kzero giornata rifa' tutti i controlli del pacchetto a ogni richiesta, anche per una sola persona: con la prova di
   scala servono circa 9 secondi. Accettato per ora (un risultato su dati sbagliati sarebbe peggio); da rivedere se
   l'attesa diventa scomoda nell'uso vero.
@@ -182,10 +230,11 @@
 - Servizi a chiamata (prenotati il giorno prima o in giornata), da inserire nei turni gia' fatti.
 
 ## Prossimi passi
-1. Mandato "privacy e sicurezza di base" (deciso il 12/10), prima di qualunque dato vero.
+1. K-010: "cassaforte dei dati personali": dati personali cifrati con una password, piu' utenti, registro degli
+   accessi (docs/sicurezza.md), prima di qualunque dato vero.
 2. Mandato "orari di lavoro": regole degli orari degli autisti, pausa a casa, filosofia aziendale nei dati.
-3. Lettore del file alunni del CTA, che lo trasforma nel formato K-Zero.
-4. K-009: programma per Windows da scaricare (i dati veri restano sul PC di Mauro).
+3. Lettore del file alunni del CTA, che lo trasforma nel formato K-Zero (con la lettura blindata del K-009).
+4. Programma per Windows da scaricare (i dati veri restano sul PC di Mauro), con le prove di sicurezza su Windows.
 5. Raccolta dati veri Alpinabus: mezzi, autisti (paese), giri di una giornata tipo.
 6. "Fotografia" dei giri attuali: km pieni, km a vuoto, tempi morti.
 7. Lettura dei paper e proposta del metodo di calcolo con OR-Tools.
