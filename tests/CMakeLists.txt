@@ -377,7 +377,10 @@ if(NOT WIN32)
               ARGOMENTI controlla @PACCHETTO@)
   kzero_prova(giornata_con_una_pipe USCITA 1 FORMATO testo ERRORE K-ERR-018 BASE ${KZERO_DEMO} MODIFICA PIPE turni.json
               ARGOMENTI giornata @PACCHETTO@ --data 2026-10-22)
-  foreach(prova rotto_pipe_al_posto_del_file rotto_collegamento_a_dev_zero rotto_collegamento_fuori_dalla_cartella
+  # Un file di 256 MB e un byte (zeri "sparsi": non occupano il disco): non si legge, nemmeno in parte.
+  kzero_rotto(rotto_file_troppo_grande FORMATO testo MODIFICA ALLUNGA persone.json 268435457
+              PROBLEMI "K-CTR-053|persone.json" CONTIENE "piu' grande di 256 MB" NON_CONTIENE "K-CTR-048" "K-CTR-003")
+  foreach(prova rotto_file_troppo_grande rotto_pipe_al_posto_del_file rotto_collegamento_a_dev_zero rotto_collegamento_fuori_dalla_cartella
                 rotto_collegamento_che_non_porta_a_nulla collegamento_dentro_la_cartella giornata_con_una_pipe)
     set_tests_properties(programma.${prova} PROPERTIES TIMEOUT 60)
   endforeach()

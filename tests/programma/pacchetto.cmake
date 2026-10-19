@@ -13,6 +13,8 @@
 #   AGGIUNGI    <file> <contenuto>                    aggiunge un file
 #   CARTELLA    <nome>                                aggiunge una cartella (al posto del file con quel nome, se c'e')
 #   PIPE        <file>                                mette una "pipe" al posto del file (non Windows)
+#   ALLUNGA     <file> <byte>                         porta il file a quella lunghezza con zeri "sparsi", che non
+#                                                    occupano il disco (Linux, comando truncate)
 #   COLLEGA     <file> <destinazione>                 mette un collegamento simbolico al posto del file (non Windows):
 #                                                    @FUORI@ = al file spostato fuori dalla cartella del pacchetto,
 #                                                    @DENTRO@ = al file spostato nella sottocartella "archivio",
@@ -104,6 +106,12 @@ elseif(operazione STREQUAL "PIPE")
   execute_process(COMMAND mkfifo "${file_modificato}" RESULT_VARIABLE problema)
   if(problema)
     fallisci_pacchetto("mkfifo ${nome_file}: ${problema}")
+  endif()
+elseif(operazione STREQUAL "ALLUNGA")
+  list(GET MODIFICA 2 byte)
+  execute_process(COMMAND truncate -s "${byte}" "${file_modificato}" RESULT_VARIABLE problema)
+  if(problema)
+    fallisci_pacchetto("truncate ${nome_file}: ${problema}")
   endif()
 elseif(operazione STREQUAL "COLLEGA")
   list(GET MODIFICA 2 destinazione)

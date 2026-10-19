@@ -1515,6 +1515,24 @@ void leggi_file(const std::string& file, const std::string& testo, Lettura& out)
         out.problemi.push_back(p);
         return;
     }
+    // Un byte zero non puo' stare in un file JSON (nemmeno dentro un testo), e la libreria JSON lo prende per la fine del
+    // file: un file valido seguito da zeri e da altro testo verrebbe letto a meta' (K-009, file rovinati o preparati).
+    if (const std::size_t zero = testo.find('\0'); zero != std::string::npos) {
+        int riga = 1, colonna = 1;
+        for (std::size_t i = 0; i < zero; ++i) {
+            if (testo[i] == '\n') {
+                ++riga;
+                colonna = 1;
+            } else if ((static_cast<unsigned char>(testo[i]) & 0xC0) != 0x80) {
+                ++colonna;
+            }
+        }
+        Problem p = problema(Check::InvalidJson, f.file, "", {number_param("riga", riga), number_param("colonna", colonna)}, 1);
+        p.where.line = riga;
+        p.where.column = colonna;
+        out.problemi.push_back(p);
+        return;
+    }
     Analisi a = analizza(testo);
     if (!a.documento) {
         Problem p = problema(Check::InvalidJson, f.file, "", {number_param("riga", a.riga), number_param("colonna", a.colonna)});

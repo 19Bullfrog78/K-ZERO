@@ -32,7 +32,9 @@ const std::vector<DefinizioneControllo>& catalogo_controlli() {
               "non e' stato letto."}},
             {Check::InvalidJson, "K-CTR-003", E, N, "JSON non valido",
              {"Il file non e' un JSON valido: errore di scrittura alla riga {riga}, colonna {colonna}, o poco prima "
-              "(es. una virgola o una parentesi mancante). Il file non e' stato letto."}},
+              "(es. una virgola o una parentesi mancante). Il file non e' stato letto.",
+              "Il file non e' un JSON valido: alla riga {riga}, colonna {colonna} c'e' un byte zero, che un file JSON non puo' "
+              "contenere (di solito il file e' rovinato, es. dopo uno spegnimento improvviso). Il file non e' stato letto."}},
             {Check::DuplicateKey, "K-CTR-004", E, N, "Campo ripetuto",
              {"Lo stesso campo compare due volte nello stesso oggetto: va scritto una volta sola. Il file non e' stato letto."}},
             {Check::WrongSchema, "K-CTR-005", E, N, "Schema del file sbagliato o mancante",

@@ -78,7 +78,10 @@ std::vector<std::string> file_del_formato() {
 
 void prova_file_del_pacchetto(const std::string& file, const std::uint8_t* dati, std::size_t n) {
     Lettura lettura = base_senza(file);
-    leggi_file(file, std::string(reinterpret_cast<const char*>(dati), n), lettura);
+    const std::string testo(reinterpret_cast<const char*>(dati), n);
+    leggi_file(file, testo, lettura);
+    // Un file usato deve essere stato letto tutto: nessun byte zero (la libreria JSON lo prende per la fine del file).
+    if (lettura.usato(file) && testo.find('\0') != std::string::npos) guasto(file + ": file con un byte zero usato lo stesso");
     for (const Visibilita v : {Visibilita{}, Visibilita{true, true}}) {
         const Resoconto r = controlla_lettura(lettura, v);
         if (r.errori + r.avvisi != static_cast<int>(r.problemi.size()) + r.errori_riservati + r.avvisi_riservati)

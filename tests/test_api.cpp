@@ -315,6 +315,15 @@ TEST(Api, K_CTR_003_json_non_valido) {
     EXPECT_EQ(l.problemi[0].where.line, 84);     // la riga dopo la virgola mancante: "alimentazione"...
     EXPECT_EQ(l.problemi[0].where.column, 21);   // ...letto fino in fondo prima di accorgersi dell'errore
     EXPECT_FALSE(l.usato("mezzi.json"));   // mai letto a meta'
+
+    // Un byte zero: la libreria JSON lo prenderebbe per la fine del file e leggerebbe solo la parte prima (K-009).
+    Memoria zero;
+    zero.file["assenze.json"] = *zero.file.at("assenze.json") + std::string(1, '\0') + "{ \"altro\": 1 }";
+    EXPECT_TRUE(problemi(zero, {{Check::InvalidJson, 1, "assenze.json", ""}}));
+    const Lettura lz = leggi_pacchetto(zero);
+    EXPECT_FALSE(lz.usato("assenze.json"));
+    EXPECT_EQ(lz.problemi[0].where.line, 10);   // subito dopo le 9 righe del file
+    EXPECT_EQ(lz.problemi[0].where.column, 1);
 }
 
 TEST(Api, K_CTR_004_campo_ripetuto) {
