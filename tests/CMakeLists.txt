@@ -668,6 +668,13 @@ if(KZERO_PROTEZIONI_ATTIVE AND CMAKE_READELF AND CMAKE_NM)
   set_tests_properties(sicurezza.protezioni_del_compilatore PROPERTIES LABELS sicurezza)
 endif()
 
+# Elenco dei componenti esterni (docs/componenti.cdx.json, CycloneDX): coincide con le versioni e le impronte fissate in
+# CMakeLists.txt e in tests/strumenti/check-jsonschema.txt.
+add_test(NAME sicurezza.elenco_dei_componenti
+         COMMAND ${CMAKE_COMMAND} -DSORGENTI=${PROJECT_SOURCE_DIR} -DVERSIONE=${PROJECT_VERSION}
+                 -P ${CMAKE_CURRENT_SOURCE_DIR}/programma/componenti.cmake)
+set_tests_properties(sicurezza.elenco_dei_componenti PROPERTIES LABELS sicurezza)
+
 # --- Fuzzing (K-009): prove con dati casuali e deformati (tests/fuzz, docs/sicurezza.md) -------------------------
 # I bersagli stanno in una libreria comune: libFuzzer li usa per cercare guasti (KZERO_FUZZ=ON, clang), rigioca_fuzz
 # per ripetere nelle prove normali ogni guasto gia' trovato (tests/fuzz/casi/<bersaglio>/<caso>) e i file del demo.
