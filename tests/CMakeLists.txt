@@ -28,6 +28,11 @@ target_link_libraries(test_giornata PRIVATE kzero_api GTest::gtest_main)
 target_compile_options(test_giornata PRIVATE ${KZERO_WARNINGS})
 target_compile_definitions(test_giornata PRIVATE KZERO_SORGENTI="${PROJECT_SOURCE_DIR}")
 gtest_discover_tests(test_giornata PROPERTIES LABELS api)
+# K-010: cifratura (libsodium) e password.
+add_executable(test_cripto test_cripto.cpp)
+target_link_libraries(test_cripto PRIVATE kzero_api GTest::gtest_main)
+target_compile_options(test_cripto PRIVATE ${KZERO_WARNINGS})
+gtest_discover_tests(test_cripto PROPERTIES LABELS "api;sicurezza")
 
 # --- Strumento standard per confrontare le uscite JSON con gli schemi ---------------
 # check-jsonschema, versioni e impronte fissate in tests/strumenti/check-jsonschema.txt.
