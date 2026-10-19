@@ -28,6 +28,7 @@
 #include "formato_dati.hpp"
 #include "lettore.hpp"
 #include "parametri.hpp"
+#include "riservatezza.hpp"
 #include "schemi_dati.hpp"
 #include "uscita.hpp"
 #include "validazione.hpp"
@@ -707,7 +708,7 @@ TEST(Api, messaggi_senza_due_punti) {
             const Presentatore presentatore(&l.pacchetto, &l.versioni, v);
             for (const DefinizioneControllo& d : catalogo_controlli()) {
                 std::vector<std::string> modelli = d.messaggi;
-                for (const auto& [variante, modello] : d.riservati) modelli.push_back(modello);
+                for (const auto& [variante, modello] : d.personali) modelli.push_back(modello);
                 for (std::size_t variante = 0; variante < d.messaggi.size(); ++variante) {
                     kzero::Problem p{d.controllo, static_cast<int>(variante), kzero::Source{}, {}};
                     for (const std::string& modello : modelli)
@@ -861,6 +862,166 @@ TEST(Api, classi_marcate_negli_schemi) {
         "turni/turni/*/competenze_richieste/*",   // come per i servizi: una competenza puo' far capire chi viaggia
     };
     EXPECT_EQ(particolari, attesi);
+}
+
+// --- Dati personali e particolari nei problemi (K-009) -----------------------------------------------------------
+
+// La classe del dato in cui sta una posizione e' la piu' riservata marcata lungo il percorso; di base la posizione si
+// ferma all'elemento comune piu' vicino e un'assenza (file di soli dati personali) diventa la persona assente.
+TEST(Api, posizioni_e_classi_dei_dati) {
+    const Memoria m;
+    const Lettura l = leggi_pacchetto(m);
+    const auto classe = [&l](const std::string& file, const std::string& puntatore) {
+        return classe_della_posizione(kzero::Source{file, puntatore, 0, 0}, l);
+    };
+    EXPECT_EQ(classe("persone.json", "/persone/2"), Classe::Comune);
+    EXPECT_EQ(classe("persone.json", "/persone/2/abilitazioni/2"), Classe::Personale);
+    EXPECT_EQ(classe("assenze.json", "/assenze/2/persona"), Classe::Personale);   // dentro un'assenza
+    EXPECT_EQ(classe("assenze.json", ""), Classe::Personale);
+    EXPECT_EQ(classe("servizi.json", "/servizi/3/domanda/gruppi/0/fermate/0/carrozzine"), Classe::Particolare);
+    EXPECT_EQ(classe("servizi.json", "/servizi/3/domanda/gruppi/0/fermate/0/salgono"), Classe::Comune);
+    EXPECT_EQ(classe("luoghi.json", "/luoghi_privati/0/nome"), Classe::Personale);
+    EXPECT_EQ(classe("luoghi.json", "/luoghi_privati/0"), Classe::Comune);
+    EXPECT_EQ(classe("mezzi.json", "/mezzi/5/codice_fiscale"), Classe::Comune);   // un campo non previsto: il suo contenitore
+    EXPECT_EQ(classe("fermate.json", "/x"), Classe::Comune);                      // non fa parte del formato
+
+    const auto mostra = [&l](const std::string& file, const std::string& puntatore, Visibilita v) {
+        return mostra_posizione(kzero::Source{file, puntatore, 0, 0}, l, v);
+    };
+    const Visibilita base{}, personali{true, false}, tutti{true, true};
+    PosizioneMostrata p = mostra("persone.json", "/persone/2/abilitazioni/2", base);
+    EXPECT_EQ(p.posizione.file, "persone.json");
+    EXPECT_EQ(p.posizione.pointer, "/persone/2");
+    EXPECT_EQ(p.ridotta, Classe::Personale);
+    p = mostra("persone.json", "/persone/2/abilitazioni/2", personali);
+    EXPECT_EQ(p.posizione.pointer, "/persone/2/abilitazioni/2");
+    EXPECT_FALSE(p.ridotta);
+    p = mostra("assenze.json", "/assenze/2", base);   // P-B, la seconda persona
+    EXPECT_EQ(p.posizione.file, "persone.json");
+    EXPECT_EQ(p.posizione.pointer, "/persone/1");
+    EXPECT_EQ(p.ridotta, Classe::Personale);
+    p = mostra("assenze.json", "/assenze/0/tipo", base);   // P-A
+    EXPECT_EQ(p.posizione.pointer, "/persone/0");
+    p = mostra("assenze.json", "/assenze/2", personali);
+    EXPECT_EQ(p.posizione.file, "assenze.json");
+    EXPECT_EQ(p.posizione.pointer, "/assenze/2");
+    p = mostra("assenze.json", "", base);   // tutto il file: nessuna posizione
+    EXPECT_TRUE(p.posizione.file.empty());
+    EXPECT_EQ(p.ridotta, Classe::Personale);
+    p = mostra("assenze.json", "/assenze/9", base);   // nessuna persona a cui ricondurla: nessuna posizione
+    EXPECT_TRUE(p.posizione.file.empty());
+    p = mostra("servizi.json", "/servizi/3/domanda/gruppi/0/fermate/0/carrozzine", personali);
+    EXPECT_EQ(p.posizione.pointer, "/servizi/3/domanda/gruppi/0/fermate/0");
+    EXPECT_EQ(p.ridotta, Classe::Particolare);
+    p = mostra("servizi.json", "/servizi/3/domanda/gruppi/0/fermate/0/carrozzine", tutti);
+    EXPECT_EQ(p.posizione.pointer, "/servizi/3/domanda/gruppi/0/fermate/0/carrozzine");
+    p = mostra("luoghi.json", "/luoghi_privati/0/nome", base);
+    EXPECT_EQ(p.posizione.pointer, "/luoghi_privati/0");
+    p = mostra("corse.json", "/corse/3/passaggi/2", base);   // dati comuni: invariata
+    EXPECT_EQ(p.posizione.pointer, "/corse/3/passaggi/2");
+    EXPECT_FALSE(p.ridotta);
+    // Un file di soli dati personali non letto (errore di forma): l'assenza non si riconduce a nessuno.
+    Memoria rotto;
+    rotto.sostituisci("assenze.json", "\"schema_versione\": 1,", "\"schema_versione\": 7,");
+    const Lettura lr = leggi_pacchetto(rotto);
+    EXPECT_TRUE(mostra_posizione(kzero::Source{"assenze.json", "/assenze/2", 0, 0}, lr, base).posizione.file.empty());
+}
+
+// Di base nessuna posizione mostrata entra in un dato personale o particolare, in nessun problema: la prova guarda il
+// demo e alcuni pacchetti rotti, su dati comuni, personali e particolari.
+TEST(Api, posizioni_mostrate_solo_su_dati_comuni) {
+    std::vector<Memoria> casi(5);
+    casi[1].sostituisci("assenze.json", "\"tipo\": \"FORMAZIONE\"", "\"tipo\": \"MALATTIA\"");
+    casi[2].sostituisci("servizi.json", "\"assistente_richiesto\": true", "\"assistente_richiesto\": false");
+    casi[3].sostituisci("persone.json", "\"tipo\": \"CQC-P\", \"scadenza\": \"2027-06-30\"", "\"tipo\": \"CQC-P\", \"scadenza\": \"2026-12-31\"");
+    casi[4].file["assenze.json"] = "{ non e' JSON";
+    int problemi_visti = 0;
+    for (const Memoria& m : casi)
+        for (const Visibilita v : {Visibilita{}, Visibilita{true, false}, Visibilita{false, true}}) {
+            const Resoconto r = controlla_pacchetto(m, v);
+            for (const ProblemaPresentato& p : r.problemi) {
+                ++problemi_visti;
+                if (p.posizione.file.empty()) continue;
+                const Classe c = classe_della_posizione(p.posizione, r.lettura);
+                EXPECT_TRUE(visibile(c, v)) << p.codice << " " << p.posizione.file << " " << p.posizione.pointer;
+                if (!v.personali) {
+                    EXPECT_NE(p.posizione.file, "assenze.json") << p.codice;
+                }
+            }
+        }
+    EXPECT_GT(problemi_visti, 30);
+}
+
+// Un problema che rivela un dato particolare (es. l'assistente di cui ha bisogno un passeggero) di base non si
+// elenca: si conta soltanto, e conta lo stesso negli errori.
+TEST(Api, problemi_sui_dati_particolari_contati_e_non_elencati) {
+    Memoria m;
+    m.sostituisci("servizi.json", "\"assistente_richiesto\": true", "\"assistente_richiesto\": false");
+    const Resoconto base = controlla_pacchetto(m, Visibilita{});
+    EXPECT_EQ(base.errori, 1);
+    EXPECT_EQ(base.errori_riservati, 1);
+    EXPECT_EQ(base.avvisi_riservati, 0);
+    for (const auto& p : base.problemi) EXPECT_NE(p.codice, "K-CTR-047");
+    const Resoconto personali = controlla_pacchetto(m, Visibilita{true, false});
+    EXPECT_EQ(personali.errori_riservati, 1);   // i dati personali non bastano
+    const Resoconto particolari = controlla_pacchetto(m, Visibilita{false, true});
+    EXPECT_EQ(particolari.errori, 1);
+    EXPECT_EQ(particolari.errori_riservati, 0);
+    ASSERT_FALSE(particolari.problemi.empty());
+    EXPECT_EQ(particolari.problemi.front().codice, "K-CTR-047");
+    EXPECT_EQ(particolari.problemi.front().messaggio,
+              "Il passeggero P-D1 ha bisogno dell'assistente a bordo, ma il gruppo G-DIS (Centro diurno, andata) non richiede "
+              "l'assistente.");
+}
+
+// Ogni controllo dichiara cosa rivela in se'; una variante con un messaggio per i dati personali rivela almeno un dato
+// personale; le varianti dichiarate esistono. L'elenco di docs/controlli.md coincide con il catalogo.
+TEST(Api, controlli_dichiarano_cosa_rivelano) {
+    std::map<std::string, std::string> attese;   // "K-CTR-nnn | classe" -> "tutti i casi" / "alcuni casi"
+    for (const DefinizioneControllo& d : catalogo_controlli()) {
+        for (const auto& [variante, c] : d.rivela_varianti) {
+            EXPECT_GE(variante, 0) << d.codice;
+            EXPECT_LT(static_cast<std::size_t>(variante), d.messaggi.size()) << d.codice;
+            EXPECT_NE(c, d.rivela) << d.codice << ": variante uguale alla dichiarazione del controllo";
+        }
+        for (const auto& [variante, modello] : d.personali) {
+            EXPECT_NE(d.rivela_variante(variante), Classe::Comune) << d.codice << " variante " << variante;
+            EXPECT_LT(static_cast<std::size_t>(variante), d.messaggi.size()) << d.codice;
+        }
+        for (const Classe c : {Classe::Personale, Classe::Particolare}) {
+            std::size_t quante = 0;
+            for (std::size_t v = 0; v < d.messaggi.size(); ++v) quante += d.rivela_variante(static_cast<int>(v)) == c;
+            if (quante == 0) continue;
+            attese[d.codice + " | " + (c == Classe::Personale ? "personale" : "particolare")] =
+                quante == d.messaggi.size() ? "tutti i casi" : "alcuni casi";
+        }
+    }
+    EXPECT_EQ(definizione_controllo(Check::AssistantNotRequested).rivela, Classe::Particolare);
+    EXPECT_EQ(definizione_controllo(Check::CountsDifferFromPassengers).rivela_variante(2), Classe::Particolare);
+    EXPECT_EQ(definizione_controllo(Check::CountsDifferFromPassengers).rivela_variante(0), Classe::Comune);
+
+    std::ifstream f(KZERO_CARTELLA_PROVE "/../docs/controlli.md", std::ios::binary);
+    ASSERT_TRUE(f.good());
+    std::map<std::string, std::string> trovate;
+    const std::regex riga(R"(^\| (K-CTR-[0-9]{3}) \| (personale|particolare) \| (tutti i casi|alcuni casi) \|.*)");
+    for (std::string r; std::getline(f, r);) {
+        if (!r.empty() && r.back() == '\r') r.pop_back();
+        std::smatch m;
+        if (std::regex_match(r, m, riga)) trovate[m[1].str() + " | " + m[2].str()] = m[3].str();
+    }
+    EXPECT_EQ(trovate, attese);
+}
+
+// Gli errori K-ERR non nominano mai un file di soli dati personali, in testo e in JSON.
+TEST(Api, errori_senza_file_riservati) {
+    const ErroreKZero riservato(Errore::ValoreNonAmmesso, "x", Posizione{"assenze.json", 3, 5});
+    EXPECT_EQ(testo_errori({riservato}, Formato::Testo), "Errore K-ERR-006: x\n");
+    EXPECT_EQ(testo_errori({riservato}, Formato::Json).find("assenze"), std::string::npos);
+    const ErroreKZero comune(Errore::ValoreNonAmmesso, "x", Posizione{"mezzi.json", 3, 5});
+    EXPECT_EQ(testo_errori({comune}, Formato::Testo), "Errore K-ERR-006 (mezzi.json, riga 3, colonna 5): x\n");
+    EXPECT_TRUE(file_riservato("assenze.json"));
+    EXPECT_FALSE(file_riservato("persone.json"));
+    EXPECT_FALSE(file_riservato("mezzi.csv"));
 }
 
 // Filtro delle tre classi nei messaggi: il nome di una fermata pubblica si vede sempre, quello di una casa

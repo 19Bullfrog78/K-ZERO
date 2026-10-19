@@ -86,7 +86,7 @@ std::vector<DefinizioneComando> crea_comandi() {
          "posizione, poi un riepilogo; esce con 1 se trova errori (gli avvisi non bloccano).",
          {{"cartella", "Cartella del pacchetto dati, con il manifesto pacchetto.json."}},
          {parametro_formato(), parametro_dati_personali(), parametro_dati_particolari()},
-         {"controlla", 2},
+         {"controlla", 3},
          esegui_controlla},
         {"descrivi",
          "Descrive il programma: comandi, argomenti, parametri, schemi JSON, file dei pacchetti dati, codici di uscita, "
@@ -155,7 +155,7 @@ std::string forma_comando(const DefinizioneComando& c) {
 
 const std::vector<Schema>& schemi_ritirati() {
     // Versioni non piu' prodotte: i file restano in docs/schema per controllare le uscite salvate prima.
-    static const std::vector<Schema> s = {{"controlla", 1}, {"descrivi", 1}, {"descrivi", 2}, {"dimostrazione", 1}};
+    static const std::vector<Schema> s = {{"controlla", 1}, {"controlla", 2}, {"descrivi", 1}, {"descrivi", 2}, {"dimostrazione", 1}};
     return s;
 }
 

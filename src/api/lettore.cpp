@@ -1443,6 +1443,27 @@ void converti(const std::string& file, const JsonDati& d, Package& pk) {
     throw std::logic_error("file del formato senza conversione: " + file);
 }
 
+// Indici generali di un file letto, ricavati con lo schema e non file per file: codici degli elementi degli elenchi
+// principali, e titolare degli elementi che appartengono a un altro (vedi Lettura).
+void indicizza(const std::string& file, const std::string& schema, int versione, const JsonDati& d, Lettura& out) {
+    for (const auto& [chiave, valore] : d.items()) {
+        if (!valore.is_array()) continue;
+        const std::string elenco = "/" + escape(chiave);
+        const auto livelli = SchemiDati::incorporati().livelli(schema, versione, elenco + "/0");
+        const JsonDati* titolare = livelli.size() == 3 ? livelli[2].titolare : nullptr;
+        const std::string campo = titolare ? titolare->at("campo").get<std::string>() : std::string();
+        auto& codici = out.codici[{file, chiave}];
+        for (std::size_t i = 0; i < valore.size(); ++i) {
+            const JsonDati& e = valore[i];
+            if (!e.is_object()) continue;
+            const auto c = e.find("codice");
+            if (c != e.end() && c->is_string()) codici.emplace(c->get<std::string>(), i);
+            const auto t = titolare ? e.find(campo) : e.end();
+            if (t != e.end() && t->is_string()) out.titolari[file][indice(elenco, i)] = t->get<std::string>();
+        }
+    }
+}
+
 Problem problema(Check c, const std::string& file, std::string puntatore, std::vector<Param> param = {}, int variante = 0) {
     return Problem{c, variante, Source{file, std::move(puntatore), 0, 0}, std::move(param)};
 }
@@ -1543,6 +1564,7 @@ Lettura leggi_pacchetto(const Sorgente& sorgente) {
             continue;
         }
         converti(f.file, d, out.pacchetto);
+        indicizza(f.file, f.schema, static_cast<int>(v), d, out);
         out.versioni[f.file] = static_cast<int>(v);
     }
     return out;

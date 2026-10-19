@@ -2,7 +2,8 @@
 
 `kzero controlla <cartella>` controlla un pacchetto dati (spiegato in [formato-dati.md](formato-dati.md))
 e scrive un resoconto in testo o in JSON (schema `controlla`, file
-[schema/controlla.v2.schema.json](schema/controlla.v2.schema.json); la versione 1, del K-007, non e' piu' prodotta).
+[schema/controlla.v3.schema.json](schema/controlla.v3.schema.json); le versioni 1, del K-007, e 2, del K-008, non sono piu'
+prodotte).
 
 Ogni problema ha:
 - un **livello**: **errore** (il dato e' sbagliato e va corretto) oppure **avviso** (il dato e' accettabile,
@@ -23,7 +24,8 @@ Come si legge il resoconto:
   non si fanno, perche' darebbero risultati falsati. Il resoconto lo dice;
 - i messaggi seguono le **classi dei dati**: di base, al posto di un dato personale (es. il nome di una casa)
   c'e' il codice dell'elemento e i dati particolari non compaiono; si vedono con `--includi-dati-personali`
-  e `--includi-dati-particolari`;
+  e `--includi-dati-particolari`. Dal K-009 anche le posizioni, e i problemi sui dati sulla salute non si elencano uno
+  per uno (sezione "Dati personali e particolari nei problemi", qui sotto);
 - il programma non usa l'orologio: le date sono quelle del pacchetto.
 
 I testi dei messaggi stanno tutti in un unico catalogo (`src/api/controlli_catalogo.cpp`), separato dai
@@ -37,13 +39,67 @@ Errore K-CTR-017 (corse.json, /corse/3/passaggi/2): Nella corsa C-RM-1 (Ritorno 
 Avviso K-CTR-035 (luoghi.json, /luoghi/5): Il luogo F-CASTELROVO-ALTO (Castelrovo, Alto) non ha le coordinate: serviranno al calcolo delle distanze.
 Avviso K-CTR-043 (luoghi.json, /luoghi/17/trasbordo): Il punto di trasbordo L-TRASB-CROCE (Croce di Pradello, parcheggio) e' autorizzato solo a voce: manca il documento.
 Avviso K-CTR-050 (mezzi.json, /mezzi/6/autorizzazioni_uso/0): L'autorizzazione del mezzo ALFA-05 (AA 105 AA) all'uso NCC (distrazione) scade il 2027-06-30, dentro il periodo del pacchetto: dopo quella data il mezzo non puo' fare i servizi che chiedono quell'uso.
-Avviso K-CTR-050 (persone.json, /persone/2/abilitazioni/2): Un'abilitazione o un'autorizzazione della persona P-C scade dentro il periodo del pacchetto (dati personali: riservati).
-Avviso K-CTR-078 (persone.json, /persone/2/abilitazioni/2): Il turno T-SECONDO (Secondo) e' scoperto in 8 giorni tra il 2027-07-07 e il 2027-08-25 (i primi: 2027-07-07, 2027-07-14, 2027-07-21, 2027-07-28, 2027-08-04, 2027-08-11...): la persona prevista P-C non puo' farlo (dati personali: riservati). Rimedio: un'assegnazione del singolo giorno.
-Avviso K-CTR-078 (assenze.json, /assenze/2): Il turno T-PRIMO (Primo) e' scoperto il 2026-11-20: la persona prevista P-B non puo' farlo (dati personali: riservati). Rimedio: un'assegnazione del singolo giorno.
+Avviso K-CTR-078 (persone.json, /persone/1; il punto preciso con --includi-dati-personali): Il turno T-PRIMO (Primo) e' scoperto il 2026-11-20: la persona prevista P-B non puo' farlo (dati personali: riservati). Rimedio: un'assegnazione del singolo giorno.
+Avviso K-CTR-050 (persone.json, /persone/2; il punto preciso con --includi-dati-personali): Un'abilitazione o un'autorizzazione della persona P-C scade dentro il periodo del pacchetto (dati personali: riservati).
+Avviso K-CTR-078 (persone.json, /persone/2; il punto preciso con --includi-dati-personali): Il turno T-SECONDO (Secondo) e' scoperto in 8 giorni tra il 2027-07-07 e il 2027-08-25 (i primi: 2027-07-07, 2027-07-14, 2027-07-21, 2027-07-28, 2027-08-04, 2027-08-11...): la persona prevista P-C non puo' farlo (dati personali: riservati). Rimedio: un'assegnazione del singolo giorno.
 Avviso K-CTR-082 (servizi_fissi.json, /servizi_fissi/2): Nel turno T-SCUOLA-1 (Scuola 1) la persona P-E guida il mezzo ALFA-07 (AA 107 AA), non il suo mezzo abituale (abbinamento preferito), dal 2026-10-19 al 2026-10-20 (2 giorni).
 Avviso K-CTR-036: Il pacchetto non ha i tempi di sosta (file tempi_sosta.json): serviranno al calcolo.
 Riepilogo: 2 aziende, 23 luoghi, 9 servizi, 26 corse, 10 mezzi, 12 persone, 18 turni; 1 errore, 8 avvisi.
 ```
+
+## Dati personali e particolari nei problemi (K-009)
+
+Un problema puo' far capire un dato anche quando il suo messaggio e' filtrato: il codice K-CTR-047 dice da solo che
+un passeggero ha bisogno dell'assistente, la posizione `/persone/2/abilitazioni/2` dice che si parla di una patente,
+`assenze.json /assenze/2` dice che la persona e' assente. Per questo la regola vale per il problema intero, non solo
+per il testo, ed e' uguale in testo e in JSON.
+
+**Cosa rivela un problema.** Ogni controllo del catalogo dichiara cosa rivela in se' (che ci sia, il suo codice, il
+messaggio di base): nessun dato personale ne' particolare, un dato **personale**, oppure un dato **particolare**
+(salute); se serve, variante per variante del messaggio. Una prova controlla che tutti lo dichiarino e che la tabella
+qui sotto coincida con il programma. Conta poi anche il dato in cui sta la posizione: un problema rivela il piu'
+riservato tra cio' che dichiara il controllo e la **classe del dato in cui sta la sua posizione** (la piu' riservata
+marcata lungo il percorso JSON, dagli schemi). Es. un codice inesistente (K-CTR-010) scritto tra le competenze richieste
+da un servizio, che sono un dato particolare, rivela un dato particolare.
+
+**Problemi sui dati particolari.** Di base non si elencano uno per uno: una riga sola, senza codice ne' posizione, con
+quanti errori e quanti avvisi sono e il rimedio:
+
+```
+Problemi sui dati particolari (salute), non elencati uno per uno: 1 errore e nessun avviso. Per vederli: --includi-dati-particolari.
+```
+
+In JSON e' il campo `problemi_riservati` (`errori`, `avvisi`). Contano lo stesso: sono nel riepilogo, il codice di
+uscita non cambia e `kzero giornata` resta bloccata se sono errori (K-ERR-018). Con `--includi-dati-particolari` si
+elencano come gli altri.
+
+**Posizioni.** Di base la posizione di un problema non entra mai in un dato personale o particolare: si ferma
+all'**elemento comune piu' vicino** (es. la persona in persone.json, non la sua abilitazione; il gruppo o la fermata in
+servizi.json, non le sue carrozzine). Un file di soli dati personali (oggi `assenze.json`, marcato tutto intero come
+personale nel suo schema) non compare mai: un problema su un'assenza ha la posizione della persona assente in
+persone.json (marcatura `x-kzero-titolare` dello schema); se la persona non si trova, la posizione non si mostra. La
+regola si ricava dalle classi degli schemi (`x-kzero-classe`), non da un elenco di casi scritto a mano. Quando la
+posizione e' ridotta, il testo lo dice ("il punto preciso con --includi-dati-personali") e in JSON c'e' il campo
+`posizione_completa_con`; con quel parametro (o `--includi-dati-particolari`, secondo il dato) si vede la posizione
+completa. Un campo non previsto dallo schema (es. un nome scritto male) prende la classe dell'elemento che lo contiene:
+il nome di un campo non e' un dato. La stessa regola vale per le posizioni mostrate da `kzero giornata`; gli errori del
+programma (K-ERR), che non hanno percorsi JSON, non nominano mai un file di soli dati personali.
+
+Controlli che rivelano un dato personale o particolare (gli altri non ne rivelano nessuno; la loro posizione segue
+comunque la regola qui sopra):
+
+| Codice | Rivela | Quando | Cosa |
+|---|---|---|---|
+| K-CTR-019 | personale | alcuni casi | il nome, la casa o una nota scritta a mano di una persona |
+| K-CTR-031 | particolare | alcuni casi | carrozzine e ausili piegati che non corrispondono ai passeggeri |
+| K-CTR-047 | particolare | tutti i casi | l'assistente di cui ha bisogno un passeggero |
+| K-CTR-050 | personale | alcuni casi | la scadenza di un'abilitazione o di un'autorizzazione di una persona |
+| K-CTR-067 | personale | alcuni casi | assenza, disponibilita', abilitazione o autorizzazione scaduta di una persona |
+| K-CTR-068 | personale | tutti i casi | l'abilitazione o l'autorizzazione che una persona non ha |
+| K-CTR-071 | particolare | tutti i casi | la competenza richiesta da un turno o da un servizio (puo' far capire chi viaggia) |
+| K-CTR-076 | personale | tutti i casi | i ruoli di una persona |
+| K-CTR-078 | personale | alcuni casi | assenza, disponibilita', abilitazione o autorizzazione scaduta di una persona |
+| K-CTR-081 | personale | tutti i casi | le preferenze di una persona |
 
 Non sono in questo catalogo (arriveranno con la verifica delle regole e con il mandato "orari di lavoro"):
 posti a bordo, attese massime sulle corse, limiti di accesso confrontati con i mezzi, tempi per andare da un

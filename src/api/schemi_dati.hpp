@@ -5,7 +5,9 @@
 // Il filtro delle uscite parte da questa marcatura ed e' uguale per testo e JSON.
 
 #include <map>
+#include <optional>
 #include <string>
+#include <vector>
 
 #include <nlohmann/json.hpp>
 
@@ -50,6 +52,20 @@ public:
 
     // Segue i $ref interni ("#/definitions/...") fino alla definizione vera.
     static const JsonDati& risolvi(const JsonDati& radice, const JsonDati& nodo);
+
+    // Un livello del percorso di un documento visto con lo schema: la radice (livello 0), poi un livello per ogni
+    // pezzo del percorso JSON.
+    struct Livello {
+        bool previsto = false;          // lo schema descrive questo livello (un campo non previsto: false)
+        std::optional<Classe> classe;   // marcatura scritta proprio qui (accanto al campo o nella sua definizione)
+        // "x-kzero-titolare" di un elemento i cui dati sono tutti personali (es. un'assenza): il campo con il codice
+        // dell'elemento comune a cui appartiene e dove sta, es. {"campo": "persona", "file": "persone.json",
+        // "elenco": "persone"}.
+        const JsonDati* titolare = nullptr;
+    };
+    // I livelli del percorso: tanti quanti i pezzi del percorso piu' uno. Dopo un pezzo non previsto, anche i livelli
+    // seguenti sono non previsti.
+    std::vector<Livello> livelli(const std::string& nome, int versione, const std::string& puntatore) const;
 
 private:
     SchemiDati();

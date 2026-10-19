@@ -8,6 +8,7 @@
 #include "controllo.hpp"
 #include "errori.hpp"
 #include "esecutori.hpp"
+#include "riservatezza.hpp"
 
 namespace kzero::api {
 
@@ -24,11 +25,23 @@ std::string quanti_opz(const std::optional<std::size_t>& n, const char* uno, con
 
 const char* nome_livello_dati(kzero::Level l) { return l == kzero::Level::Full ? "completo" : "solo_numeri"; }
 
-std::string posizione_testo(const kzero::Source& s) {
+// "persone.json, /persone/2", con la nota se la posizione completa e' riservata.
+std::string posizione_testo(const ProblemaPresentato& p) {
+    const kzero::Source& s = p.posizione;
     std::string t = s.file;
     if (!s.pointer.empty()) t += ", " + s.pointer;
     if (s.line > 0) t += ", riga " + std::to_string(s.line) + ", colonna " + std::to_string(s.column);
+    if (p.posizione_ridotta)
+        t += std::string(t.empty() ? "" : "; ") + "il punto preciso con " + parametro_per(*p.posizione_ridotta);
     return t;
+}
+
+// "1 errore e 2 avvisi", "nessun errore e 1 avviso".
+std::string errori_e_avvisi(int errori, int avvisi) {
+    const auto n = [](int x, const char* uno, const char* molti) {
+        return x == 0 ? std::string("nessun ") + uno : std::to_string(x) + " " + (x == 1 ? uno : molti);
+    };
+    return n(errori, "errore", "errori") + " e " + n(avvisi, "avviso", "avvisi");
 }
 
 Json posizione_json(const kzero::Source& s) {
@@ -63,13 +76,17 @@ std::string in_testo(const Resoconto& r) {
     } else {
         t += "Controllo del pacchetto (manifesto non letto)\n";
     }
+    // Una riga sola per i problemi che rivelano un dato particolare: senza codice ne' posizione, solo quanti sono.
+    if (r.errori_riservati + r.avvisi_riservati > 0)
+        t += "Problemi sui dati particolari (salute), non elencati uno per uno: " +
+             errori_e_avvisi(r.errori_riservati, r.avvisi_riservati) + ". Per vederli: --includi-dati-particolari.\n";
     for (const ProblemaPresentato& p : r.problemi) {
         t += std::string(p.livello == Livello::Errore ? "Errore " : "Avviso ") + p.codice;
-        const std::string pos = posizione_testo(p.posizione);
+        const std::string pos = posizione_testo(p);
         if (!pos.empty()) t += " (" + pos + ")";
         t += ": " + p.messaggio + "\n";
     }
-    if (r.problemi.empty()) t += "Nessun problema.\n";
+    if (r.problemi.empty() && r.errori_riservati + r.avvisi_riservati == 0) t += "Nessun problema.\n";
     if (!r.contenuto_controllato)
         t += "Controlli sul contenuto non eseguiti: prima vanno corretti gli errori nella forma dei file.\n";
     const Conteggi c = conteggi(r);
@@ -98,6 +115,7 @@ std::string in_json(const DefinizioneComando& comando, const Resoconto& r, const
     j["dati_personali_inclusi"] = v.personali;
     j["dati_particolari_inclusi"] = v.particolari;
     j["controlli_sul_contenuto"] = r.contenuto_controllato;
+    j["problemi_riservati"] = {{"errori", r.errori_riservati}, {"avvisi", r.avvisi_riservati}};
     Json problemi = Json::array();
     for (const ProblemaPresentato& p : r.problemi) {
         Json x = Json::object();
@@ -105,6 +123,7 @@ std::string in_json(const DefinizioneComando& comando, const Resoconto& r, const
         x["codice"] = p.codice;
         x["messaggio"] = p.messaggio;
         if (!p.posizione.file.empty()) x["posizione"] = posizione_json(p.posizione);
+        if (p.posizione_ridotta) x["posizione_completa_con"] = parametro_per(*p.posizione_ridotta);
         if (!p.giorni.empty()) {
             Json giorni = Json::array();
             for (const auto& [dal, al] : p.giorni)

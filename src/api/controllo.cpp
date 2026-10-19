@@ -5,6 +5,7 @@
 #include <tuple>
 
 #include "formato_dati.hpp"
+#include "riservatezza.hpp"
 #include "validazione.hpp"
 
 namespace kzero::api {
@@ -27,8 +28,13 @@ bool prima(const ProblemaPresentato& a, const ProblemaPresentato& b) {
     if (chiave(a) != chiave(b)) return chiave(a) < chiave(b);
     if (a.posizione.file != b.posizione.file) return a.posizione.file < b.posizione.file;
     if (a.posizione.pointer != b.posizione.pointer) return prima_nel_documento(a.posizione.pointer, b.posizione.pointer);
-    return std::tie(a.posizione.line, a.posizione.column, a.codice, a.messaggio) <
-           std::tie(b.posizione.line, b.posizione.column, b.codice, b.messaggio);
+    if (std::tie(a.posizione.line, a.posizione.column, a.codice, a.messaggio) !=
+        std::tie(b.posizione.line, b.posizione.column, b.codice, b.messaggio))
+        return std::tie(a.posizione.line, a.posizione.column, a.codice, a.messaggio) <
+               std::tie(b.posizione.line, b.posizione.column, b.codice, b.messaggio);
+    // Due problemi che si mostrano uguali (posizione ridotta): l'ordine della posizione vera, per un resoconto stabile.
+    if (a.completa.file != b.completa.file) return ordine_file(a.completa.file) < ordine_file(b.completa.file);
+    return prima_nel_documento(a.completa.pointer, b.completa.pointer);
 }
 
 }  // namespace
@@ -52,11 +58,19 @@ Resoconto controlla_pacchetto(const Sorgente& sorgente, const Visibilita& visibi
     const Presentatore presentatore(r.contenuto_controllato ? &r.lettura.pacchetto : nullptr, &r.lettura.versioni, visibilita);
     for (const kzero::Problem& p : problemi) {
         const DefinizioneControllo& d = definizione_controllo(p.check);
+        (d.livello == Livello::Errore ? r.errori : r.avvisi) += 1;
+        // Il problema rivela il piu' riservato tra cio' che dice in se' e il dato in cui sta la sua posizione. Se e' un
+        // dato particolare (salute), di base si conta soltanto: niente codice, messaggio, posizione.
+        const Classe rivela = piu_riservata(d.rivela_variante(p.variant), classe_della_posizione(p.where, r.lettura));
+        if (rivela == Classe::Particolare && !visibile(Classe::Particolare, visibilita)) {
+            (d.livello == Livello::Errore ? r.errori_riservati : r.avvisi_riservati) += 1;
+            continue;
+        }
         std::vector<std::pair<kzero::Day, kzero::Day>> giorni;
         for (const kzero::Param& x : p.params)
             if (x.kind == kzero::Param::Kind::Days) giorni = periodi_di_giorni(x.days);
-        r.problemi.push_back({d.livello, d.codice, presentatore.messaggio(p), p.where, giorni});
-        (d.livello == Livello::Errore ? r.errori : r.avvisi) += 1;
+        const PosizioneMostrata dove = mostra_posizione(p.where, r.lettura, visibilita);
+        r.problemi.push_back({d.livello, d.codice, presentatore.messaggio(p), dove.posizione, dove.ridotta, giorni, p.where});
     }
     std::stable_sort(r.problemi.begin(), r.problemi.end(), prima);
     return r;

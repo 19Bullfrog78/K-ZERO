@@ -64,18 +64,23 @@ const char* modo_mezzo(kzero::VehicleSource s) {
     return "nessuno";
 }
 
-Json posizione(const kzero::Source& s) {
-    Json j = Json::object();
-    j["file"] = s.file;
-    j["puntatore"] = s.pointer;
-    return j;
-}
 
 // --- Il documento JSON ------------------------------------------------------------------------------------------
 
 class Giornata {
 public:
     Giornata(const kzero::Planner& piano, const Vista& vista) : piano_(piano), idx_(piano.index()), vista_(vista) {}
+
+    // Dove e' scritta un'assegnazione, filtrata come le posizioni dei problemi (riservatezza.hpp): di base non entra mai
+    // in un dato personale o particolare; null se non si puo' mostrare.
+    Json posizione(const kzero::Source& s) const {
+        const PosizioneMostrata p = vista_.posizione(s);
+        if (p.posizione.file.empty()) return Json(nullptr);
+        Json j = Json::object();
+        j["file"] = p.posizione.file;
+        j["puntatore"] = p.posizione.pointer;
+        return j;
+    }
 
     Json luogo(const kzero::Code& codice) const {
         Json j = Json::object();

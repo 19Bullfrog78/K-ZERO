@@ -18,21 +18,30 @@ namespace kzero::api {
 enum class Livello { Errore, Avviso };
 
 struct DefinizioneControllo {
-    DefinizioneControllo(kzero::Check c, std::string cod, Livello l, std::string descr, std::vector<std::string> mess,
-                         std::map<int, std::string> ris = {}, std::map<int, std::string> pers = {})
-        : controllo(c), codice(std::move(cod)), livello(l), descrizione(std::move(descr)), messaggi(std::move(mess)),
-          riservati(std::move(ris)), personali(std::move(pers)) {}
+    DefinizioneControllo(kzero::Check c, std::string cod, Livello l, Classe riv, std::string descr, std::vector<std::string> mess,
+                         std::map<int, Classe> riv_varianti = {}, std::map<int, std::string> pers = {})
+        : controllo(c), codice(std::move(cod)), livello(l), rivela(riv), rivela_varianti(std::move(riv_varianti)),
+          descrizione(std::move(descr)), messaggi(std::move(mess)), personali(std::move(pers)) {}
 
     kzero::Check controllo;
     std::string codice;                  // "K-CTR-001": fisso, mai riusato per altro
     Livello livello = Livello::Errore;
+    // Cosa rivela il problema in se' (che ci sia, il suo codice, il messaggio di base): Comune = nessun dato personale
+    // ne' particolare; Personale (es. un'abilitazione o un'assenza di una persona); Particolare (salute). Dichiarato per
+    // ogni controllo; le varianti del messaggio che rivelano altro stanno in rivela_varianti. Nelle uscite conta il piu'
+    // riservato tra questo e la classe del dato in cui sta la posizione (riservatezza.hpp).
+    Classe rivela = Classe::Particolare;
+    std::map<int, Classe> rivela_varianti;
     std::string descrizione;             // breve; identica in docs/controlli.md
     std::vector<std::string> messaggi;   // un modello per variante; {nome} = valore del problema
-    // Varianti che parlano di dati particolari: il modello da usare senza --includi-dati-particolari.
-    std::map<int, std::string> riservati;
     // Varianti che parlano di dati personali (es. un'abilitazione o un'assenza di una persona): il modello da usare
     // senza --includi-dati-personali.
     std::map<int, std::string> personali;
+
+    Classe rivela_variante(int variante) const {
+        const auto it = rivela_varianti.find(variante);
+        return it == rivela_varianti.end() ? rivela : it->second;
+    }
 };
 
 // Catalogo completo, in ordine di codice.

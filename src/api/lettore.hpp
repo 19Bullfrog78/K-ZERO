@@ -84,6 +84,11 @@ struct Lettura {
     std::vector<kzero::Problem> problemi;   // problemi di forma dei file
     std::map<std::string, int> versioni;    // file usati -> versione del loro schema
     std::set<std::string> presenti;         // file del formato presenti nella cartella
+    // Per il filtro delle posizioni (riservatezza.hpp), ricavati con gli schemi da ogni file letto:
+    // gli elementi degli elenchi principali per codice: (file, elenco) -> codice -> indice nell'elenco;
+    std::map<std::pair<std::string, std::string>, std::map<std::string, std::size_t>> codici;
+    // gli elementi che appartengono a un altro ("x-kzero-titolare", es. le assenze): file -> puntatore -> codice.
+    std::map<std::string, std::map<std::string, std::string>> titolari;
 
     bool usato(const std::string& file) const { return versioni.count(file) > 0; }
     // Nessun errore di forma (i file non riconosciuti sono solo avvisi): si possono controllare i contenuti.

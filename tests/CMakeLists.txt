@@ -154,10 +154,14 @@ kzero_prova(dimostrazione_json_tutti_i_dati USCITA 0 FORMATO json SCHEMA dimostr
 
 # kzero controlla sui pacchetti di esempio: nessun errore (uscita 0), solo gli avvisi voluti (dal K-008 anche due
 # scadenze nel periodo, due turni scoperti per un fatto con le date e il mezzo di scorta al posto di quello abituale).
+# Dal K-009 di base una posizione non entra in un dato personale: l'abilitazione che scade (/persone/2/abilitazioni/2)
+# diventa la persona (/persone/2), l'assenza (assenze.json /assenze/2) la persona assente (/persone/1).
 set(AVVISI_DEMO "K-CTR-035|luoghi.json|/luoghi/5" "K-CTR-043|luoghi.json|/luoghi/17/trasbordo" "K-CTR-036||"
-    "K-CTR-050|mezzi.json|/mezzi/6/autorizzazioni_uso/0" "K-CTR-050|persone.json|/persone/2/abilitazioni/2"
-    "K-CTR-078|persone.json|/persone/2/abilitazioni/2" "K-CTR-078|assenze.json|/assenze/2"
+    "K-CTR-050|mezzi.json|/mezzi/6/autorizzazioni_uso/0" "K-CTR-050|persone.json|/persone/2"
+    "K-CTR-078|persone.json|/persone/2" "K-CTR-078|persone.json|/persone/1"
     "K-CTR-082|servizi_fissi.json|/servizi_fissi/2")
+set(AVVISI_DEMO_COMPLETI "K-CTR-050|persone.json|/persone/2/abilitazioni/2" "K-CTR-078|persone.json|/persone/2/abilitazioni/2"
+    "K-CTR-078|assenze.json|/assenze/2")
 set(luoghi_demo 23)          # 18 luoghi pubblici e 5 privati
 set(luoghi_demo-numeri 18)   # "solo numeri": nessun luogo privato
 foreach(pacchetto demo demo-numeri)
@@ -166,13 +170,17 @@ foreach(pacchetto demo demo-numeri)
               # Il riepilogo in due pezzi: in CMake il punto e virgola separa gli elementi di un elenco.
               CONTIENE "Riepilogo: 2 aziende, ${luoghi_${pacchetto}} luoghi, 9 servizi, 26 corse, 10 mezzi, 12 persone, 18 turni"
                        " 0 errori, 8 avvisi."
-              PROBLEMI ${AVVISI_DEMO} NON_CONTIENE "Errore K-CTR"
+              PROBLEMI ${AVVISI_DEMO} NON_CONTIENE "Errore K-CTR" "abilitazioni" "assenze.json" "Problemi sui dati particolari"
               ARGOMENTI controlla ${PROJECT_SOURCE_DIR}/esempi/${pacchetto})
   kzero_prova(controlla_${n}_json USCITA 0 FORMATO json SCHEMA controlla
-              CONTIENE "\"errori\": 0" "\"avvisi\": 8" PROBLEMI ${AVVISI_DEMO}
+              CONTIENE "\"errori\": 0" "\"avvisi\": 8" "\"posizione_completa_con\": \"--includi-dati-personali\""
+              PROBLEMI ${AVVISI_DEMO} NON_CONTIENE "abilitazioni" "assenze.json"
               ARGOMENTI controlla ${PROJECT_SOURCE_DIR}/esempi/${pacchetto} --formato json)
 endforeach()
+kzero_prova(controlla_demo_dati_personali USCITA 0 FORMATO testo PROBLEMI ${AVVISI_DEMO_COMPLETI} NON_CONTIENE "il punto preciso"
+            ARGOMENTI controlla ${PROJECT_SOURCE_DIR}/esempi/demo --includi-dati-personali)
 kzero_prova(controlla_demo_tutti_i_dati USCITA 0 FORMATO json SCHEMA controlla
+            PROBLEMI ${AVVISI_DEMO_COMPLETI} NON_CONTIENE "posizione_completa_con"
             CONTIENE "\"dati_personali_inclusi\": true" "\"dati_particolari_inclusi\": true"
             ARGOMENTI controlla ${PROJECT_SOURCE_DIR}/esempi/demo --includi-dati-personali --includi-dati-particolari
                       --formato json)
@@ -269,9 +277,17 @@ kzero_rotto(rotto_abilitazione_inesistente_nelle_norme FORMATO testo
             CONTIENE "Il codice D2 non esiste tra le abilitazioni delle norme N-IT")
 kzero_rotto(rotto_uso_del_mezzo_inesistente FORMATO json MODIFICA IMPOSTA mezzi.json /mezzi/0/uso "\"NOLEGGIO\""
             PROBLEMI "K-CTR-010|mezzi.json|/mezzi/0/uso")
+# Le competenze richieste da un servizio sono un dato particolare (possono far capire chi viaggia): dal K-009 di base
+# il problema non si elenca, si conta soltanto (con i 4 K-CTR-071 delle persone che non hanno la competenza scritta
+# male); con --includi-dati-particolari si vede tutto.
 kzero_rotto(rotto_competenza_inesistente FORMATO testo MODIFICA IMPOSTA servizi.json /servizi/3/competenze_richieste/0 "\"PEDANE\""
+            CONTIENE "Problemi sui dati particolari (salute), non elencati uno per uno: 5 errori e nessun avviso. Per vederli: --includi-dati-particolari."
+            NON_CONTIENE "PEDANE" "K-CTR-010" "K-CTR-071" "competenze_richieste")
+kzero_prova(rotto_competenza_inesistente_dati_particolari USCITA 1 FORMATO testo RESOCONTO BASE ${KZERO_DEMO}
+            MODIFICA IMPOSTA servizi.json /servizi/3/competenze_richieste/0 "\"PEDANE\""
             PROBLEMI "K-CTR-010|servizi.json|/servizi/3/competenze_richieste/0"
-            CONTIENE "Il codice PEDANE non esiste tra le competenze dell'azienda ALFA")
+            CONTIENE "Il codice PEDANE non esiste tra le competenze dell'azienda ALFA" NON_CONTIENE "Problemi sui dati particolari"
+            ARGOMENTI controlla @PACCHETTO@ --includi-dati-particolari)
 kzero_rotto(rotto_impostazioni_azienda_ripetute FORMATO testo MODIFICA IMPOSTA aziende.json /aziende/1/azienda "\"ALFA\""
             PROBLEMI "K-CTR-009|aziende.json|/aziende/1")
 kzero_rotto(rotto_distrazione_rovesciata FORMATO testo
@@ -283,15 +299,19 @@ kzero_rotto(rotto_persona_doppia FORMATO testo MODIFICA IMPOSTA persone.json /pe
             PROBLEMI "K-CTR-009|persone.json|/persone/1")
 kzero_rotto(rotto_abilitazione_della_persona_inesistente FORMATO testo
             MODIFICA IMPOSTA persone.json /persone/0/abilitazioni/1/tipo "\"D2\""
-            PROBLEMI "K-CTR-010|persone.json|/persone/0/abilitazioni/1/tipo"
+            PROBLEMI "K-CTR-010|persone.json|/persone/0"
             CONTIENE "Il codice scritto in un dato personale (riservato) non esiste tra le abilitazioni delle norme N-IT"
             NON_CONTIENE "D2" "Rossi Mario")
 kzero_rotto(rotto_tipo_di_assenza_inesistente FORMATO json MODIFICA IMPOSTA assenze.json /assenze/0/tipo "\"MALATTIA\""
-            PROBLEMI "K-CTR-010|assenze.json|/assenze/0/tipo" NON_CONTIENE "MALATTIA")
+            PROBLEMI "K-CTR-010|persone.json|/persone/0" NON_CONTIENE "MALATTIA" "assenze")
+kzero_prova(rotto_tipo_di_assenza_inesistente_dati_personali USCITA 1 FORMATO json SCHEMA controlla RESOCONTO BASE ${KZERO_DEMO}
+            MODIFICA IMPOSTA assenze.json /assenze/0/tipo "\"MALATTIA\""
+            PROBLEMI "K-CTR-010|assenze.json|/assenze/0/tipo" CONTIENE "MALATTIA"
+            ARGOMENTI controlla @PACCHETTO@ --includi-dati-personali --formato json)
 kzero_rotto(rotto_tipo_di_fermo_inesistente FORMATO testo MODIFICA IMPOSTA fermi.json /fermi/0/tipo "\"OFFICINA\""
             PROBLEMI "K-CTR-010|fermi.json|/fermi/0/tipo" CONTIENE "Il codice OFFICINA non esiste tra i tipi di fermo dell'azienda ALFA")
 kzero_rotto(rotto_assenza_rovesciata FORMATO testo MODIFICA IMPOSTA assenze.json /assenze/0/al "\"2026-10-21\""
-            PROBLEMI "K-CTR-012|assenze.json|/assenze/0" NON_CONTIENE "2026-10-21" "2026-10-22" "2026-10-23")
+            PROBLEMI "K-CTR-012|persone.json|/persone/0" NON_CONTIENE "2026-10-21" "2026-10-22" "2026-10-23" "assenze")
 # Caso reale: "16.08" scritto tra 12.05 e 12.19.
 kzero_rotto(rotto_orario_indietro FORMATO testo MODIFICA IMPOSTA corse.json /corse/3/passaggi/2/orario "\"16:08\""
             PROBLEMI "K-CTR-017|corse.json|/corse/3/passaggi/2"
@@ -376,7 +396,7 @@ kzero_prova(giornata_demo_numeri USCITA 0 FORMATO json SCHEMA giornata CONTIENE 
 # singolo giorno e' un errore: kzero giornata non mostra nulla.
 kzero_prova(avviso_assenza_senza_sostituzione USCITA 0 FORMATO testo BASE ${KZERO_DEMO}
             MODIFICA TOGLI assegnazioni.json /assegnazioni/3
-            PROBLEMI "K-CTR-078|assenze.json|/assenze/0" CONTIENE " 0 errori, 9 avvisi."
+            PROBLEMI "K-CTR-078|persone.json|/persone/0" CONTIENE " 0 errori, 9 avvisi." NON_CONTIENE "assenze.json"
             ARGOMENTI controlla @PACCHETTO@)
 kzero_prova(giornata_assenza_senza_sostituzione USCITA 0 FORMATO testo BASE ${KZERO_DEMO}
             MODIFICA TOGLI assegnazioni.json /assegnazioni/3
@@ -522,7 +542,7 @@ kzero_prova(avviso_azienda_senza_norme USCITA 0 FORMATO testo BASE ${KZERO_DEMO}
             ARGOMENTI controlla @PACCHETTO@)
 kzero_prova(avviso_abilitazione_che_scade USCITA 0 FORMATO testo BASE ${KZERO_DEMO}
             MODIFICA IMPOSTA persone.json /persone/2/abilitazioni/2/scadenza "\"2027-03-31\""
-            PROBLEMI "K-CTR-050|persone.json|/persone/2/abilitazioni/2"
+            PROBLEMI "K-CTR-050|persone.json|/persone/2"
             CONTIENE "Un'abilitazione o un'autorizzazione della persona P-C scade dentro il periodo del pacchetto"
             NON_CONTIENE "CQC" "2027-03-31" "Verdi Carlo"
             ARGOMENTI controlla @PACCHETTO@)
@@ -544,18 +564,19 @@ kzero_prova(classi_trasbordo_in_una_casa_dati_personali USCITA 1 FORMATO json SC
             MODIFICA IMPOSTA corse.json /corse/4/passaggi/2/luogo "\"PP-01\""
             PROBLEMI "K-CTR-023|corse.json|/corse/4/passaggi/2/trasbordi/0" CONTIENE "PP-01 (Casa Bianchi)"
             ARGOMENTI controlla @PACCHETTO@ --includi-dati-personali --formato json)
+# Dal K-009 un problema che rivela un dato particolare (carrozzine, assistente, tipo "disabili") di base non si elenca:
+# una riga sola, senza codice ne' posizione, con quanti errori e avvisi sono; il codice di uscita non cambia.
 kzero_rotto(classi_carrozzine FORMATO testo MODIFICA IMPOSTA servizi.json /servizi/3/domanda/gruppi/0/fermate/0/carrozzine 0
-            PROBLEMI "K-CTR-031|servizi.json|/servizi/3/domanda/gruppi/0/fermate/0" CONTIENE "un dato particolare (riservato)"
-            NON_CONTIENE "carrozzin")
+            CONTIENE "Problemi sui dati particolari (salute), non elencati uno per uno: 1 errore e nessun avviso." " 1 errore, 8 avvisi."
+            NON_CONTIENE "carrozzin" "K-CTR-031" "/servizi/3/domanda")
 kzero_prova(classi_carrozzine_dati_particolari USCITA 1 FORMATO testo RESOCONTO BASE ${KZERO_DEMO}
             MODIFICA IMPOSTA servizi.json /servizi/3/domanda/gruppi/0/fermate/0/carrozzine 0
             PROBLEMI "K-CTR-031|servizi.json|/servizi/3/domanda/gruppi/0/fermate/0" CONTIENE "le persone sedute sulla carrozzina non corrispondono"
             ARGOMENTI controlla @PACCHETTO@ --includi-dati-particolari)
 kzero_rotto(classi_assistente FORMATO testo
             MODIFICA IMPOSTA servizi.json /servizi/3/domanda/gruppi/0/assistente_richiesto false
-            PROBLEMI "K-CTR-047|servizi.json|/servizi/3/domanda/gruppi/0/passeggeri/0"
-            CONTIENE "Il passeggero P-D1 ha un dato particolare (riservato) che il gruppo G-DIS"
-            NON_CONTIENE "assistente" "Bianchi Luca")
+            CONTIENE "Problemi sui dati particolari (salute), non elencati uno per uno: 1 errore e nessun avviso."
+            NON_CONTIENE "assistente" "Bianchi Luca" "K-CTR-047" "P-D1" "passeggeri")
 kzero_prova(classi_assistente_dati_particolari USCITA 1 FORMATO json SCHEMA controlla RESOCONTO BASE ${KZERO_DEMO}
             MODIFICA IMPOSTA servizi.json /servizi/3/domanda/gruppi/0/assistente_richiesto false
             PROBLEMI "K-CTR-047|servizi.json|/servizi/3/domanda/gruppi/0/passeggeri/0"
@@ -563,7 +584,7 @@ kzero_prova(classi_assistente_dati_particolari USCITA 1 FORMATO json SCHEMA cont
             ARGOMENTI controlla @PACCHETTO@ --includi-dati-particolari --formato json)
 kzero_rotto(classi_valore_particolare_nello_schema FORMATO json
             MODIFICA IMPOSTA servizi.json /servizi/3/domanda/gruppi/0/tipo "\"disabili_gravi\""
-            PROBLEMI "K-CTR-007|servizi.json|/servizi/3/domanda/gruppi/0/tipo" NON_CONTIENE "disabili_gravi")
+            CONTIENE "\"problemi_riservati\": {\n    \"errori\": 1," NON_CONTIENE "disabili_gravi" "K-CTR-007" "/servizi/3")
 kzero_prova(classi_valore_particolare_nello_schema_mostrato USCITA 1 FORMATO testo RESOCONTO BASE ${KZERO_DEMO}
             MODIFICA IMPOSTA servizi.json /servizi/3/domanda/gruppi/0/tipo "\"disabili_gravi\""
             PROBLEMI "K-CTR-007|servizi.json|/servizi/3/domanda/gruppi/0/tipo" CONTIENE "\"disabili_gravi\""
