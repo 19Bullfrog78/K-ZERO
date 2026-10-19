@@ -1,5 +1,5 @@
 # Prove automatiche: ctest --test-dir build --output-on-failure
-# Etichette: nucleo, api, programma, documentazione, architettura, schemi, scala.
+# Etichette: nucleo, api, programma, documentazione, architettura, schemi, scala, sicurezza.
 include(GoogleTest)
 
 # --- Prove del nucleo (GoogleTest): ogni TEST si registra da solo --------------------
@@ -645,6 +645,20 @@ add_test(NAME architettura.nucleo_senza_stampa
          COMMAND ${CMAKE_COMMAND} -DSORGENTI=${PROJECT_SOURCE_DIR}
                  -P ${CMAKE_CURRENT_SOURCE_DIR}/programma/architettura.cmake)
 set_tests_properties(architettura.nucleo_senza_stampa PROPERTIES LABELS architettura)
+
+# --- Sicurezza (K-009): niente rete -----------------------------------------------------------------------------
+# Il programma compilato non importa funzioni di rete (Linux: simboli ELF) e nessun sorgente include intestazioni o
+# librerie di rete. Vedi docs/sicurezza.md.
+add_test(NAME sicurezza.niente_rete_nei_sorgenti
+         COMMAND ${CMAKE_COMMAND} -DMODO=sorgenti -DSORGENTI=${PROJECT_SOURCE_DIR}
+                 -P ${CMAKE_CURRENT_SOURCE_DIR}/programma/rete.cmake)
+set_tests_properties(sicurezza.niente_rete_nei_sorgenti PROPERTIES LABELS sicurezza)
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_NM AND CMAKE_OBJDUMP)
+  add_test(NAME sicurezza.niente_rete_nel_programma
+           COMMAND ${CMAKE_COMMAND} -DMODO=programma -DKZERO=$<TARGET_FILE:kzero> -DNM=${CMAKE_NM} -DOBJDUMP=${CMAKE_OBJDUMP}
+                   -P ${CMAKE_CURRENT_SOURCE_DIR}/programma/rete.cmake)
+  set_tests_properties(sicurezza.niente_rete_nel_programma PROPERTIES LABELS sicurezza)
+endif()
 
 # --- Prova di scala: un pacchetto grande, generato con un seme fisso, controllato senza errori ------------
 # Il tempo e la memoria si misurano a parte (DIARIO.md): le macchine del controllo GitHub variano.
