@@ -164,6 +164,22 @@
   del passeggero 3 (1); una funzione di rete aggiunta apposta (socket) 2. Tutti scoperti.
   Prova di scala: kzero controlla 4,3 secondi con 132 MB, kzero giornata di tutti 5,2 secondi con 249 MB (macchina di
   prova: 4 processori Xeon a 2,1 GHz). Non e' una soglia delle prove.
+- 2026-10-19 - K-009 aggiunta 1 (programma, nella proposta "K-009: sicurezza di base"): **case dei passeggeri e luoghi
+  sensibili**. L'arbitro ha trovato il buco: con --includi-dati-personali la giornata di ALFA-03 e la corsa C-DIS-1 della
+  dimostrazione mostravano "PP-01 Casa Bianchi" e poi il centro diurno. Ora una regola sola (LegameSensibile, in
+  src/api/riservatezza) per tutte le uscite: con i dati personali e senza quelli particolari, dove si riconosce una
+  persona trasportata (il nome di un passeggero o la sua casa) i luoghi sensibili diventano "riservato". Insieme:
+  l'intera giornata mostrata (giornata, tre viste), servizi e corse (dimostrazione), il messaggio (controlla); il perche'
+  in DECISIONI.md (nel demo T-AUTO prende Casa Neri e consegna il trasbordo T-01 che T-DIS porta al centro: un turno da
+  solo non bastava). Sostituisce le due regole del punto 3, scritte a parte. Schemi delle uscite alla stessa versione.
+  Prove: 516 su 516 (27 nuove: la regola da sola, i messaggi, la giornata in tre viste in testo e JSON, inizio e fine in
+  un luogo sensibile, una corsa con una casa e senza luogo sensibile, un luogo sensibile senza case, la dimostrazione);
+  cambiate due righe dell'uscita attesa della dimostrazione con i dati personali (il centro nelle corse C-DIS-1 e
+  C-DIS-GIO). Con i sanitizer 514 su 514. Fuzzing in locale 60 secondi per bersaglio sui 27 bersagli (i file del
+  pacchetto ora anche con i soli dati personali): 115.065 file deformati, 42.216 righe di comando, 2.608.998 date e
+  orari, nessun guasto. Sabotaggio (prove rosse; tra parentesi quelle sugli schemi di quelle uscite, non eseguite):
+  regola spenta per le sole attivita' del turno 10 (4), 5 in testo e 5 in JSON; regola spenta del tutto 15 (5), 6 in
+  testo e 9 in JSON o nell'API. Tutti scoperti.
 
 ## Bug e limiti noti
 - Pause a casa: la regola (dai quanti minuti, entro quanti km da casa, deviazione massima) non e' ancora nei dati;
@@ -190,9 +206,11 @@
   OneDrive con i "file su richiesta") e le protezioni del compilatore equivalenti (/GS, /guard:cf, /DYNAMICBASE,
   /HIGHENTROPYVA, /NXCOMPAT): oggi sono provate solo su Linux.
 - Sicurezza (docs/sicurezza.md): i file dei pacchetti sono in chiaro sul disco, con un solo utente e senza registro degli
-  accessi, fino al mandato K-010 "cassaforte dei dati personali". Con --includi-dati-personali chi legge tutta un'uscita
-  puo' ancora collegare un passeggero ai luoghi attraverso i codici (gruppo, servizio, corse): il filtro dei luoghi
-  sensibili toglie solo i legami diretti. Un file vicino ai 256 MB preparato apposta puo' occupare diversi GB di memoria
+  accessi, fino al mandato K-010 "cassaforte dei dati personali". Il filtro dei luoghi sensibili chiude il legame dentro
+  un'uscita (K-009 aggiunta 1), non tra uscite diverse: chi puo' usare --includi-dati-personali puo' anche chiedere la
+  stessa giornata senza, dove il centro si vede accanto al codice della casa (lo chiudono utenti e permessi, K-010);
+  restano anche i nomi liberi del demo (il turno "Centro diurno", il servizio "Trasporto al centro diurno Il Faro", che
+  nel JSON della giornata nomina ancora il centro) e il legame tra messaggi diversi di controlla. Un file vicino ai 256 MB preparato apposta puo' occupare diversi GB di memoria
   mentre lo si legge. Un collegamento fisso (hard link) non si distingue da un file normale, e chi ha gia' accesso al PC
   puo' cambiare un file mentre lo si legge. Le librerie del sistema (C e C++) non sono nell'elenco dei componenti; che
   l'elenco rispetti lo schema CycloneDX e' controllato solo in locale, non nelle prove.
