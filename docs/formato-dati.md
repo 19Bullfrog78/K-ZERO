@@ -296,16 +296,25 @@ autorizzato). Tipi dei luoghi privati: `porta_a_porta` (la casa del passeggero, 
 Un punto di trasbordo e' un luogo di tipo `punto_trasbordo`, oppure un altro luogo pubblico (es. un punto di
 sosta) con il blocco `trasbordo`. Una casa non e' mai un punto di trasbordo.
 
-**Luoghi sensibili** (K-009). Il nome e la posizione di un centro diurno sono dati comuni (e' un luogo pubblico), ma
-"Bianchi Luca scende al centro diurno" e' un dato sulla salute di Bianchi Luca. Per questo, quando un'uscita mostra il
-nome di un passeggero (`--includi-dati-personali`) e non i dati particolari, il **legame** tra quel passeggero e un luogo
-sensibile diventa `"riservato"`: la sua salita, la sua discesa, la destinazione del suo gruppo (la scuola o il centro,
-se sta in un luogo sensibile), e un luogo sensibile nominato in un messaggio insieme a lui. Con
-`--includi-dati-particolari` si vede tutto; senza il nome (di base) il luogo si vede, perche' resta il solo codice del
-passeggero. Non riguarda gli autisti e gli assistenti (lavorare in un centro non e' un dato sulla salute di chi ci
-lavora) ne' i conteggi. Nel demo il centro diurno `L-CENTRO` e' sensibile. I nomi liberi (servizi, gruppi, corse,
-turni, calendari, note) restano responsabilita' di chi scrive i dati: un nome come "Trasporto al centro diurno" accanto
-all'elenco dei passeggeri dice lo stesso (docs/sicurezza.md).
+**Luoghi sensibili** (K-009, con l'aggiunta 1). Il nome e la posizione di un centro diurno sono dati comuni (e' un luogo
+pubblico), ma "Bianchi Luca scende al centro diurno", o "la corsa passa da Casa Bianchi e arriva al centro diurno", e'
+un dato sulla salute di chi ci va. Una regola sola per tutte le uscite, testo e JSON allo stesso modo: quando si vedono i
+dati personali (`--includi-dati-personali`) ma non quelli particolari, in un **insieme** che lascia riconoscere una
+persona trasportata - il nome di un passeggero, oppure la sua casa (un punto porta a porta con il nome o l'indirizzo) -
+ogni luogo sensibile diventa `"riservato"`: il codice e il nome, e la scuola o il centro che ci sta. L'insieme e'
+quello che l'uscita lega con i codici che mostra:
+- `kzero controlla`: il messaggio di un problema;
+- `kzero dimostrazione`: servizi e corse insieme (sono legati dai codici dei servizi e dei trasbordi); l'elenco dei
+  luoghi no, perche' non lega nessuno a un luogo;
+- `kzero giornata`: tutta la giornata mostrata, in ognuna delle tre viste (tutti, un mezzo, una persona): corse e pezzi
+  di corsa, attivita', luogo di inizio e di fine dei turni, presa servizio. Un turno solo non basta: il luogo si
+  leggerebbe nel turno dopo dello stesso mezzo, in quello che riceve il trasbordo o in quello dell'assistente a bordo.
+
+Con `--includi-dati-particolari` si vede tutto; di base (senza dati personali) il luogo si vede, perche' passeggeri e case
+restano solo codici. Non riguarda il personale (lavorare in un centro, o il garage presso la casa di un autista, non e'
+un dato sulla salute di nessuno) ne' i conteggi. Nel demo il centro diurno `L-CENTRO` e' sensibile. I nomi e i codici
+liberi (servizi, gruppi, corse, turni, calendari, note) restano responsabilita' di chi scrive i dati: un nome come
+"Trasporto al centro diurno" accanto all'elenco dei passeggeri dice lo stesso (docs/sicurezza.md).
 
 ```json
 {

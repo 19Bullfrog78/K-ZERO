@@ -69,7 +69,7 @@ Il programma e' diviso in tre piani, uno sopra l'altro:
 | `esegui.cpp` | Dalla riga di comando all'esito: prepara tutto in memoria (`esegui`), poi lo scrive (`consegna`). Cosi' un errore non lascia mai un risultato a meta'. |
 | `formato_dati.cpp` | Elenco dei file di un pacchetto, con lo schema e le versioni che il programma sa leggere. |
 | `lettore.cpp` | Lettura di un pacchetto: dal K-009 lettura blindata (solo file normali dentro la cartella, mai oltre il massimo di byte), poi JSON valido e senza campi ripetuti, schema e versione giusti, rispetto dello schema; poi la conversione nel modello del nucleo e quanti valori personali e particolari ci sono. Un file con un errore di forma non viene usato. |
-| `riservatezza.cpp` | (K-009) Classe del dato in cui sta una posizione e posizione da mostrare: di base non entra mai in un dato personale o particolare, si ferma all'elemento comune piu' vicino (un'assenza diventa la persona). Regola ricavata dalle classi degli schemi. |
+| `riservatezza.cpp` | (K-009) Classe del dato in cui sta una posizione e posizione da mostrare: di base non entra mai in un dato personale o particolare, si ferma all'elemento comune piu' vicino (un'assenza diventa la persona). Regola ricavata dalle classi degli schemi. Legame con i luoghi sensibili (`LegameSensibile`, K-009 aggiunta 1): la regola sola usata da controlla, dimostrazione e giornata. |
 | `validazione.cpp` | Controllo con gli schemi (libreria valijson) e messaggi della libreria tradotti in italiano. |
 | `schemi_dati.cpp` | Schemi dei file di dati incorporati nel programma e **classe di ogni campo** (comune, personale, particolare), letta dalla marcatura dello schema. |
 | `controlli_catalogo.cpp` | Catalogo dei controlli K-CTR: codice, livello, cosa rivela il problema in se' (nessun dato, un dato personale o particolare), descrizione e testo dei messaggi (unico posto da tradurre). Presenta i messaggi seguendo le classi dei dati e i luoghi sensibili. |
@@ -166,8 +166,8 @@ personale e' sostituito dal codice del suo elemento, un dato particolare diventa
 particolare, per prudenza; una prova controlla che tutti i campi siano marcati. Dal K-009 vale anche per il problema
 intero (un problema che rivela un dato sulla salute di base si conta soltanto), per le posizioni (mai dentro un dato
 personale o particolare: si fermano all'elemento comune piu' vicino; un'assenza diventa la persona, marcatura
-`x-kzero-titolare`) e per i **luoghi sensibili** (il legame tra il nome di un passeggero e un centro diurno e'
-riservato senza i dati particolari).
+`x-kzero-titolare`) e per i **luoghi sensibili** (il legame tra un passeggero, o la sua casa, e un centro diurno e'
+riservato senza i dati particolari; una regola sola, `LegameSensibile` in riservatezza.hpp).
 
 Il **livello** del pacchetto ("solo numeri", consigliato, oppure "completo") dice se ci possono essere
 passeggeri uno per uno e case; un pacchetto "solo numeri" che li contiene e' un errore (K-CTR-019).

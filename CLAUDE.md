@@ -120,7 +120,9 @@ Si parte da Alpinabus (3 minibus + 1 auto) e si deve poter crescere fino a 500 m
   `--includi-dati-personali` e `--includi-dati-particolari`. Vale anche nei messaggi, nelle posizioni (mai dentro un
   dato personale o particolare: si fermano all'elemento comune piu' vicino, regola ricavata dagli schemi) e nei
   problemi stessi (ogni controllo K-CTR dichiara cosa rivela; quelli sui dati sulla salute di base si contano
-  soltanto). Con i nomi dei passeggeri e senza i dati particolari, il legame con un luogo sensibile e' riservato.
+  soltanto). Con i nomi dei passeggeri o le loro case e senza i dati particolari, il legame con un luogo sensibile e'
+  riservato in tutto l'insieme che l'uscita lega (il messaggio, servizi e corse, l'intera giornata): una regola sola,
+  `LegameSensibile` in src/api/riservatezza.hpp.
 - Ogni nuova uscita, messaggio, posizione o registro passa dal filtro delle classi; nessun dato personale nei registri
   del programma. La lettura dei file e' blindata (solo file normali dentro la cartella del pacchetto, mai oltre il
   massimo di byte): ogni nuovo lettore di file esterni (es. il file del CTA) la usa.

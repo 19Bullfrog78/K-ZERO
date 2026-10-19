@@ -61,8 +61,11 @@ dell'elemento, un dato particolare diventa "riservato"; si vedono solo con `--in
   codice ne' posizione): una riga sola dice quanti errori e avvisi sono, e contano lo stesso;
 - la posizione di un problema non entra mai in un dato personale o particolare: si ferma all'elemento comune piu'
   vicino; un problema su un'assenza indica la persona, non il file delle assenze. Regola ricavata dagli schemi;
-- **luoghi sensibili** (es. un centro diurno, segnato da chi scrive i dati): quando un'uscita mostra il nome di un
-  passeggero senza i dati particolari, il legame tra il passeggero e il luogo sensibile diventa "riservato";
+- **luoghi sensibili** (es. un centro diurno, segnato da chi scrive i dati): con i dati personali e senza quelli
+  particolari, dove un'uscita lascia riconoscere un passeggero - il nome o la casa (un punto porta a porta con il nome o
+  l'indirizzo) - il luogo sensibile diventa "riservato": nel messaggio di un problema, in servizi e corse della
+  dimostrazione, in tutta la giornata mostrata ([formato-dati.md](formato-dati.md), "Luoghi sensibili"). Una regola
+  sola nel codice (`LegameSensibile`, src/api/riservatezza.hpp), usata da tutte le uscite;
 - gli errori del programma (K-ERR) non nominano mai un file di soli dati personali.
 
 **Minimizzazione.** Nessun campo per codice fiscale, telefoni, mail, data di nascita, cause delle assenze, idoneita'
@@ -121,12 +124,17 @@ K-Zero sara' venduto.
   i dati: il programma li mostra sempre. Un nome come "Trasporto al centro diurno" accanto all'elenco dei passeggeri dice
   lo stesso di un luogo sensibile. E' responsabilita' di chi scrive i dati (sezione 5). Il pacchetto dimostrativo, che ha
   dati inventati ed e' stato scritto prima di questa regola, ha proprio nomi e codici cosi' (il servizio `S-DIS`
-  "Trasporto al centro diurno Il Faro", il gruppo "Centro diurno, andata"): restano come esempio di cosa evitare, e
-  perche' le prove li usano.
-- **Collegamenti tra i codici.** Il filtro toglie i legami diretti (il nome del passeggero accanto alla sua
-  destinazione); chi legge tutta un'uscita con i nomi puo' ancora collegare un passeggero al suo gruppo, il gruppo al
-  servizio, il servizio alle corse e queste ai luoghi. Un'uscita con `--includi-dati-personali` va trattata come i file
-  del pacchetto.
+  "Trasporto al centro diurno Il Faro", il gruppo "Centro diurno, andata", il turno `T-DIS` "Centro diurno", il
+  calendario `CAL-CENTRO` "Centro diurno: lunedi', mercoledi' e giovedi'", la corsa "Centro diurno, giro principale"):
+  restano come esempio di cosa evitare, e perche' le prove li usano. Nella giornata con i dati personali il centro
+  diventa "riservato", ma questi nomi dicono ancora "centro diurno" (non quale).
+- **Collegamenti tra i codici.** Dentro una giornata, e dentro servizi e corse della dimostrazione, il legame tra una
+  casa o un passeggero e un luogo sensibile e' chiuso anche attraverso i codici (stesso mezzo, trasbordi, servizi).
+  Restano: tra messaggi diversi di `kzero controlla`; tra uscite diverse (chi puo' usare `--includi-dati-personali` puo'
+  anche chiedere la stessa giornata senza, dove il centro si vede accanto al codice della casa: la regola protegge
+  quello che una singola uscita mostra, ad esempio un foglio dato a un autista, non chi usa il programma - quello e' il
+  compito degli utenti e dei permessi del mandato K-010); gli orari e i km, per chi conosce la zona. Un'uscita con
+  `--includi-dati-personali` va trattata come i file del pacchetto.
 - **Uscite copiate altrove.** Quello che l'utente salva, stampa o incolla (es. in un assistente AI) esce dal controllo
   del programma.
 - **Memoria.** Un file vicino al massimo di 256 MB, preparato apposta, puo' occupare in memoria diversi GB mentre lo si
