@@ -18,8 +18,15 @@ if(MODO STREQUAL "programma")
   string(REGEX REPLACE "@[^\n]*" "" elenco "${elenco}")
   string(REPLACE "\n" ";" simboli "${elenco}")
   list(LENGTH simboli quanti)
-  # La prova non deve passare per sbaglio: il programma importa di sicuro l'operatore new della libreria C++.
-  if(quanti LESS 20 OR NOT "_Znwm" IN_LIST simboli)
+  # La prova non deve passare per sbaglio: il programma importa di sicuro funzioni della libreria C++ (std::...).
+  # (Non l'operatore new: con AddressSanitizer lo definisce il programma stesso.)
+  set(libreria_cpp FALSE)
+  foreach(s IN LISTS simboli)
+    if(s MATCHES "^_ZNS|^_ZNKS")
+      set(libreria_cpp TRUE)
+    endif()
+  endforeach()
+  if(quanti LESS 20 OR NOT libreria_cpp)
     message(FATAL_ERROR "elenco dei simboli importati da ${KZERO} non letto correttamente (${quanti} simboli)")
   endif()
   set(vietati socket socketpair connect bind listen accept accept4 shutdown setsockopt getsockopt getpeername getsockname

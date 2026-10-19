@@ -168,6 +168,8 @@ const ShiftDay* turno_del_giorno(const std::vector<ShiftDay>& piano, const std::
         if (sd.shift->code == codice) return &sd;
     return nullptr;
 }
+// Un turno di un elenco temporaneo (es. turno_del_giorno(piano.day(...), ...)) sparirebbe con l'elenco: vietato.
+const ShiftDay* turno_del_giorno(std::vector<ShiftDay>&& piano, const std::string& codice) = delete;
 
 // Chi fa il turno quel giorno: il codice della persona, "-" se scoperto, "assente" se il turno quel giorno non c'e'.
 std::string chi(const Package& p, const std::string& turno, const std::string& data) {
@@ -479,7 +481,8 @@ TEST(Turni, sostituzione_di_un_giorno) {
     EXPECT_EQ(chi(p, "PRIMO", "2026-10-16"), "P-A");
     EXPECT_EQ(chi(p, "PRIMO", "2026-10-21"), "P-B");
     const Planner piano(p);
-    EXPECT_EQ(turno_del_giorno(piano.day(giorno("2026-10-15")), "PRIMO")->person_source, PersonSource::Day);
+    const auto giovedi = piano.day(giorno("2026-10-15"));
+    EXPECT_EQ(turno_del_giorno(giovedi, "PRIMO")->person_source, PersonSource::Day);
 }
 
 // Corse di calendari diversi nello stesso turno: in un giorno di vacanza scolastica restano solo quelle di linea.
@@ -500,7 +503,8 @@ TEST(Turni, corse_di_calendari_diversi_in_vacanza) {
     EXPECT_EQ(b->items[0].trip->code, "C-LIN-533");
     EXPECT_EQ(b->start, ora("07:52"));   // inizio e fine ricavati dalle corse di quel giorno
     EXPECT_EQ(b->end, ora("08:15"));
-    EXPECT_EQ(turno_del_giorno(piano.day(giorno("2026-12-08")), "MISTO"), nullptr);   // festivita': niente
+    const auto immacolata = piano.day(giorno("2026-12-08"));
+    EXPECT_EQ(turno_del_giorno(immacolata, "MISTO"), nullptr);   // festivita': niente
 }
 
 // Turno festivo in una festivita' infrasettimanale: domeniche piu' festivita', scritte una volta sola.
@@ -525,7 +529,8 @@ TEST(Turni, assenza_su_un_turno_della_rotazione_avviso_e_scoperto) {
     turno_semplice(p, "PRIMO", "CAL-LV", "06:30", "12:00");
     rotazione(p, "ROT", 1, "2026-10-12", {{"P-A", {"PRIMO"}}});   // P-A in ferie il 22 e 23/10 (assenze.json)
     const Planner piano(p);
-    const ShiftDay* sd = turno_del_giorno(piano.day(giorno("2026-10-22")), "PRIMO");
+    const auto giornata_sd = piano.day(giorno("2026-10-22"));
+    const ShiftDay* sd = turno_del_giorno(giornata_sd, "PRIMO");
     ASSERT_NE(sd, nullptr);
     EXPECT_TRUE(sd->uncovered());
     EXPECT_EQ(sd->planned->code, "P-A");
@@ -559,7 +564,8 @@ TEST(Turni, disponibilita_rigida) {
     turno_semplice(p, "POMERIGGIO", "CAL-LV", "13:00", "17:00");
     rotazione(p, "ROT", 1, "2026-10-12", {{"P-D", {"POMERIGGIO"}}});   // P-D disponibile da lunedi' a venerdi' 06:30-14:00
     const Planner piano(p);
-    const ShiftDay* sd = turno_del_giorno(piano.day(giorno("2026-10-15")), "POMERIGGIO");
+    const auto giornata_sd = piano.day(giorno("2026-10-15"));
+    const ShiftDay* sd = turno_del_giorno(giornata_sd, "POMERIGGIO");
     ASSERT_NE(sd, nullptr);
     EXPECT_TRUE(sd->uncovered());
     EXPECT_EQ(sd->person_impediment, PersonImpediment::OutsideAvailability);
@@ -571,7 +577,8 @@ TEST(Turni, mezzo_in_fermo_su_un_turno_ricorrente_avviso_e_senza_mezzo) {
     turno(p, "SCUOLA", "ALFA", "CAL-SCUOLA-LV", {corsa("C-AM-1")}, ShiftVehicleMode::Specific, "ALFA-01");
     rotazione(p, "ROT", 1, "2026-10-12", {{"P-B", {"SCUOLA"}}});
     const Planner piano(p);
-    const ShiftDay* sd = turno_del_giorno(piano.day(giorno("2026-10-19")), "SCUOLA");   // ALFA-01 in revisione 19-20/10
+    const auto giornata_sd = piano.day(giorno("2026-10-19"));   // ALFA-01 in revisione 19-20/10
+    const ShiftDay* sd = turno_del_giorno(giornata_sd, "SCUOLA");
     ASSERT_NE(sd, nullptr);
     EXPECT_EQ(sd->vehicle, nullptr);
     EXPECT_EQ(sd->planned_vehicle->code, "ALFA-01");
@@ -913,7 +920,8 @@ TEST(Turni, K_CTR_086_087_assistente) {
     rotazione(p, "ROT", 1, "2026-09-01", {{"P-B4", {"ASILO-ASS"}}});
     EXPECT_EQ(quanti(p, Check::EscortWithoutPerson), 0);
     const Planner piano(p);
-    const ShiftDay* ass = turno_del_giorno(piano.day(giorno("2026-10-15")), "ASILO-ASS");
+    const auto giornata_ass = piano.day(giorno("2026-10-15"));
+    const ShiftDay* ass = turno_del_giorno(giornata_ass, "ASILO-ASS");
     ASSERT_NE(ass, nullptr);
     EXPECT_EQ(ass->aboard->code, "BETA-01");   // a bordo del mezzo del turno dell'autista
     // C-DIS-1: il contratto CT-SCU dice committente; il turno dice azienda.

@@ -653,7 +653,9 @@ add_test(NAME sicurezza.niente_rete_nei_sorgenti
          COMMAND ${CMAKE_COMMAND} -DMODO=sorgenti -DSORGENTI=${PROJECT_SOURCE_DIR}
                  -P ${CMAKE_CURRENT_SOURCE_DIR}/programma/rete.cmake)
 set_tests_properties(sicurezza.niente_rete_nei_sorgenti PROPERTIES LABELS sicurezza)
-if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_NM AND CMAKE_OBJDUMP)
+# Sul programma vero: con i sanitizer il programma contiene anche le loro librerie, che intercettano le funzioni di
+# rete del sistema (e si collegano a libresolv) senza che K-Zero le usi.
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_NM AND CMAKE_OBJDUMP AND NOT KZERO_SANITIZER AND NOT KZERO_FUZZ)
   add_test(NAME sicurezza.niente_rete_nel_programma
            COMMAND ${CMAKE_COMMAND} -DMODO=programma -DKZERO=$<TARGET_FILE:kzero> -DNM=${CMAKE_NM} -DOBJDUMP=${CMAKE_OBJDUMP}
                    -P ${CMAKE_CURRENT_SOURCE_DIR}/programma/rete.cmake)

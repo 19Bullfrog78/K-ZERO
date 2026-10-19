@@ -1,8 +1,13 @@
-# Controllo automatico: a ogni proposta e a ogni salvataggio su main.
-# Compila senza warning (i warning del codice K-Zero diventano errori), prova i comandi
-# (anche kzero controlla sui pacchetti di esempio), esegue le prove e verifica le uscite JSON
-# e i file dei pacchetti di esempio con gli schemi di docs/schema usando uno strumento standard
-# (check-jsonschema), indipendente dal codice di K-Zero.
+# Controllo automatico: a ogni proposta e a ogni salvataggio su main. Tre lavori, in parallelo.
+# 1. compila-e-prova: compila senza warning (i warning del codice K-Zero diventano errori), con le protezioni del
+#    compilatore, prova i comandi (anche kzero controlla sui pacchetti di esempio), esegue le prove e verifica le uscite
+#    JSON e i file dei pacchetti di esempio con gli schemi di docs/schema usando uno strumento standard
+#    (check-jsonschema), indipendente dal codice di K-Zero.
+# 2. sanitizer (K-009): compila tutto con AddressSanitizer e UndefinedBehaviorSanitizer ed esegue tutte le prove; il
+#    primo errore di memoria o comportamento non definito ferma la prova (GDPR art. 32 c. 1 lett. d: provare
+#    regolarmente l'efficacia delle misure).
+# 3. fuzzing (K-009): prove con dati casuali e deformati, 20 secondi per bersaglio (docs/sicurezza.md spiega la scelta);
+#    se trova un guasto, il caso che lo provoca si scarica dai risultati del lavoro.
 name: Controllo
 
 on:
@@ -23,7 +28,7 @@ jobs:
       - name: Compila
         run: |
           cmake -S . -B build -DKZERO_WERROR=ON -DKZERO_SCHEMI_OBBLIGATORI=ON
-          cmake --build build
+          cmake --build build -j "$(nproc)"
       - name: Prova i comandi
         run: |
           ./build/kzero versione
@@ -36,3 +41,51 @@ jobs:
         run: ctest --test-dir build --output-on-failure --label-exclude schemi
       - name: Verifica degli schemi JSON
         run: ctest --test-dir build --output-on-failure --label-regex schemi
+
+  sanitizer:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+      - name: Installa check-jsonschema (versioni e impronte fissate)
+        run: python -m pip install --require-hashes -r tests/strumenti/check-jsonschema.txt
+      - name: Librerie dei sanitizer di clang
+        run: |
+          if [ ! -f /usr/lib/llvm-18/lib/clang/18/lib/linux/libclang_rt.asan-x86_64.a ]; then
+            sudo apt-get update && sudo apt-get install -y --no-install-recommends libclang-rt-18-dev
+          fi
+      - name: Compila con AddressSanitizer e UndefinedBehaviorSanitizer
+        run: |
+          cmake -S . -B build -DCMAKE_C_COMPILER=clang-18 -DCMAKE_CXX_COMPILER=clang++-18 -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+                -DKZERO_SANITIZER=ON -DKZERO_WERROR=ON -DKZERO_SCHEMI_OBBLIGATORI=ON
+          cmake --build build -j "$(nproc)"
+      - name: Esegui tutte le prove
+        env:
+          ASAN_OPTIONS: halt_on_error=1:abort_on_error=1:detect_leaks=1
+          UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
+        run: ctest --test-dir build --output-on-failure
+
+  fuzzing:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+      - name: Librerie di libFuzzer e dei sanitizer di clang
+        run: |
+          if [ ! -f /usr/lib/llvm-18/lib/clang/18/lib/linux/libclang_rt.fuzzer-x86_64.a ]; then
+            sudo apt-get update && sudo apt-get install -y --no-install-recommends libclang-rt-18-dev
+          fi
+      - name: Compila i bersagli del fuzzing
+        run: |
+          cmake -S . -B build-fuzz -DCMAKE_C_COMPILER=clang-18 -DCMAKE_CXX_COMPILER=clang++-18 -DCMAKE_BUILD_TYPE=RelWithDebInfo \
+                -DKZERO_FUZZ=ON -DKZERO_WERROR=ON
+          cmake --build build-fuzz -j "$(nproc)" --target fuzz_pacchetto fuzz_parametri fuzz_date_e_orari
+      - name: Fuzzing, 20 secondi per bersaglio
+        run: KZERO_FUZZ_PARALLELI=$(nproc) tests/fuzz/fuzz.sh build-fuzz 20 fuzz-lavoro
+      - name: Casi che provocano un guasto
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: guasti-del-fuzzing
+          path: fuzz-lavoro/guasti

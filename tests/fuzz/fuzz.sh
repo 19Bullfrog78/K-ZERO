@@ -11,6 +11,7 @@
 #       in locale, a lungo: tests/fuzz/fuzz.sh build-fuzz 3600 ~/kzero-fuzz
 #       un solo bersaglio:  tests/fuzz/fuzz.sh build-fuzz 600 ~/kzero-fuzz pacchetto-corse.json
 # I casi interessanti trovati restano in <lavoro>/corpus/<bersaglio>/: un giro successivo riparte da li'.
+# KZERO_FUZZ_PARALLELI=<n>: n bersagli alla volta (es. il numero di processori).
 set -u
 radice="$(cd "$(dirname "$0")/../.." && pwd)"
 build="$(cd "$1" && pwd)"
@@ -55,14 +56,15 @@ for p in sorted(parole):
     print('"%s"' % p.replace('\\', '\\\\').replace('"', '\\"'))
 PY
 
-esito=0
 riassunto="$lavoro/riassunto.txt"
 touch "$riassunto"
-for b in "${bersagli[@]}"; do
-  corpus="$lavoro/corpus/$b"
-  guasti="$lavoro/guasti/$b"
+paralleli="${KZERO_FUZZ_PARALLELI:-1}"
+
+# Un bersaglio: prepara il corpus, lancia libFuzzer, scrive l'esito in <lavoro>/esito-<bersaglio>.txt.
+prova_bersaglio() {
+  local b="$1" corpus="$lavoro/corpus/$1" guasti="$lavoro/guasti/$1" programma f semi extra registro codice casi copertura
+  local ambiente=()
   mkdir -p "$corpus" "$guasti"
-  ambiente=()
   case "$b" in
     pacchetto-*)
       f="${b#pacchetto-}"
@@ -71,16 +73,16 @@ for b in "${bersagli[@]}"; do
       for semi in "$radice/esempi/demo" "$radice/esempi/demo-numeri" "$radice/tests/esempi/k007-demo"; do
         [ -f "$semi/$f" ] && cp "$semi/$f" "$corpus/seme-$(basename "$semi")-$f"
       done
-      [ -n "$(ls -A "$corpus")" ] || printf '{"schema": "%s", "schema_versione": 1}' "${f%.json}" > "$corpus/seme-minimo"
       ;;
     parametri) programma="$build/tests/fuzz_parametri"; cp "$radice/tests/fuzz/semi/parametri/"* "$corpus/" ;;
     date-e-orari) programma="$build/tests/fuzz_date_e_orari"; cp "$radice/tests/fuzz/semi/date-e-orari/"* "$corpus/" ;;
-    *) echo "bersaglio sconosciuto: $b" >&2; exit 2 ;;
+    *) echo "GUASTO $b: bersaglio sconosciuto" > "$lavoro/esito-$b.txt"; return 2 ;;
   esac
   # Semi in piu' (es. tempi_sosta.json, che il demo non ha) e casi gia' trovati.
   for extra in "$radice/tests/fuzz/semi/$b" "$radice/tests/fuzz/casi/$b"; do
     [ -d "$extra" ] && cp "$extra/"* "$corpus/" 2>/dev/null
   done
+  [ -n "$(ls -A "$corpus")" ] || printf '{"schema": "%s", "schema_versione": 1}' "${f%.json}" > "$corpus/seme-minimo"
   registro="$lavoro/$b.log"
   # -timeout=10: un caso che impiega piu' di 10 secondi e' un guasto (il programma deve finire subito).
   # -rss_limit_mb=2048: un caso che chiede piu' di 2 GB di memoria e' un guasto.
@@ -91,11 +93,22 @@ for b in "${bersagli[@]}"; do
   casi=$(grep -o 'stat::number_of_executed_units: *[0-9]*' "$registro" | grep -o '[0-9]*$' | tail -1)
   copertura=$(grep -o 'cov: [0-9]*' "$registro" | tail -1 | grep -o '[0-9]*')
   if [ $codice -ne 0 ]; then
-    esito=1
-    echo "GUASTO $b (uscita $codice): casi in $guasti" | tee -a "$riassunto"
-    grep -E "ERROR|GUASTO|runtime error|SUMMARY" "$registro" | head -5 | tee -a "$riassunto"
-  else
-    echo "ok $b: ${casi:-?} casi in ${secondi} s, copertura ${copertura:-?}" | tee -a "$riassunto"
+    { echo "GUASTO $b (uscita $codice): casi in $guasti"
+      grep -E "ERROR|GUASTO|runtime error|SUMMARY" "$registro" | head -5; } > "$lavoro/esito-$b.txt"
+    return 1
   fi
+  echo "ok $b: ${casi:-?} casi in ${secondi} s, copertura ${copertura:-?}" > "$lavoro/esito-$b.txt"
+}
+
+# I bersagli, KZERO_FUZZ_PARALLELI alla volta (di base uno).
+for b in "${bersagli[@]}"; do
+  while [ "$(jobs -rp | wc -l)" -ge "$paralleli" ]; do wait -n; done
+  prova_bersaglio "$b" &
+done
+wait
+esito=0
+for b in "${bersagli[@]}"; do
+  cat "$lavoro/esito-$b.txt" | tee -a "$riassunto"
+  grep -q '^ok ' "$lavoro/esito-$b.txt" || esito=1
 done
 exit $esito

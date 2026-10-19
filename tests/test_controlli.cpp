@@ -76,9 +76,12 @@ void solo_avvisi_voluti(const std::vector<Problem>& v) {
         {Check::RecurringShiftPersonFact, "/assenze/2"},
         {Check::PairingNotRespected, "/servizi_fissi/2"},
     };
-    for (const auto& [c, puntatore] : attesi)
+    for (const auto& atteso : attesi) {
+        const Check c = atteso.first;
+        const std::string& puntatore = atteso.second;   // C++17: una lambda non cattura i nomi di [c, puntatore]
         EXPECT_TRUE(std::any_of(v.begin(), v.end(), [&](const Problem& x) { return x.check == c && x.where.pointer == puntatore; }))
             << api::definizione_controllo(c).codice << " " << puntatore << elenco(v);
+    }
     for (const Problem& x : v) EXPECT_EQ(api::definizione_controllo(x.check).livello, api::Livello::Avviso) << elenco(v);
 }
 
