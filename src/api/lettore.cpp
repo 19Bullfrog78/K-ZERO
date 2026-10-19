@@ -610,6 +610,7 @@ void luoghi(const JsonDati& d, Package& pk) {
                                                c.testo(t, "documento"), c.vero(t, "a_voce"), c.testo(t, "nota"),
                                                c.src(p + "/trasbordo")};
         }
+        x.sensitive = c.vero(l, "sensibile");   // versione 2
         x.note = c.testo(l, "nota");
         x.src = c.src(p);
         pk.places.push_back(x);

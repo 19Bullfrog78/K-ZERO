@@ -93,10 +93,23 @@ Json in_json(const DefinizioneComando& comando, const Resoconto& r, const Vista&
         x["calendario"] = s.calendar.code;
         Json gruppi = Json::array();
         for (const auto& g : s.groups) {
+            // Luoghi sensibili (K-009): con il nome dei passeggeri e senza i dati particolari, il legame tra un passeggero
+            // e un luogo sensibile (la destinazione del suo gruppo, la salita, la discesa) e' riservato.
+            const bool legame_riservato =
+                visibile(Classe::Personale, vista.visibilita()) && !visibile(Classe::Particolare, vista.visibilita()) &&
+                std::any_of(g.passengers.begin(), g.passengers.end(), [](const kzero::Passenger& q) { return !q.name.empty(); });
+            const auto luogo_o_riservato = [&](const kzero::Code& luogo) {
+                const kzero::Place* l = idx.place(luogo);
+                return legame_riservato && l && l->sensitive ? Json(kRiservato) : Json(luogo);
+            };
             Json y = Json::object();
             y["codice"] = g.code;
             y["tipo"] = vista.campo(g.src, "tipo", nome_tipo_gruppo(g.type), g.code);
-            y["scuola"] = g.school ? Json(g.school->code) : Json(nullptr);
+            const kzero::School* scuola = g.school ? idx.school(g.school->code) : nullptr;
+            const kzero::Place* luogo_scuola = scuola ? idx.place(scuola->place.code) : nullptr;
+            y["scuola"] = !g.school                                                       ? Json(nullptr)
+                          : legame_riservato && luogo_scuola && luogo_scuola->sensitive ? Json(kRiservato)
+                                                                                        : Json(g.school->code);
             y["persone"] = g.counts == kzero::CountKind::Unknown ? Json(nullptr) : Json(g.total_boarding());
             y["fermate"] = g.stops.size();
             int carrozzine = 0, ausili = 0;
@@ -114,9 +127,9 @@ Json in_json(const DefinizioneComando& comando, const Resoconto& r, const Vista&
                 z["codice"] = q.code;
                 z["nome"] = vista.campo(q.src, "nome", q.name, q.code);
                 z["stato"] = nome_stato(q.status);
-                z["salita"] = q.boarding ? Json(q.boarding->place.code) : Json(nullptr);
+                z["salita"] = q.boarding ? luogo_o_riservato(q.boarding->place.code) : Json(nullptr);
                 z["salita_bloccata"] = q.boarding && q.boarding->mode == kzero::Assignment::Locked;
-                z["discesa"] = q.alighting ? Json(q.alighting->place.code) : Json(nullptr);
+                z["discesa"] = q.alighting ? luogo_o_riservato(q.alighting->place.code) : Json(nullptr);
                 // Il filtro vale per tutti, anche senza motivo: cosi' non si capisce chi ne ha uno.
                 z["motivo"] = vista.campo(q.src, "motivo", q.reason.empty() ? Json(nullptr) : Json(q.reason), q.code);
                 std::string esigenze;

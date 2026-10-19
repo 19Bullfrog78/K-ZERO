@@ -285,7 +285,8 @@ TEST(Api, pacchetto_demo_letto) {
     EXPECT_TRUE(l.problemi.empty());
     EXPECT_TRUE(l.forma_valida());
     EXPECT_EQ(l.versioni.size(), 24u);   // tutti i file del formato tranne tempi_sosta.json
-    for (const char* f : {"calendari.json", "regolamenti.json", "servizi.json", "mezzi.json"}) EXPECT_EQ(l.versioni.at(f), 2) << f;
+    for (const char* f : {"calendari.json", "regolamenti.json", "servizi.json", "mezzi.json", "luoghi.json"})
+        EXPECT_EQ(l.versioni.at(f), 2) << f;
     EXPECT_EQ(l.pacchetto.trips.size(), 26u);
 }
 
@@ -1010,6 +1011,41 @@ TEST(Api, controlli_dichiarano_cosa_rivelano) {
         if (std::regex_match(r, m, riga)) trovate[m[1].str() + " | " + m[2].str()] = m[3].str();
     }
     EXPECT_EQ(trovate, attese);
+}
+
+// Luoghi sensibili (K-009): un messaggio che mostra il nome di un passeggero senza i dati particolari non lo lega a un
+// luogo sensibile (il centro diurno del demo); senza il nome, o con i dati particolari, il luogo si vede. Un luogo non
+// sensibile si vede sempre.
+TEST(Api, luoghi_sensibili_nei_messaggi) {
+    const Memoria m;
+    const Lettura l = leggi_pacchetto(m);
+    ASSERT_EQ(l.versioni.at("luoghi.json"), 2);
+    const auto messaggio = [&l](const std::string& luogo, Visibilita v) {
+        const Presentatore p(&l.pacchetto, &l.versioni, v);
+        return p.messaggio(kzero::Problem{Check::CountsDifferFromPassengers, 3, kzero::Source{},
+                                          {kzero::ref_param("passeggero", kzero::Element::Passenger, "P-D1"),
+                                           kzero::ref_param("luogo", kzero::Element::Place, luogo),
+                                           kzero::ref_param("gruppo", kzero::Element::Group, "G-DIS")}});
+    };
+    EXPECT_EQ(messaggio("L-CENTRO", Visibilita{true, false}),
+              "Il passeggero P-D1 (Bianchi Luca) sale o scende a riservato, che non e' tra le fermate del gruppo G-DIS (Centro "
+              "diurno, andata).");
+    EXPECT_NE(messaggio("L-CENTRO", Visibilita{}).find("sale o scende a L-CENTRO (Valfonda, Centro diurno Il Faro)"), std::string::npos);
+    EXPECT_NE(messaggio("L-CENTRO", Visibilita{true, true}).find("(Bianchi Luca) sale o scende a L-CENTRO"), std::string::npos);
+    EXPECT_NE(messaggio("L-MEDIE", Visibilita{true, false}).find("(Bianchi Luca) sale o scende a L-MEDIE"), std::string::npos);
+    // Una scuola o un centro in un luogo sensibile vale come il luogo.
+    const Presentatore personali(&l.pacchetto, &l.versioni, Visibilita{true, false});
+    const std::string con_scuola = personali.messaggio(kzero::Problem{
+        Check::WaitOutsideRegulation, 0, kzero::Source{},
+        {kzero::ref_param("passeggero", kzero::Element::Passenger, "P-D1"), kzero::ref_param("scuola", kzero::Element::School, "SC-CENTRO"),
+         kzero::ref_param("regolamento", kzero::Element::Regulation, "R-TN"), kzero::ref_param("contratto", kzero::Element::Contract, "CT-SCU"),
+         kzero::number_param("minuti", 30), kzero::number_param("massimo", 25)}});
+    EXPECT_NE(con_scuola.find("L'attesa concordata con riservato"), std::string::npos) << con_scuola;
+    // Un pacchetto con i luoghi nella versione 1 (senza "sensibile") si legge ancora.
+    Memoria v1;
+    v1.sostituisci("luoghi.json", "\"schema_versione\": 2,", "\"schema_versione\": 1,");
+    v1.sostituisci("luoghi.json", ",\n      \"sensibile\": true", "");
+    EXPECT_TRUE(problemi(v1, {}));
 }
 
 // Gli errori K-ERR non nominano mai un file di soli dati personali, in testo e in JSON.

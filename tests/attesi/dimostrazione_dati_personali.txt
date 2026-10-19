@@ -56,10 +56,10 @@ S-SUP-RM  Ritorno superiori a supporto della linea B610
    gruppo G-RM-SUP  tipo: riservato  scuola SC-SUP  persone 5 in 4 fermate  carrozzine: riservato  ausili piegati: riservato  assistente richiesto: riservato
 S-DIS  Trasporto al centro diurno Il Faro
    tipo: riservato  contratto CT-SCU (committente CVA)  calendario CAL-CENTRO
-   gruppo G-DIS  tipo: riservato  scuola SC-CENTRO  persone 3 in 4 fermate  carrozzine: riservato  ausili piegati: riservato  assistente richiesto: riservato
-      passeggero P-D1  Bianchi Luca  attivo  sale a PP-01, scende a L-CENTRO  esigenze: riservato
-      passeggero P-D2  Verdi Anna  attivo  sale a PP-02, scende a L-CENTRO  esigenze: riservato
-      passeggero P-D3  Neri Paolo  attivo  sale a PP-03, scende a L-CENTRO  esigenze: riservato
+   gruppo G-DIS  tipo: riservato  scuola riservato  persone 3 in 4 fermate  carrozzine: riservato  ausili piegati: riservato  assistente richiesto: riservato
+      passeggero P-D1  Bianchi Luca  attivo  sale a PP-01, scende a riservato  esigenze: riservato
+      passeggero P-D2  Verdi Anna  attivo  sale a PP-02, scende a riservato  esigenze: riservato
+      passeggero P-D3  Neri Paolo  attivo  sale a PP-03, scende a riservato  esigenze: riservato
 S-ASILO  Scuola dell'infanzia di Lagobello, andata
    tipo: riservato  contratto CT-ASILO (committente CVA)  calendario CAL-INFANZIA
    gruppo G-ASILO  tipo: riservato  scuola SC-INFANZIA  persone 7 in 3 fermate  carrozzine: riservato  ausili piegati: riservato  assistente richiesto: riservato
@@ -76,8 +76,8 @@ S-LIN-B610  Linea B610 Valfonda - Pradello
    gruppo G-LIN  tipo: riservato  persone non note in 4 fermate  carrozzine: riservato  ausili piegati: riservato  assistente richiesto: riservato
 S-DIS-GIO  Trasporto al centro diurno Il Faro, il giovedi'
    tipo: riservato  contratto CT-SCU (committente CVA)  calendario CAL-CENTRO-GIO
-   gruppo G-DIS-GIO  tipo: riservato  scuola SC-CENTRO  persone 1 in 2 fermate  carrozzine: riservato  ausili piegati: riservato  assistente richiesto: riservato
-      passeggero P-D4  Gialli Marta  attivo  sale a PP-04, scende a L-CENTRO  esigenze: riservato
+   gruppo G-DIS-GIO  tipo: riservato  scuola riservato  persone 1 in 2 fermate  carrozzine: riservato  ausili piegati: riservato  assistente richiesto: riservato
+      passeggero P-D4  Gialli Marta  attivo  sale a PP-04, scende a riservato  esigenze: riservato
 S-LIN-B620  Linea B620 Sorgenta - Montebrino, tutti i giorni
    tipo: riservato  contratto CT-LIN-BETA (committente TPV)  calendario CAL-SEMPRE
    gruppo G-LIN-B620  tipo: riservato  persone non note in 3 fermate  carrozzine: riservato  ausili piegati: riservato  assistente richiesto: riservato

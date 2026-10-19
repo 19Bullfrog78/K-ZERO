@@ -145,6 +145,10 @@ struct Place {
     std::vector<ExternalCode> external;
     std::optional<AccessLimits> limits;
     std::optional<TransferAuthorization> transfer;   // presente = punto di trasbordo autorizzato
+    // Luogo sensibile (K-009, scelta di chi scrive i dati): dire che una persona ci va lascia capire un dato sulla
+    // salute (es. un centro diurno o di terapia). Nelle uscite che mostrano il nome di un passeggero senza i dati
+    // particolari, il legame tra il passeggero e questo luogo e' riservato.
+    bool sensitive = false;
     std::string note;
     Source src;
 };

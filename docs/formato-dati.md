@@ -255,7 +255,9 @@ Nel demo le norme italiane (`N-IT`): patenti e usi dal Codice della strada (artt
 ### luoghi.json
 
 Tutti i luoghi: `luoghi` (pubblici) e `luoghi_privati` (case di persone, dati personali). Schema:
-[docs/schema/luoghi.v1.schema.json](schema/luoghi.v1.schema.json).
+[docs/schema/luoghi.v2.schema.json](schema/luoghi.v2.schema.json); la versione 1
+([docs/schema/luoghi.v1.schema.json](schema/luoghi.v1.schema.json), senza `sensibile`) si legge ancora: per passare alla
+2 si scrive `"schema_versione": 2` e si segnano i luoghi sensibili.
 
 Tipi dei luoghi pubblici: `fermata` (fermata pubblica), `scuola`, `centro` (diurno, terapie, socio-educativo...),
 `rimessa`, `ricovero_esterno`, `punto_sosta` (dove il mezzo aspetta), `punto_trasbordo` (punto di trasbordo
@@ -274,6 +276,7 @@ autorizzato). Tipi dei luoghi privati: `porta_a_porta` (la casa del passeggero, 
 | `luoghi[].limiti_accesso` | no | comune | Misure e massa massime (`lunghezza_massima_m`, `larghezza_massima_m`, `altezza_massima_m`, `massa_massima_t`) e `divieti[]` |
 | `luoghi[].limiti_accesso.divieti[]` | no | comune | Divieto per un `mezzo` (codice) oppure per una `categoria` (M1, M2, M3), con il `motivo` (`cartello`, `esperienza` dell'autista, `altro`) e una `nota` |
 | `luoghi[].trasbordo` | no | comune | Presente = punto di trasbordo autorizzato: `autorizzato_da` (es. "CTA sentita la Provincia"), `data`, `documento` oppure `a_voce: true` (avviso K-CTR-043), `nota` |
+| `luoghi[].sensibile` | no | comune | Versione 2: `true` = luogo sensibile, cioe' dire che una persona ci va lascia capire un dato sulla salute (es. un centro diurno, un centro di terapia). Lo sceglie chi scrive i dati: un doposcuola, anch'esso di tipo `centro`, di solito non lo e' (sotto) |
 | `luoghi[].nota` | no | comune | Note |
 | `luoghi_privati[].codice` | si' | comune | Codice del luogo (resta visibile: e' quello che compare al posto dei dati personali) |
 | `luoghi_privati[].tipo` | si' | comune | `porta_a_porta` oppure `ricovero_esterno` |
@@ -286,6 +289,17 @@ autorizzato). Tipi dei luoghi privati: `porta_a_porta` (la casa del passeggero, 
 
 Un punto di trasbordo e' un luogo di tipo `punto_trasbordo`, oppure un altro luogo pubblico (es. un punto di
 sosta) con il blocco `trasbordo`. Una casa non e' mai un punto di trasbordo.
+
+**Luoghi sensibili** (K-009). Il nome e la posizione di un centro diurno sono dati comuni (e' un luogo pubblico), ma
+"Bianchi Luca scende al centro diurno" e' un dato sulla salute di Bianchi Luca. Per questo, quando un'uscita mostra il
+nome di un passeggero (`--includi-dati-personali`) e non i dati particolari, il **legame** tra quel passeggero e un luogo
+sensibile diventa `"riservato"`: la sua salita, la sua discesa, la destinazione del suo gruppo (la scuola o il centro,
+se sta in un luogo sensibile), e un luogo sensibile nominato in un messaggio insieme a lui. Con
+`--includi-dati-particolari` si vede tutto; senza il nome (di base) il luogo si vede, perche' resta il solo codice del
+passeggero. Non riguarda gli autisti e gli assistenti (lavorare in un centro non e' un dato sulla salute di chi ci
+lavora) ne' i conteggi. Nel demo il centro diurno `L-CENTRO` e' sensibile. I nomi liberi (servizi, gruppi, corse,
+turni, calendari, note) restano responsabilita' di chi scrive i dati: un nome come "Trasporto al centro diurno" accanto
+all'elenco dei passeggeri dice lo stesso (docs/sicurezza.md).
 
 ```json
 {

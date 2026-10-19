@@ -129,10 +129,23 @@ kzero_prova(descrivi_json USCITA 0 FORMATO json SCHEMA descrivi ARGOMENTI descri
 kzero_prova(dimostrazione_testo USCITA 0 FORMATO testo ATTESO ${CMAKE_CURRENT_SOURCE_DIR}/attesi/dimostrazione.txt
             CONTIENE ${FERMATE_PUBBLICHE} NON_CONTIENE ${DATI_PERSONALI} "Deambulatore"
             ARGOMENTI dimostrazione)
+# Luoghi sensibili (K-009): con il nome dei passeggeri e senza i dati particolari, il legame tra un passeggero e il
+# centro diurno (luogo sensibile del demo) e' riservato: la discesa e la scuola del gruppo. Con i dati particolari, o
+# senza i nomi, si vede.
 kzero_prova(dimostrazione_testo_con_interruttore USCITA 0 FORMATO testo
             ATTESO ${CMAKE_CURRENT_SOURCE_DIR}/attesi/dimostrazione_dati_personali.txt
-            CONTIENE ${DATI_PERSONALI} ${FERMATE_PUBBLICHE} NON_CONTIENE "Deambulatore"
+            CONTIENE ${DATI_PERSONALI} ${FERMATE_PUBBLICHE} "Bianchi Luca  attivo  sale a PP-01, scende a riservato"
+                     "gruppo G-DIS  tipo: riservato  scuola riservato"
+            NON_CONTIENE "Deambulatore" "scende a L-CENTRO" "scuola SC-CENTRO"
             ARGOMENTI dimostrazione --includi-dati-personali)
+kzero_prova(dimostrazione_luogo_sensibile_con_tutti_i_dati USCITA 0 FORMATO testo
+            CONTIENE "Bianchi Luca  attivo  sale a PP-01, scende a L-CENTRO" "gruppo G-DIS  tipo: disabili  scuola SC-CENTRO"
+            NON_CONTIENE "scende a riservato" "scuola riservato"
+            ARGOMENTI dimostrazione --includi-dati-personali --includi-dati-particolari)
+kzero_prova(dimostrazione_luogo_sensibile_senza_nomi USCITA 0 FORMATO testo
+            CONTIENE "passeggero P-D1  attivo  sale a PP-01, scende a L-CENTRO" "scuola SC-CENTRO"
+            NON_CONTIENE "Bianchi Luca" "scende a riservato"
+            ARGOMENTI dimostrazione)
 kzero_prova(dimostrazione_testo_dati_particolari USCITA 0 FORMATO testo
             CONTIENE "Deambulatore" "tipo: disabili" "categoria: ibrido" ${FERMATE_PUBBLICHE} NON_CONTIENE ${DATI_PERSONALI}
             ARGOMENTI dimostrazione --includi-dati-particolari)
@@ -141,8 +154,8 @@ kzero_prova(dimostrazione_json USCITA 0 FORMATO json SCHEMA dimostrazione
             NON_CONTIENE ${DATI_PERSONALI} ${DATI_PARTICOLARI}
             ARGOMENTI dimostrazione --formato json)
 kzero_prova(dimostrazione_json_dati_personali USCITA 0 FORMATO json SCHEMA dimostrazione
-            CONTIENE "\"dati_personali_inclusi\": true" ${DATI_PERSONALI} ${FERMATE_PUBBLICHE}
-            NON_CONTIENE ${DATI_PARTICOLARI}
+            CONTIENE "\"dati_personali_inclusi\": true" ${DATI_PERSONALI} ${FERMATE_PUBBLICHE} "\"discesa\": \"riservato\""
+            NON_CONTIENE ${DATI_PARTICOLARI} "\"discesa\": \"L-CENTRO\"" "\"scuola\": \"SC-CENTRO\""
             ARGOMENTI dimostrazione --includi-dati-personali --formato json)
 kzero_prova(dimostrazione_json_dati_particolari USCITA 0 FORMATO json SCHEMA dimostrazione
             CONTIENE "\"dati_particolari_inclusi\": true" ${DATI_PARTICOLARI} ${FERMATE_PUBBLICHE}
