@@ -660,6 +660,14 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Linux" AND CMAKE_NM AND CMAKE_OBJDUMP)
   set_tests_properties(sicurezza.niente_rete_nel_programma PROPERTIES LABELS sicurezza)
 endif()
 
+# Protezioni del compilatore nella versione di rilascio per Linux (DECISIONI.md).
+if(KZERO_PROTEZIONI_ATTIVE AND CMAKE_READELF AND CMAKE_NM)
+  add_test(NAME sicurezza.protezioni_del_compilatore
+           COMMAND ${CMAKE_COMMAND} -DKZERO=$<TARGET_FILE:kzero> -DREADELF=${CMAKE_READELF} -DNM=${CMAKE_NM}
+                   -P ${CMAKE_CURRENT_SOURCE_DIR}/programma/protezioni.cmake)
+  set_tests_properties(sicurezza.protezioni_del_compilatore PROPERTIES LABELS sicurezza)
+endif()
+
 # --- Fuzzing (K-009): prove con dati casuali e deformati (tests/fuzz, docs/sicurezza.md) -------------------------
 # I bersagli stanno in una libreria comune: libFuzzer li usa per cercare guasti (KZERO_FUZZ=ON, clang), rigioca_fuzz
 # per ripetere nelle prove normali ogni guasto gia' trovato (tests/fuzz/casi/<bersaglio>/<caso>) e i file del demo.

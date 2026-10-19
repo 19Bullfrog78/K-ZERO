@@ -1,0 +1,42 @@
+# K-Zero - prova sulle protezioni del compilatore (K-009, DECISIONI.md): nella versione di rilascio per Linux il
+# programma e' rilocabile (PIE), ha le tabelle in sola lettura dopo l'avvio (RELRO completo: GNU_RELRO e BIND_NOW),
+# lo stack non eseguibile, il controllo dello stack (__stack_chk_fail) e i controlli di _FORTIFY_SOURCE (funzioni
+# __*_chk della libreria C).
+# Uso: cmake -DKZERO=<programma> -DREADELF=<readelf> -DNM=<nm> -P protezioni.cmake
+cmake_minimum_required(VERSION 3.25)
+
+function(leggi uscita)
+  execute_process(COMMAND ${ARGN} OUTPUT_VARIABLE testo RESULT_VARIABLE esito)
+  if(esito)
+    message(FATAL_ERROR "${ARGN}: uscita ${esito}")
+  endif()
+  set(${uscita} "${testo}" PARENT_SCOPE)
+endfunction()
+
+leggi(intestazione "${READELF}" -h "${KZERO}")
+if(NOT intestazione MATCHES "Type:[ \t]+DYN")
+  message(FATAL_ERROR "il programma non e' rilocabile (PIE)")
+endif()
+leggi(segmenti "${READELF}" -l -W "${KZERO}")
+if(NOT segmenti MATCHES "GNU_RELRO")
+  message(FATAL_ERROR "manca RELRO (tabelle in sola lettura dopo l'avvio)")
+endif()
+string(REGEX MATCH "GNU_STACK[^\n]*" stack "${segmenti}")
+if(stack STREQUAL "" OR stack MATCHES "RWE")
+  message(FATAL_ERROR "lo stack del programma e' eseguibile: ${stack}")
+endif()
+leggi(dinamica "${READELF}" -d "${KZERO}")
+if(NOT dinamica MATCHES "BIND_NOW" AND NOT dinamica MATCHES "Flags:[^\n]*NOW")
+  message(FATAL_ERROR "manca BIND_NOW (RELRO completo)")
+endif()
+leggi(simboli "${NM}" -D --undefined-only "${KZERO}")
+if(NOT simboli MATCHES "__stack_chk_fail")
+  message(FATAL_ERROR "manca il controllo dello stack (-fstack-protector-strong)")
+endif()
+string(REGEX MATCHALL "__[a-z0-9_]+_chk@" controllati "${simboli}")
+list(REMOVE_ITEM controllati "__stack_chk@")
+list(LENGTH controllati quanti)
+if(quanti EQUAL 0)
+  message(FATAL_ERROR "nessuna funzione controllata da _FORTIFY_SOURCE (__*_chk)")
+endif()
+message(STATUS "protezioni presenti: PIE, RELRO completo, stack non eseguibile, controllo dello stack, ${quanti} funzioni __*_chk")

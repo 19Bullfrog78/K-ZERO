@@ -45,6 +45,42 @@ if(KZERO_SANITIZER OR KZERO_FUZZ)
   add_link_options(-fsanitize=address,undefined)
 endif()
 
+# --- Protezioni del compilatore (K-009) per le versioni di rilascio su Linux -----------------
+# Rendono piu' difficile sfruttare un errore di memoria (DECISIONI.md): controllo dello stack, controlli delle funzioni
+# della libreria C (_FORTIFY_SOURCE, con l'ottimizzazione) e della libreria C++, eseguibile rilocabile (PIE), tabelle
+# in sola lettura (RELRO completo), stack non eseguibile. Ogni opzione si usa solo se il compilatore la conosce. Non
+# con i sanitizer (che hanno i loro controlli). Le equivalenti per Windows arriveranno con il programma per Windows.
+option(KZERO_PROTEZIONI "Protezioni del compilatore nelle versioni di rilascio (Linux)" ON)
+set(KZERO_PROTEZIONI_ATTIVE OFF)
+string(TOUPPER "${CMAKE_BUILD_TYPE}" tipo_build)
+if(KZERO_PROTEZIONI AND NOT KZERO_SANITIZER AND NOT KZERO_FUZZ AND CMAKE_SYSTEM_NAME STREQUAL "Linux"
+   AND CMAKE_CXX_COMPILER_ID MATCHES "GNU|Clang" AND tipo_build MATCHES "^(RELEASE|RELWITHDEBINFO|MINSIZEREL)$")
+  include(CheckCXXCompilerFlag)
+  include(CheckLinkerFlag)
+  include(CheckPIESupported)
+  set(KZERO_PROTEZIONI_ATTIVE ON)
+  foreach(opzione -fstack-protector-strong -fstack-clash-protection -fcf-protection)
+    string(MAKE_C_IDENTIFIER "KZERO_HA${opzione}" variabile)
+    check_cxx_compiler_flag(${opzione} ${variabile})
+    if(${variabile})
+      add_compile_options(${opzione})
+    endif()
+  endforeach()
+  # Il compilatore puo' gia' definire _FORTIFY_SOURCE (es. Ubuntu): si toglie e si rimette, senza avvisi.
+  add_compile_options(-U_FORTIFY_SOURCE -D_FORTIFY_SOURCE=3)
+  add_compile_definitions(_GLIBCXX_ASSERTIONS)
+  check_pie_supported()
+  set(CMAKE_POSITION_INDEPENDENT_CODE ON)
+  check_linker_flag(CXX "LINKER:-z,relro,-z,now" KZERO_HA_RELRO)
+  if(KZERO_HA_RELRO)
+    add_link_options(LINKER:-z,relro,-z,now)
+  endif()
+  check_linker_flag(CXX "LINKER:-z,noexecstack" KZERO_HA_NOEXECSTACK)
+  if(KZERO_HA_NOEXECSTACK)
+    add_link_options(LINKER:-z,noexecstack)
+  endif()
+endif()
+
 # --- Librerie esterne ------------------------------------------------------------
 # Versione fissata e impronta (SHA256) del file scaricato: la compilazione resta uguale nel tempo.
 # SYSTEM: gli avvisi delle librerie non contano come avvisi di K-Zero.
