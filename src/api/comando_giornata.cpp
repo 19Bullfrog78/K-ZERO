@@ -70,12 +70,7 @@ const char* modo_mezzo(kzero::VehicleSource s) {
 class Giornata {
 public:
     Giornata(const kzero::Planner& piano, const Vista& vista)
-        : piano_(piano), idx_(piano.index()), vista_(vista), legame_(&idx_, vista.visibilita()) {}
-
-    // Luoghi sensibili (riservatezza.hpp): l'insieme e' l'intera giornata mostrata, perche' i turni sono legati dal
-    // mezzo, dalla persona, dai trasbordi e dall'assistente a bordo. Ogni luogo mostrato passa da luogo(), che lo
-    // dichiara: costruire una volta tutta la giornata dichiara tutto, prima di costruirla per davvero.
-    const LegameSensibile& legame() const { return legame_; }
+        : piano_(piano), idx_(piano.index()), vista_(vista) {}
 
     // Dove e' scritta un'assegnazione, filtrata come le posizioni dei problemi (riservatezza.hpp): di base non entra mai
     // in un dato personale o particolare; null se non si puo' mostrare.
@@ -88,15 +83,10 @@ public:
         return j;
     }
 
-    // Un luogo: codice e nome (filtrato secondo la classe), oppure "riservato" tutti e due (luogo sensibile).
+    // Un luogo: codice e nome, filtrato secondo la classe (la casa di chi va in un luogo sensibile vale come dato
+    // particolare: vista.campo, riservatezza.hpp).
     Json luogo(const kzero::Code& codice) const {
-        legame_.luogo(codice);
         Json j = Json::object();
-        if (legame_.nasconde_luogo(codice)) {
-            j["codice"] = kRiservato;
-            j["nome"] = kRiservato;
-            return j;
-        }
         j["codice"] = codice;
         const kzero::Place* l = idx_.place(codice);
         j["nome"] = l ? vista_.campo(l->src, "nome", l->name, l->code) : Json(nullptr);
@@ -359,7 +349,6 @@ private:
     const kzero::Planner& piano_;
     const kzero::Index& idx_;
     const Vista& vista_;
-    mutable LegameSensibile legame_;
 };
 
 // Dettaglio di una persona (assenze) da mostrare solo con i dati personali.
@@ -407,12 +396,6 @@ Json in_json(const DefinizioneComando& comando, const Resoconto& r, const Parame
             continue;
         scelti.push_back(&sd);
     }
-    // Luoghi sensibili: prima si dichiara tutto quello che la giornata mostra (vedi Giornata::legame).
-    if (g.legame().attivo()) {
-        if (sola_persona && sola_persona->base_place) (void)g.luogo(sola_persona->base_place->code);
-        for (const kzero::ShiftDay* sd : scelti) (void)g.turno(*sd);
-    }
-
     Json vista_json = Json::object();
     vista_json["tipo"] = sola_persona ? "persona" : solo_mezzo ? "mezzo" : "tutti";
     vista_json["codice"] = sola_persona ? Json(sola_persona->code) : solo_mezzo ? Json(solo_mezzo->code) : Json(nullptr);

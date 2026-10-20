@@ -169,12 +169,16 @@ dell'elenco `luoghi`), **obbligatorio** (si'/no), **classe** (comune, personale,
 
 ### pacchetto.json
 
-Il manifesto: chi, quando, da dove vengono i dati, che livello di dati contiene. Schema:
-[docs/schema/pacchetto.v1.schema.json](schema/pacchetto.v1.schema.json).
+Il manifesto: chi, quando, da dove vengono i dati, che livello di dati contiene, se ha una cassaforte. Schemi:
+[docs/schema/pacchetto.v2.schema.json](schema/pacchetto.v2.schema.json) (versione attuale, K-010) e
+[docs/schema/pacchetto.v1.schema.json](schema/pacchetto.v1.schema.json) (versione 1, ancora letta: e' la versione 2 senza
+`cassaforte` e `porta_a_porta_sensibile`, e il fuso orario senza lunghezza massima; un manifesto 1 vale come "nessuna
+cassaforte" e "il porta a porta non e' sensibile"). Per passare alla 2 si scrive `"schema_versione": 2`, si aggiunge
+`"cassaforte": false` e si sceglie `porta_a_porta_sensibile`.
 
 | Campo | Obbl. | Classe | Significato |
 |---|---|---|---|
-| `codice` | si' | comune | Codice del pacchetto (serve a dire da quale pacchetto ne deriva un altro) |
+| `codice` | si' | comune | Codice del pacchetto (serve a dire da quale pacchetto ne deriva un altro; la cassaforte lo ripete per non finire in un altro pacchetto) |
 | `nome` | no | comune | Nome del pacchetto |
 | `dati_inventati` | no | comune | `true` = dati inventati (esempi, prove): non usarli come dati reali |
 | `aziende[]` | si' | comune | Aziende presenti nel pacchetto (una o piu'): `codice`, `nome` |
@@ -183,14 +187,16 @@ Il manifesto: chi, quando, da dove vengono i dati, che livello di dati contiene.
 | `origine.deriva_da` | no | comune | Codice del pacchetto da cui deriva |
 | `origine.nota` | no | comune | Note sull'origine dei dati |
 | `livello` | si' | comune | `solo_numeri` (consigliato) oppure `completo` |
-| `fuso_orario` | si' | comune | Nome IANA del fuso (es. `Europe/Rome`): gli orari sono orari locali di questo fuso |
+| `fuso_orario` | si' | comune | Nome IANA del fuso (es. `Europe/Rome`), al massimo 64 caratteri (versione 2): gli orari sono orari locali di questo fuso |
 | `valuta` | si' | comune | Codice ISO 4217 (es. `EUR`): i costi sono in questa valuta |
 | `impostazioni.margine_trasbordo_minuti` | si' | comune | Scelta di chi pianifica: la corsa che riceve un trasbordo deve arrivare almeno tanti minuti prima della corsa che consegna |
+| `impostazioni.porta_a_porta_sensibile` | si' (v2) | comune | `true` = chi viaggia porta a porta lascia capire un dato sulla salute (es. in Trentino il porta a porta e' di regola un servizio per persone con disabilita'): nome e casa di ogni passeggero porta a porta valgono come dati particolari, come quelli di chi va in un luogo sensibile (vedi "Luoghi sensibili"). `false` = il porta a porta non dice nulla sulla salute (es. trasporto scolastico in campagna) |
+| `cassaforte` | si' (v2) | comune | `false` = nessuna cassaforte; altrimenti `id` (codice della cassaforte, 32 cifre esadecimali) e `generazione` (cresce a ogni richiusura). Lo scrive il programma (`kzero chiudi`, `kzero richiudi`): vedi [cassaforte.md](cassaforte.md) |
 
 ```json
 {
   "schema": "pacchetto",
-  "schema_versione": 1,
+  "schema_versione": 2,
   "codice": "DEMO-2026",
   "nome": "Pacchetto dimostrativo K-Zero",
   "dati_inventati": true,
@@ -200,7 +206,8 @@ Il manifesto: chi, quando, da dove vengono i dati, che livello di dati contiene.
   "livello": "completo",
   "fuso_orario": "Europe/Rome",
   "valuta": "EUR",
-  "impostazioni": { "margine_trasbordo_minuti": 3 }
+  "impostazioni": { "margine_trasbordo_minuti": 3, "porta_a_porta_sensibile": true },
+  "cassaforte": false
 }
 ```
 

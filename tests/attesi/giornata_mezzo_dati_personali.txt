@@ -17,12 +17,12 @@ T-DIS "Centro diurno"  07:25-09:35 (2 ore e 10 minuti)  azienda ALFA, autista
                 servizi S-DIS (tipo riservato, contratto CT-SCU, committente CVA)
                 calendario CAL-CENTRO "Centro diurno: lunedi', mercoledi' e giovedi'", 139 giorni nel periodo; km a pieno 20,3, a vuoto 5,5; assistente fornito dal committente
       07:40  L-RIMESSA-ALFA  Valfonda, rimessa Autoservizi Alfa  sale l'assistente  a bordo 0
-      07:52  PP-01  Casa Bianchi  salgono 1  km a vuoto 5,5  a bordo 1
-      08:05  PP-02  Casa Verdi  salgono 1  km a pieno 4,8  a bordo 2
+      07:52  PP-01  salgono 1  km a vuoto 5,5  a bordo 1
+      08:05  PP-02  salgono 1  km a pieno 4,8  a bordo 2
       08:20  L-TRASB-PONTE  Ponte di Sorgenta, piazzale  riparte 08:30  riceve il trasbordo T-01 (1)  km a pieno 6,1  a bordo 3
-      08:52  riservato  scendono 3  scende l'assistente  km a pieno 9,4  a bordo 0
+      08:52  L-CENTRO  Valfonda, Centro diurno Il Faro  scendono 3  scende l'assistente  km a pieno 9,4  a bordo 0
                 (fermo 3 minuti)
-   08:55-09:05  Trasferimento a vuoto (VUOTO), da riservato a L-RIMESSA-ALFA (Valfonda, rimessa Autoservizi Alfa), km a vuoto 1
+   08:55-09:05  Trasferimento a vuoto (VUOTO), da L-CENTRO (Valfonda, Centro diurno Il Faro) a L-RIMESSA-ALFA (Valfonda, rimessa Autoservizi Alfa), km a vuoto 1
    09:05-09:35  Pulizia del mezzo (PULIZIA), a L-RIMESSA-ALFA (Valfonda, rimessa Autoservizi Alfa)
    Totale del turno: km a pieno 20,3, a vuoto 6,5; fermo 5 minuti.
 

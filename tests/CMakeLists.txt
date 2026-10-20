@@ -115,8 +115,11 @@ function(kzero_rotto nome)
 endfunction()
 
 # Dati personali e particolari del pacchetto demo: di base non devono comparire nelle uscite.
-set(DATI_PERSONALI "Bianchi Luca" "Esposito Sara" "Gallo Pietro" "Casa Bianchi" "Casa Neri"
-                   "abitazione di un autista" "Spostata da Lagobello")
+# Dal K-010 il nome e la casa di chi va al centro diurno (luogo sensibile del demo) valgono come dati particolari: si
+# vedono solo con tutti e due i parametri (DATI_PERSONALI_LEGATI); gli altri dati personali con il primo.
+set(DATI_PERSONALI_LIBERI "Esposito Sara" "Gallo Pietro" "abitazione di un autista" "Spostata da Lagobello")
+set(DATI_PERSONALI_LEGATI "Bianchi Luca" "Casa Bianchi" "Casa Neri")
+set(DATI_PERSONALI ${DATI_PERSONALI_LIBERI} ${DATI_PERSONALI_LEGATI})
 set(DATI_PARTICOLARI "Deambulatore" "\"disabili\"" "carrozzina, assistente" "carrozzina piegata" "\"ibrido\"")
 # Le fermate pubbliche si vedono sempre.
 set(FERMATE_PUBBLICHE "Pradello, Piazza" "Castelrovo, Alto" "Valfonda, Stazione FVV")
@@ -134,18 +137,16 @@ kzero_prova(descrivi_json USCITA 0 FORMATO json SCHEMA descrivi ARGOMENTI descri
 kzero_prova(dimostrazione_testo USCITA 0 FORMATO testo ATTESO ${CMAKE_CURRENT_SOURCE_DIR}/attesi/dimostrazione.txt
             CONTIENE ${FERMATE_PUBBLICHE} NON_CONTIENE ${DATI_PERSONALI} "Deambulatore"
             ARGOMENTI dimostrazione)
-# Luoghi sensibili (K-009): con il nome dei passeggeri e senza i dati particolari, il legame tra un passeggero e il
-# centro diurno (luogo sensibile del demo) e' riservato: la discesa e la scuola del gruppo. Con i dati particolari, o
-# senza i nomi, si vede.
+# Luoghi sensibili (K-010, regola nuova): con i dati personali e senza quelli particolari il nome e la casa di chi va al
+# centro diurno (luogo sensibile del demo) restano codici; il centro si vede, mai "riservato" al posto di un luogo. Con
+# i dati particolari si vede tutto.
 kzero_prova(dimostrazione_testo_con_interruttore USCITA 0 FORMATO testo
             ATTESO ${CMAKE_CURRENT_SOURCE_DIR}/attesi/dimostrazione_dati_personali.txt
-            CONTIENE ${DATI_PERSONALI} ${FERMATE_PUBBLICHE} "Bianchi Luca  attivo  sale a PP-01, scende a riservato"
-                     "gruppo G-DIS  tipo: riservato  scuola riservato"
-                     # K-009, aggiunta 1: nelle corse con la casa di un passeggero il centro e' riservato; la corsa con
-                     # una casa e nessun luogo sensibile resta com'e'.
-                     "   07:52  PP-01  Casa Bianchi  salgono 1" "   08:52  riservato  scendono 3"
-                     "   08:05  PP-03  Casa Neri  salgono 1"
-            NON_CONTIENE "Deambulatore" "scende a L-CENTRO" "scuola SC-CENTRO" "L-CENTRO  Valfonda"
+            CONTIENE ${DATI_PERSONALI_LIBERI} ${FERMATE_PUBBLICHE} "passeggero P-D1  attivo  sale a PP-01, scende a L-CENTRO"
+                     "gruppo G-DIS  tipo: riservato  scuola SC-CENTRO"
+                     "   07:52  PP-01  salgono 1" "   08:52  L-CENTRO  Valfonda, Centro diurno Il Faro  scendono 3"
+                     "   08:05  PP-03  salgono 1" "PR-01  ricovero esterno  Garage presso l'abitazione di un autista"
+            NON_CONTIENE ${DATI_PERSONALI_LEGATI} "Deambulatore" "scende a riservato" "scuola riservato" "  riservato  scendono"
             ARGOMENTI dimostrazione --includi-dati-personali)
 kzero_prova(dimostrazione_luogo_sensibile_con_tutti_i_dati USCITA 0 FORMATO testo
             CONTIENE "Bianchi Luca  attivo  sale a PP-01, scende a L-CENTRO" "gruppo G-DIS  tipo: disabili  scuola SC-CENTRO"
@@ -164,9 +165,9 @@ kzero_prova(dimostrazione_json USCITA 0 FORMATO json SCHEMA dimostrazione
             NON_CONTIENE ${DATI_PERSONALI} ${DATI_PARTICOLARI}
             ARGOMENTI dimostrazione --formato json)
 kzero_prova(dimostrazione_json_dati_personali USCITA 0 FORMATO json SCHEMA dimostrazione
-            CONTIENE "\"dati_personali_inclusi\": true" ${DATI_PERSONALI} ${FERMATE_PUBBLICHE} "\"discesa\": \"riservato\""
-                     "\"luogo\": \"riservato\"" "\"luogo\": \"PP-03\""
-            NON_CONTIENE ${DATI_PARTICOLARI} "\"discesa\": \"L-CENTRO\"" "\"scuola\": \"SC-CENTRO\"" "\"luogo\": \"L-CENTRO\""
+            CONTIENE "\"dati_personali_inclusi\": true" ${DATI_PERSONALI_LIBERI} ${FERMATE_PUBBLICHE} "\"discesa\": \"L-CENTRO\""
+                     "\"scuola\": \"SC-CENTRO\"" "\"luogo\": \"L-CENTRO\"" "\"luogo\": \"PP-03\"" "\"nome\": \"P-D1\""
+            NON_CONTIENE ${DATI_PARTICOLARI} ${DATI_PERSONALI_LEGATI} "\"discesa\": \"riservato\"" "\"luogo\": \"riservato\""
             ARGOMENTI dimostrazione --includi-dati-personali --formato json)
 kzero_prova(dimostrazione_json_dati_particolari USCITA 0 FORMATO json SCHEMA dimostrazione
             CONTIENE "\"dati_particolari_inclusi\": true" ${DATI_PARTICOLARI} ${FERMATE_PUBBLICHE}
@@ -426,29 +427,27 @@ kzero_prova(giornata_tutti_i_dati_json USCITA 0 FORMATO json SCHEMA giornata
 kzero_prova(giornata_demo_numeri USCITA 0 FORMATO json SCHEMA giornata CONTIENE "\"livello\": \"solo_numeri\""
             ARGOMENTI giornata ${PROJECT_SOURCE_DIR}/esempi/demo-numeri --data 2026-10-22 --formato json)
 
-# K-009, aggiunta 1: case dei passeggeri e luoghi sensibili. Con i dati personali e senza quelli particolari, una
-# giornata che mostra la casa di un passeggero (punto porta a porta con il nome) non mostra il luogo sensibile (il
-# centro diurno L-CENTRO) in nessun punto: corse, attivita' (il trasferimento a vuoto), inizio e fine, presa servizio.
-# Nelle tre viste, in testo e in JSON. "CAL-CENTRO" e' il codice di un calendario: si cerca " L-CENTRO" e "\"L-CENTRO\"".
-set(LUOGO_SENSIBILE_TESTO " L-CENTRO" "Centro diurno Il Faro")
-set(LUOGO_SENSIBILE_JSON "\"L-CENTRO\"" "Valfonda, Centro diurno")
+# Case dei passeggeri e luoghi sensibili (K-010, regola nuova). Con i dati personali e senza quelli particolari, la casa
+# di chi va al centro diurno (L-CENTRO, luogo sensibile del demo) resta un codice in ogni vista e in ogni corsa; il centro
+# si vede sempre (corse, attivita', inizio e fine), mai "riservato" al posto di un luogo. In testo e in JSON.
 kzero_prova(giornata_mezzo_casa_e_centro USCITA 0 FORMATO testo
             ATTESO ${CMAKE_CURRENT_SOURCE_DIR}/attesi/giornata_mezzo_dati_personali.txt
-            CONTIENE "07:52  PP-01  Casa Bianchi  salgono 1" "08:52  riservato  scendono 3"
-                     "Trasferimento a vuoto (VUOTO), da riservato a L-RIMESSA-ALFA"
-            NON_CONTIENE ${LUOGO_SENSIBILE_TESTO}
+            CONTIENE "07:52  PP-01  salgono 1" "08:52  L-CENTRO  Valfonda, Centro diurno Il Faro  scendono 3"
+                     "Trasferimento a vuoto (VUOTO), da L-CENTRO (Valfonda, Centro diurno Il Faro) a L-RIMESSA-ALFA"
+            NON_CONTIENE ${DATI_PERSONALI_LEGATI} "riservato  " "da riservato"
             ARGOMENTI ${GIORNATA_DEMO} --data 2026-10-22 --mezzo ALFA-03 --includi-dati-personali)
 foreach(caso "mezzo;--mezzo;ALFA-03" "persona;--persona;P-C" "tutti")
   list(POP_FRONT caso vista)
   kzero_prova(giornata_${vista}_casa_e_centro_testo USCITA 0 FORMATO testo
-              CONTIENE "PP-01  Casa Bianchi" "08:52  riservato  scendono 3" "da riservato a L-RIMESSA-ALFA"
-              NON_CONTIENE ${LUOGO_SENSIBILE_TESTO}
+              CONTIENE "PP-01  salgono 1" "08:52  L-CENTRO  Valfonda, Centro diurno Il Faro  scendono 3"
+                       "da L-CENTRO (Valfonda, Centro diurno Il Faro) a L-RIMESSA-ALFA"
+              NON_CONTIENE ${DATI_PERSONALI_LEGATI} "riservato  " "da riservato"
               ARGOMENTI ${GIORNATA_DEMO} --data 2026-10-22 ${caso} --includi-dati-personali)
   kzero_prova(giornata_${vista}_casa_e_centro_json USCITA 0 FORMATO json SCHEMA giornata
-              CONTIENE "Casa Bianchi" "\"luogo\": \"riservato\"" "\"codice\": \"riservato\""
-              NON_CONTIENE ${LUOGO_SENSIBILE_JSON}
+              CONTIENE "\"luogo\": \"PP-01\"" "\"luogo\": \"L-CENTRO\"" "Valfonda, Centro diurno Il Faro"
+              NON_CONTIENE ${DATI_PERSONALI_LEGATI} "\"luogo\": \"riservato\"" "\"codice\": \"riservato\""
               ARGOMENTI ${GIORNATA_DEMO} --data 2026-10-22 ${caso} --includi-dati-personali --formato json)
-  # Con i dati particolari il centro si vede, e anche di base (la casa si vede solo con il codice).
+  # Con i dati particolari si vede anche la casa; di base la casa e' un codice e il centro si vede.
   kzero_prova(giornata_${vista}_casa_e_centro_tutti_i_dati USCITA 0 FORMATO testo
               CONTIENE "PP-01  Casa Bianchi" "08:52  L-CENTRO  Valfonda, Centro diurno Il Faro  scendono 3"
                        "da L-CENTRO (Valfonda, Centro diurno Il Faro) a L-RIMESSA-ALFA"
@@ -457,25 +456,23 @@ foreach(caso "mezzo;--mezzo;ALFA-03" "persona;--persona;P-C" "tutti")
               CONTIENE "\"luogo\": \"L-CENTRO\"" "\"luogo\": \"PP-01\"" NON_CONTIENE "Casa Bianchi"
               ARGOMENTI ${GIORNATA_DEMO} --data 2026-10-22 ${caso} --formato json)
 endforeach()
-# Una corsa con una casa e nessun luogo sensibile resta com'e' (l'auto elettrica, ramo di Montebrino).
-kzero_prova(giornata_casa_senza_luogo_sensibile USCITA 0 FORMATO testo
-            CONTIENE "08:05  PP-03  Casa Neri  salgono 1" "08:25  L-TRASB-PONTE  Ponte di Sorgenta, piazzale  consegna il trasbordo T-01"
+# L'auto elettrica porta Neri al trasbordo per il centro: la sua casa resta un codice anche se questa corsa non arriva
+# al centro (con la regola del K-009 si leggeva "Casa Neri"). Il garage presso la casa di un autista si vede.
+kzero_prova(giornata_casa_legata_su_una_corsa_senza_centro USCITA 0 FORMATO testo
+            CONTIENE "08:05  PP-03  salgono 1" "08:25  L-TRASB-PONTE  Ponte di Sorgenta, piazzale  consegna il trasbordo T-01"
                      "Comincia a PR-01 (Garage presso l'abitazione di un autista)"
-            NON_CONTIENE "riservato  "
+            NON_CONTIENE "Casa Neri" "riservato  "
             ARGOMENTI ${GIORNATA_DEMO} --data 2026-10-22 --mezzo ALFA-04 --includi-dati-personali)
-# Luogo di inizio e di fine, presa servizio e attivita': con la rimessa segnata sensibile (solo in questa prova) la
-# giornata di P-C non la mostra da nessuna parte, neppure nel turno della sera, che non porta nessuno a casa.
+# Un luogo segnato sensibile si vede sempre (qui la rimessa, solo in questa prova): non lega nessuno, perche' nessun
+# passeggero ci va.
 kzero_prova(giornata_inizio_e_fine_in_un_luogo_sensibile USCITA 0 FORMATO testo BASE ${KZERO_DEMO}
             MODIFICA IMPOSTA luoghi.json /luoghi/0/sensibile true
-            CONTIENE "presa servizio a riservato" "Comincia a riservato, finisce a riservato"
-                     "Presa servizio con il controllo del mezzo (PRESA), a riservato" "07:40  riservato  sale l'assistente"
-                     "Spostamento della persona senza il mezzo (A-PIEDI), da riservato a F-VALFONDA-PIAZZA"
-            NON_CONTIENE "L-RIMESSA-ALFA" "rimessa Autoservizi Alfa"
+            CONTIENE "presa servizio a L-RIMESSA-ALFA" "Comincia a L-RIMESSA-ALFA" "07:40  L-RIMESSA-ALFA"
+            NON_CONTIENE "a riservato" "riservato  " "Casa Bianchi"
             ARGOMENTI giornata @PACCHETTO@ --data 2026-10-22 --persona P-C --includi-dati-personali)
 kzero_prova(giornata_inizio_e_fine_in_un_luogo_sensibile_json USCITA 0 FORMATO json SCHEMA giornata BASE ${KZERO_DEMO}
             MODIFICA IMPOSTA luoghi.json /luoghi/0/sensibile true
-            CONTIENE "\"codice\": \"riservato\"" "\"luogo\": \"riservato\"" "Casa Bianchi"
-            NON_CONTIENE "L-RIMESSA-ALFA" "rimessa Autoservizi Alfa"
+            CONTIENE "\"codice\": \"L-RIMESSA-ALFA\"" NON_CONTIENE "\"codice\": \"riservato\"" "\"luogo\": \"riservato\"" "Casa Bianchi"
             ARGOMENTI giornata @PACCHETTO@ --data 2026-10-22 --persona P-C --includi-dati-personali --formato json)
 # Un luogo sensibile in una giornata senza case di passeggeri si vede (la scuola media, segnata sensibile solo qui).
 kzero_prova(giornata_luogo_sensibile_senza_case USCITA 0 FORMATO testo BASE ${KZERO_DEMO}
@@ -651,10 +648,15 @@ kzero_prova(avviso_file_non_riconosciuto USCITA 0 FORMATO testo BASE ${KZERO_DEM
 kzero_rotto(classi_trasbordo_in_una_casa FORMATO testo MODIFICA IMPOSTA corse.json /corse/4/passaggi/2/luogo "\"PP-01\""
             PROBLEMI "K-CTR-023|corse.json|/corse/4/passaggi/2/trasbordi/0" CONTIENE "avviene in PP-01,"
             NON_CONTIENE "Casa Bianchi")
+# PP-01 e' la casa di chi va al centro diurno: dal K-010 il nome si vede solo con anche i dati particolari.
 kzero_prova(classi_trasbordo_in_una_casa_dati_personali USCITA 1 FORMATO json SCHEMA controlla RESOCONTO BASE ${KZERO_DEMO}
             MODIFICA IMPOSTA corse.json /corse/4/passaggi/2/luogo "\"PP-01\""
-            PROBLEMI "K-CTR-023|corse.json|/corse/4/passaggi/2/trasbordi/0" CONTIENE "PP-01 (Casa Bianchi)"
+            PROBLEMI "K-CTR-023|corse.json|/corse/4/passaggi/2/trasbordi/0" CONTIENE "avviene in PP-01," NON_CONTIENE "Casa Bianchi"
             ARGOMENTI controlla @PACCHETTO@ --includi-dati-personali --formato json)
+kzero_prova(classi_trasbordo_in_una_casa_tutti_i_dati USCITA 1 FORMATO json SCHEMA controlla RESOCONTO BASE ${KZERO_DEMO}
+            MODIFICA IMPOSTA corse.json /corse/4/passaggi/2/luogo "\"PP-01\""
+            PROBLEMI "K-CTR-023|corse.json|/corse/4/passaggi/2/trasbordi/0" CONTIENE "PP-01 (Casa Bianchi)"
+            ARGOMENTI controlla @PACCHETTO@ --includi-dati-personali --includi-dati-particolari --formato json)
 # Dal K-009 un problema che rivela un dato particolare (carrozzine, assistente, tipo "disabili") di base non si elenca:
 # una riga sola, senza codice ne' posizione, con quanti errori e avvisi sono; il codice di uscita non cambia.
 kzero_rotto(classi_carrozzine FORMATO testo MODIFICA IMPOSTA servizi.json /servizi/3/domanda/gruppi/0/fermate/0/carrozzine 0

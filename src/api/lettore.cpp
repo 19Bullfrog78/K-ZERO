@@ -514,6 +514,11 @@ void manifesto(const JsonDati& d, Package& pk) {
     m.timezone = d.at("fuso_orario").get<std::string>();
     m.currency = d.at("valuta").get<std::string>();
     m.transfer_margin_min = d.at("impostazioni").at("margine_trasbordo_minuti").get<int>();
+    m.door_to_door_sensitive = c.vero(d.at("impostazioni"), "porta_a_porta_sensibile");   // versione 2
+    if (const auto v = d.find("cassaforte"); v != d.end() && v->is_object()) {               // versione 2
+        m.vault_id = v->at("id").get<std::string>();
+        m.vault_generation = v->at("generazione").get<int>();
+    }
     m.src = c.src("");
 }
 

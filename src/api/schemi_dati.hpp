@@ -62,6 +62,9 @@ public:
         // dell'elemento comune a cui appartiene e dove sta, es. {"campo": "persona", "file": "persone.json",
         // "elenco": "persone"}.
         const JsonDati* titolare = nullptr;
+        // "x-kzero-trasportato" (K-010): l'elemento e' un passeggero ("passeggero") o la casa di una persona ("casa"),
+        // i cui dati personali valgono come particolari se e' legato a un luogo sensibile (riservatezza.hpp).
+        const JsonDati* trasportato = nullptr;
     };
     // I livelli del percorso: tanti quanti i pezzi del percorso piu' uno. Dopo un pezzo non previsto, anche i livelli
     // seguenti sono non previsti.

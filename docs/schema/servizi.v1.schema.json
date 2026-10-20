@@ -220,6 +220,7 @@
     "passeggero": {
       "description": "Un passeggero (solo nel livello completo).",
       "type": "object",
+      "x-kzero-trasportato": "passeggero",
       "additionalProperties": false,
       "required": ["codice", "stato"],
       "properties": {

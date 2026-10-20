@@ -7,6 +7,9 @@
 
 namespace kzero::api {
 
+Vista::Vista(const Lettura& lettura, Visibilita visibilita)
+    : lettura_(lettura), visibilita_(visibilita), indice_(lettura.pacchetto), legame_(&indice_) {}
+
 Classe Vista::classe(const kzero::Source& elemento, const std::string& campo) const {
     const auto v = lettura_.versioni.find(elemento.file);
     if (v == lettura_.versioni.end()) return Classe::Particolare;
@@ -15,7 +18,10 @@ Classe Vista::classe(const kzero::Source& elemento, const std::string& campo) co
 }
 
 Json Vista::campo(const kzero::Source& elemento, const std::string& campo, Json valore, const std::string& codice) const {
-    return filtra(classe(elemento, campo), std::move(valore), codice);
+    const Classe c = classe(elemento, campo);
+    if (c == Classe::Personale && !legame_.nessuno() && legame_.legato(trasportato(elemento, lettura_), codice))
+        return visibile(Classe::Personale, visibilita_) && visibile(Classe::Particolare, visibilita_) ? valore : Json(codice);
+    return filtra(c, std::move(valore), codice);
 }
 
 Json Vista::filtra(Classe c, Json valore, const std::string& codice) const {

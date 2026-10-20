@@ -126,6 +126,7 @@ std::vector<SchemiDati::Livello> SchemiDati::livelli(const std::string& nome, in
         for (const JsonDati* x : {d, &n}) {   // la marcatura accanto al campo vale piu' di quella della definizione
             if (const auto c = marcatura(*x)) l.classe = c;
             if (x->is_object() && x->contains("x-kzero-titolare")) l.titolare = &x->at("x-kzero-titolare");
+            if (x->is_object() && x->contains("x-kzero-trasportato")) l.trasportato = &x->at("x-kzero-trasportato");
         }
         return std::make_pair(l, d);
     };

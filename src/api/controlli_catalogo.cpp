@@ -504,6 +504,7 @@ struct Presentatore::Dati {
     const std::map<std::string, int>* versioni = nullptr;
     Visibilita visibilita;
     std::optional<kzero::Index> indice;
+    std::optional<LegameSensibile> legame;   // passeggeri e case legati a un luogo sensibile (riservatezza.hpp)
 };
 
 Presentatore::Presentatore(const kzero::Package* pacchetto, const std::map<std::string, int>* versioni, Visibilita visibilita)
@@ -511,7 +512,10 @@ Presentatore::Presentatore(const kzero::Package* pacchetto, const std::map<std::
     dati_->pacchetto = pacchetto;
     dati_->versioni = versioni;
     dati_->visibilita = visibilita;
-    if (pacchetto) dati_->indice.emplace(*pacchetto);
+    if (pacchetto) {
+        dati_->indice.emplace(*pacchetto);
+        dati_->legame.emplace(&*dati_->indice);
+    }
 }
 
 Presentatore::~Presentatore() = default;
@@ -577,7 +581,12 @@ std::string Presentatore::riferimento(kzero::Element e, const std::string& codic
     const std::string schema = src->file.substr(0, src->file.rfind(".json"));
     if (versione == dati_->versioni->end()) return codice;
     const Classe classe = SchemiDati::incorporati().classe(schema, versione->second, src->pointer + "/" + campo);
-    return visibile(classe, dati_->visibilita) ? codice + " (" + nome + ")" : codice;
+    // Il nome di un passeggero o di una casa legati a un luogo sensibile vale come dato particolare (riservatezza.hpp).
+    const bool legato = classe == Classe::Personale && dati_->legame &&
+                        ((e == kzero::Element::Passenger && dati_->legame->passeggero(codice)) ||
+                         (e == kzero::Element::Place && dati_->legame->casa(codice)));
+    const bool mostra = visibile(classe, dati_->visibilita) && (!legato || visibile(Classe::Particolare, dati_->visibilita));
+    return mostra ? codice + " (" + nome + ")" : codice;
 }
 
 std::string Presentatore::messaggio(const kzero::Problem& p) const {
@@ -588,20 +597,6 @@ std::string Presentatore::messaggio(const kzero::Problem& p) const {
     const std::string& modello = personale != d.personali.end() && !visibile(Classe::Personale, dati_->visibilita)
                                      ? personale->second
                                      : d.messaggi[static_cast<std::size_t>(p.variant)];
-    // Luoghi sensibili (riservatezza.hpp): l'insieme e' il messaggio. Se nomina un passeggero o la sua casa e non
-    // mostra i dati particolari, i luoghi sensibili che nomina (e le scuole o i centri che ci stanno) sono riservati.
-    LegameSensibile legame(dati_->indice ? &*dati_->indice : nullptr, dati_->visibilita);
-    for (const kzero::Param& x : p.params) {
-        if (x.kind != kzero::Param::Kind::Ref) continue;
-        if (x.element == kzero::Element::Passenger) legame.passeggero(x.text);
-        if (x.element == kzero::Element::Place) legame.luogo(x.text);
-    }
-    const auto sensibile = [&legame](const kzero::Param& x) {
-        if (x.kind != kzero::Param::Kind::Ref) return false;
-        if (x.element == kzero::Element::Place) return legame.nasconde_luogo(x.text);
-        if (x.element == kzero::Element::School) return legame.nasconde_scuola(x.text);
-        return false;
-    };
     std::string out;
     for (std::size_t i = 0; i < modello.size(); ++i) {
         if (modello[i] != '{') {
@@ -616,9 +611,7 @@ std::string Presentatore::messaggio(const kzero::Problem& p) const {
             (it->sensitivity == kzero::Param::Sensitivity::Personal && !visibile(Classe::Personale, dati_->visibilita)) ||
             (it->sensitivity == kzero::Param::Sensitivity::Particular && !visibile(Classe::Particolare, dati_->visibilita));
         std::string valore;
-        if (sensibile(*it)) {
-            valore = kRiservato;
-        } else if (nascosto) {
+        if (nascosto) {
             valore = it->hidden.empty() ? std::string(kRiservato) : it->hidden;
         } else {
             switch (it->kind) {
