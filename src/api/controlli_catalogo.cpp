@@ -449,10 +449,70 @@ const std::vector<DefinizioneControllo>& catalogo_controlli() {
             {Check::ContractWithoutRegulation, "K-CTR-046", A, N, "Contratto senza regolamento valido per una parte del periodo",
              {"Il regolamento {regolamento} non vale per una parte del periodo del contratto {contratto}: dal {dal} al {al}."}},
         };
+        // Controlli che usano dati personali o particolari per giudicare altro (K-010, "non verificato" per chi non li puo'
+        // aprire). P = personali, Q = particolari.
+        struct Richiede {
+            bool personali, particolari;
+        };
+        const Richiede P{true, false}, Q{false, true}, PQ{true, true};
+        // Il piano del giorno (turni.hpp: chi fa ogni turno e con quale mezzo) toglie la persona o il mezzo per un fatto con le
+        // date: assenze, disponibilita', abilitazioni e autorizzazioni scadute (dati personali), usi del mezzo e
+        // autorizzazioni richiesti per tipo di servizio (dato particolare). Tutti i controlli fatti sulla persona o sul mezzo
+        // del piano richiedono quindi le due classi.
+        const std::map<Check, Richiede> richiede = {
+            {Check::NumbersOnlyPersonalData, PQ},     // la presenza di dati personali (anche quelli legati a luoghi sensibili)
+            {Check::PlaceWithoutCoordinates, PQ},     // le coordinate dei luoghi privati (le case legate stanno con i particolari)
+            {Check::DwellTimesUndefined, Q},          // chi viaggia (tipi dei gruppi)
+            {Check::MaxRideUndefined, Q},             // regole dei regolamenti per tipo di servizio e di gruppo
+            {Check::AssistantNotRequested, Q},        // esigenze dei passeggeri
+            {Check::ExpiresInPeriod, P},              // scadenze delle abilitazioni delle persone
+            {Check::CompanyWithoutNorms, P},          // abilitazioni delle persone
+            // Sul piano del giorno:
+            {Check::ShiftVehicleInconsistent, PQ},    // mezzo abituale della persona del giorno
+            {Check::PersonOverlap, PQ},
+            {Check::VehicleOverlap, PQ},
+            {Check::DayAssignmentAgainstFact, PQ},
+            {Check::DriverWithoutLicence, PQ},
+            {Check::VehicleWithoutUseForService, PQ},
+            {Check::PairingFixedViolated, PQ},
+            {Check::PersonWithoutCompetence, PQ},     // anche competenze delle persone e competenze richieste
+            {Check::VehicleAgainstConstraint, PQ},
+            {Check::OtherCompanyWithoutLoan, PQ},
+            {Check::BlockedTripOtherVehicle, PQ},
+            {Check::PersonRoleMismatch, PQ},
+            {Check::RecurringShiftPersonFact, PQ},
+            {Check::RecurringShiftVehicleFact, PQ},
+            {Check::PreferenceNotRespected, PQ},
+            {Check::PairingNotRespected, PQ},
+            {Check::ShiftVehicleToAssign, PQ},
+            {Check::PersonWithoutShifts, PQ},
+            {Check::VehicleNeverUsed, PQ},
+            {Check::EscortWithoutPerson, PQ},
+            {Check::EscortProviderDiffers, PQ},
+        };
+        for (DefinizioneControllo& d : c) {
+            const auto it = richiede.find(d.controllo);
+            if (it == richiede.end()) continue;
+            d.richiede_personali = it->second.personali;
+            d.richiede_particolari = it->second.particolari;
+        }
         std::sort(c.begin(), c.end(), [](const DefinizioneControllo& a, const DefinizioneControllo& b) { return a.codice < b.codice; });
         return c;
     }();
     return catalogo;
+}
+
+bool verificabile(const DefinizioneControllo& d, int variante, Classe classe_posizione, bool in_trasportato,
+                  const Visibilita& leggibili) {
+    if ((d.richiede_personali && !leggibili.personali) || (d.richiede_particolari && !leggibili.particolari)) return false;
+    // I dati personali dei passeggeri e delle case legati a un luogo sensibile stanno con i particolari: senza i particolari
+    // un problema su un dato personale di un passeggero o di una casa puo' riguardarli.
+    const auto legge = [&](Classe c) {
+        if (c == Classe::Comune) return true;
+        if (c == Classe::Personale) return leggibili.personali && (leggibili.particolari || !in_trasportato);
+        return leggibili.particolari;
+    };
+    return legge(d.rivela_variante(variante)) && legge(classe_posizione);
 }
 
 const DefinizioneControllo& definizione_controllo(Check c) {

@@ -1,0 +1,45 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "kzero - registro, versione 1",
+  "description": "Uscita di 'kzero registro <cartella> --utente CODICE --formato json' (K-010): le voci del registro degli accessi alla cassaforte, dopo il controllo della catena (una voce tolta, cambiata o spostata ferma il comando). Ogni voce: numero, ora UTC (orologio del PC), utente, comando, classi aperte e mostrate, nota senza dati personali. La lettura stessa e' l'ultima voce. Spiegato in docs/cassaforte.md.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "schema_versione", "utente", "pacchetto", "cassaforte", "catena_controllata", "conservazione", "conservazione_scaduta", "voci"],
+  "definitions": {
+    "codice": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$" },
+    "classi": { "type": "array", "uniqueItems": true, "items": { "enum": ["personali", "particolari"] } }
+  },
+  "properties": {
+    "schema": { "const": "registro" },
+    "schema_versione": { "const": 1 },
+    "utente": { "$ref": "#/definitions/codice" },
+    "pacchetto": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["codice", "nome"],
+      "properties": { "codice": { "type": "string", "minLength": 1 }, "nome": { "type": "string" } }
+    },
+    "cassaforte": { "type": "string", "pattern": "^[0-9a-f]{32}$" },
+    "catena_controllata": { "const": true },
+    "conservazione": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$" },
+    "conservazione_scaduta": { "type": "boolean" },
+    "voci": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["numero", "ora", "utente", "comando", "classi_aperte", "classi_mostrate", "nota"],
+        "properties": {
+          "numero": { "type": "integer", "minimum": 1 },
+          "ora": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}Z$" },
+          "utente": { "$ref": "#/definitions/codice" },
+          "comando": { "type": "string", "minLength": 1 },
+          "classi_aperte": { "$ref": "#/definitions/classi" },
+          "classi_mostrate": { "$ref": "#/definitions/classi" },
+          "nota": { "type": "string" }
+        }
+      }
+    }
+  }
+}

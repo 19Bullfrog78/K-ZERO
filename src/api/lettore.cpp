@@ -186,6 +186,25 @@ FileLetto PacchettoIncorporato::leggi(const std::string& nome, std::uintmax_t ma
     return out;
 }
 
+std::vector<Sorgente::Voce> PacchettoInMemoria::voci() const {
+    std::vector<Voce> v;
+    for (const auto& [nome, testo] : file) v.push_back({nome, false});
+    return v;
+}
+
+FileLetto PacchettoInMemoria::leggi(const std::string& nome, std::uintmax_t massimo) const {
+    FileLetto out;
+    const auto it = file.find(nome);
+    if (it == file.end()) return out;
+    if (it->second.size() > massimo) {
+        out.esito = FileLetto::Esito::TroppoGrande;
+        return out;
+    }
+    out.esito = FileLetto::Esito::Letto;
+    out.testo = it->second;
+    return out;
+}
+
 bool Lettura::forma_valida() const {
     // Gli avvisi (es. un file non riconosciuto, dati in chiaro) non fermano i controlli sul contenuto.
     return std::all_of(problemi.begin(), problemi.end(),

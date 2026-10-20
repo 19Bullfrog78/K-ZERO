@@ -2,9 +2,9 @@
 // Il resoconto va sempre sull'uscita standard: e' il risultato del comando anche quando trova errori nei dati
 // (allora il codice di uscita e' 1). Un errore del programma (es. cartella inesistente) va invece sull'uscita
 // di errore con un codice K-ERR, e il resoconto resta vuoto.
-#include <filesystem>
 #include <string>
 
+#include "accesso.hpp"
 #include "controllo.hpp"
 #include "errori.hpp"
 #include "esecutori.hpp"
@@ -71,8 +71,15 @@ Conteggi conteggi(const Resoconto& r) {
 // Quali dati personali e particolari contiene il pacchetto (quanti valori, mai i valori): utile per sapere cosa e'
 // coinvolto se il pacchetto finisce nelle mani sbagliate (docs/sicurezza.md). Di base solo i totali; file per file con
 // --includi-dati-personali (il nome di un file di soli dati personali, es. assenze.json, dice gia' qualcosa).
-Lettura::ValoriRiservati totali_riservati(const Lettura& l) {
+// Con la cassaforte (K-010): quelli contati alla chiusura (tutti, anche delle classi che l'utente non apre) piu' quelli
+// scritti in chiaro nei file normali.
+Lettura::ValoriRiservati totali_riservati(const Lettura& l, const accesso::LetturaPerComando* c = nullptr) {
     Lettura::ValoriRiservati t;
+    if (c && c->cassaforte) {
+        t.personali = c->cassaforte->valori.personali + l.in_chiaro.personali;
+        t.particolari = c->cassaforte->valori.particolari + l.in_chiaro.particolari;
+        return t;
+    }
     for (const auto& [file, v] : l.riservati) {
         t.personali += v.personali;
         t.particolari += v.particolari;
@@ -80,10 +87,17 @@ Lettura::ValoriRiservati totali_riservati(const Lettura& l) {
     return t;
 }
 
-std::string valori_riservati_testo(const Lettura& l, const Visibilita& visibilita) {
-    const Lettura::ValoriRiservati tot = totali_riservati(l);
+const char* nome_classe(Classe c) { return c == Classe::Particolare ? "particolari" : "personali"; }
+
+std::string valori_riservati_testo(const Lettura& l, const Visibilita& visibilita, const accesso::LetturaPerComando& cf) {
+    const Lettura::ValoriRiservati tot = totali_riservati(l, &cf);
     if (tot.personali + tot.particolari == 0) return "nessuno";
     std::string t = std::to_string(tot.personali) + " valori personali e " + std::to_string(tot.particolari) + " particolari";
+    if (cf.cassaforte) {
+        t += ", nella cassaforte";
+        if (l.in_chiaro.personali + l.in_chiaro.particolari > 0)
+            t += " (" + std::to_string(l.in_chiaro.personali + l.in_chiaro.particolari) + " in chiaro nei file normali)";
+    }
     if (!visibilita.personali) return t + " (file per file: --includi-dati-personali)";
     std::string per_file;
     for (const FileDati& f : file_dati()) {
@@ -95,7 +109,7 @@ std::string valori_riservati_testo(const Lettura& l, const Visibilita& visibilit
     return t + ": " + per_file;
 }
 
-std::string in_testo(const Resoconto& r, const Visibilita& visibilita) {
+std::string in_testo(const Resoconto& r, const Visibilita& visibilita, const accesso::LetturaPerComando& cf) {
     std::string t;
     const kzero::Manifest& m = r.lettura.pacchetto.manifest;
     if (r.lettura.usato("pacchetto.json")) {
@@ -104,6 +118,9 @@ std::string in_testo(const Resoconto& r, const Visibilita& visibilita) {
     } else {
         t += "Controllo del pacchetto (manifesto non letto)\n";
     }
+    if (cf.cassaforte)
+        t += "Cassaforte aperta dall'utente " + cf.utente + " (" + cassaforte::testo_permessi_breve(cf.permessi) +
+             "); conservazione dei dati fino al " + cf.cassaforte->conservazione + (cf.scaduta ? " (data passata)" : "") + ".\n";
     // Una riga sola per i problemi che rivelano un dato particolare: senza codice ne' posizione, solo quanti sono.
     if (r.errori_riservati + r.avvisi_riservati > 0)
         t += "Problemi sui dati particolari (salute), non elencati uno per uno: " +
@@ -117,7 +134,14 @@ std::string in_testo(const Resoconto& r, const Visibilita& visibilita) {
     if (r.problemi.empty() && r.errori_riservati + r.avvisi_riservati == 0) t += "Nessun problema.\n";
     if (!r.contenuto_controllato)
         t += "Controlli sul contenuto non eseguiti: prima vanno corretti gli errori nella forma dei file.\n";
-    t += "Dati personali e particolari nel pacchetto: " + valori_riservati_testo(r.lettura, visibilita) + ".\n";
+    for (const Resoconto::NonVerificati& nv : r.non_verificati) {
+        std::string codici;
+        for (const std::string& x : nv.controlli) codici += (codici.empty() ? "" : ", ") + x;
+        t += std::string("Non verificato (servono i dati ") + nome_classe(nv.classe) + ", che l'utente non puo' aprire): i " +
+             "controlli sui dati " + nome_classe(nv.classe) + " stessi e quelli che li usano (" + codici +
+             "). I loro risultati non sono ne' tra i problemi ne' nel riepilogo.\n";
+    }
+    t += "Dati personali e particolari nel pacchetto: " + valori_riservati_testo(r.lettura, visibilita, cf) + ".\n";
     const Conteggi c = conteggi(r);
     t += "Riepilogo: " + quanti_opz(c.aziende, "azienda", "aziende", "non lette") + ", " +
          quanti_opz(c.luoghi, "luogo", "luoghi", "non letti") + ", " + quanti_opz(c.servizi, "servizio", "servizi", "non letti") +
@@ -129,7 +153,7 @@ std::string in_testo(const Resoconto& r, const Visibilita& visibilita) {
     return t;
 }
 
-std::string in_json(const DefinizioneComando& comando, const Resoconto& r, const Visibilita& v) {
+std::string in_json(const DefinizioneComando& comando, const Resoconto& r, const Visibilita& v, const accesso::LetturaPerComando& cf) {
     Json j = documento(comando.schema);
     if (r.lettura.usato("pacchetto.json")) {
         const kzero::Manifest& m = r.lettura.pacchetto.manifest;
@@ -143,6 +167,19 @@ std::string in_json(const DefinizioneComando& comando, const Resoconto& r, const
     }
     j["dati_personali_inclusi"] = v.personali;
     j["dati_particolari_inclusi"] = v.particolari;
+    if (cf.cassaforte) {
+        Json x = Json::object();
+        x["utente"] = cf.utente;
+        x["permessi"] = accesso::classi(cf.permessi.personali, cf.permessi.particolari);
+        x["conservazione"] = cf.cassaforte->conservazione;
+        x["conservazione_scaduta"] = cf.scaduta;
+        j["cassaforte"] = x;
+    } else {
+        j["cassaforte"] = nullptr;
+    }
+    Json nv = Json::array();
+    for (const Resoconto::NonVerificati& x : r.non_verificati) nv.push_back({{"servono", nome_classe(x.classe)}, {"controlli", x.controlli}});
+    j["non_verificato"] = nv;
     j["controlli_sul_contenuto"] = r.contenuto_controllato;
     j["problemi_riservati"] = {{"errori", r.errori_riservati}, {"avvisi", r.avvisi_riservati}};
     Json problemi = Json::array();
@@ -175,7 +212,7 @@ std::string in_json(const DefinizioneComando& comando, const Resoconto& r, const
     riepilogo["errori"] = r.errori;
     riepilogo["avvisi"] = r.avvisi;
     j["riepilogo"] = riepilogo;
-    const Lettura::ValoriRiservati tot = totali_riservati(r.lettura);
+    const Lettura::ValoriRiservati tot = totali_riservati(r.lettura, &cf);
     Json riservati = Json::object();
     riservati["personali"] = tot.personali;
     riservati["particolari"] = tot.particolari;
@@ -194,15 +231,11 @@ std::string in_json(const DefinizioneComando& comando, const Resoconto& r, const
 
 Risultato esegui_controlla(const DefinizioneComando& comando, const Parametri& parametri) {
     const std::string& cartella = parametri.argomenti.at(0);
-    std::error_code ec;
-    if (cartella.empty() || !std::filesystem::is_directory(std::filesystem::path(cartella), ec))
-        throw ErroreKZero(Errore::CartellaNonTrovata,
-                          "Cartella del pacchetto non trovata: '" + cartella +
-                              "'. Indicare la cartella che contiene il manifesto pacchetto.json.");
-    const Visibilita visibilita{parametri.includi_dati_personali, parametri.includi_dati_particolari};
-    const Resoconto r = controlla_pacchetto(CartellaSuDisco(cartella), visibilita);
+    accesso::LetturaPerComando lc = accesso::leggi_per_comando(cartella, parametri, comando.nome, "");
+    const Visibilita visibilita = lc.visibilita;
+    const Resoconto r = controlla_lettura(std::move(lc.lettura), visibilita);
     Risultato risultato;
-    risultato.uscita = parametri.formato == Formato::Json ? in_json(comando, r, visibilita) : in_testo(r, visibilita);
+    risultato.uscita = parametri.formato == Formato::Json ? in_json(comando, r, visibilita, lc) : in_testo(r, visibilita, lc);
     risultato.codice = r.errori > 0 ? static_cast<int>(CodiceUscita::ErroreDati) : static_cast<int>(CodiceUscita::Riuscito);
     return risultato;
 }

@@ -56,6 +56,8 @@ struct Permessi {
 
 // "i dati personali", "i dati particolari", "i dati personali e particolari".
 std::string testo_permessi(const Permessi& p);
+// Lo stesso senza l'articolo, per gli elenchi: "dati personali", "dati personali e particolari", "nessun dato".
+std::string testo_permessi_breve(const Permessi& p);
 
 // Un utente come lo vede l'intestazione (nessun segreto). Sono dati autenticati solo dopo l'apertura.
 struct UtenteVisibile {
@@ -100,6 +102,10 @@ struct Riepilogo {
     std::uint32_t registro_voci = 0;   // l'ultima voce del registro legata alla cassaforte (vedi registro.hpp)
     cripto::Bytes registro_impronta;
 };
+
+// Quanti byte occupa l'intestazione (con le fessure degli utenti): la parte da distruggere per prima nella cancellazione.
+// Lancia ErroreCassaforte se il file non si legge.
+std::size_t lunghezza_intestazione(std::string_view file);
 
 // Prima dell'apertura: cosa dice l'intestazione senza nessuna chiave (per i messaggi e il fuzzing). Lancia ErroreCassaforte.
 Riepilogo leggi_intestazione(std::string_view file);

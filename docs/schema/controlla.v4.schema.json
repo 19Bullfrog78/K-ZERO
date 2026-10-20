@@ -1,0 +1,362 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "kzero - controlla, versione 4",
+  "description": "Uscita di 'kzero controlla <cartella> --formato json': i problemi trovati nel pacchetto dati (errori e avvisi con codice K-CTR, spiegati in docs/controlli.md) e un riepilogo. Va sull'uscita standard anche quando ci sono errori nei dati; allora il codice di uscita e' 1. I messaggi e le posizioni seguono le classi dei dati: di base i dati personali sono sostituiti dal codice dell'elemento, quelli particolari non compaiono, una posizione non entra mai in un dato personale o particolare (si ferma all'elemento comune piu' vicino) e i problemi che rivelano un dato particolare (salute) non si elencano uno per uno: si contano in 'problemi_riservati'. Versione 3 (K-009): campi 'problemi_riservati', 'posizione_completa_con' e 'dati_riservati_presenti'. Sostituisce la versione 2 (K-008), che non e' piu' prodotta. Versione 4 (K-010): 'cassaforte' (chi l'ha aperta e con quali permessi) e 'non_verificato' (per chi non puo' aprire una classe, i controlli non verificati: i loro risultati non sono nel resoconto). Sostituisce la versione 3, che non e' piu' prodotta.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "schema_versione",
+    "pacchetto",
+    "dati_personali_inclusi",
+    "dati_particolari_inclusi",
+    "cassaforte",
+    "non_verificato",
+    "controlli_sul_contenuto",
+    "problemi_riservati",
+    "problemi",
+    "riepilogo",
+    "dati_riservati_presenti"
+  ],
+  "properties": {
+    "schema": {
+      "const": "controlla"
+    },
+    "schema_versione": {
+      "const": 4
+    },
+    "pacchetto": {
+      "description": "Dati del manifesto; null se il manifesto non e' stato letto.",
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "codice",
+            "livello"
+          ],
+          "properties": {
+            "codice": {
+              "type": "string",
+              "minLength": 1
+            },
+            "nome": {
+              "type": "string",
+              "minLength": 1
+            },
+            "livello": {
+              "enum": [
+                "solo_numeri",
+                "completo"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "dati_personali_inclusi": {
+      "type": "boolean"
+    },
+    "dati_particolari_inclusi": {
+      "type": "boolean"
+    },
+    "cassaforte": {
+      "description": "Cassaforte (K-010): null per un pacchetto senza cassaforte; altrimenti chi l'ha aperta, i suoi permessi e la data di conservazione dei dati.",
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "utente",
+            "permessi",
+            "conservazione",
+            "conservazione_scaduta"
+          ],
+          "properties": {
+            "utente": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+            },
+            "permessi": {
+              "description": "Le classi che l'utente puo' aprire.",
+              "type": "array",
+              "uniqueItems": true,
+              "items": {
+                "enum": [
+                  "personali",
+                  "particolari"
+                ]
+              }
+            },
+            "conservazione": {
+              "type": "string",
+              "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+            },
+            "conservazione_scaduta": {
+              "description": "La data di conservazione e' passata (orologio del PC).",
+              "type": "boolean"
+            }
+          }
+        }
+      ]
+    },
+    "non_verificato": {
+      "description": "Per ogni classe che l'utente non puo' aprire: i controlli che la richiedono (catalogo). Anche i problemi che starebbero nei dati di quella classe non si calcolano. Vuoto senza cassaforte o con tutti i permessi.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "servono",
+          "controlli"
+        ],
+        "properties": {
+          "servono": {
+            "enum": [
+              "personali",
+              "particolari"
+            ]
+          },
+          "controlli": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^K-CTR-[0-9]{3}$"
+            }
+          }
+        }
+      }
+    },
+    "controlli_sul_contenuto": {
+      "description": "false se ci sono errori nella forma dei file: allora i controlli sul contenuto non sono stati fatti.",
+      "type": "boolean"
+    },
+    "problemi_riservati": {
+      "description": "Problemi che rivelano un dato particolare (salute): senza --includi-dati-particolari non sono in 'problemi' (niente codice, messaggio ne' posizione), si dice solo quanti sono. Contano lo stesso nel riepilogo e nel codice di uscita. Con il parametro sono elencati in 'problemi' e qui sono 0.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "errori",
+        "avvisi"
+      ],
+      "properties": {
+        "errori": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "avvisi": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "problemi": {
+      "description": "Prima gli errori, poi gli avvisi; ciascuno in ordine di file (ordine del formato) e di posizione.",
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/problema"
+      }
+    },
+    "riepilogo": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "aziende",
+        "luoghi",
+        "servizi",
+        "corse",
+        "mezzi",
+        "persone",
+        "turni",
+        "errori",
+        "avvisi"
+      ],
+      "properties": {
+        "aziende": {
+          "$ref": "#/definitions/quanti"
+        },
+        "luoghi": {
+          "$ref": "#/definitions/quanti"
+        },
+        "servizi": {
+          "$ref": "#/definitions/quanti"
+        },
+        "corse": {
+          "$ref": "#/definitions/quanti"
+        },
+        "mezzi": {
+          "$ref": "#/definitions/quanti"
+        },
+        "persone": {
+          "$ref": "#/definitions/quanti"
+        },
+        "turni": {
+          "$ref": "#/definitions/quanti"
+        },
+        "errori": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "avvisi": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "dati_riservati_presenti": {
+      "description": "Quali dati personali e particolari contiene il pacchetto: quanti valori di ogni classe (dalle classi degli schemi), mai i valori stessi; solo i file letti. Serve a sapere cosa e' coinvolto se il pacchetto va perso o finisce alla persona sbagliata (docs/sicurezza.md). File per file solo con --includi-dati-personali (il nome di un file di soli dati personali dice gia' qualcosa), altrimenti 'per_file' e' null.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "personali",
+        "particolari",
+        "per_file"
+      ],
+      "properties": {
+        "personali": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "particolari": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "per_file": {
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "file",
+                  "personali",
+                  "particolari"
+                ],
+                "properties": {
+                  "file": {
+                    "type": "string",
+                    "minLength": 1
+                  },
+                  "personali": {
+                    "type": "integer",
+                    "minimum": 0
+                  },
+                  "particolari": {
+                    "type": "integer",
+                    "minimum": 0
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    }
+  },
+  "definitions": {
+    "quanti": {
+      "description": "Numero di elementi; null se il file c'e' ma non e' stato letto (errori di forma) o se manca il manifesto.",
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 0
+    },
+    "problema": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "livello",
+        "codice",
+        "messaggio"
+      ],
+      "properties": {
+        "livello": {
+          "enum": [
+            "errore",
+            "avviso"
+          ]
+        },
+        "codice": {
+          "type": "string",
+          "pattern": "^K-CTR-[0-9]{3}$"
+        },
+        "messaggio": {
+          "description": "Spiegazione in italiano del caso preciso.",
+          "type": "string",
+          "minLength": 1
+        },
+        "posizione": {
+          "description": "Dove sta il problema, fin dove le classi dei dati lo permettono; manca per i problemi dell'intero pacchetto e quando anche il file sarebbe un dato riservato (es. assenze.json senza una persona a cui ricondurla).",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "file"
+          ],
+          "properties": {
+            "file": {
+              "type": "string",
+              "minLength": 1
+            },
+            "puntatore": {
+              "description": "Percorso JSON standard (RFC 6901) nel file, es. /corse/3/passaggi/4.",
+              "type": "string",
+              "pattern": "^(/[^/]*)+$"
+            },
+            "riga": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "colonna": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        },
+        "posizione_completa_con": {
+          "description": "Presente se la posizione completa sta in un dato personale o particolare: e' ridotta (all'elemento comune piu' vicino) o manca, e si vede intera con questo parametro.",
+          "enum": [
+            "--includi-dati-personali",
+            "--includi-dati-particolari"
+          ]
+        },
+        "giorni": {
+          "description": "Solo per i problemi dei turni uguali in molti giorni: i giorni, raggruppati in periodi di giorni consecutivi, in ordine (docs/controlli.md).",
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "dal",
+              "al"
+            ],
+            "properties": {
+              "dal": {
+                "$ref": "#/definitions/data"
+              },
+              "al": {
+                "$ref": "#/definitions/data"
+              }
+            }
+          }
+        }
+      }
+    },
+    "data": {
+      "description": "Data AAAA-MM-GG che esiste nel calendario (es. 2026-09-14; il 29 febbraio solo negli anni bisestili).",
+      "type": "string",
+      "pattern": "^([0-9]{4}-((0[13578]|1[02])-(0[1-9]|[12][0-9]|3[01])|(0[469]|11)-(0[1-9]|[12][0-9]|30)|02-(0[1-9]|1[0-9]|2[0-8]))|([0-9]{2}(0[48]|[2468][048]|[13579][26])|([02468][048]|[13579][26])00)-02-29)$"
+    }
+  }
+}

@@ -79,5 +79,7 @@ private:
 // Il tipo "x-kzero-trasportato" dell'elemento che sta in quella posizione (es. "/servizi/3/domanda/gruppi/0/passeggeri/0"),
 // se c'e'; vuoto altrimenti. versione = la versione letta del file.
 std::string trasportato(const kzero::Source& elemento, const Lettura& lettura);
+// La posizione sta dentro un passeggero o una casa (un livello del percorso marcato "x-kzero-trasportato")?
+bool in_trasportato(const kzero::Source& posizione, const Lettura& lettura);
 
 }  // namespace kzero::api

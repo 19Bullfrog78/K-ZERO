@@ -25,6 +25,11 @@ std::string testo_permessi(const Permessi& p) {
     return "nessun dato";
 }
 
+std::string testo_permessi_breve(const Permessi& p) {
+    const std::string t = testo_permessi(p);
+    return t.rfind("i ", 0) == 0 ? t.substr(2) : t;
+}
+
 std::string nuovo_id() { return cripto::esadecimale(cripto::casuali(kId)); }
 
 // --- Lo stato di una cassaforte aperta ------------------------------------------------------------------------------------
@@ -170,6 +175,8 @@ Riepilogo riepilogo_di(const Intestazione& i) {
 }
 
 }  // namespace
+
+std::size_t lunghezza_intestazione(std::string_view file) { return analizza(file).fine; }
 
 Riepilogo leggi_intestazione(std::string_view file) { return riepilogo_di(analizza(file).intestazione); }
 

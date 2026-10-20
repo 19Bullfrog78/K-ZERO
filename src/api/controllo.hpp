@@ -35,6 +35,14 @@ struct Resoconto {
     // per uno: solo quanti sono (in errori e avvisi sono gia' contati).
     int errori_riservati = 0;
     int avvisi_riservati = 0;
+    // Cassaforte (K-010): per ogni classe che l'utente non puo' aprire, i controlli non verificati (in ordine di codice): quelli
+    // che la richiedono (catalogo). Anche i problemi che starebbero nei dati di quella classe non si possono calcolare.
+    // Nessun loro risultato e' nel resoconto, ne' tra i problemi ne' nei conteggi.
+    struct NonVerificati {
+        Classe classe = Classe::Personale;
+        std::vector<std::string> controlli;
+    };
+    std::vector<NonVerificati> non_verificati;
 
     // Quanti elementi ci sono nel file: nessun valore se il file c'e' ma non e' stato letto per errori di forma.
     std::optional<std::size_t> quanti(const std::string& file, std::size_t n) const;

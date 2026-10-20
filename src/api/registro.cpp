@@ -156,7 +156,9 @@ Registro leggi(std::string_view file, const cassaforte::Cassaforte& c) {
     return out;
 }
 
-std::string scrivi(const Registro& r, const cassaforte::Cassaforte& c) {
+std::string scrivi(const Registro& r, const cassaforte::Cassaforte& c) { return scrivi(r, c, c.versione_base()); }
+
+std::string scrivi(const Registro& r, const cassaforte::Cassaforte& c, std::uint32_t versione_base) {
     Bytes id;
     cripto::da_esadecimale(c.riepilogo().id, id);
     if (id != r.id) throw std::logic_error("registro: di un'altra cassaforte");
@@ -167,11 +169,11 @@ std::string scrivi(const Registro& r, const cassaforte::Cassaforte& c) {
     w.byte(kMagia, sizeof kMagia);
     w.u16(kVersione);
     w.byte(id);
-    w.u32(c.versione_base());
+    w.u32(versione_base);
     const Bytes ad = w.dati();
     const Bytes nonce = cripto::casuali(cripto::kNonce);
     w.byte(nonce);
-    const Segreto chiave = c.chiave_registro(c.versione_base());
+    const Segreto chiave = c.chiave_registro(versione_base);
     const Bytes cifrato = cripto::cifra(chiave, nonce.data(), reinterpret_cast<const unsigned char*>(testo.data()), testo.size(), ad);
     w.byte(cifrato);
     return std::string(w.dati().begin(), w.dati().end());

@@ -63,8 +63,10 @@ Registro leggi(std::string_view file, const cassaforte::Cassaforte& c);
 // impronta e il suo numero vanno nell'ancora della cassaforte quando la si riscrive.
 const Voce& aggiungi(Registro& r, Voce v);
 
-// Il file del registro, cifrato con la chiave base di adesso della cassaforte.
+// Il file del registro, cifrato con la chiave base di adesso della cassaforte, o con quella di una versione data (prima di
+// un cambio delle chiavi: la cassaforte nuova la conserva nella sua storia).
 std::string scrivi(const Registro& r, const cassaforte::Cassaforte& c);
+std::string scrivi(const Registro& r, const cassaforte::Cassaforte& c, std::uint32_t versione_base);
 
 // Il registro nuovo di una cassaforte appena chiusa (id = 32 cifre esadecimali).
 Registro nuovo(const std::string& id);

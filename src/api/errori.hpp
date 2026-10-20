@@ -47,6 +47,27 @@ enum class Errore {
     DataFuoriPeriodo,
     ElementoNonTrovato,
     PacchettoConErrori,
+    // Cassaforte (K-010)
+    PasswordNonDisponibile,
+    PasswordNonAmmessa,
+    UtenteSconosciuto,
+    PasswordSbagliata,
+    PermessoMancante,
+    CassaforteIlleggibile,
+    CassaforteVersioneSconosciuta,
+    CassaforteDiUnAltroPacchetto,
+    ParametriCassaforteNonAmmessi,
+    CassaforteManomessa,
+    RegistroIlleggibile,
+    ScritturaNonRiuscita,
+    PacchettoSenzaCassaforte,
+    ServeUtente,
+    CartellaGiaPresente,
+    ManifestoDaAggiornare,
+    ChiusuraNonVerificata,
+    UtentiNonAmmessi,
+    PacchettoDiverso,
+    CassaforteMancante,
 };
 
 struct DefinizioneErrore {

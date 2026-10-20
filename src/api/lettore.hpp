@@ -81,6 +81,14 @@ private:
     std::string cartella_;
 };
 
+// Un pacchetto in memoria: nome del file -> contenuto (es. il pacchetto da richiudere, controllato prima di scriverlo).
+class PacchettoInMemoria : public Sorgente {
+public:
+    std::vector<Voce> voci() const override;
+    FileLetto leggi(const std::string& nome, std::uintmax_t massimo) const override;
+    std::map<std::string, std::string> file;
+};
+
 // I valori della cassaforte aperta da un utente, da unire ai file normali (K-010, cassaforte.hpp). Le voci restano di
 // chi le possiede (la cassaforte aperta), che deve vivere piu' a lungo della lettura.
 struct ValoriCassaforte {

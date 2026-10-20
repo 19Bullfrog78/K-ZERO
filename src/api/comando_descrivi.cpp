@@ -29,7 +29,14 @@ const char* nome_tipo(TipoParametro t) {
     return "?";
 }
 
-const char* nome_forma(FormaValore f) { return f == FormaValore::Data ? "data" : "codice"; }
+const char* nome_forma(FormaValore f) {
+    switch (f) {
+        case FormaValore::Data: return "data";
+        case FormaValore::Codice: return "codice";
+        case FormaValore::Percorso: return "percorso";
+    }
+    return "?";
+}
 
 std::string unisci(const std::vector<std::string>& v, const std::string& separatore) {
     std::string s;
@@ -41,7 +48,8 @@ std::string unisci(const std::vector<std::string>& v, const std::string& separat
 std::string forma(const DefinizioneParametro& p) {
     switch (p.tipo) {
         case TipoParametro::Scelta: return p.nome + " <" + unisci(p.valori, "|") + ">";
-        case TipoParametro::Valore: return p.nome + (p.forma == FormaValore::Data ? " <AAAA-MM-GG>" : " <codice>");
+        case TipoParametro::Valore:
+            return p.nome + (p.forma == FormaValore::Data ? " <AAAA-MM-GG>" : p.forma == FormaValore::Codice ? " <codice>" : " <cartella>");
         case TipoParametro::Interruttore: break;
     }
     return p.nome;

@@ -190,4 +190,12 @@ std::string trasportato(const kzero::Source& elemento, const Lettura& lettura) {
                                                                                    : std::string();
 }
 
+bool in_trasportato(const kzero::Source& posizione, const Lettura& lettura) {
+    const auto sv = schema_di(posizione.file, &lettura);
+    if (!sv) return false;
+    for (const auto& l : SchemiDati::incorporati().livelli(sv->first, sv->second, posizione.pointer))
+        if (l.previsto && l.trasportato) return true;
+    return false;
+}
+
 }  // namespace kzero::api

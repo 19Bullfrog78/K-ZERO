@@ -9,6 +9,7 @@
 #include <set>
 #include <string>
 
+#include "accesso.hpp"
 #include "controllo.hpp"
 #include "errori.hpp"
 #include "esecutori.hpp"
@@ -354,7 +355,22 @@ private:
 // Dettaglio di una persona (assenze) da mostrare solo con i dati personali.
 Json personale(const Vista& vista, Json valore) { return vista.visibilita().personali ? valore : Json(kRiservato); }
 
-Json in_json(const DefinizioneComando& comando, const Resoconto& r, const Parametri& par, const Vista& vista) {
+// Cassaforte (K-010): cosa non e' verificato per chi non puo' aprire una classe (il piano del giorno dipende da tutte e due).
+Json non_verificato(const Visibilita& leggibili) {
+    Json nv = Json::array();
+    if (!leggibili.personali)
+        nv.push_back({{"servono", "personali"},
+                      {"cosa", "chi fa i turni e con quali mezzi: dipende da assenze, disponibilita', abilitazioni e "
+                               "autorizzazioni delle persone, che l'utente non puo' aprire"}});
+    if (!leggibili.particolari)
+        nv.push_back({{"servono", "particolari"},
+                      {"cosa", "chi fa i turni e con quali mezzi: dipende dagli usi dei mezzi e dalle autorizzazioni richiesti "
+                               "per tipo di servizio (dato particolare), che l'utente non puo' aprire"}});
+    return nv;
+}
+
+Json in_json(const DefinizioneComando& comando, const Resoconto& r, const Parametri& par, const Vista& vista,
+             const accesso::LetturaPerComando& cf) {
     const kzero::Package& p = r.lettura.pacchetto;
     const kzero::Planner piano(p);
     const kzero::Index& idx = piano.index();
@@ -372,6 +388,17 @@ Json in_json(const DefinizioneComando& comando, const Resoconto& r, const Parame
     pacchetto["periodo"] = {{"dal", kzero::text_from_day(p.manifest.period.from)}, {"al", kzero::text_from_day(p.manifest.period.to)}};
     j["pacchetto"] = pacchetto;
     j["controllo"] = {{"errori", r.errori}, {"avvisi", r.avvisi}};
+    if (cf.cassaforte) {
+        Json x = Json::object();
+        x["utente"] = cf.utente;
+        x["permessi"] = accesso::classi(cf.permessi.personali, cf.permessi.particolari);
+        x["conservazione"] = cf.cassaforte->conservazione;
+        x["conservazione_scaduta"] = cf.scaduta;
+        j["cassaforte"] = x;
+    } else {
+        j["cassaforte"] = nullptr;
+    }
+    j["non_verificato"] = non_verificato(r.lettura.leggibili);
     j["data"] = kzero::text_from_day(d);
     j["giorno_della_settimana"] = chiave_giorno(kzero::weekday_of(d));
     Json festivita = Json::array();
@@ -622,6 +649,18 @@ std::string in_testo(const Json& j) {
     t += "Giornata del " + j.at("data").get<std::string>() + ", " + giorno + apostrofo + " - pacchetto " +
          pk.at("codice").get<std::string>() + " \"" + pk.at("nome").get<std::string>() + "\"" +
          (j.at("dati_inventati").get<bool>() ? " (dati inventati)" : "") + "\n";
+    if (!j.at("cassaforte").is_null()) {
+        const Json& c = j.at("cassaforte");
+        std::string permessi;
+        for (const auto& x : c.at("permessi")) permessi += (permessi.empty() ? "dati " : " e ") + x.get<std::string>();
+        t += "Cassaforte aperta dall'utente " + c.at("utente").get<std::string>() + " (" + permessi + ")";
+        if (c.at("conservazione_scaduta").get<bool>())
+            t += ". Avviso: la data di conservazione dei dati (" + c.at("conservazione").get<std::string>() +
+                 ") e' passata (kzero cancella, o kzero conservazione con una data nuova)";
+        t += ".\n";
+    }
+    for (const auto& x : j.at("non_verificato"))
+        t += "Non verificato (servono i dati " + x.at("servono").get<std::string>() + "): " + x.at("cosa").get<std::string>() + ".\n";
     const Json& v = j.at("vista");
     if (v.at("tipo") == "persona") {
         const Json& x = j.at("persona");
@@ -675,18 +714,17 @@ std::string in_testo(const Json& j) {
 
 Risultato esegui_giornata(const DefinizioneComando& comando, const Parametri& parametri) {
     const std::string& cartella = parametri.argomenti.at(0);
-    std::error_code ec;
-    if (cartella.empty() || !std::filesystem::is_directory(std::filesystem::path(cartella), ec))
-        throw ErroreKZero(Errore::CartellaNonTrovata,
-                          "Cartella del pacchetto non trovata: '" + cartella +
-                              "'. Indicare la cartella che contiene il manifesto pacchetto.json.");
-    const Visibilita visibilita{parametri.includi_dati_personali, parametri.includi_dati_particolari};
-    const Resoconto r = controlla_pacchetto(CartellaSuDisco(cartella), visibilita);
+    std::string nota = "giornata del " + kzero::text_from_day(*parametri.data);
+    if (!parametri.persona.empty()) nota += ", persona " + parametri.persona;
+    if (!parametri.mezzo.empty()) nota += ", mezzo " + parametri.mezzo;
+    accesso::LetturaPerComando lc = accesso::leggi_per_comando(cartella, parametri, comando.nome, nota);
+    const Visibilita visibilita = lc.visibilita;
+    const Resoconto r = controlla_lettura(std::move(lc.lettura), visibilita);
     if (r.errori > 0)
         throw ErroreKZero(Errore::PacchettoConErrori,
                           "Il pacchetto ha " + quanti(r.errori, "errore", "errori") +
                               " nei dati: la giornata non si mostra, perche' sarebbe falsata. Correggere prima gli errori: "
-                              "kzero controlla " + cartella);
+                              "kzero controlla " + cartella + (lc.utente.empty() ? "" : " --utente " + lc.utente));
     const kzero::Package& p = r.lettura.pacchetto;
     const kzero::Day d = *parametri.data;
     if (d < p.manifest.period.from || d > p.manifest.period.to)
@@ -700,7 +738,7 @@ Risultato esegui_giornata(const DefinizioneComando& comando, const Parametri& pa
     if (!parametri.mezzo.empty() && !idx.vehicle(parametri.mezzo))
         throw ErroreKZero(Errore::ElementoNonTrovato, "Il mezzo " + parametri.mezzo + " non c'e' nel pacchetto " + p.manifest.code +
                                                           " (mezzi.json).");
-    const Json j = in_json(comando, r, parametri, Vista(r.lettura, visibilita));
+    const Json j = in_json(comando, r, parametri, Vista(r.lettura, visibilita), lc);
     return {parametri.formato == Formato::Json ? testo_json(j) : in_testo(j), 0};
 }
 

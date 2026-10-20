@@ -37,6 +37,12 @@ struct DefinizioneControllo {
     // Varianti che parlano di dati personali (es. un'abilitazione o un'assenza di una persona): il modello da usare
     // senza --includi-dati-personali.
     std::map<int, std::string> personali;
+    // Cassaforte (K-010): il controllo usa dati personali o particolari per giudicare altro (es. il tipo di servizio,
+    // dato particolare, decide quali usi del mezzo servono; le assenze, dato personale, chi puo' fare un turno). Per un
+    // utente che non puo' aprire quella classe il controllo e' "non verificato": i suoi risultati sarebbero falsati.
+    // Dichiarato nel catalogo; una prova (test_unione) confronta i risultati di utenti con permessi diversi.
+    bool richiede_personali = false;
+    bool richiede_particolari = false;
 
     Classe rivela_variante(int variante) const {
         const auto it = rivela_varianti.find(variante);
@@ -46,6 +52,14 @@ struct DefinizioneControllo {
 
 // Catalogo completo, in ordine di codice.
 const std::vector<DefinizioneControllo>& catalogo_controlli();
+
+// Il problema si puo' calcolare con le classi che l'utente puo' leggere (K-010)? No se il suo controllo richiede una classe
+// che non legge, oppure se il problema rivela, o sta in, un dato di quella classe (i dati non ci sono). classe_posizione =
+// la classe del dato in cui sta la posizione (riservatezza.hpp); in_trasportato = la posizione sta in un passeggero o in
+// una casa, i cui dati personali stanno con i particolari se sono legati a un luogo sensibile. Con tutte le classi
+// leggibili: sempre si'.
+bool verificabile(const DefinizioneControllo& d, int variante, Classe classe_posizione, bool in_trasportato,
+                  const Visibilita& leggibili);
 const DefinizioneControllo& definizione_controllo(kzero::Check c);
 
 const char* nome_livello(Livello l);   // "errore", "avviso"
