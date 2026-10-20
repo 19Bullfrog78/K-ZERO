@@ -33,6 +33,14 @@ add_executable(test_cripto test_cripto.cpp)
 target_link_libraries(test_cripto PRIVATE kzero_api GTest::gtest_main)
 target_compile_options(test_cripto PRIVATE ${KZERO_WARNINGS})
 gtest_discover_tests(test_cripto PROPERTIES LABELS "api;sicurezza")
+add_executable(test_unione test_unione.cpp)
+target_link_libraries(test_unione PRIVATE kzero_api GTest::gtest_main)
+target_compile_options(test_unione PRIVATE ${KZERO_WARNINGS})
+gtest_discover_tests(test_unione PROPERTIES LABELS "api;sicurezza")
+add_executable(test_cassaforte test_cassaforte.cpp)
+target_link_libraries(test_cassaforte PRIVATE kzero_api GTest::gtest_main)
+target_compile_options(test_cassaforte PRIVATE ${KZERO_WARNINGS})
+gtest_discover_tests(test_cassaforte PROPERTIES LABELS "api;sicurezza")
 
 # --- Strumento standard per confrontare le uscite JSON con gli schemi ---------------
 # check-jsonschema, versioni e impronte fissate in tests/strumenti/check-jsonschema.txt.

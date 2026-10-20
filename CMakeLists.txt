@@ -261,6 +261,11 @@ add_library(kzero_api STATIC
   src/api/comando_versione.cpp
   src/api/controlli_catalogo.cpp
   src/api/controllo.cpp
+  src/api/disco.cpp
+  src/api/cassaforte.cpp
+  src/api/cassaforte_formato.cpp
+  src/api/chiusura.cpp
+  src/api/classi.cpp
   src/api/cripto.cpp
   src/api/errori.cpp
   src/api/esegui.cpp
@@ -268,6 +273,7 @@ add_library(kzero_api STATIC
   src/api/lettore.cpp
   src/api/parametri.cpp
   src/api/password.cpp
+  src/api/registro.cpp
   src/api/riservatezza.cpp
   src/api/schemi_dati.cpp
   src/api/unicode.cpp

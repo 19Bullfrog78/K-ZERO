@@ -4,7 +4,8 @@
 // - XChaCha20-Poly1305 (crypto_aead_xchacha20poly1305_ietf): cifratura autenticata, nonce casuali di 24 byte;
 // - Argon2id v1.3 (crypto_pwhash): chiave dalla password, parametri controllati prima di calcolare;
 // - X25519 "sealed box" (crypto_box_seal): le chiavi dei dati chiuse per un utente, senza conoscere la sua password;
-// - Ed25519 (crypto_sign): la firma dell'intestazione della cassaforte;
+// - HMAC-SHA-512-256 (crypto_auth): l'autenticazione dell'intestazione della cassaforte con una chiave che hanno solo gli
+//   utenti (una firma non basta: la sua chiave pubblica starebbe nello stesso file, e chi cambia il file cambia anche quella);
 // - BLAKE2b (crypto_generichash) per le impronte, crypto_kdf per le chiavi derivate.
 // Chiavi, password e testo decifrato stanno in memoria protetta (Segreto): pagine di guardia, bloccata in memoria dove il
 // sistema lo permette, esclusa dai core dump, azzerata quando si libera.
@@ -27,9 +28,7 @@ inline constexpr std::size_t kImpronta = 32;         // BLAKE2b-256
 inline constexpr std::size_t kPubblicaBox = 32;      // X25519
 inline constexpr std::size_t kSegretaBox = 32;
 inline constexpr std::size_t kSovraccaricoBusta = 48;   // crypto_box_SEALBYTES
-inline constexpr std::size_t kPubblicaFirma = 32;    // Ed25519
-inline constexpr std::size_t kSegretaFirma = 64;
-inline constexpr std::size_t kFirma = 64;
+inline constexpr std::size_t kAutenticazione = 32;   // etichetta di crypto_auth (HMAC-SHA-512-256)
 
 // Avvia la libreria (sodium_init); si puo' chiamare piu' volte. Lancia std::runtime_error se non si avvia.
 void avvia();
@@ -106,15 +105,10 @@ Bytes pubblica_box(const Segreto& segreta);   // la chiave pubblica di una chiav
 Bytes sigilla(const unsigned char* dati, std::size_t n, const Bytes& pubblica);
 bool apri_busta(const Bytes& busta, const Bytes& pubblica, const Segreto& segreta, Segreto& in_chiaro);
 
-// --- Firme (Ed25519) -------------------------------------------------------------------------------------------------
-struct CoppiaFirma {
-    Bytes pubblica;
-    Segreto segreta;
-};
-CoppiaFirma nuova_coppia_firma();
-Bytes pubblica_firma(const Segreto& segreta);
-Bytes firma(const Bytes& messaggio, const Segreto& segreta);
-bool verifica_firma(const Bytes& firma, const Bytes& messaggio, const Bytes& pubblica);
+// --- Autenticazione con una chiave segreta (crypto_auth, HMAC-SHA-512-256) -------------------------------------------------
+Bytes autentica(const Segreto& chiave, const Bytes& messaggio);
+// A tempo costante; false anche con una chiave o un'etichetta di lunghezza sbagliata.
+bool verifica_autenticazione(const Bytes& etichetta, const Bytes& messaggio, const Segreto& chiave);
 
 // --- Impronte e chiavi derivate --------------------------------------------------------------------------------------
 // BLAKE2b-256 (senza chiave).

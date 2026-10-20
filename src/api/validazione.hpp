@@ -13,6 +13,7 @@ struct ErroreSchema {
     std::string puntatore;               // percorso JSON del dato sbagliato
     std::string messaggio;               // in italiano, con il valore trovato quando serve a capire
     std::string messaggio_senza_valore;  // lo stesso senza il valore: per i dati personali e particolari
+    std::string campo_mancante;          // un campo obbligatorio che manca (nell'oggetto al puntatore), se e' questo l'errore
 };
 
 // Tutti i punti in cui il documento non rispetta lo schema (nome, versione), in ordine di percorso.

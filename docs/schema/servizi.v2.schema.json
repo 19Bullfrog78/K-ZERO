@@ -181,6 +181,7 @@
           "description": "Fermate di salita e di discesa con il numero di persone.",
           "type": "array",
           "items": {
+            "x-kzero-chiave": ["luogo"],
             "type": "object",
             "additionalProperties": false,
             "required": ["luogo"],

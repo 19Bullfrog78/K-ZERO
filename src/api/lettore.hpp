@@ -12,8 +12,10 @@
 #include <string>
 #include <vector>
 
+#include "classi.hpp"
 #include "controlli.hpp"
 #include "domain_models.hpp"
+#include "schemi_dati.hpp"
 
 namespace kzero::api {
 
@@ -79,6 +81,15 @@ private:
     std::string cartella_;
 };
 
+// I valori della cassaforte aperta da un utente, da unire ai file normali (K-010, cassaforte.hpp). Le voci restano di
+// chi le possiede (la cassaforte aperta), che deve vivere piu' a lungo della lettura.
+struct ValoriCassaforte {
+    Visibilita leggibili;              // le classi che l'utente puo' leggere (i suoi permessi)
+    std::string id;                    // codice della cassaforte (32 cifre esadecimali)
+    std::uint32_t generazione = 0;     // chiusura a cui appartengono i valori
+    std::vector<const Voce*> voci;     // delle classi leggibili, nell'ordine della cassaforte
+};
+
 struct Lettura {
     kzero::Package pacchetto;
     std::vector<kzero::Problem> problemi;   // problemi di forma dei file
@@ -96,17 +107,42 @@ struct Lettura {
         std::size_t particolari = 0;
     };
     std::map<std::string, ValoriRiservati> riservati;
+    // I documenti letti, con i valori della cassaforte gia' uniti (servono a chiudere, esportare e confrontare).
+    std::map<std::string, JsonDati> documenti;
+    // Cassaforte (K-010): dichiarata nel manifesto (versione 2), il file c'e', classi che si leggono. Un pacchetto senza
+    // cassaforte si legge tutto; uno con la cassaforte solo nelle classi dei permessi di chi l'ha aperta (nessuna, se non
+    // e' stata aperta).
+    bool cassaforte_dichiarata = false;
+    bool cassaforte_presente = false;
+    Visibilita leggibili{true, true};
+    // Valori personali e particolari scritti in chiaro nei file normali (prima dell'unione con la cassaforte).
+    ValoriRiservati in_chiaro;
 
     bool usato(const std::string& file) const { return versioni.count(file) > 0; }
     // Nessun errore di forma (i file non riconosciuti sono solo avvisi): si possono controllare i contenuti.
     bool forma_valida() const;
 };
 
-Lettura leggi_pacchetto(const Sorgente& sorgente);
+// Legge il pacchetto. Con la cassaforte (K-010): cassaforte = i valori che l'utente ha potuto aprire (nullptr: nessuno);
+// si uniscono ai file normali per codice (classi.hpp) prima del controllo degli schemi, e per le classi che l'utente non
+// puo' leggere i campi che mancano valgono come presenti ma non leggibili, mai come mancanti.
+Lettura leggi_pacchetto(const Sorgente& sorgente, const ValoriCassaforte* cassaforte = nullptr);
 
 // Legge un solo file del formato, gia' letto dalla sua sorgente (testo), e lo aggiunge alla lettura: codifica, JSON,
-// schema e versione, rispetto dello schema, conversione. Lo usa leggi_pacchetto per ogni file; le prove con dati
-// casuali (tests/fuzz) lo usano per cambiare un file alla volta senza rileggere gli altri.
-void leggi_file(const std::string& file, const std::string& testo, Lettura& lettura);
+// schema e versione, unione con i valori della cassaforte, rispetto dello schema, conversione. Lo usa leggi_pacchetto per
+// ogni file; le prove con dati casuali (tests/fuzz) lo usano per cambiare un file alla volta senza rileggere gli altri.
+void leggi_file(const std::string& file, const std::string& testo, Lettura& lettura, const ValoriCassaforte* cassaforte = nullptr);
+
+// Il manifesto, se si legge ed e' conforme al suo schema: per sapere prima di tutto se il pacchetto ha una cassaforte.
+struct ManifestoLetto {
+    std::string codice;                // del pacchetto
+    int versione = 0;
+    bool cassaforte = false;           // dichiarata (versione 2)
+    std::string id;                    // della cassaforte
+    std::uint32_t generazione = 0;
+    bool dati_inventati = false;
+    JsonDati documento;
+};
+std::optional<ManifestoLetto> leggi_manifesto(const Sorgente& sorgente);
 
 }  // namespace kzero::api

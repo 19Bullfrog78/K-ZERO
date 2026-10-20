@@ -30,8 +30,7 @@ static_assert(kEtichetta == crypto_aead_xchacha20poly1305_ietf_ABYTES, "etichett
 static_assert(kSale == crypto_pwhash_SALTBYTES, "sale");
 static_assert(kPubblicaBox == crypto_box_PUBLICKEYBYTES && kSegretaBox == crypto_box_SECRETKEYBYTES, "box");
 static_assert(kSovraccaricoBusta == crypto_box_SEALBYTES, "busta");
-static_assert(kPubblicaFirma == crypto_sign_PUBLICKEYBYTES && kSegretaFirma == crypto_sign_SECRETKEYBYTES, "firma");
-static_assert(kFirma == crypto_sign_BYTES, "firma");
+static_assert(kChiave == crypto_auth_KEYBYTES && kAutenticazione == crypto_auth_BYTES, "autenticazione");
 static_assert(kChiave == crypto_kdf_KEYBYTES && crypto_kdf_CONTEXTBYTES == 8, "kdf");
 
 void avvia() {
@@ -174,32 +173,20 @@ bool apri_busta(const Bytes& busta, const Bytes& pubblica, const Segreto& segret
     return true;
 }
 
-// --- Firme -----------------------------------------------------------------------------------------------------------
+// --- Autenticazione con una chiave segreta -----------------------------------------------------------------------------
 
-CoppiaFirma nuova_coppia_firma() {
+Bytes autentica(const Segreto& chiave, const Bytes& messaggio) {
+    if (chiave.dimensione() != kChiave) throw std::logic_error("autentica: chiave di lunghezza sbagliata");
     avvia();
-    CoppiaFirma c{Bytes(kPubblicaFirma), Segreto(kSegretaFirma)};
-    crypto_sign_keypair(c.pubblica.data(), c.segreta.dati());
-    return c;
+    Bytes t(kAutenticazione);
+    crypto_auth(t.data(), messaggio.data(), messaggio.size(), chiave.dati());
+    return t;
 }
 
-Bytes pubblica_firma(const Segreto& segreta) {
-    Bytes p(kPubblicaFirma);
-    if (segreta.dimensione() != kSegretaFirma || crypto_sign_ed25519_sk_to_pk(p.data(), segreta.dati()) != 0) return {};
-    return p;
-}
-
-Bytes firma(const Bytes& messaggio, const Segreto& segreta) {
-    if (segreta.dimensione() != kSegretaFirma) throw std::logic_error("firma: chiave di lunghezza sbagliata");
-    Bytes f(kFirma);
-    crypto_sign_detached(f.data(), nullptr, messaggio.data(), messaggio.size(), segreta.dati());
-    return f;
-}
-
-bool verifica_firma(const Bytes& f, const Bytes& messaggio, const Bytes& pubblica) {
+bool verifica_autenticazione(const Bytes& etichetta, const Bytes& messaggio, const Segreto& chiave) {
+    if (chiave.dimensione() != kChiave || etichetta.size() != kAutenticazione) return false;
     avvia();
-    if (f.size() != kFirma || pubblica.size() != kPubblicaFirma) return false;
-    return crypto_sign_verify_detached(f.data(), messaggio.data(), messaggio.size(), pubblica.data()) == 0;
+    return crypto_auth_verify(etichetta.data(), messaggio.data(), messaggio.size(), chiave.dati()) == 0;
 }
 
 // --- Impronte e chiavi derivate ----------------------------------------------------------------------------------------

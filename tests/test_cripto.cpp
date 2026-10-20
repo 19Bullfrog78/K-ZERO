@@ -89,17 +89,21 @@ TEST(Cripto, BusteSoloPerIlDestinatario) {
     EXPECT_FALSE(cripto::apri_busta(x, u.pubblica, u.segreta, out));
 }
 
-TEST(Cripto, FirmeScopronoOgniCambiamento) {
-    const cripto::CoppiaFirma f = cripto::nuova_coppia_firma();
-    EXPECT_EQ(cripto::pubblica_firma(f.segreta), f.pubblica);
+TEST(Cripto, AutenticazioneScopreOgniCambiamento) {
+    const Segreto k(cripto::casuali(cripto::kChiave).data(), cripto::kChiave);
     const Bytes m = {'i', 'n', 't', 'e', 's', 't', 'a'};
-    const Bytes s = cripto::firma(m, f.segreta);
-    EXPECT_TRUE(cripto::verifica_firma(s, m, f.pubblica));
+    const Bytes t = cripto::autentica(k, m);
+    ASSERT_EQ(t.size(), cripto::kAutenticazione);
+    EXPECT_TRUE(cripto::verifica_autenticazione(t, m, k));
     Bytes m2 = m;
     m2[0] ^= 1;
-    EXPECT_FALSE(cripto::verifica_firma(s, m2, f.pubblica));
-    const cripto::CoppiaFirma g = cripto::nuova_coppia_firma();
-    EXPECT_FALSE(cripto::verifica_firma(s, m, g.pubblica));
+    EXPECT_FALSE(cripto::verifica_autenticazione(t, m2, k));
+    Bytes t2 = t;
+    t2.back() ^= 0x80;
+    EXPECT_FALSE(cripto::verifica_autenticazione(t2, m, k));
+    const Segreto altra(cripto::casuali(cripto::kChiave).data(), cripto::kChiave);
+    EXPECT_FALSE(cripto::verifica_autenticazione(t, m, altra));
+    EXPECT_FALSE(cripto::verifica_autenticazione(Bytes(t.begin(), t.end() - 1), m, k));
 }
 
 TEST(Cripto, ImpronteChiaviDerivateEsadecimale) {

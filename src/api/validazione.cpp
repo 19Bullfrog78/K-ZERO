@@ -210,6 +210,8 @@ std::vector<ErroreSchema> valida(const JsonDati& documento, const std::string& s
         if (inizia(m, "Failed to validate against a conditional schema") || inizia(m, "Failed to validate against additional properties") ||
             inizia(m, "Failed to validate against dependent schema"))
             continue;
+        // Una parte di "allOf" non rispettata: conta l'errore preciso che la libreria da' nello stesso punto o piu' in basso.
+        if (inizia(m, "Failed to validate against child schema #") && altri_sotto(grezzi, puntatore, i)) continue;
         if (inizia(m, "Failed to validate against schema associated with property name '")) {
             // Senza errori piu' in basso e' un campo vietato in quel caso (schema "false"): l'errore e' il campo.
             const std::string figlio = puntatore + "/" + escape_puntatore(nome_tra_apici(m));
@@ -225,7 +227,9 @@ std::vector<ErroreSchema> valida(const JsonDati& documento, const std::string& s
         const JsonDati* sotto = SchemiDati::incorporati().sottoschema(schema, versione, puntatore);
         const JsonDati::json_pointer jp(puntatore);
         const JsonDati* istanza = documento.contains(jp) ? &documento.at(jp) : nullptr;
-        out.push_back({puntatore, traduci_messaggio(m, sotto, istanza), traduci_messaggio(m, sotto, nullptr)});
+        const bool mancante = inizia(m, "Missing required property '") || inizia(m, "Missing dependency '");
+        out.push_back({puntatore, traduci_messaggio(m, sotto, istanza), traduci_messaggio(m, sotto, nullptr),
+                       mancante ? nome_tra_apici(m) : std::string()});
         priorita_out.push_back(priorita(m));
     }
     // In ordine di documento; a parita' di posizione, prima l'errore che spiega meglio.

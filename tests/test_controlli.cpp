@@ -787,5 +787,7 @@ TEST(Controlli, catalogo_coperto) {
     EXPECT_EQ(api::definizione_controllo(Check::NotRegularFile).codice, "K-CTR-088");   // K-009: lettura blindata
     EXPECT_EQ(api::definizione_controllo(Check::LinkOutsideFolder).codice, "K-CTR-089");
     EXPECT_EQ(api::definizione_controllo(Check::DirectoryInsteadOfFile).codice, "K-CTR-090");
-    EXPECT_EQ(api::catalogo_controlli().size(), 90u);
+    EXPECT_EQ(api::definizione_controllo(Check::VaultMissing).codice, "K-CTR-091");   // K-010: cassaforte
+    EXPECT_EQ(api::definizione_controllo(Check::RetentionExpired).codice, "K-CTR-097");
+    EXPECT_EQ(api::catalogo_controlli().size(), 97u);
 }

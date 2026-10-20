@@ -368,6 +368,54 @@ const std::vector<DefinizioneControllo>& catalogo_controlli() {
             {Check::DirectoryInsteadOfFile, "K-CTR-090", E, N, "Cartella al posto di un file del pacchetto",
              {"C'e' una cartella che si chiama {file}, come un file del pacchetto: il file non e' stato letto. Togliere o "
               "rinominare la cartella e mettere al suo posto il file."}},
+            // Cassaforte dei dati personali (K-010)
+            {Check::VaultMissing, "K-CTR-091", E, N, "Manca la cassaforte",
+             {"Il manifesto dice che il pacchetto ha una cassaforte, ma il file cassaforte.kzc non c'e': i dati personali e "
+              "particolari mancano (es. cartella copiata a meta'). Rimettere il file della cassaforte preso dalla stessa copia "
+              "del pacchetto."}},
+            {Check::VaultUndeclared, "K-CTR-092", E, N, "Cassaforte non dichiarata nel manifesto",
+             {"Nella cartella c'e' il file della cassaforte (cassaforte.kzc), ma il manifesto non la dichiara (\"cassaforte\": "
+              "false o manifesto della versione 1): il manifesto e' di un'altra copia del pacchetto, e i dati personali e "
+              "particolari non si leggono. Rimettere il manifesto di questa copia."}},
+            {Check::VaultGenerationMismatch, "K-CTR-093", E, N, "Cassaforte e file normali di chiusure diverse",
+             {"Il manifesto e' della chiusura numero {manifesto}, la cassaforte della chiusura numero {cassaforte}: i file "
+              "normali e la cassaforte vengono da copie diverse del pacchetto (es. una copia vecchia rimessa al suo posto, o "
+              "una richiusura interrotta). Rimettere la copia giusta, o rifare la richiusura (kzero richiudi)."}},
+            {Check::VaultValueOrphan, "K-CTR-094", E, N, "Valore della cassaforte senza il suo elemento",
+             {"Un valore personale della cassaforte per {file} non trova il suo elemento ({elemento}): l'elemento e' stato tolto "
+              "o cambiato nei file normali dopo la chiusura. Il valore non e' stato messo da nessuna parte. Rimettere "
+              "l'elemento com'era, oppure correggere i dati con un'uscita in chiaro e una richiusura (kzero esporta, kzero "
+              "richiudi).",
+              "Un valore particolare della cassaforte per {file} non trova il suo elemento ({elemento}): l'elemento e' stato "
+              "tolto o cambiato nei file normali dopo la chiusura. Il valore non e' stato messo da nessuna parte. Rimettere "
+              "l'elemento com'era, oppure correggere i dati con un'uscita in chiaro e una richiusura (kzero esporta, kzero "
+              "richiudi).",
+              "Un valore personale della cassaforte per {file} trova piu' elementi uguali ({elemento}): non si sa a quale "
+              "va. Il valore non e' stato messo da nessuna parte. Correggere i dati con un'uscita in chiaro e una "
+              "richiusura (kzero esporta, kzero richiudi).",
+              "Un valore particolare della cassaforte per {file} trova piu' elementi uguali ({elemento}): non si sa a quale "
+              "va. Il valore non e' stato messo da nessuna parte. Correggere i dati con un'uscita in chiaro e una "
+              "richiusura (kzero esporta, kzero richiudi)."},
+             {{1, PA}, {3, PA}}},
+            {Check::VaultValueConflict, "K-CTR-095", E, N, "Valore sia nella cassaforte sia in chiaro",
+             {"Un valore personale di {file} c'e' sia nella cassaforte sia in chiaro nel file normale: non si sa quale vale. "
+              "Togliere il valore in chiaro, oppure correggere i dati con un'uscita in chiaro e una richiusura (kzero "
+              "esporta, kzero richiudi).",
+              "Un valore particolare di {file} c'e' sia nella cassaforte sia in chiaro nel file normale: non si sa quale vale. "
+              "Togliere il valore in chiaro, oppure correggere i dati con un'uscita in chiaro e una richiusura (kzero "
+              "esporta, kzero richiudi)."},
+             {{1, PA}}},
+            {Check::ClearPersonalData, "K-CTR-096", A, N, "Dati personali o particolari in chiaro",
+             {"Il pacchetto contiene {personali} valori personali e {particolari} particolari in chiaro e il manifesto non dice "
+              "\"dati_inventati\": se sono dati veri, vanno chiusi nella cassaforte (kzero chiudi), e poi la cartella in chiaro "
+              "va cancellata.",
+              "Nei file normali, accanto alla cassaforte, ci sono {personali} valori personali e {particolari} particolari in "
+              "chiaro (es. scritti dopo la chiusura): vanno messi nella cassaforte con un'uscita in chiaro e una richiusura "
+              "(kzero esporta, kzero richiudi)."}},
+            {Check::RetentionExpired, "K-CTR-097", A, N, "Data di conservazione dei dati passata",
+             {"La data di conservazione dei dati personali e particolari della cassaforte ({data}) e' passata: se i dati non "
+              "servono piu', cancellare la cassaforte (kzero cancella); se c'e' un motivo per tenerli, scrivere una data nuova "
+              "(kzero conservazione)."}},
             // Contenuto: avvisi
             {Check::PlaceWithoutCoordinates, "K-CTR-035", A, N, "Luogo senza coordinate",
              {"Il luogo {luogo} non ha le coordinate: serviranno al calcolo delle distanze."}},
