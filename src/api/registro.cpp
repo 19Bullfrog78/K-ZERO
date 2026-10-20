@@ -102,40 +102,15 @@ const Voce& aggiungi(Registro& r, Voce v) {
     return r.voci.back();
 }
 
-Registro leggi(std::string_view file, const cassaforte::Cassaforte& c) {
-    const cassaforte::Riepilogo cf = c.riepilogo();
-    Bytes id;
-    cripto::da_esadecimale(cf.id, id);
-    const auto* p = reinterpret_cast<const unsigned char*>(file.data());
-    if (file.size() < kIntestazione + cripto::kNonce + cripto::kEtichetta || std::memcmp(p, kMagia, sizeof kMagia) != 0)
-        rovinato("manca, e' vuoto o non e' un registro di K-Zero");
-    cassaforte::formato::Lettore r(p, file.size());
-    r.byte(sizeof kMagia);
-    if (r.u16() != kVersione) rovinato("e' di una versione che questo programma non conosce");
-    if (r.byte(cassaforte::kId) != id) rovinato("e' di un'altra cassaforte");
+Registro voci_dal_testo(std::string_view t, const Bytes& id, std::uint32_t ancora_voci, const Bytes& ancora_impronta) {
     Registro out;
     out.id = id;
-    out.versione_base = r.u32();
-    const Bytes nonce = r.byte(cripto::kNonce);
-    if (!r.ok() || out.versione_base == 0 || out.versione_base > c.versione_base()) rovinato("e' rovinato");
-    Segreto chiave;
-    try {
-        chiave = c.chiave_registro(out.versione_base);
-    } catch (const cassaforte::ErroreCassaforte&) {
-        rovinato("e' cifrato con una chiave che la cassaforte non conosce");
-    }
-    const Bytes ad(p, p + kIntestazione);
-    Segreto testo;
-    const std::size_t inizio = kIntestazione + cripto::kNonce;
-    if (!cripto::decifra(chiave, nonce.data(), p + inizio, file.size() - inizio, ad, testo))
-        rovinato("e' stato cambiato da fuori di K-Zero");
     JsonDati elenco;
     try {
         const JsonDati::parser_callback_t limite = [](int profondita, JsonDati::parse_event_t, JsonDati&) {
             if (profondita > kProfondita) throw std::runtime_error("troppo profondo");
             return true;
         };
-        const std::string_view t = testo.testo();
         elenco = JsonDati::parse(t.begin(), t.end(), limite);
     } catch (const std::exception&) {
         rovinato("ha un contenuto non valido");
@@ -150,9 +125,39 @@ Registro leggi(std::string_view file, const cassaforte::Cassaforte& c) {
         precedente = cripto::esadecimale(impronta(v));
         out.voci.push_back(std::move(v));
     }
-    if (cf.registro_voci > out.voci.size()) rovinato("ha meno voci di quelle che la cassaforte ricorda (voci tolte)");
-    if (cf.registro_voci > 0 && impronta(out.voci[cf.registro_voci - 1]) != cf.registro_impronta)
+    if (ancora_voci > out.voci.size()) rovinato("ha meno voci di quelle che la cassaforte ricorda (voci tolte)");
+    if (ancora_voci > 0 && impronta(out.voci[ancora_voci - 1]) != ancora_impronta)
         rovinato("non e' quello che la cassaforte ricorda (voci cambiate)");
+    return out;
+}
+
+Registro leggi(std::string_view file, const cassaforte::Cassaforte& c) {
+    const cassaforte::Riepilogo cf = c.riepilogo();
+    Bytes id;
+    cripto::da_esadecimale(cf.id, id);
+    const auto* p = reinterpret_cast<const unsigned char*>(file.data());
+    if (file.size() < kIntestazione + cripto::kNonce + cripto::kEtichetta || std::memcmp(p, kMagia, sizeof kMagia) != 0)
+        rovinato("manca, e' vuoto o non e' un registro di K-Zero");
+    cassaforte::formato::Lettore r(p, file.size());
+    r.byte(sizeof kMagia);
+    if (r.u16() != kVersione) rovinato("e' di una versione che questo programma non conosce");
+    if (r.byte(cassaforte::kId) != id) rovinato("e' di un'altra cassaforte");
+    const std::uint32_t versione_base = r.u32();
+    const Bytes nonce = r.byte(cripto::kNonce);
+    if (!r.ok() || versione_base == 0 || versione_base > c.versione_base()) rovinato("e' rovinato");
+    Segreto chiave;
+    try {
+        chiave = c.chiave_registro(versione_base);
+    } catch (const cassaforte::ErroreCassaforte&) {
+        rovinato("e' cifrato con una chiave che la cassaforte non conosce");
+    }
+    const Bytes ad(p, p + kIntestazione);
+    Segreto testo;
+    const std::size_t inizio = kIntestazione + cripto::kNonce;
+    if (!cripto::decifra(chiave, nonce.data(), p + inizio, file.size() - inizio, ad, testo))
+        rovinato("e' stato cambiato da fuori di K-Zero");
+    Registro out = voci_dal_testo(testo.testo(), id, cf.registro_voci, cf.registro_impronta);
+    out.versione_base = versione_base;
     return out;
 }
 

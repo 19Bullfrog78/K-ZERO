@@ -189,6 +189,7 @@ Parametri leggi_parametri(const DefinizioneComando& c, const std::vector<std::st
             p.applica(risultato, valore);
             continue;
         }
+        if (o.count() == 0 && p.obbligatorio) continue;   // una scelta obbligatoria non ha un valore predefinito
         const std::string valore = o.count() == 1 ? o.results().front() : p.predefinito;
         if (std::find(p.valori.begin(), p.valori.end(), valore) == p.valori.end())
             throw ErroreKZero(Errore::ValoreNonAmmesso, "Valore non ammesso per " + p.nome + ": " + tra_apici(valore) +

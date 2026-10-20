@@ -59,6 +59,11 @@ cripto::Bytes impronta(const Voce& v);
 // ErroreRegistro (anche se il file manca: una cassaforte ha sempre il suo registro).
 Registro leggi(std::string_view file, const cassaforte::Cassaforte& c);
 
+// La parte di leggi() dopo la decifratura: le voci dal testo in chiaro, con la catena (che parte dal codice della
+// cassaforte, id) e l'ancora della cassaforte (ancora_voci = 0: nessuna). Lancia ErroreRegistro. La usa anche il fuzzing.
+Registro voci_dal_testo(std::string_view testo, const cripto::Bytes& id, std::uint32_t ancora_voci,
+                        const cripto::Bytes& ancora_impronta);
+
 // Aggiunge una voce in fondo (numero e impronta della precedente li mette questa funzione) e la restituisce: la sua
 // impronta e il suo numero vanno nell'ancora della cassaforte quando la si riscrive.
 const Voce& aggiungi(Registro& r, Voce v);

@@ -5,6 +5,7 @@
 #include <unistd.h>
 
 #include <algorithm>
+#include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <set>
@@ -348,4 +349,100 @@ TEST(Accesso, ComandiInsieme) {
     EXPECT_EQ(r.voci.size(), 1u + kFigli * kVolte + 1u);
     for (std::size_t i = 0; i < r.voci.size(); ++i) EXPECT_EQ(r.voci[i].numero, i + 1);
     EXPECT_TRUE(temporanei(chiuso).empty());
+}
+
+namespace {
+
+// Per tutta la vita dell'oggetto i file temporanei vanno in una cartella data (TMPDIR), poi si torna a prima.
+class TemporaneiIn {
+public:
+    explicit TemporaneiIn(const fs::path& cartella) {
+        const char* prima = std::getenv("TMPDIR");
+        if (prima) prima_ = prima;
+        c_era_ = prima != nullptr;
+        fs::create_directories(cartella);
+        ::setenv("TMPDIR", cartella.c_str(), 1);
+    }
+    ~TemporaneiIn() {
+        if (c_era_) ::setenv("TMPDIR", prima_.c_str(), 1);
+        else ::unsetenv("TMPDIR");
+    }
+    TemporaneiIn(const TemporaneiIn&) = delete;
+    TemporaneiIn& operator=(const TemporaneiIn&) = delete;
+
+private:
+    std::string prima_;
+    bool c_era_ = false;
+};
+
+std::set<std::string> nomi_in(const fs::path& cartella) {
+    std::set<std::string> n;
+    for (const auto& e : fs::recursive_directory_iterator(cartella)) n.insert(fs::relative(e.path(), cartella).string());
+    return n;
+}
+
+}  // namespace
+
+// I dati decifrati restano in memoria (punto 7): dopo ogni comando che apre la cassaforte nessun file nuovo, ne' nella
+// cartella del pacchetto ne' tra i temporanei, e nessun valore personale o particolare in nessun file, fuori dal pacchetto in
+// chiaro di partenza e dall'uscita in chiaro chiesta apposta (kzero esporta --scrivi).
+TEST(Accesso, DatiDecifratiMaiSuDisco) {
+    CartellaDiLavoro lavoro;
+    const TemporaneiIn temporanei_qui(lavoro / "tmp");
+    ASSERT_EQ(fs::temp_directory_path(), lavoro / "tmp");
+    AmbienteDiProva amb;
+    const fs::path chiuso = demo_chiuso(lavoro, amb);
+    const std::set<std::string> file_del_pacchetto = nomi_in(chiuso);
+
+    // I valori in testo del demo che vanno nella cassaforte, presi con la regola delle classi (nomi, case, indirizzi...),
+    // tranne quelli che dopo la chiusura si leggono comunque nei file del pacchetto perche' sono anche un dato comune (es. il
+    // comune di una casa e' anche il comune di una fermata; "disabili" e' anche una parola dei regolamenti).
+    const chiusura::Separazione s = chiusura::separa(leggi_pacchetto(CartellaSuDisco(lavoro / "chiaro")));
+    std::string pacchetto_chiuso;
+    for (const std::string& nome : file_del_pacchetto) pacchetto_chiuso += leggi_testo(chiuso / nome);
+    std::set<std::string> valori;
+    for (const auto* elenco : {&s.contenuto.personali, &s.contenuto.particolari})
+        for (const Voce& v : *elenco)
+            if (v.valore.is_string() && v.valore.get<std::string>().size() >= 6 &&
+                pacchetto_chiuso.find(v.valore.get<std::string>()) == std::string::npos)
+                valori.insert(v.valore.get<std::string>());
+    ASSERT_GT(valori.size(), 30u);
+    ASSERT_EQ(valori.count("Rossi Mario"), 1u);
+    ASSERT_EQ(valori.count("Casa Bianchi"), 1u);
+
+    const std::string c = chiuso.string();
+    const std::vector<std::vector<std::string>> comandi_che_aprono = {
+        {"controlla", c, "--utente", "A", "--includi-dati-personali", "--includi-dati-particolari"},
+        {"giornata", c, "--utente", "A", "--data", "2026-10-22", "--includi-dati-personali", "--includi-dati-particolari"},
+        {"giornata", c, "--utente", "A", "--data", "2026-10-22", "--mezzo", "ALFA-03", "--includi-dati-personali"},
+        {"giornata", c, "--utente", "A", "--data", "2026-10-22", "--persona", "P-C", "--includi-dati-personali"},
+        {"cassaforte", c, "--utente", "A"},
+        {"registro", c, "--utente", "A"},
+        {"esporta", c, "--scrivi", (lavoro / "uscita").string(), "--utente", "A"},
+        {"richiudi", (lavoro / "uscita").string(), "--scrivi", c, "--utente", "A"},
+        {"conservazione", "--scrivi", c, "--utente", "A", "--conservazione", "2098-12-31"},
+    };
+    for (const auto& argomenti : comandi_che_aprono) {
+        amb.password = {kPw};
+        EXPECT_EQ(comando(argomenti).codice, 0) << argomenti[0];
+    }
+    amb.password = {kPw, "barca gialla sul lago verde"};
+    EXPECT_EQ(comando({"aggiungi-utente", "--scrivi", c, "--utente", "A", "--nuovo-utente", "B", "--permessi", "personali"}).codice, 0);
+    amb.password = {"barca gialla sul lago verde", "una password tutta nuova per B"};
+    EXPECT_EQ(comando({"password", "--scrivi", c, "--utente", "B"}).codice, 0);
+    amb.password = {kPw};
+    EXPECT_EQ(comando({"togli-utente", "--scrivi", c, "--utente", "A", "--utente-da-togliere", "B"}).codice, 0);
+
+    EXPECT_TRUE(fs::is_empty(lavoro / "tmp")) << "file temporanei rimasti";
+    EXPECT_EQ(nomi_in(chiuso), file_del_pacchetto);   // nessun file nuovo, nemmeno nascosto
+    std::size_t letti = 0;
+    for (const auto& e : fs::recursive_directory_iterator(lavoro.percorso())) {
+        if (!e.is_regular_file()) continue;
+        const std::string primo = fs::relative(e.path(), lavoro.percorso()).begin()->string();
+        if (primo == "chiaro" || primo == "uscita") continue;
+        const std::string testo = leggi_testo(e.path());
+        for (const std::string& v : valori) EXPECT_EQ(testo.find(v), std::string::npos) << e.path() << ": " << v;
+        ++letti;
+    }
+    EXPECT_EQ(letti, file_del_pacchetto.size());
 }

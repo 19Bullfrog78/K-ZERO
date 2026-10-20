@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # K-Zero - fuzzing (prove con dati casuali e deformati) di tutti i bersagli, per un tempo fisso ciascuno.
 # Bersagli: un file del pacchetto alla volta (25 tipi di file, partendo dai file del demo, del demo "solo numeri", della
-# copia del demo del K-007 per le versioni vecchie e di tests/fuzz/semi), la riga di comando, date e orari.
+# copia del demo del K-007 per le versioni vecchie e di tests/fuzz/semi), la riga di comando, date e orari; dal K-010 la
+# cassaforte (il file, il testo decifrato delle sezioni), il registro (il file, il testo decifrato) e le password.
 # Un guasto (memoria, comportamento non definito, risultato incoerente, attesa oltre 10 secondi) ferma il bersaglio:
 # il file che lo provoca resta in <lavoro>/guasti/<bersaglio>/ e lo script esce con 1. Il file va corretto e messo in
 # tests/fuzz/casi/<bersaglio>/ (diventa una prova normale, fuzz.casi.<bersaglio>).
@@ -31,8 +32,12 @@ if [ $# -gt 0 ]; then
 else
   bersagli=()
   for f in "${file_formato[@]}"; do bersagli+=("pacchetto-$f"); done
-  bersagli+=(parametri date-e-orari)
+  bersagli+=(parametri date-e-orari cassaforte cassaforte-voci registro registro-voci password)
 fi
+# Semi dei bersagli della cassaforte (K-010): preparati a ogni giro (chiavi casuali) da rigioca_fuzz.
+semi_cassaforte="$lavoro/semi-cassaforte"
+rm -rf "$semi_cassaforte"
+"$build/tests/rigioca_fuzz" --scrivi-semi "$semi_cassaforte" || { echo "semi della cassaforte non scritti"; exit 1; }
 
 # Parole dei file di dati (nomi dei campi e valori fissi degli schemi): aiutano libFuzzer a scrivere JSON plausibile.
 dizionario="$lavoro/k-zero.dict"
@@ -76,6 +81,10 @@ prova_bersaglio() {
       ;;
     parametri) programma="$build/tests/fuzz_parametri"; cp "$radice/tests/fuzz/semi/parametri/"* "$corpus/" ;;
     date-e-orari) programma="$build/tests/fuzz_date_e_orari"; cp "$radice/tests/fuzz/semi/date-e-orari/"* "$corpus/" ;;
+    cassaforte|cassaforte-voci|registro|registro-voci|password)
+      programma="$build/tests/fuzz_cassaforte"
+      ambiente=(KZERO_BERSAGLIO="$b")
+      cp "$semi_cassaforte/$b/"* "$corpus/" ;;
     *) echo "GUASTO $b: bersaglio sconosciuto" > "$lavoro/esito-$b.txt"; return 2 ;;
   esac
   # Semi in piu' (es. tempi_sosta.json, che il demo non ha) e casi gia' trovati.

@@ -144,8 +144,7 @@ DefinizioneParametro parametro_permessi() {
     p.nome = "--permessi";
     p.tipo = TipoParametro::Scelta;
     p.valori = {"particolari", "personali", "tutti"};
-    p.predefinito = "personali";
-    p.obbligatorio = true;
+    p.obbligatorio = true;   // una scelta sui permessi si scrive sempre: nessun valore predefinito
     p.descrizione = "I permessi del nuovo utente: i dati personali, quelli particolari (salute) o tutti e due; al massimo quelli "
                     "di chi lo aggiunge.";
     p.applica = [](Parametri& par, const std::string& valore) { par.permessi = valore; };

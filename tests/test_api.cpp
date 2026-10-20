@@ -91,7 +91,11 @@ TEST(Api, tabella_comandi) {
             if (p.tipo == TipoParametro::Scelta) {
                 EXPECT_FALSE(p.valori.empty()) << p.nome;
                 EXPECT_TRUE(std::is_sorted(p.valori.begin(), p.valori.end())) << p.nome;
-                EXPECT_NE(std::find(p.valori.begin(), p.valori.end(), p.predefinito), p.valori.end()) << p.nome;
+                // Una scelta obbligatoria (es. --permessi, K-010) non ha un valore predefinito: si scrive sempre.
+                if (p.obbligatorio)
+                    EXPECT_TRUE(p.predefinito.empty()) << p.nome;
+                else
+                    EXPECT_NE(std::find(p.valori.begin(), p.valori.end(), p.predefinito), p.valori.end()) << p.nome;
             } else {
                 EXPECT_TRUE(p.valori.empty()) << p.nome;
                 EXPECT_TRUE(p.predefinito.empty()) << p.nome;

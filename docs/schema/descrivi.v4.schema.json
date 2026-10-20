@@ -337,7 +337,7 @@
           }
         },
         "predefinito": {
-          "description": "Valore usato quando il parametro non e' scritto.",
+          "description": "Valore usato quando il parametro non e' scritto; una scelta obbligatoria non ne ha.",
           "type": "string",
           "minLength": 1
         },
@@ -378,9 +378,27 @@
           },
           "then": {
             "required": [
-              "valori",
-              "predefinito"
-            ]
+              "valori"
+            ],
+            "if": {
+              "properties": {
+                "obbligatorio": {
+                  "const": false
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "predefinito"
+              ]
+            },
+            "else": {
+              "not": {
+                "required": [
+                  "predefinito"
+                ]
+              }
+            }
           },
           "else": {
             "not": {

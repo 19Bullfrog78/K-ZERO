@@ -292,7 +292,33 @@ TEST(Cassaforte, UtenteToltoNonApreLaVersioneNuova) {
     EXPECT_NO_THROW(a3.chiave_registro(1));
     EXPECT_NO_THROW(a3.chiave_registro(2));
     EXPECT_NO_THROW(a3.chiave_registro(3));
-    (void)vecchie_b;
+    // Le chiavi che B aveva (le legge dalla sua copia vecchia) non decifrano la sezione nuova dei dati personali.
+    {
+        using namespace cassaforte::formato;
+        const Analizzato x = analizza(dopo);
+        const Sezione& sez = x.intestazione.sezioni[0];
+        const std::string cifrata = dopo.substr(x.fine, static_cast<std::size_t>(sez.lunghezza));
+        Segreto testo;
+        EXPECT_FALSE(cripto::decifra(derivata(vecchie_b.livelli[kPersonali], kPerSezione), sez.nonce.data(),
+                                     reinterpret_cast<const unsigned char*>(cifrata.data()), cifrata.size(),
+                                     ad_sezione(x.intestazione.id, kPersonali, x.intestazione.versioni[kPersonali],
+                                                x.intestazione.generazione),
+                                     testo));
+    }
+    // B rimette a mano la sua vecchia voce nell'intestazione e rifa' le autenticazioni con le chiavi che aveva: non apre, e
+    // chi e' rimasto se ne accorge.
+    {
+        using namespace cassaforte::formato;
+        const Analizzato vecchio = analizza(prima);
+        const Utente b = *vecchio.intestazione.utente("B");
+        const std::string con_b = riscrivi(dopo, [&](Intestazione& i) {
+            i.utenti.push_back(b);
+            std::sort(i.utenti.begin(), i.utenti.end(), [](const Utente& x, const Utente& y) { return x.codice < y.codice; });
+        }, {&vecchie_b.livelli[kBase], &vecchie_b.livelli[kPersonali], nullptr});
+        tipo_errore(con_b, "B", kPwB);
+        EXPECT_EQ(tipo_errore(con_b, "A", kPwA), Tipo::Manomessa);
+        EXPECT_EQ(tipo_errore(con_b, "D", kPwD), Tipo::Manomessa);
+    }
     (void)nuove_a;
 }
 
