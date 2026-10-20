@@ -5,3 +5,7 @@ tests/esempi/** text eol=lf
 # Schemi e pacchetti di esempio: entrano nel programma byte per byte (cmake/incorpora.cmake), uguali su ogni sistema.
 docs/schema/** text eol=lf
 esempi/** text eol=lf
+# Cassaforte e registro degli accessi (K-010): file binari cifrati, mai toccati da git (vengono dopo e vincono sulle
+# regole sopra: un "a capo" cambiato rovinerebbe la cassaforte).
+*.kzc binary
+*.kzr binary
