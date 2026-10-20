@@ -82,7 +82,8 @@ jobs:
         run: |
           cmake -S . -B build-fuzz -DCMAKE_C_COMPILER=clang-18 -DCMAKE_CXX_COMPILER=clang++-18 -DCMAKE_BUILD_TYPE=RelWithDebInfo \
                 -DKZERO_FUZZ=ON -DKZERO_WERROR=ON
-          cmake --build build-fuzz -j "$(nproc)" --target fuzz_pacchetto fuzz_parametri fuzz_date_e_orari fuzz_cassaforte
+          cmake --build build-fuzz -j "$(nproc)" --target fuzz_pacchetto fuzz_parametri fuzz_date_e_orari fuzz_cassaforte \
+            rigioca_fuzz
       - name: Fuzzing, 20 secondi per bersaglio
         run: KZERO_FUZZ_PARALLELI=$(nproc) tests/fuzz/fuzz.sh build-fuzz 20 fuzz-lavoro
       - name: Casi che provocano un guasto

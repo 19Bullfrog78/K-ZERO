@@ -222,7 +222,9 @@
   deformate, 602.408 contenuti della cassaforte, 9.943.456 registri deformati e 6.844.219 elenchi di voci, 5.092.454
   password, piu' 67.049 file del pacchetto, 32.183 righe di comando e 5.631.188 date e orari nel giro finale. Nessun
   guasto. Il bersaglio "registro" prova solo l'intestazione e la cifratura (un registro deformato non si decifra mai):
-  la lettura delle voci e la catena le prova "registro-voci", sul testo gia' decifrato.
+  la lettura delle voci e la catena le prova "registro-voci", sul testo gia' decifrato. Il fuzzing del controllo GitHub
+  compila anche rigioca_fuzz, che prepara i semi della cassaforte con chiavi nuove a ogni giro (al primo giro sulla
+  proposta mancava e il lavoro si fermava subito).
   Sabotaggio (prove rosse): --includi-dati-* accettati senza il permesso 4; valori decifrati scritti in un
   file temporaneo 1 (prova nuova: dati decifrati mai su disco); voce del registro non scritta e dati mostrati 1;
   intestazione non controllata 3; elenchi dei permessi non controllati (chiave pubblica sostituita, permesso alzato a

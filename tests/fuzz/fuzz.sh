@@ -37,7 +37,11 @@ fi
 # Semi dei bersagli della cassaforte (K-010): preparati a ogni giro (chiavi casuali) da rigioca_fuzz.
 semi_cassaforte="$lavoro/semi-cassaforte"
 rm -rf "$semi_cassaforte"
-"$build/tests/rigioca_fuzz" --scrivi-semi "$semi_cassaforte" || { echo "semi della cassaforte non scritti"; exit 1; }
+if [ ! -x "$build/tests/rigioca_fuzz" ]; then
+  echo "manca $build/tests/rigioca_fuzz, che prepara i semi della cassaforte: compilarlo con --target rigioca_fuzz" >&2
+  exit 1
+fi
+"$build/tests/rigioca_fuzz" --scrivi-semi "$semi_cassaforte" || { echo "semi della cassaforte non scritti" >&2; exit 1; }
 
 # Parole dei file di dati (nomi dei campi e valori fissi degli schemi): aiutano libFuzzer a scrivere JSON plausibile.
 dizionario="$lavoro/k-zero.dict"

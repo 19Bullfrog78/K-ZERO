@@ -52,7 +52,8 @@ Si parte da Alpinabus (3 minibus + 1 auto) e si deve poter crescere fino a 500 m
   -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build-san && ctest --test-dir build-san --output-on-failure`
 - Fuzzing (prove con dati casuali e deformati, libFuzzer, solo clang; su Ubuntu serve il pacchetto libclang-rt-18-dev):
   `CC=clang CXX=clang++ cmake -S . -B build-fuzz -DKZERO_FUZZ=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo &&
-  cmake --build build-fuzz --target fuzz_pacchetto fuzz_parametri fuzz_date_e_orari fuzz_cassaforte`, poi
+  cmake --build build-fuzz --target fuzz_pacchetto fuzz_parametri fuzz_date_e_orari fuzz_cassaforte rigioca_fuzz`
+  (rigioca_fuzz prepara i semi della cassaforte, con chiavi nuove a ogni giro), poi
   `tests/fuzz/fuzz.sh build-fuzz <secondi per bersaglio> [cartella di lavoro] [bersagli]` (32 bersagli: `pacchetto-<file>`,
   `parametri`, `date-e-orari` e, dal K-010, `cassaforte`, `cassaforte-voci`, `registro`, `registro-voci`, `password`; nel
   controllo GitHub 20 secondi; in locale a lungo, es. `KZERO_FUZZ_PARALLELI=4
