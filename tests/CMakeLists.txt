@@ -28,24 +28,25 @@ target_link_libraries(test_giornata PRIVATE kzero_api GTest::gtest_main)
 target_compile_options(test_giornata PRIVATE ${KZERO_WARNINGS})
 target_compile_definitions(test_giornata PRIVATE KZERO_SORGENTI="${PROJECT_SOURCE_DIR}")
 gtest_discover_tests(test_giornata PROPERTIES LABELS api)
-# K-010: cifratura (libsodium) e password.
+# K-010: cifratura (libsodium) e password, unione dei dati, registro, cassaforte. Una sola etichetta: gtest_discover_tests
+# spezzerebbe un elenco di etichette ("api;sicurezza") in due proprieta' diverse.
 add_executable(test_cripto test_cripto.cpp)
 target_link_libraries(test_cripto PRIVATE kzero_api GTest::gtest_main)
 target_compile_options(test_cripto PRIVATE ${KZERO_WARNINGS})
-gtest_discover_tests(test_cripto PROPERTIES LABELS "api;sicurezza")
+gtest_discover_tests(test_cripto PROPERTIES LABELS sicurezza)
 add_executable(test_unione test_unione.cpp)
 target_link_libraries(test_unione PRIVATE kzero_api GTest::gtest_main)
 target_compile_options(test_unione PRIVATE ${KZERO_WARNINGS})
 target_compile_definitions(test_unione PRIVATE KZERO_CARTELLA_PROVE="${CMAKE_CURRENT_SOURCE_DIR}")
-gtest_discover_tests(test_unione PROPERTIES LABELS "api;sicurezza")
+gtest_discover_tests(test_unione PROPERTIES LABELS sicurezza)
 add_executable(test_registro test_registro.cpp)
 target_link_libraries(test_registro PRIVATE kzero_api GTest::gtest_main)
 target_compile_options(test_registro PRIVATE ${KZERO_WARNINGS})
-gtest_discover_tests(test_registro PROPERTIES LABELS "api;sicurezza")
+gtest_discover_tests(test_registro PROPERTIES LABELS sicurezza)
 add_executable(test_cassaforte test_cassaforte.cpp)
 target_link_libraries(test_cassaforte PRIVATE kzero_api GTest::gtest_main)
 target_compile_options(test_cassaforte PRIVATE ${KZERO_WARNINGS})
-gtest_discover_tests(test_cassaforte PROPERTIES LABELS "api;sicurezza")
+gtest_discover_tests(test_cassaforte PROPERTIES LABELS sicurezza)
 
 # --- Strumento standard per confrontare le uscite JSON con gli schemi ---------------
 # check-jsonschema, versioni e impronte fissate in tests/strumenti/check-jsonschema.txt.
