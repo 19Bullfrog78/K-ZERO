@@ -2,8 +2,8 @@
 
 `kzero controlla <cartella>` controlla un pacchetto dati (spiegato in [formato-dati.md](formato-dati.md))
 e scrive un resoconto in testo o in JSON (schema `controlla`, file
-[schema/controlla.v3.schema.json](schema/controlla.v3.schema.json); le versioni 1, del K-007, e 2, del K-008, non sono piu'
-prodotte).
+[schema/controlla.v4.schema.json](schema/controlla.v4.schema.json); le versioni 1, del K-007, 2, del K-008, e 3, del K-009,
+non sono piu' prodotte).
 
 Ogni problema ha:
 - un **livello**: **errore** (il dato e' sbagliato e va corretto) oppure **avviso** (il dato e' accettabile,
@@ -31,7 +31,14 @@ Come si legge il resoconto:
   c'e' il codice dell'elemento e i dati particolari non compaiono; si vedono con `--includi-dati-personali`
   e `--includi-dati-particolari`. Dal K-009 anche le posizioni, e i problemi sui dati sulla salute non si elencano uno
   per uno (sezione "Dati personali e particolari nei problemi", qui sotto);
-- il programma non usa l'orologio: le date sono quelle del pacchetto.
+- il programma non usa l'orologio: le date sono quelle del pacchetto. L'unica eccezione e' K-CTR-097 (data di
+  conservazione della cassaforte passata, K-010);
+- con un pacchetto chiuso nella cassaforte (K-010, docs/cassaforte.md) si controllano i dati che l'utente puo' aprire,
+  uniti in memoria. Un controllo che ha bisogno di una classe che l'utente non puo' aprire (es. le persone a bordo senza i
+  dati particolari, o i turni senza i dati personali delle assenze) non si fa: il resoconto lo elenca tra i **non
+  verificati**, con la classe che serve (in JSON `non_verificato`), e non e' mai un risultato fatto su dati mancanti come se
+  fossero completi. Il resoconto dice anche chi ha aperto la cassaforte e cosa ha potuto aprire (in JSON `cassaforte`).
+  I parametri `--includi-dati-*` valgono solo entro i permessi dell'utente.
 
 I testi dei messaggi stanno tutti in un unico catalogo (`src/api/controlli_catalogo.cpp`), separato dai
 controlli: per tradurli in un'altra lingua basta tradurre il catalogo.

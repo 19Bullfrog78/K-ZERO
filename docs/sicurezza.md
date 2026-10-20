@@ -28,25 +28,30 @@ La valutazione d'impatto la fa il titolare; questa sezione gli da' i fatti sul p
 | Di chi | Alunni (minori), persone con disabilita' e loro accompagnatori, autisti e assistenti delle aziende. |
 | Quali dati mai | Codice fiscale, telefoni, mail, data di nascita, idoneita' medica, cause delle assenze: il formato non ha campi per scriverli (un campo cosi' aggiunto a mano e' un errore). |
 | Quanto | Il minimo: il livello "solo numeri" (consigliato) ha solo conteggi per fermata, niente nomi, case, porta a porta, motivi. |
-| Dove | Solo nei file del pacchetto (una cartella) sul PC di chi pianifica. Il programma non usa la rete, non scrive file senza `--scrivi`, non tiene archivi o registri propri. |
-| Chi li vede | Chi usa il PC e apre i file. Le uscite del programma di base non contengono dati personali ne' particolari (sezione 3). |
-| Per quanto | K-Zero non conserva nulla per conto suo: i tempi li decide il titolare per i file del pacchetto. |
+| Dove | Solo nella cartella del pacchetto, sul PC di chi pianifica. Dal K-010 i dati veri stanno cosi': i **file normali** hanno solo i dati comuni; tutti i valori personali e particolari stanno nella **cassaforte** (`cassaforte.kzc`), cifrata; accanto c'e' il **registro degli accessi** (`registro.kzr`), cifrato. Il programma non usa la rete e non scrive file senza `--scrivi` (sola eccezione: la voce del registro a ogni apertura). |
+| Chi li vede | Solo gli **utenti della cassaforte**, ognuno con la sua password e i suoi permessi (dati personali, dati particolari, o tutti e due); ognuno decifra solo le classi dei suoi permessi. Le uscite di base non contengono dati personali ne' particolari (sezione 3). |
+| Per quanto | Fino alla **data di conservazione** scelta da chi chiude il pacchetto (si puo' cambiare): passata, ogni apertura lo ricorda; `kzero cancella` distrugge la cassaforte e il registro. Il registro dura quanto la cassaforte. |
 | Chi decide | Titolare dei dati degli alunni: con ogni probabilita' la Provincia (da confermare con il suo RPD). L'azienda che pianifica per conto del committente e' responsabile del trattamento (art. 28) per quei dati, e titolare dei dati dei propri dipendenti. |
+| Chi ha aperto | Il registro degli accessi: ogni apertura e ogni azione (utente, data e ora, comando, classi aperte e mostrate, mai i dati); lo legge ogni utente con `kzero registro`. |
 
 `kzero controlla <cartella>` dice in ogni momento quali dati contiene un pacchetto: il livello e quanti valori
-personali e particolari ci sono (file per file con `--includi-dati-personali`).
+personali e particolari ci sono (file per file con `--includi-dati-personali`); `kzero cassaforte <cartella>` dice quanti
+valori ci sono nella cassaforte, chi sono gli utenti e con quali permessi, fino a quando si conservano i dati.
 
 ## 2. Da cosa protegge, e da chi
 
 | Chi o cosa | Cosa fa K-Zero oggi | Cosa resta |
 |---|---|---|
-| **Chi usa lo stesso PC** (un collega, un familiare) | Niente di proprio: i file del pacchetto sono file normali. | Utenti separati del sistema operativo (sezione 5). La cassaforte cifrata dei dati personali con password, piu' utenti e registro degli accessi arrivano con il mandato K-010. |
-| **Un PC o una chiavetta persi o rubati** | Niente di proprio: chi ha i file li puo' leggere. | Cifratura del disco del sistema operativo (sezione 5); mandato K-010. |
-| **Un file di dati preparato apposta**, o rovinato | Lettura blindata, limiti di buon senso, controllo con gli schemi, file malformati rifiutati senza blocchi; provato con i sanitizer e con il fuzzing a ogni proposta; protezioni del compilatore (sezione 3). | Rischi residui in sezione 4. |
+| **Chi usa lo stesso PC** (un collega, un familiare) | Senza una password della cassaforte vede solo i file normali, con i dati comuni; ogni apertura chiede utente e password e va nel registro. | I file normali (dati comuni, nomi liberi: sezione 4); il PC acceso con il programma aperto; un programma malevolo che legge la tastiera o la memoria. |
+| **Un PC o una chiavetta persi o rubati** | La cassaforte e' cifrata (XChaCha20-Poly1305) con chiavi chiuse dalle password (Argon2id, 256 MiB e 3 passaggi: ogni tentativo costa tempo e memoria). | Una password debole si puo' indovinare provando su una copia; le copie in chiaro (la cartella prima della chiusura, le uscite in chiaro) se non sono state cancellate: serve anche la cifratura del disco (sezione 5). |
+| **Un utente con meno permessi** (es. solo i dati personali) | Non riceve mai la chiave dei dati particolari, nemmeno quando le chiavi si rifanno; non puo' dare a se' o ad altri permessi che non ha, neanche cambiando il file con un altro programma (sezione 3); i parametri `--includi-dati-*` oltre i permessi sono un errore. | Puo' copiare fuori i dati che legge: e' il suo permesso. |
+| **Un utente tolto** | Le chiavi dei dati che aveva si rifanno e i dati si ricifrano: non apre la versione nuova, e il registro si ricifra. | Le copie vecchie che ha tenuto restano leggibili con la sua password di allora; una copia vecchia rimessa al posto di quella nuova non si scopre (sezione 4). |
+| **Chi cambia i file della cassaforte con un altro programma** | Intestazione autenticata con una chiave che hanno solo gli utenti, elenchi dei permessi autenticati con le chiavi dei dati: un utente aggiunto da fuori, una chiave pubblica sostituita, un permesso alzato, un parametro abbassato si scoprono e niente si apre (K-ERR-028). Il registro e' a catena e legato alla cassaforte. | Chi ha le chiavi e sa programmare puo' riscrivere il registro (sezione 4). |
+| **Un file di dati preparato apposta**, o rovinato | Lettura blindata, limiti di buon senso, controllo con gli schemi, file malformati rifiutati senza blocchi; cassaforte e registro con limiti su ogni lunghezza, parametri assurdi rifiutati prima di calcolare; provato con i sanitizer e con il fuzzing a ogni proposta; protezioni del compilatore (sezione 3). | Rischi residui in sezione 4. |
 | **Un assistente AI che legge le uscite** (spesso su server esterni) | Di base le uscite non contengono dati personali (al loro posto il codice) ne' particolari ("riservato"), nemmeno nei messaggi, nelle posizioni o nel solo fatto che ci sia un problema sulla salute (sezione 3). Un assistente AI e' solo un aiuto facoltativo. | Con `--includi-dati-personali` o `--includi-dati-particolari` l'uscita contiene quei dati: non va data a un assistente AI. |
-| **Uno sbaglio di chi scrive i dati** | I controlli K-CTR (docs/controlli.md): es. un pacchetto "solo numeri" con dei nomi e' un errore (K-CTR-019). | I nomi liberi (servizi, corse, turni, note, codici) possono rivelare un dato sulla salute: sezione 5. |
+| **Uno sbaglio di chi scrive i dati** | I controlli K-CTR (docs/controlli.md): es. un pacchetto "solo numeri" con dei nomi e' un errore (K-CTR-019); dati personali in chiaro in un pacchetto che non dice "dati inventati" sono un avviso a ogni lettura (K-CTR-096). | I nomi liberi (servizi, corse, turni, note, codici) possono rivelare un dato sulla salute: sezione 5. |
 | **La rete** | Nessun comando usa la rete; due prove lo controllano (sezione 3). | Il futuro adattatore delle distanze (es. Google Maps) sara' l'unica eccezione: un programma separato, acceso con un parametro esplicito, che manda fuori solo coordinate (mai nomi o altri dati delle persone), con un suo mandato. |
-| **Un componente esterno compromesso** | Solo quattro librerie, con versione e impronta fissate; elenco dei componenti in un formato standard (sezione 3). | Le librerie del sistema (libreria C e C++ del compilatore) non sono nell'elenco. |
+| **Un componente esterno compromesso** | Poche librerie, con versione e impronta fissate (libsodium anche con la firma dell'autore verificata); elenco dei componenti in un formato standard (sezione 3). | Le librerie del sistema (libreria C e C++ del compilatore) non sono nell'elenco. |
 
 ## 3. Le misure di oggi
 
@@ -61,12 +66,53 @@ dell'elemento, un dato particolare diventa "riservato"; si vedono solo con `--in
   codice ne' posizione): una riga sola dice quanti errori e avvisi sono, e contano lo stesso;
 - la posizione di un problema non entra mai in un dato personale o particolare: si ferma all'elemento comune piu'
   vicino; un problema su un'assenza indica la persona, non il file delle assenze. Regola ricavata dagli schemi;
-- **luoghi sensibili** (es. un centro diurno, segnato da chi scrive i dati): con i dati personali e senza quelli
-  particolari, dove un'uscita lascia riconoscere un passeggero - il nome o la casa (un punto porta a porta con il nome o
-  l'indirizzo) - il luogo sensibile diventa "riservato": nel messaggio di un problema, in servizi e corse della
-  dimostrazione, in tutta la giornata mostrata ([formato-dati.md](formato-dati.md), "Luoghi sensibili"). Una regola
-  sola nel codice (`LegameSensibile`, src/api/riservatezza.hpp), usata da tutte le uscite;
+- **luoghi sensibili** (es. un centro diurno, segnato da chi scrive i dati): dal K-010 la regola vale per la persona, non
+  per il luogo. Il nome, la casa e gli altri dati personali di chi e' legato a un luogo sensibile (chi ci va, chi sale o
+  scende li', le case porta a porta toccate da quei giri) valgono come dati particolari **in tutte le uscite**, non solo
+  dove compare il centro; il centro si vede sempre. Cosi' la regola regge tra uscite diverse: nessuna lega mai il codice
+  della casa al nome senza i dati particolari ([formato-dati.md](formato-dati.md), "Luoghi sensibili"). Nella cassaforte
+  quei dati stanno con i particolari: chi non ne ha il permesso non li puo' decifrare. Una regola sola nel codice
+  (`LegameSensibile`, src/api/riservatezza.hpp);
 - gli errori del programma (K-ERR) non nominano mai un file di soli dati personali.
+
+**Cassaforte dei dati personali** (K-010, [cassaforte.md](cassaforte.md)). I dati veri stanno solo nella cassaforte:
+- **tutti i valori personali e particolari** del pacchetto, scelti con le classi degli schemi (la stessa regola con cui
+  `kzero controlla` li conta), legati al loro elemento con il codice, mai con la posizione: un elemento tolto o cambiato
+  dopo la chiusura e' un errore (K-CTR-094), mai un nome sulla persona sbagliata. I file normali restano leggibili, con
+  i soli dati comuni; all'apertura i dati si uniscono in memoria;
+- **cifratura** con libsodium (XChaCha20-Poly1305, usata come prescrive la sua documentazione: niente cifratura fatta in
+  casa); chiavi dalle password con **Argon2id** (256 MiB, 3 passaggi; parametri scritti nel file, rifiutati se abbassati
+  o assurdi, prima di calcolare);
+- **piu' utenti con permessi**: dati personali, dati particolari o tutti e due; due chiavi dei dati separate e una
+  "fessura" per utente con le sole chiavi dei suoi permessi. Si danno al massimo i permessi che si hanno; togliere un
+  utente rifa' le chiavi e ricifra i dati; non si toglie l'ultimo che legge una classe, ne' l'ultimo con tutti i
+  permessi;
+- **intestazione autenticata**: utenti, chiavi pubbliche, permessi, parametri e versione sono autenticati con una chiave
+  che hanno solo gli utenti (rifatta quando si toglie un utente); chi ha i dati particolari e' autenticato anche con la
+  chiave dei particolari, chi ha i personali con quella dei personali: un permesso alzato a mano, anche da un utente
+  vero, si scopre prima di consegnare una chiave;
+- **password**: mai come parametro ne' in una variabile d'ambiente, dal terminale senza eco (la nuova due volte) o
+  dall'ingresso standard con `--password-da-ingresso`; regole di NIST SP 800-63B-4 (almeno 15 caratteri, fino a 256,
+  qualunque carattere, rifiutate le password comuni e quelle prevedibili); normalizzazione Unicode NFC (stessa password
+  su Linux e su Windows). Nessun recupero: un altro utente con i permessi della persona puo' darle una password nuova;
+- **permessi nelle uscite**: `--includi-dati-personali` e `--includi-dati-particolari` valgono solo entro i permessi
+  (altrimenti errore K-ERR-023). Per chi non puo' aprire una classe, un controllo o un calcolo che ne ha bisogno e'
+  **"non verificato"** e il risultato lo dice: mai un risultato fatto su dati mancanti come se fossero completi (una
+  prova confronta i risultati dei tre tipi di utente su 375 pacchetti);
+- **memoria protetta**: chiavi, password e testo decifrato in memoria bloccata, con pagine di guardia, esclusa dai core
+  dump e azzerata appena finito; mentre la cassaforte e' aperta il programma non scrive "core dump" (Linux). Dati
+  decifrati mai su disco ne' in file temporanei: l'uscita in chiaro (`kzero esporta`) e' l'unica eccezione, esplicita;
+- **cancellazione e conservazione**: data di conservazione scelta alla chiusura (si puo' cambiare); passata, ogni
+  apertura lo ricorda (K-CTR-097); `kzero cancella` distrugge prima le fessure con le chiavi, poi i file, e stampa un
+  resoconto da conservare.
+
+**Registro degli accessi** (K-010). Ogni apertura e ogni azione scrive una voce (utente, data e ora UTC dall'orologio del
+PC, comando, classi aperte e mostrate, una nota senza dati personali); se la voce non si scrive i dati non si aprono. Voci
+a catena (ognuna contiene l'impronta di quella prima) e la cassaforte ricorda l'ultima voce scritta insieme a lei: una
+voce tolta, cambiata o spostata si scopre. Cifrato con una chiave che hanno tutti gli utenti; in un file accanto alla
+cassaforte, cosi' un comando che legge non riscrive i dati. Scritture atomiche (file temporaneo, poi sostituzione) e
+cartella bloccata durante ogni scrittura: due comandi insieme, anche da due PC su una cartella condivisa che lo permette,
+non perdono voci e non rovinano i file (provato).
 
 **Minimizzazione.** Nessun campo per codice fiscale, telefoni, mail, data di nascita, cause delle assenze, idoneita'
 medica. Il livello "solo numeri" e' quello consigliato.
@@ -75,7 +121,11 @@ medica. Il livello "solo numeri" e' quello consigliato.
 rete (socket, connect, getaddrinfo e simili) e non sia collegato a librerie di rete; un'altra controlla che nessun file
 del codice includa intestazioni di rete o si colleghi a librerie di rete.
 
-**Niente scritture senza `--scrivi`.** Il risultato va sull'uscita standard; nessun comando scrive file.
+**Niente scritture senza `--scrivi`.** Il risultato va sull'uscita standard; nessun comando scrive file senza
+`--scrivi <cartella>`, che dice proprio quale cartella si scrive o si cambia (chiusura, uscita in chiaro, utenti,
+password, conservazione, cancellazione). Le uniche eccezioni, documentate: la voce del registro a ogni apertura, l'ora
+del registro e la data di conservazione dall'orologio del PC, chiavi, sali e nonce dal caso (le uscite restano uguali, i
+byte della cassaforte no).
 
 **Limiti di buon senso.** Ogni numero e testo dei file ha un massimo nello schema (una prova lo controlla); un file oltre
 256 MB non si legge.
@@ -93,8 +143,10 @@ A ogni proposta, oltre alle prove normali:
 - **sanitizer**: il programma e tutte le prove compilati con AddressSanitizer (errori di memoria: letture e scritture
   fuori posto, memoria usata dopo averla liberata, perdite) e UndefinedBehaviorSanitizer (operazioni dal risultato non
   definito); il primo problema ferma la prova;
-- **fuzzing** (prove con dati casuali e deformati, libFuzzer): 27 bersagli, cioe' ogni tipo di file del pacchetto (il demo
-  con quel file sostituito: lettura, controlli, messaggi), la riga di comando, date e orari; partono dai file del demo e
+- **fuzzing** (prove con dati casuali e deformati, libFuzzer): 32 bersagli, cioe' ogni tipo di file del pacchetto (il demo
+  con quel file sostituito: lettura, controlli, messaggi), la riga di comando, date e orari e, dal K-010, il file della
+  cassaforte, il testo decifrato delle sue sezioni, il file e il testo del registro, le password (per non calcolare
+  Argon2id a ogni caso questi bersagli usano parametri leggeri che il programma kzero non accetta); partono dai file del demo e
   controllano anche la coerenza dei risultati (posizioni mostrate solo su dati comuni, JSON sempre valido, stessa regola
   delle date nel programma e negli schemi). **20 secondi per bersaglio**, piu' bersagli insieme: circa 5 minuti in tutto,
   come le prove normali, per non rallentare ogni proposta; bastano a provare migliaia di file deformati per ogni tipo e a
@@ -108,7 +160,8 @@ funzioni della libreria C (`_FORTIFY_SOURCE`) e C++, eseguibile rilocabile (PIE)
 completo), stack non eseguibile. Rendono piu' difficile sfruttare un errore di memoria; una prova le ritrova nel
 programma compilato.
 
-**Componenti esterni fissati ed elencati.** CLI11, nlohmann/json, valijson e (solo per le prove) GoogleTest e
+**Componenti esterni fissati ed elencati.** CLI11, nlohmann/json, valijson, libsodium (cifratura), utf8proc
+(normalizzazione Unicode delle password), l'elenco delle password comuni (SecLists) e (solo per le prove) GoogleTest e
 check-jsonschema, con versione e impronta fissate. L'elenco completo, leggibile da un programma, e' in
 [componenti.cdx.json](componenti.cdx.json) (formato standard CycloneDX 1.5): nome, versione, provenienza, impronta,
 licenza, se serve al programma o solo alle prove. Una prova controlla che coincida con quello che si scarica davvero.
@@ -117,44 +170,89 @@ K-Zero sara' venduto.
 
 ## 4. I rischi che restano, e chi li chiudera'
 
-- **File in chiaro sul disco; un solo utente; nessun registro degli accessi.** Chiunque apra la cartella legge i dati.
-  Li chiude il mandato **K-010 "cassaforte dei dati personali"**: dati personali cifrati con una password, piu' utenti,
-  registro degli accessi. Fino ad allora: sezione 5.
+La cassaforte protegge i dati quando i file sono fermi sul disco, in una copia di sicurezza o su un PC rubato, e da chi
+non ha una password; non protegge da tutto. Detto onestamente:
+
+- **Chi conosce una password** apre i dati dei permessi di quell'utente. Una password debole si puo' indovinare provando
+  su una copia del file, senza limiti di tentativi: Argon2id rende ogni prova lenta e costosa (circa mezzo secondo e
+  256 MiB su un PC normale), non impossibile. Per questo le regole delle password nuove e i consigli della sezione 5.
+- **Un PC acceso con il programma aperto.** Mentre un comando lavora, i dati uniti stanno nella memoria del programma:
+  chiavi, password e testo decifrato in memoria protetta, azzerati appena finito; ma i dati uniti (nomi, case...) stanno
+  nelle strutture normali del programma fino alla fine del comando, e il sistema li puo' mettere nel file di scambio
+  (swap). Un programma malevolo sul PC, o un amministratore del PC, puo' leggere la tastiera e la memoria. Non promettiamo
+  di piu': per questo la cifratura del disco e un utente per persona (sezione 5).
+- **Copie vecchie.** La cartella in chiaro da cui si e' chiuso il pacchetto, le uscite in chiaro (`kzero esporta`) e le
+  stampe restano dove sono finche' non si cancellano, e anche dopo la cancellazione i dati possono restare sul disco o
+  nelle copie di sicurezza. Le copie vecchie della cassaforte restano cifrate con le password di allora: anche dopo
+  `kzero cancella`, e anche presso un utente tolto che ne ha tenuta una copia. Su dischi a stato solido la cancellazione
+  sul posto delle fessure non garantisce che i byte vecchi spariscano dal disco.
+- **Una copia vecchia rimessa al posto di quella nuova** (cassaforte, registro e file normali di una copia di prima, es.
+  da un utente tolto che torna con la sua copia) non si scopre senza un riferimento fuori dalla cartella: i file sono
+  autentici, solo vecchi. Il registro e l'ancora della cassaforte scoprono le voci tolte o cambiate, non una copia
+  intera di prima.
+- **Un utente tolto che aveva ancora accesso alla cartella** e gli stessi permessi di chi lo toglie puo', in teoria,
+  preparare il file in modo che gli utenti che non hanno piu' aperto la cassaforte con una password nuova accettino
+  chiavi che lui conosce (docs/cassaforte.md, "Cosa non si scopre"). Chi lo ha tolto se ne accorgerebbe aprendo. Rimedio:
+  dopo aver tolto un utente che poteva scrivere nella cartella, gli altri cambiano la password (`kzero password`).
+- **Il registro** lo puo' riscrivere tutto chi ha le chiavi e sa programmare (ogni utente le ha, per poterlo scrivere);
+  le voci scritte dopo l'ultima modifica della cassaforte (le sole letture) si possono togliere senza che si veda. L'ora e'
+  quella dell'orologio del PC, che chi usa il PC puo' cambiare. Un comando su una cartella in sola lettura non apre
+  niente, perche' la voce non si puo' scrivere.
+- **Un utente puo' dare ad altri i suoi permessi** (aggiungendo un utente), o copiare fuori i dati che legge: e' quello
+  che il permesso gli consente. Il registro lo mostra.
+- **I file normali** restano in chiaro: dati comuni (fermate, orari, mezzi, codici, conteggi senza esigenze) e i nomi
+  liberi (punto sotto).
 - **Nomi liberi.** Nomi di servizi, gruppi, corse, turni, calendari, note e codici sono dati comuni scelti da chi scrive
-  i dati: il programma li mostra sempre. Un nome come "Trasporto al centro diurno" accanto all'elenco dei passeggeri dice
-  lo stesso di un luogo sensibile. E' responsabilita' di chi scrive i dati (sezione 5). Il pacchetto dimostrativo, che ha
-  dati inventati ed e' stato scritto prima di questa regola, ha proprio nomi e codici cosi' (il servizio `S-DIS`
-  "Trasporto al centro diurno Il Faro", il gruppo "Centro diurno, andata", il turno `T-DIS` "Centro diurno", il
-  calendario `CAL-CENTRO` "Centro diurno: lunedi', mercoledi' e giovedi'", la corsa "Centro diurno, giro principale"):
-  restano come esempio di cosa evitare, e perche' le prove li usano. Nella giornata con i dati personali il centro
-  diventa "riservato", ma questi nomi dicono ancora "centro diurno" (non quale).
-- **Collegamenti tra i codici.** Dentro una giornata, e dentro servizi e corse della dimostrazione, il legame tra una
-  casa o un passeggero e un luogo sensibile e' chiuso anche attraverso i codici (stesso mezzo, trasbordi, servizi).
-  Restano: tra messaggi diversi di `kzero controlla`; tra uscite diverse (chi puo' usare `--includi-dati-personali` puo'
-  anche chiedere la stessa giornata senza, dove il centro si vede accanto al codice della casa: la regola protegge
-  quello che una singola uscita mostra, ad esempio un foglio dato a un autista, non chi usa il programma - quello e' il
-  compito degli utenti e dei permessi del mandato K-010); gli orari e i km, per chi conosce la zona. Un'uscita con
-  `--includi-dati-personali` va trattata come i file del pacchetto.
+  i dati: il programma li mostra sempre e stanno nei file normali, in chiaro. Un nome come "Trasporto al centro diurno"
+  accanto all'elenco dei passeggeri dice lo stesso di un luogo sensibile. E' responsabilita' di chi scrive i dati
+  (sezione 5); un avviso sui nomi liberi arrivera' con un mandato piccolo. Il pacchetto dimostrativo, che ha dati
+  inventati ed e' stato scritto prima di questa regola, ha proprio nomi e codici cosi' (il servizio `S-DIS` "Trasporto al
+  centro diurno Il Faro", il gruppo "Centro diurno, andata", il turno `T-DIS` "Centro diurno", il calendario `CAL-CENTRO`
+  "Centro diurno: lunedi', mercoledi' e giovedi'", la corsa "Centro diurno, giro principale"): restano come esempio di
+  cosa evitare, e perche' le prove li usano. Questi nomi dicono "centro diurno" e il nome del servizio dice anche quale
+  ("Il Faro", che si legge per esempio nel JSON della giornata): con la regola del K-010 il centro si vede comunque, e
+  nome e casa di chi ci va restano dati particolari.
+- **Collegamenti tra i codici.** Chi ha i soli dati personali non legge mai nome e casa di chi e' legato a un luogo
+  sensibile (stanno con i particolari, in tutte le uscite). Restano gli orari e i km, per chi conosce la zona, e i nomi
+  liberi.
+- **"Non verificato".** Chi non puo' aprire una classe vede meno controlli e una giornata "non verificata" in alcune
+  parti: e' voluto (mai un risultato su dati mancanti come se fossero completi), ma chi ha tutti i permessi deve guardare
+  anche lui il pacchetto.
 - **Uscite copiate altrove.** Quello che l'utente salva, stampa o incolla (es. in un assistente AI) esce dal controllo
   del programma.
 - **Memoria.** Un file vicino al massimo di 256 MB, preparato apposta, puo' occupare in memoria diversi GB mentre lo si
   legge. Il limite ferma gli errori e i file sbagliati, non un attacco fatto per esaurire la memoria di un PC piccolo.
 - **Chi ha gia' accesso al PC** puo' cambiare i file mentre il programma li legge, o usare un collegamento fisso ("hard
   link", che il sistema non distingue da un file normale): sono fuori da cio' che il programma puo' controllare.
-- **Windows.** Le prove della lettura blindata (pipe, dispositivi, collegamenti e scorciatoie, cartelle sincronizzate
-  come OneDrive con i "file su richiesta") e le protezioni del compilatore equivalenti (`/GS`, `/guard:cf`,
-  `/DYNAMICBASE`, `/HIGHENTROPYVA`, `/NXCOMPAT`) le fara' il mandato del programma per Windows. Oggi sono provate solo
-  su Linux.
+- **Cartelle condivise in rete.** Il blocco della cartella dipende dal sistema: se non si puo' bloccare, il comando si
+  ferma (K-ERR-030) e nessun dato si apre.
+- **Windows.** Il programma per Windows non c'e' ancora (mandato a parte): le prove della lettura blindata, delle
+  password dal terminale, del blocco dei file, della memoria protetta e dei core dump, e le protezioni del compilatore
+  equivalenti (`/GS`, `/guard:cf`, `/DYNAMICBASE`, `/HIGHENTROPYVA`, `/NXCOMPAT`) le fara' quel mandato. Oggi tutto e'
+  provato solo su Linux.
 - **Le librerie del sistema** (libreria C e C++ del compilatore) non sono nell'elenco dei componenti: le aggiorna il
   sistema operativo.
 
 ## 5. Consigli per chi usa K-Zero
 
-- **Un utente per persona** sul PC, con la sua **password**, e il blocco dello schermo quando ci si allontana. I file
-  dei pacchetti in una cartella dell'utente, non in una cartella condivisa.
-- **Cifratura del disco** del sistema operativo: su Windows BitLocker (Pro) o "Crittografia dispositivo" (Home); su Mac
-  FileVault; su Linux la cifratura del disco all'installazione. Cosi' un PC rubato non lascia leggere i file.
-- **Copie di sicurezza** regolari, su un supporto separato e cifrato, e ogni tanto la prova di rimetterle a posto.
+- **I dati veri solo nella cassaforte.** Chiudere il pacchetto (`kzero chiudi`) prima di scriverci dati veri di persone,
+  e subito dopo **cancellare la cartella in chiaro**; lo stesso per un'uscita in chiaro, appena richiusa.
+- **Password**: una frase lunga (es. quattro o cinque parole che non stanno insieme), diversa da ogni altra password,
+  mai scritta nei file del PC. Nessun recupero: tenere **almeno due utenti con tutti i permessi** (es. il titolare e un
+  sostituto), cosi' una password persa si sostituisce (`kzero password --per-utente`).
+- **Un utente della cassaforte per persona**, con i soli permessi che servono (es. l'ufficio i soli dati personali).
+  Chi lascia l'azienda si toglie subito (`kzero togli-utente`); se poteva ancora scrivere nella cartella, gli altri
+  cambiano la password.
+- **Un utente per persona** anche sul PC, con la sua password, e il blocco dello schermo quando ci si allontana.
+- **Cifratura del disco** del sistema operativo, che **resta necessaria** anche con la cassaforte (copie in chiaro, file
+  normali, file di scambio): su Windows BitLocker (Pro) o "Crittografia dispositivo" (Home); su Mac FileVault; su Linux la
+  cifratura del disco all'installazione.
+- **Copie di sicurezza** regolari, su un supporto separato e cifrato, e ogni tanto la prova di rimetterle a posto. Ora
+  contengono la cassaforte cifrata: copiare sempre insieme cassaforte, registro e file normali; una copia si apre con le
+  password di quando e' stata fatta.
+- **Data di conservazione** realistica alla chiusura; quando i dati non servono piu', `kzero cancella` e cancellare anche
+  le copie.
+- **Guardare il registro** ogni tanto (`kzero registro`): aperture che non si riconoscono vanno capite.
 - **Livello "solo numeri" quando basta**: per i turni, i mezzi, i giri bastano i conteggi per fermata. I nomi e le case
   solo quando servono davvero.
 - **Nomi liberi senza dati sulla salute.** Da evitare: "Trasporto al centro diurno", "Disabili Pradello", "Corsa
@@ -162,23 +260,34 @@ K-Zero sara' venduto.
   3", "Andata Il Faro" (se il luogo non e' sensibile), "Turno 4"; il tipo "disabili" va nel campo apposta, che e' gia'
   riservato.
 - **Luoghi sensibili segnati**: un centro diurno, di terapia o di riabilitazione con `"sensibile": true` (luoghi.json,
-  versione 2). Un doposcuola di solito no.
-- **Non mandare pacchetti "completi"** per mail o su chiavette; se serve, un pacchetto "solo numeri", oppure un archivio
-  cifrato con una password detta a voce.
+  versione 2). Un doposcuola di solito no. Il porta a porta: la scelta `porta_a_porta_sensibile` del manifesto (versione
+  2) e' dell'azienda ([formato-dati.md](formato-dati.md)).
+- **Non mandare pacchetti** per mail o su chiavette se non chiusi; se serve, un pacchetto chiuso (la password detta a voce,
+  mai nello stesso messaggio) o un pacchetto "solo numeri".
 - **Assistenti AI**: dare solo le uscite di base (senza `--includi-dati-personali` e `--includi-dati-particolari`), mai i
-  file di un pacchetto "completo".
+  file di un pacchetto in chiaro ne' le password.
 - **Programma**: scaricarlo solo dalla fonte ufficiale e tenerlo aggiornato.
 
 ## 6. Cosa fare in caso di violazione
 
 Una violazione e' per esempio: un PC o una chiavetta con un pacchetto rubati o persi, un pacchetto o un'uscita con i nomi
-mandati alla persona sbagliata, un'uscita con i dati personali incollata in un servizio esterno.
+mandati alla persona sbagliata, un'uscita con i dati personali incollata in un servizio esterno, una password della
+cassaforte scoperta, aperture nel registro che nessuno riconosce.
 
-1. **Fermare il danno**: cambiare le password, chiedere a chi ha ricevuto per sbaglio di cancellare, bloccare il PC a
-   distanza se si puo'.
-2. **Capire cosa e' coinvolto**: `kzero controlla <cartella> --includi-dati-personali` sulla copia del pacchetto dice il
-   livello ("solo numeri" o "completo") e quanti dati personali e particolari ci sono, file per file. Annotare data,
-   ora, cosa e' successo, chi e' coinvolto.
+1. **Fermare il danno**: cambiare le password (del PC e della cassaforte, `kzero password`), togliere l'utente
+   coinvolto (`kzero togli-utente`), chiedere a chi ha ricevuto per sbaglio di cancellare, bloccare il PC a distanza se
+   si puo'.
+2. **Capire cosa e' coinvolto**: `kzero cassaforte <cartella> --utente ...` dice quanti valori personali e particolari
+   ci sono nella cassaforte e chi sono gli utenti; `kzero controlla` (su un pacchetto in chiaro, file per file con
+   `--includi-dati-personali`) dice il livello e quanti dati ci sono; `kzero registro` dice chi ha aperto la cassaforte e
+   quando. Capire anche se sul supporto perso c'erano **copie in chiaro** (la cartella prima della chiusura, uscite in
+   chiaro, stampe) e se una **password** puo' essere stata scoperta. Annotare data, ora, cosa e' successo, chi e'
+   coinvolto.
+   - **Con i dati nella cassaforte** (e nessuna copia in chiaro, password non scoperte e conformi alle regole) i dati
+     persi sono cifrati, cioe' incomprensibili per chi non ha una password: e' il caso dell'art. 34 c. 3 lett. a, in cui
+     non serve avvisare le persone. **Lo decide il titolare**, che resta tenuto a documentare la violazione e valuta lui
+     la notifica al Garante (art. 33). Se una password puo' essere stata scoperta, cambiarla subito su una copia buona e
+     trattare la violazione come se i dati fossero in chiaro.
 3. **Avvisare**:
    - l'azienda che tratta i dati **per conto di altri** (es. i dati degli alunni per conto della Provincia) informa
      **subito il titolare**, senza ingiustificato ritardo (art. 33 c. 2): e' il titolare che decide se e come notificare
