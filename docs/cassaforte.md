@@ -152,6 +152,9 @@ parametri leggeri; il programma kzero non ha nessun parametro o variabile per ca
   dopo) ha nella fessura la chiave nuova vera e se ne accorge (K-ERR-028). Rimedio: dopo aver tolto un utente che poteva
   scrivere nella cartella, gli altri cambiano la password.
 - L'ora e' quella dell'orologio del PC.
+- I tentativi con una password sbagliata (o su una cassaforte manomessa) non entrano nel registro: senza la password non
+  c'e' la chiave per scrivere una voce, e chi prova le password su una copia del file non passa dal programma. Il registro
+  dice chi ha aperto, non chi ha provato.
 
 ## Il formato del file della cassaforte (versione 1)
 

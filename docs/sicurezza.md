@@ -197,7 +197,8 @@ non ha una password; non protegge da tutto. Detto onestamente:
 - **Il registro** lo puo' riscrivere tutto chi ha le chiavi e sa programmare (ogni utente le ha, per poterlo scrivere);
   le voci scritte dopo l'ultima modifica della cassaforte (le sole letture) si possono togliere senza che si veda. L'ora e'
   quella dell'orologio del PC, che chi usa il PC puo' cambiare. Un comando su una cartella in sola lettura non apre
-  niente, perche' la voce non si puo' scrivere.
+  niente, perche' la voce non si puo' scrivere. I tentativi con una password sbagliata non entrano nel registro (senza la
+  password non c'e' la chiave per scrivere la voce): il registro dice chi ha aperto, non chi ha provato.
 - **Un utente puo' dare ad altri i suoi permessi** (aggiungendo un utente), o copiare fuori i dati che legge: e' quello
   che il permesso gli consente. Il registro lo mostra.
 - **I file normali** restano in chiaro: dati comuni (fermate, orari, mezzi, codici, conteggi senza esigenze) e i nomi
