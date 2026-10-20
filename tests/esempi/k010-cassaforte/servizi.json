@@ -1,0 +1,612 @@
+{
+  "schema": "servizi",
+  "schema_versione": 2,
+  "servizi": [
+    {
+      "calendario": "CAL-SCUOLA-LV",
+      "codice": "S-SCU-AM",
+      "codici_esterni": [
+        {
+          "codice": "2050001/1",
+          "sistema": "Consorzio Valle Alta",
+          "tipo": "servizio"
+        }
+      ],
+      "contratto": "CT-SCU",
+      "domanda": {
+        "gruppi": [
+          {
+            "codice": "G-AM-MEDIE",
+            "conteggi": "esatti",
+            "fermate": [
+              {
+                "luogo": "F-PRADELLO",
+                "salgono": 9
+              },
+              {
+                "luogo": "F-CASTELROVO",
+                "salgono": 8
+              },
+              {
+                "luogo": "F-MONTEBRINO",
+                "salgono": 7
+              },
+              {
+                "luogo": "L-MEDIE",
+                "scendono": 24
+              }
+            ],
+            "finestra": {
+              "alle": "07:55",
+              "dalle": "07:30"
+            },
+            "nome": "Medie, andata",
+            "scuola": "SC-MEDIE",
+            "verso": "andata"
+          },
+          {
+            "codice": "G-AM-PRIM",
+            "conteggi": "esatti",
+            "fermate": [
+              {
+                "luogo": "F-SORGENTA",
+                "salgono": 6
+              },
+              {
+                "luogo": "F-LAGOBELLO",
+                "salgono": 8
+              },
+              {
+                "luogo": "L-PRIM",
+                "scendono": 14
+              }
+            ],
+            "finestra": {
+              "alle": "08:05",
+              "dalle": "07:40"
+            },
+            "nome": "Primaria, andata",
+            "scuola": "SC-PRIM",
+            "verso": "andata"
+          }
+        ]
+      },
+      "liberta_oraria": {
+        "soglia_da_concordare_minuti": 10,
+        "tipo": "libera"
+      },
+      "nome": "Andata mattina Pradello - Valfonda, medie e primaria"
+    },
+    {
+      "calendario": "CAL-SCUOLA-LV",
+      "codice": "S-SCU-RM",
+      "codici_esterni": [
+        {
+          "codice": "2050001/2",
+          "sistema": "Consorzio Valle Alta",
+          "tipo": "servizio"
+        }
+      ],
+      "contratto": "CT-SCU",
+      "domanda": {
+        "gruppi": [
+          {
+            "codice": "G-RM-MEDIE",
+            "conteggi": "esatti",
+            "fermate": [
+              {
+                "luogo": "L-MEDIE",
+                "salgono": 11
+              },
+              {
+                "luogo": "F-CASTELROVO",
+                "scendono": 4
+              },
+              {
+                "luogo": "F-MONTEBRINO",
+                "scendono": 4
+              },
+              {
+                "luogo": "F-PRADELLO",
+                "scendono": 3
+              }
+            ],
+            "finestra": {
+              "alle": "12:15",
+              "dalle": "12:00"
+            },
+            "nome": "Medie, ritorno",
+            "scuola": "SC-MEDIE",
+            "verso": "ritorno"
+          }
+        ]
+      },
+      "liberta_oraria": {
+        "soglia_da_concordare_minuti": 10,
+        "tipo": "libera"
+      },
+      "nome": "Ritorno mezzogiorno medie"
+    },
+    {
+      "calendario": "CAL-SCUOLA-LV",
+      "codice": "S-SUP-RM",
+      "codici_esterni": [
+        {
+          "codice": "SUP-B610-R",
+          "sistema": "Trasporti Provinciali Valfonda",
+          "tipo": "servizio"
+        }
+      ],
+      "contratto": "CT-LIN",
+      "domanda": {
+        "gruppi": [
+          {
+            "codice": "G-RM-SUP",
+            "conteggi": "esatti",
+            "fermate": [
+              {
+                "luogo": "L-SUP",
+                "salgono": 5
+              },
+              {
+                "luogo": "F-CASTELROVO",
+                "scendono": 2
+              },
+              {
+                "luogo": "F-MONTEBRINO",
+                "scendono": 1
+              },
+              {
+                "luogo": "F-PRADELLO",
+                "scendono": 2
+              }
+            ],
+            "finestra": {
+              "alle": "12:00",
+              "dalle": "11:50"
+            },
+            "nome": "Superiori, ritorno",
+            "scuola": "SC-SUP",
+            "verso": "ritorno"
+          }
+        ]
+      },
+      "liberta_oraria": {
+        "soglia_da_concordare_minuti": 10,
+        "tipo": "libera"
+      },
+      "nome": "Ritorno superiori a supporto della linea B610",
+      "regole": {
+        "posti_minimi": 12
+      }
+    },
+    {
+      "calendario": "CAL-CENTRO",
+      "codice": "S-DIS",
+      "codici_esterni": [
+        {
+          "codice": "48211",
+          "sistema": "Consorzio Valle Alta",
+          "tipo": "scheda"
+        }
+      ],
+      "contratto": "CT-SCU",
+      "domanda": {
+        "gruppi": [
+          {
+            "codice": "G-DIS",
+            "conteggi": "esatti",
+            "fermate": [
+              {
+                "luogo": "PP-01",
+                "salgono": 1
+              },
+              {
+                "luogo": "PP-02",
+                "salgono": 1
+              },
+              {
+                "luogo": "PP-03",
+                "salgono": 1
+              },
+              {
+                "luogo": "L-CENTRO",
+                "scendono": 3
+              }
+            ],
+            "finestra": {
+              "alle": "09:00",
+              "dalle": "08:30"
+            },
+            "nome": "Centro diurno, andata",
+            "passeggeri": [
+              {
+                "codice": "P-D1",
+                "discesa": {
+                  "assegnazione": "proposta",
+                  "luogo": "L-CENTRO"
+                },
+                "salita": {
+                  "assegnazione": "proposta",
+                  "luogo": "PP-01"
+                },
+                "stato": {
+                  "tipo": "attivo"
+                }
+              },
+              {
+                "codice": "P-D2",
+                "discesa": {
+                  "assegnazione": "proposta",
+                  "luogo": "L-CENTRO"
+                },
+                "salita": {
+                  "assegnazione": "proposta",
+                  "luogo": "PP-02"
+                },
+                "stato": {
+                  "tipo": "attivo"
+                }
+              },
+              {
+                "codice": "P-D3",
+                "discesa": {
+                  "assegnazione": "proposta",
+                  "luogo": "L-CENTRO"
+                },
+                "salita": {
+                  "assegnazione": "proposta",
+                  "luogo": "PP-03"
+                },
+                "stato": {
+                  "tipo": "attivo"
+                }
+              }
+            ],
+            "scuola": "SC-CENTRO",
+            "verso": "andata"
+          }
+        ]
+      },
+      "liberta_oraria": {
+        "soglia_da_concordare_minuti": 15,
+        "tipo": "libera"
+      },
+      "nome": "Trasporto al centro diurno Il Faro"
+    },
+    {
+      "calendario": "CAL-INFANZIA",
+      "codice": "S-ASILO",
+      "contratto": "CT-ASILO",
+      "domanda": {
+        "gruppi": [
+          {
+            "codice": "G-ASILO",
+            "conteggi": "esatti",
+            "fermate": [
+              {
+                "luogo": "F-SORGENTA",
+                "salgono": 4
+              },
+              {
+                "luogo": "F-LAGOBELLO",
+                "salgono": 3
+              },
+              {
+                "luogo": "L-INFANZIA",
+                "scendono": 7
+              }
+            ],
+            "finestra": {
+              "alle": "08:00",
+              "dalle": "07:50"
+            },
+            "nome": "Bambini dell'infanzia",
+            "passeggeri": [
+              {
+                "codice": "P-A1",
+                "discesa": {
+                  "assegnazione": "proposta",
+                  "luogo": "L-INFANZIA"
+                },
+                "salita": {
+                  "assegnazione": "proposta",
+                  "luogo": "F-SORGENTA"
+                },
+                "stato": {
+                  "tipo": "attivo"
+                }
+              },
+              {
+                "codice": "P-A2",
+                "discesa": {
+                  "assegnazione": "proposta",
+                  "luogo": "L-INFANZIA"
+                },
+                "salita": {
+                  "assegnazione": "proposta",
+                  "luogo": "F-SORGENTA"
+                },
+                "stato": {
+                  "tipo": "attivo"
+                }
+              },
+              {
+                "codice": "P-A3",
+                "discesa": {
+                  "assegnazione": "proposta",
+                  "luogo": "L-INFANZIA"
+                },
+                "salita": {
+                  "assegnazione": "bloccata",
+                  "luogo": "F-SORGENTA"
+                },
+                "stato": {
+                  "tipo": "attivo"
+                }
+              },
+              {
+                "codice": "P-A4",
+                "discesa": {
+                  "assegnazione": "proposta",
+                  "luogo": "L-INFANZIA"
+                },
+                "salita": {
+                  "assegnazione": "proposta",
+                  "luogo": "F-SORGENTA"
+                },
+                "stato": {
+                  "riferimento": "Mail del Consorzio Valle Alta del 2026-09-15",
+                  "tipo": "sbloccato"
+                }
+              },
+              {
+                "codice": "P-A5",
+                "discesa": {
+                  "assegnazione": "proposta",
+                  "luogo": "L-INFANZIA"
+                },
+                "salita": {
+                  "assegnazione": "proposta",
+                  "luogo": "F-LAGOBELLO"
+                },
+                "stato": {
+                  "tipo": "attivo"
+                }
+              },
+              {
+                "codice": "P-A6",
+                "discesa": {
+                  "assegnazione": "proposta",
+                  "luogo": "L-INFANZIA"
+                },
+                "salita": {
+                  "assegnazione": "proposta",
+                  "luogo": "F-LAGOBELLO"
+                },
+                "stato": {
+                  "tipo": "attivo"
+                }
+              },
+              {
+                "codice": "P-A7",
+                "discesa": {
+                  "assegnazione": "proposta",
+                  "luogo": "L-INFANZIA"
+                },
+                "salita": {
+                  "assegnazione": "proposta",
+                  "luogo": "F-LAGOBELLO"
+                },
+                "stato": {
+                  "tipo": "attivo"
+                }
+              },
+              {
+                "codice": "P-A8",
+                "discesa": {
+                  "assegnazione": "proposta",
+                  "luogo": "L-INFANZIA"
+                },
+                "salita": {
+                  "assegnazione": "proposta",
+                  "luogo": "F-LAGOBELLO"
+                },
+                "stato": {
+                  "tipo": "sospeso"
+                }
+              }
+            ],
+            "scuola": "SC-INFANZIA",
+            "verso": "andata"
+          }
+        ]
+      },
+      "liberta_oraria": {
+        "soglia_da_concordare_minuti": 10,
+        "tipo": "libera"
+      },
+      "nome": "Scuola dell'infanzia di Lagobello, andata"
+    },
+    {
+      "calendario": "CAL-FERIALI",
+      "codice": "S-LIN-B610",
+      "codici_esterni": [
+        {
+          "codice": "B610",
+          "sistema": "Trasporti Provinciali Valfonda",
+          "tipo": "linea"
+        }
+      ],
+      "contratto": "CT-LIN",
+      "domanda": {
+        "gruppi": [
+          {
+            "codice": "G-LIN",
+            "conteggi": "non_noti",
+            "fermate": [
+              {
+                "luogo": "F-STAZIONE"
+              },
+              {
+                "luogo": "F-VALFONDA-PIAZZA"
+              },
+              {
+                "luogo": "F-CASTELROVO-ALTO"
+              },
+              {
+                "luogo": "F-PRADELLO"
+              }
+            ],
+            "nome": "Utenti della linea B610",
+            "verso": "andata"
+          }
+        ]
+      },
+      "liberta_oraria": {
+        "tipo": "fissa"
+      },
+      "nome": "Linea B610 Valfonda - Pradello"
+    },
+    {
+      "calendario": "CAL-CENTRO-GIO",
+      "codice": "S-DIS-GIO",
+      "codici_esterni": [
+        {
+          "codice": "48230",
+          "sistema": "Consorzio Valle Alta",
+          "tipo": "scheda"
+        }
+      ],
+      "contratto": "CT-SCU",
+      "domanda": {
+        "gruppi": [
+          {
+            "codice": "G-DIS-GIO",
+            "conteggi": "esatti",
+            "fermate": [
+              {
+                "luogo": "PP-04",
+                "salgono": 1
+              },
+              {
+                "luogo": "L-CENTRO",
+                "scendono": 1
+              }
+            ],
+            "finestra": {
+              "alle": "09:00",
+              "dalle": "08:30"
+            },
+            "nome": "Centro diurno, andata del giovedi'",
+            "passeggeri": [
+              {
+                "codice": "P-D4",
+                "discesa": {
+                  "assegnazione": "proposta",
+                  "luogo": "L-CENTRO"
+                },
+                "salita": {
+                  "assegnazione": "proposta",
+                  "luogo": "PP-04"
+                },
+                "stato": {
+                  "tipo": "attivo"
+                }
+              }
+            ],
+            "scuola": "SC-CENTRO",
+            "verso": "andata"
+          }
+        ]
+      },
+      "liberta_oraria": {
+        "soglia_da_concordare_minuti": 15,
+        "tipo": "libera"
+      },
+      "nome": "Trasporto al centro diurno Il Faro, il giovedi'"
+    },
+    {
+      "calendario": "CAL-SEMPRE",
+      "codice": "S-LIN-B620",
+      "codici_esterni": [
+        {
+          "codice": "B620",
+          "sistema": "Trasporti Provinciali Valfonda",
+          "tipo": "linea"
+        }
+      ],
+      "contratto": "CT-LIN-BETA",
+      "domanda": {
+        "gruppi": [
+          {
+            "codice": "G-LIN-B620",
+            "conteggi": "non_noti",
+            "fermate": [
+              {
+                "luogo": "F-SORGENTA"
+              },
+              {
+                "luogo": "F-LAGOBELLO"
+              },
+              {
+                "luogo": "F-MONTEBRINO"
+              }
+            ],
+            "nome": "Utenti della linea B620",
+            "verso": "andata"
+          }
+        ]
+      },
+      "liberta_oraria": {
+        "tipo": "fissa"
+      },
+      "nome": "Linea B620 Sorgenta - Montebrino, tutti i giorni"
+    },
+    {
+      "calendario": "CAL-GITA",
+      "codice": "S-GITA",
+      "contratto": "CT-GITA",
+      "domanda": {
+        "gruppi": [
+          {
+            "codice": "G-GITA-A",
+            "conteggi": "esatti",
+            "fermate": [
+              {
+                "luogo": "F-VALFONDA-PIAZZA",
+                "salgono": 30
+              },
+              {
+                "luogo": "F-LAGOBELLO",
+                "scendono": 30
+              }
+            ],
+            "nome": "Soci della Pro Loco, andata",
+            "verso": "andata"
+          },
+          {
+            "codice": "G-GITA-R",
+            "conteggi": "esatti",
+            "fermate": [
+              {
+                "luogo": "F-LAGOBELLO",
+                "salgono": 30
+              },
+              {
+                "luogo": "F-VALFONDA-PIAZZA",
+                "scendono": 30
+              }
+            ],
+            "nome": "Soci della Pro Loco, ritorno",
+            "verso": "ritorno"
+          }
+        ]
+      },
+      "liberta_oraria": {
+        "tipo": "fissa"
+      },
+      "nome": "Gita della Pro Loco al lago di Lagobello"
+    }
+  ]
+}

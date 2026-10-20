@@ -1,0 +1,66 @@
+{
+  "schema": "servizi_fissi",
+  "schema_versione": 1,
+  "servizi_fissi": [
+    {
+      "calendario": "CAL-MER-FER",
+      "codice": "SF-MER",
+      "persona": "P-C",
+      "turno": "T-SECONDO"
+    },
+    {
+      "calendario": "CAL-FERIALI",
+      "codice": "SF-NOTTE",
+      "persona": "P-NUOVO",
+      "turno": "T-NOTTE"
+    },
+    {
+      "calendario": "CAL-SCUOLA-LV",
+      "codice": "SF-SCUOLA-1",
+      "persona": "P-E",
+      "turno": "T-SCUOLA-1"
+    },
+    {
+      "calendario": "CAL-CENTRO-GIO",
+      "codice": "SF-DIS-GIO",
+      "persona": "P-E",
+      "turno": "T-DIS-GIO"
+    },
+    {
+      "calendario": "CAL-SCUOLA-LV",
+      "codice": "SF-SCUOLA-2",
+      "persona": "P-F",
+      "turno": "T-SCUOLA-2"
+    },
+    {
+      "calendario": "CAL-SCUOLA-LV",
+      "codice": "SF-SCUOLA-3",
+      "persona": "P-G",
+      "turno": "T-SCUOLA-3"
+    },
+    {
+      "calendario": "CAL-CENTRO",
+      "codice": "SF-AUTO",
+      "persona": "P-D",
+      "turno": "T-AUTO"
+    },
+    {
+      "calendario": "CAL-MAR-VEN",
+      "codice": "SF-RISERVA",
+      "persona": "P-D",
+      "turno": "T-RISERVA"
+    },
+    {
+      "calendario": "CAL-INFANZIA",
+      "codice": "SF-B-ACCOMP",
+      "persona": "P-B4",
+      "turno": "T-B-ACCOMP"
+    },
+    {
+      "calendario": "CAL-MER-FER",
+      "codice": "SF-REPERIBILE",
+      "persona": "P-C",
+      "turno": "T-REPERIBILE"
+    }
+  ]
+}

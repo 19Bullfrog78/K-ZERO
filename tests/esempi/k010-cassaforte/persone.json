@@ -1,0 +1,78 @@
+{
+  "persone": [
+    {
+      "azienda": "ALFA",
+      "codice": "P-A",
+      "presa_servizio": "L-RIMESSA-ALFA"
+    },
+    {
+      "azienda": "ALFA",
+      "codice": "P-B",
+      "presa_servizio": "L-RIMESSA-ALFA"
+    },
+    {
+      "azienda": "ALFA",
+      "codice": "P-C",
+      "presa_servizio": "L-RIMESSA-ALFA",
+      "prestiti": [
+        {
+          "accordo": "Accordo consortile n. 2/2026 tra Alfa e Beta (inventato)",
+          "al": "2027-08-31",
+          "azienda": "BETA",
+          "dal": "2026-09-01"
+        }
+      ]
+    },
+    {
+      "azienda": "ALFA",
+      "codice": "P-D",
+      "mezzo_abituale": "ALFA-04",
+      "presa_servizio": "PR-01"
+    },
+    {
+      "azienda": "ALFA",
+      "codice": "P-NUOVO",
+      "ipotetica": true
+    },
+    {
+      "azienda": "BETA",
+      "codice": "P-B1",
+      "presa_servizio": "L-RIMESSA-BETA"
+    },
+    {
+      "azienda": "BETA",
+      "codice": "P-B2",
+      "presa_servizio": "L-RIMESSA-BETA"
+    },
+    {
+      "azienda": "BETA",
+      "codice": "P-B3",
+      "presa_servizio": "L-RIMESSA-BETA"
+    },
+    {
+      "azienda": "BETA",
+      "codice": "P-B4",
+      "presa_servizio": "F-SORGENTA"
+    },
+    {
+      "azienda": "ALFA",
+      "codice": "P-E",
+      "mezzo_abituale": "ALFA-01",
+      "presa_servizio": "L-RIMESSA-ALFA"
+    },
+    {
+      "azienda": "ALFA",
+      "codice": "P-F",
+      "mezzo_abituale": "ALFA-02",
+      "presa_servizio": "L-RIMESSA-ALFA"
+    },
+    {
+      "azienda": "ALFA",
+      "codice": "P-G",
+      "mezzo_abituale": "ALFA-06",
+      "presa_servizio": "L-RIMESSA-ALFA"
+    }
+  ],
+  "schema": "persone",
+  "schema_versione": 1
+}

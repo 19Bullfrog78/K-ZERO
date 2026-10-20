@@ -1,0 +1,237 @@
+{
+  "calendari": [
+    {
+      "al": "2027-06-12",
+      "codice": "CAL-SCUOLA",
+      "codici_esterni": [
+        {
+          "codice": "o",
+          "sistema": "Consorzio Valle Alta",
+          "tipo": "periodo"
+        }
+      ],
+      "dal": "2026-09-14",
+      "date_tolte": [
+        "2026-12-08",
+        "2027-06-02"
+      ],
+      "giorni": [
+        "lunedi",
+        "martedi",
+        "mercoledi",
+        "giovedi",
+        "venerdi",
+        "sabato"
+      ],
+      "nome": "Giorni di scuola 2026/27 (da lunedi' a sabato, festivita' nazionali e patrono esclusi)",
+      "sospensioni": [
+        {
+          "al": "2027-01-06",
+          "dal": "2026-12-23",
+          "motivo": "Vacanze di Natale"
+        },
+        {
+          "al": "2027-02-09",
+          "dal": "2027-02-08",
+          "motivo": "Carnevale"
+        },
+        {
+          "al": "2027-03-30",
+          "dal": "2027-03-25",
+          "motivo": "Vacanze di Pasqua"
+        }
+      ],
+      "toglie": {
+        "festivita": [
+          "FEST-IT",
+          "FEST-VALFONDA"
+        ]
+      }
+    },
+    {
+      "al": "2027-06-12",
+      "base": "CAL-SCUOLA",
+      "codice": "CAL-SCUOLA-LV",
+      "codici_esterni": [
+        {
+          "codice": "f1",
+          "sistema": "Consorzio Valle Alta",
+          "tipo": "periodo"
+        }
+      ],
+      "dal": "2026-09-14",
+      "giorni": [
+        "lunedi",
+        "martedi",
+        "mercoledi",
+        "giovedi",
+        "venerdi"
+      ],
+      "nome": "Giorni di scuola escluso il sabato"
+    },
+    {
+      "al": "2027-06-12",
+      "base": "CAL-SCUOLA-LV",
+      "codice": "CAL-INFANZIA",
+      "dal": "2026-09-21",
+      "giorni": [
+        "lunedi",
+        "martedi",
+        "mercoledi",
+        "giovedi",
+        "venerdi"
+      ],
+      "nome": "Scuola dell'infanzia: attiva dal 21 settembre"
+    },
+    {
+      "al": "2027-07-30",
+      "codice": "CAL-CENTRO",
+      "dal": "2026-09-01",
+      "date_aggiunte": [
+        "2026-12-22"
+      ],
+      "date_tolte": [
+        "2027-06-02"
+      ],
+      "giorni": [
+        "lunedi",
+        "mercoledi",
+        "giovedi"
+      ],
+      "nome": "Centro diurno: lunedi', mercoledi' e giovedi'",
+      "sospensioni": [
+        {
+          "al": "2026-12-31",
+          "dal": "2026-12-24",
+          "motivo": "Chiusura del centro"
+        }
+      ]
+    },
+    {
+      "al": "2027-08-31",
+      "codice": "CAL-FERIALI",
+      "codici_esterni": [
+        {
+          "codice": "FER",
+          "sistema": "Trasporti Provinciali Valfonda",
+          "tipo": "periodo"
+        }
+      ],
+      "dal": "2026-09-01",
+      "giorni": [
+        "lunedi",
+        "martedi",
+        "mercoledi",
+        "giovedi",
+        "venerdi",
+        "sabato"
+      ],
+      "nome": "Giorni feriali (da lunedi' a sabato, festivi esclusi)",
+      "toglie": {
+        "festivita": [
+          "FEST-IT"
+        ]
+      }
+    },
+    {
+      "al": "2027-07-30",
+      "base": "CAL-CENTRO",
+      "codice": "CAL-CENTRO-GIO",
+      "dal": "2026-09-01",
+      "giorni": [
+        "giovedi"
+      ],
+      "nome": "Centro diurno: solo il giovedi'"
+    },
+    {
+      "al": "2027-08-31",
+      "base": "CAL-FERIALI",
+      "codice": "CAL-LV-FER",
+      "dal": "2026-09-01",
+      "giorni": [
+        "lunedi",
+        "martedi",
+        "mercoledi",
+        "giovedi",
+        "venerdi"
+      ],
+      "nome": "Giorni feriali da lunedi' a venerdi'"
+    },
+    {
+      "al": "2027-08-31",
+      "base": "CAL-FERIALI",
+      "codice": "CAL-SAB-FER",
+      "dal": "2026-09-01",
+      "giorni": [
+        "sabato"
+      ],
+      "nome": "Sabati feriali"
+    },
+    {
+      "al": "2027-08-31",
+      "base": "CAL-FERIALI",
+      "codice": "CAL-MER-FER",
+      "dal": "2026-09-01",
+      "giorni": [
+        "mercoledi"
+      ],
+      "nome": "Mercoledi' feriali"
+    },
+    {
+      "al": "2027-06-12",
+      "base": "CAL-SCUOLA-LV",
+      "codice": "CAL-MAR-VEN",
+      "dal": "2026-09-14",
+      "giorni": [
+        "martedi",
+        "venerdi"
+      ],
+      "nome": "Martedi' e venerdi' di scuola, senza i giorni del centro diurno",
+      "toglie": {
+        "calendari": [
+          "CAL-CENTRO"
+        ]
+      }
+    },
+    {
+      "aggiunge": {
+        "festivita": [
+          "FEST-IT"
+        ]
+      },
+      "al": "2027-08-31",
+      "codice": "CAL-FESTIVI",
+      "dal": "2026-09-01",
+      "giorni": [
+        "domenica"
+      ],
+      "nome": "Domeniche e festivita' nazionali"
+    },
+    {
+      "al": "2027-08-31",
+      "codice": "CAL-SEMPRE",
+      "dal": "2026-09-01",
+      "giorni": [
+        "lunedi",
+        "martedi",
+        "mercoledi",
+        "giovedi",
+        "venerdi",
+        "sabato",
+        "domenica"
+      ],
+      "nome": "Tutti i giorni"
+    },
+    {
+      "al": "2026-11-15",
+      "codice": "CAL-GITA",
+      "dal": "2026-11-15",
+      "giorni": [
+        "domenica"
+      ],
+      "nome": "Giorno della gita della Pro Loco"
+    }
+  ],
+  "schema": "calendari",
+  "schema_versione": 2
+}

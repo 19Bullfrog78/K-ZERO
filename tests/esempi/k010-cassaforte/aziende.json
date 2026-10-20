@@ -1,0 +1,153 @@
+{
+  "aziende": [
+    {
+      "attivita": [
+        {
+          "codice": "PRESA",
+          "nome": "Presa servizio con il controllo del mezzo",
+          "usa_il_mezzo": true
+        },
+        {
+          "codice": "FINE",
+          "nome": "Fine servizio con il controllo del mezzo",
+          "usa_il_mezzo": true
+        },
+        {
+          "codice": "PULIZIA",
+          "nome": "Pulizia del mezzo",
+          "usa_il_mezzo": true
+        },
+        {
+          "codice": "RIFORNIMENTO",
+          "nome": "Rifornimento",
+          "usa_il_mezzo": true
+        },
+        {
+          "codice": "RICARICA",
+          "nome": "Ricarica del mezzo elettrico",
+          "usa_il_mezzo": true
+        },
+        {
+          "codice": "ATTESA",
+          "nome": "Attesa con il mezzo",
+          "usa_il_mezzo": true
+        },
+        {
+          "codice": "PAUSA",
+          "nome": "Pausa",
+          "usa_il_mezzo": false
+        },
+        {
+          "codice": "VUOTO",
+          "nome": "Trasferimento a vuoto",
+          "usa_il_mezzo": true
+        },
+        {
+          "codice": "RISERVA",
+          "nome": "Riserva a disposizione in rimessa",
+          "usa_il_mezzo": false
+        },
+        {
+          "codice": "REPERIBILE",
+          "nome": "Reperibilita'",
+          "usa_il_mezzo": false
+        },
+        {
+          "codice": "A-PIEDI",
+          "nome": "Spostamento della persona senza il mezzo",
+          "usa_il_mezzo": false
+        }
+      ],
+      "azienda": "ALFA",
+      "competenze": [
+        {
+          "codice": "PEDANA",
+          "nome": "Formato per l'uso della pedana"
+        },
+        {
+          "codice": "LINEA-B610",
+          "nome": "Conosce la linea B610"
+        },
+        {
+          "codice": "ELETTRICO",
+          "nome": "Formato per il mezzo elettrico"
+        }
+      ],
+      "impostazioni": {
+        "abbinamento_autista_mezzo": "preferito",
+        "ricovero_vicino_a_casa": "preferito"
+      },
+      "norme": "N-IT",
+      "tipi_assenza": [
+        {
+          "codice": "FERIE",
+          "nome": "Ferie"
+        },
+        {
+          "codice": "PERMESSO",
+          "nome": "Permesso"
+        },
+        {
+          "codice": "FORMAZIONE",
+          "nome": "Formazione"
+        }
+      ],
+      "tipi_fermo": [
+        {
+          "codice": "REVISIONE",
+          "nome": "Revisione"
+        },
+        {
+          "codice": "MANUTENZIONE",
+          "nome": "Manutenzione"
+        }
+      ]
+    },
+    {
+      "attivita": [
+        {
+          "codice": "PRESA-SERVIZIO",
+          "nome": "Uscita dalla rimessa e controllo",
+          "usa_il_mezzo": true
+        },
+        {
+          "codice": "RIENTRO",
+          "nome": "Rientro in rimessa",
+          "usa_il_mezzo": true
+        },
+        {
+          "codice": "SOSTA",
+          "nome": "Sosta al capolinea",
+          "usa_il_mezzo": true
+        }
+      ],
+      "azienda": "BETA",
+      "competenze": [
+        {
+          "codice": "INFANZIA",
+          "nome": "Formata per l'accompagnamento dei bambini"
+        }
+      ],
+      "impostazioni": {
+        "abbinamento_autista_mezzo": "nessuno",
+        "ricovero_vicino_a_casa": "mai"
+      },
+      "norme": "N-IT",
+      "nota": "Trasporti Beta vuole i mezzi sempre in rimessa la notte.",
+      "tipi_assenza": [
+        {
+          "codice": "FERIE",
+          "nome": "Ferie"
+        }
+      ],
+      "tipi_fermo": [
+        {
+          "codice": "OFFICINA",
+          "nome": "In officina"
+        }
+      ]
+    }
+  ],
+  "schema": "aziende",
+  "schema_versione": 1
+}

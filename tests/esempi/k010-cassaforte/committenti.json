@@ -1,0 +1,25 @@
+{
+  "committenti": [
+    {
+      "codice": "CVA",
+      "nome": "Consorzio Valle Alta (inventato)"
+    },
+    {
+      "codice": "TPV",
+      "codici_esterni": [
+        {
+          "codice": "TPV",
+          "sistema": "Trasporti Provinciali Valfonda",
+          "tipo": "committente"
+        }
+      ],
+      "nome": "Trasporti Provinciali Valfonda (inventato)"
+    },
+    {
+      "codice": "PROLOCO",
+      "nome": "Pro Loco di Valfonda (inventata)"
+    }
+  ],
+  "schema": "committenti",
+  "schema_versione": 1
+}

@@ -78,7 +78,7 @@ public:
         PasswordSbagliata,     // oppure fessura dell'utente cambiata: non si possono distinguere
         Manomessa,             // intestazione, buste, storia o sezioni non autentiche
         PermessoMancante,      // la modifica chiede permessi che l'utente non ha
-        UtentiNonAmmessi,      // es. codice gia' usato, ultimo utente, ultimo che legge una classe con dati
+        UtentiNonAmmessi,      // es. codice gia' usato, ultimo utente, ultimo che legge una classe, ultimo con tutti i permessi
     };
     ErroreCassaforte(Tipo t, const std::string& messaggio) : std::runtime_error(messaggio), tipo(t) {}
     Tipo tipo;

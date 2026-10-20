@@ -38,6 +38,10 @@ target_link_libraries(test_unione PRIVATE kzero_api GTest::gtest_main)
 target_compile_options(test_unione PRIVATE ${KZERO_WARNINGS})
 target_compile_definitions(test_unione PRIVATE KZERO_CARTELLA_PROVE="${CMAKE_CURRENT_SOURCE_DIR}")
 gtest_discover_tests(test_unione PROPERTIES LABELS "api;sicurezza")
+add_executable(test_registro test_registro.cpp)
+target_link_libraries(test_registro PRIVATE kzero_api GTest::gtest_main)
+target_compile_options(test_registro PRIVATE ${KZERO_WARNINGS})
+gtest_discover_tests(test_registro PROPERTIES LABELS "api;sicurezza")
 add_executable(test_cassaforte test_cassaforte.cpp)
 target_link_libraries(test_cassaforte PRIVATE kzero_api GTest::gtest_main)
 target_compile_options(test_cassaforte PRIVATE ${KZERO_WARNINGS})
@@ -57,20 +61,27 @@ if(NOT KZERO_CHECK_JSONSCHEMA)
 endif()
 
 # --- Prove sul programma: lanciano kzero (tests/programma/caso.cmake) ----------------
+# K-010: piccolo strumento per cambiare un byte di un file binario (cassaforte, registro) nelle prove di manomissione.
+add_executable(cambia_byte strumenti/cambia_byte.cpp)
+target_compile_options(cambia_byte PRIVATE ${KZERO_WARNINGS})
 # kzero_prova(<nome> USCITA <codice> FORMATO testo|json [ERRORE K-ERR-nnn] [SCHEMA <nome>]
 #             [ATTESO <file>] [USCITA_SU <file>] [CONTIENE <testi>] [NON_CONTIENE <testi>]
 #             [RESOCONTO] [PROBLEMI <K-CTR-nnn|file|percorso JSON>...]
 #             [BASE <cartella> MODIFICA <operazione> <argomenti>...]
+#             [INGRESSO <righe>...] [VARIABILI] [PREPARA <argomenti>... PREPARA_INGRESSO <righe>...]
 #             ARGOMENTI <argomenti>)
 # RESOCONTO: il risultato va sull'uscita standard anche con l'uscita 1 (kzero controlla su dati sbagliati).
 # BASE e MODIFICA: il pacchetto da controllare e' una copia di BASE con una sola modifica (vedi
 # tests/programma/pacchetto.cmake); negli ARGOMENTI la sua cartella si scrive @PACCHETTO@.
 # Per ogni prova in json registra anche schema.<nome>: il documento rispetta lo schema che dichiara.
+# K-010: INGRESSO = righe sull'ingresso standard (password di prova con --password-da-ingresso); VARIABILI = ora del registro
+# e codice di una cassaforte nuova sostituiti prima dei confronti; PREPARA = un comando lanciato prima, sulla copia; senza
+# MODIFICA la BASE si copia com'e'. Con BASE ogni giro parte da una copia nuova.
 set(KZERO_USCITE_PROVE ${CMAKE_CURRENT_BINARY_DIR}/uscite)
 
 function(kzero_prova nome)
-  cmake_parse_arguments(P "RESOCONTO" "USCITA;FORMATO;ERRORE;SCHEMA;ATTESO;USCITA_SU;BASE"
-                        "ARGOMENTI;CONTIENE;NON_CONTIENE;PROBLEMI;MODIFICA" ${ARGN})
+  cmake_parse_arguments(P "RESOCONTO;VARIABILI" "USCITA;FORMATO;ERRORE;SCHEMA;ATTESO;USCITA_SU;BASE"
+                        "ARGOMENTI;CONTIENE;NON_CONTIENE;PROBLEMI;MODIFICA;INGRESSO;PREPARA;PREPARA_INGRESSO" ${ARGN})
   set(testo "set(NOME [==[${nome}]==])\nset(CARTELLA [==[${KZERO_USCITE_PROVE}]==])\n")
   string(APPEND testo "set(USCITA ${P_USCITA})\nset(FORMATO ${P_FORMATO})\n")
   foreach(chiave ERRORE SCHEMA ATTESO USCITA_SU)
@@ -81,10 +92,13 @@ function(kzero_prova nome)
   if(P_RESOCONTO)
     string(APPEND testo "set(RESOCONTO TRUE)\n")
   endif()
+  if(P_VARIABILI)
+    string(APPEND testo "set(VARIABILI TRUE)\n")
+  endif()
   if(DEFINED P_BASE)
     string(APPEND testo "set(PACCHETTO_BASE [==[${P_BASE}]==])\n")
   endif()
-  foreach(elenco ARGOMENTI CONTIENE NON_CONTIENE PROBLEMI MODIFICA)
+  foreach(elenco ARGOMENTI CONTIENE NON_CONTIENE PROBLEMI MODIFICA INGRESSO PREPARA PREPARA_INGRESSO)
     string(APPEND testo "set(${elenco}")
     foreach(valore IN LISTS P_${elenco})
       string(APPEND testo " [==[${valore}]==]")
@@ -95,7 +109,7 @@ function(kzero_prova nome)
   file(WRITE ${caso} "${testo}")
 
   add_test(NAME programma.${nome}
-           COMMAND ${CMAKE_COMMAND} -DKZERO=$<TARGET_FILE:kzero> -DCASO=${caso}
+           COMMAND ${CMAKE_COMMAND} -DKZERO=$<TARGET_FILE:kzero> -DCAMBIA_BYTE=$<TARGET_FILE:cambia_byte> -DCASO=${caso}
                    -P ${CMAKE_CURRENT_SOURCE_DIR}/programma/caso.cmake)
   set_tests_properties(programma.${nome} PROPERTIES LABELS programma)
   if(P_FORMATO STREQUAL "json" AND KZERO_CHECK_JSONSCHEMA)
@@ -724,6 +738,298 @@ if(EXISTS /dev/full)
   kzero_prova(uscita_non_scrivibile_json USCITA 3 FORMATO json SCHEMA errore ERRORE K-ERR-010 USCITA_SU /dev/full
               ARGOMENTI versione --formato json)
 endif()
+
+# --- Cassaforte dei dati personali (K-010) ---------------------------------------------------------------------------
+# Copia congelata della versione 1 della cassaforte: il demo chiuso con il programma del K-010 (parametri di rilascio), con
+# tre utenti. Le password di prova sono scritte qui (dati inventati): TITOLARE ha i dati personali e particolari, UFFICIO i
+# soli personali, SALUTE i soli particolari. Le prove lavorano sempre su una copia (BASE), mai sulla cartella del repository.
+set(KZERO_CASSAFORTE ${CMAKE_CURRENT_SOURCE_DIR}/esempi/k010-cassaforte)
+set(PW_TITOLARE "congelata per sempre nelle prove")
+set(PW_UFFICIO "ufficio legge solo i dati personali")
+set(PW_SALUTE "salute legge solo i dati particolari")
+# kzero_cassaforte(<nome> <utente> USCITA ... ARGOMENTI <comando> ... ): kzero_prova su una copia della cassaforte, con la
+# password dell'utente sull'ingresso standard e --password-da-ingresso in fondo agli argomenti.
+function(kzero_cassaforte nome utente)
+  cmake_parse_arguments(C "" "" "ARGOMENTI;INGRESSO_IN_PIU" ${ARGN})
+  kzero_prova(${nome} BASE ${KZERO_CASSAFORTE} INGRESSO "${PW_${utente}}" ${C_INGRESSO_IN_PIU} ${C_UNPARSED_ARGUMENTS}
+              ARGOMENTI ${C_ARGOMENTI} --utente ${utente} --password-da-ingresso)
+endfunction()
+
+# Versione 1 leggibile, permessi in ogni uscita: controlla per i tre tipi di utente, in testo e in JSON.
+kzero_cassaforte(cassaforte_controlla_titolare TITOLARE USCITA 0 FORMATO testo PROBLEMI ${AVVISI_DEMO}
+                 CONTIENE "Cassaforte aperta dall'utente TITOLARE (dati personali e particolari); conservazione dei dati fino al 2099-12-31."
+                          "248 valori personali e 37 particolari, nella cassaforte" " 0 errori, 8 avvisi."
+                 NON_CONTIENE "Non verificato" "Bianchi" "Deambulatore"
+                 ARGOMENTI controlla @PACCHETTO@)
+kzero_cassaforte(cassaforte_controlla_titolare_json TITOLARE USCITA 0 FORMATO json SCHEMA controlla PROBLEMI ${AVVISI_DEMO}
+                 CONTIENE "\"utente\": \"TITOLARE\"" "\"non_verificato\": []" "\"conservazione_scaduta\": false"
+                 ARGOMENTI controlla @PACCHETTO@ --formato json)
+kzero_cassaforte(cassaforte_controlla_titolare_tutti_i_dati TITOLARE USCITA 0 FORMATO testo PROBLEMI ${AVVISI_DEMO_COMPLETI}
+                 CONTIENE "248 valori personali e 37 particolari, nella cassaforte: luoghi.json 25 personali"
+                 ARGOMENTI controlla @PACCHETTO@ --includi-dati-personali --includi-dati-particolari)
+kzero_cassaforte(cassaforte_controlla_ufficio UFFICIO USCITA 0 FORMATO testo
+                 CONTIENE "Cassaforte aperta dall'utente UFFICIO (dati personali)"
+                          "Non verificato (servono i dati particolari, che l'utente non puo' aprire)" "K-CTR-068"
+                 NON_CONTIENE "servono i dati personali" ${DATI_PERSONALI} ${DATI_PARTICOLARI}
+                 ARGOMENTI controlla @PACCHETTO@)
+kzero_cassaforte(cassaforte_controlla_ufficio_json UFFICIO USCITA 0 FORMATO json SCHEMA controlla
+                 CONTIENE "\"servono\": \"particolari\"" "\"utente\": \"UFFICIO\"" NON_CONTIENE "\"servono\": \"personali\""
+                 ARGOMENTI controlla @PACCHETTO@ --formato json)
+kzero_cassaforte(cassaforte_controlla_ufficio_dati_personali UFFICIO USCITA 0 FORMATO testo
+                 CONTIENE "nella cassaforte: luoghi.json" "persone.json 161 personali e 0 particolari"
+                 PROBLEMI "K-CTR-050|persone.json|/persone/2/abilitazioni/2"
+                 NON_CONTIENE ${DATI_PERSONALI_LEGATI} ${DATI_PARTICOLARI} "K-CTR-078 ("
+                 ARGOMENTI controlla @PACCHETTO@ --includi-dati-personali)
+kzero_cassaforte(cassaforte_controlla_salute SALUTE USCITA 0 FORMATO testo
+                 CONTIENE "Cassaforte aperta dall'utente SALUTE (dati particolari)"
+                          "Non verificato (servono i dati personali, che l'utente non puo' aprire)"
+                 NON_CONTIENE "servono i dati particolari" ${DATI_PERSONALI_LIBERI}
+                 ARGOMENTI controlla @PACCHETTO@)
+kzero_cassaforte(cassaforte_controlla_salute_json SALUTE USCITA 0 FORMATO json SCHEMA controlla
+                 CONTIENE "\"servono\": \"personali\"" NON_CONTIENE "\"servono\": \"particolari\""
+                 ARGOMENTI controlla @PACCHETTO@ --formato json --includi-dati-particolari)
+# Parametri oltre i permessi: un errore chiaro, non un'uscita filtrata in silenzio.
+kzero_cassaforte(cassaforte_ufficio_dati_particolari UFFICIO USCITA 2 FORMATO testo ERRORE K-ERR-023
+                 CONTIENE "--includi-dati-particolari: l'utente UFFICIO non ha il permesso dei dati particolari"
+                 ARGOMENTI controlla @PACCHETTO@ --includi-dati-particolari)
+kzero_cassaforte(cassaforte_ufficio_dati_particolari_json UFFICIO USCITA 2 FORMATO json SCHEMA errore ERRORE K-ERR-023
+                 ARGOMENTI giornata @PACCHETTO@ --data 2026-10-22 --includi-dati-particolari --formato json)
+kzero_cassaforte(cassaforte_salute_dati_personali SALUTE USCITA 2 FORMATO testo ERRORE K-ERR-023
+                 ARGOMENTI giornata @PACCHETTO@ --data 2026-10-22 --includi-dati-personali)
+# giornata nelle tre viste (tutti, persona, mezzo), per i tre tipi di utente, in testo e in JSON.
+foreach(utente TITOLARE UFFICIO SALUTE)
+  string(TOLOWER ${utente} u)
+  if(utente STREQUAL "TITOLARE")
+    set(nota_verifica NON_CONTIENE "Non verificato")
+  else()
+    set(nota_verifica CONTIENE "Non verificato (servono i dati")
+  endif()
+  foreach(vista tutti persona mezzo)
+    set(scelta "")
+    if(vista STREQUAL "persona")
+      set(scelta --persona P-C)
+    elseif(vista STREQUAL "mezzo")
+      set(scelta --mezzo ALFA-03)
+    endif()
+    kzero_cassaforte(cassaforte_giornata_${u}_${vista} ${utente} USCITA 0 FORMATO testo ${nota_verifica}
+                     NON_CONTIENE ${DATI_PERSONALI} ${DATI_PARTICOLARI}
+                     ARGOMENTI giornata @PACCHETTO@ --data 2026-10-22 ${scelta})
+    kzero_cassaforte(cassaforte_giornata_${u}_${vista}_json ${utente} USCITA 0 FORMATO json SCHEMA giornata
+                     CONTIENE "\"utente\": \"${utente}\"" NON_CONTIENE ${DATI_PERSONALI} ${DATI_PARTICOLARI}
+                     ARGOMENTI giornata @PACCHETTO@ --data 2026-10-22 ${scelta} --formato json)
+  endforeach()
+endforeach()
+# LegameSensibile segue i permessi: chi ha i soli dati personali non legge mai il nome o la casa di chi va al centro, ne'
+# senza ne' con --includi-dati-personali; il centro si vede sempre.
+kzero_cassaforte(cassaforte_giornata_mezzo_ufficio_dati_personali UFFICIO USCITA 0 FORMATO testo
+                 CONTIENE "08:52  L-CENTRO  Valfonda, Centro diurno Il Faro  scendono 3" "07:52  PP-01  salgono 1"
+                          "Persona: P-C Verdi Carlo"
+                 NON_CONTIENE ${DATI_PERSONALI_LEGATI} ${DATI_PARTICOLARI} "riservato  scendono"
+                 ARGOMENTI giornata @PACCHETTO@ --data 2026-10-22 --mezzo ALFA-03 --includi-dati-personali)
+kzero_cassaforte(cassaforte_giornata_mezzo_ufficio_senza_parametri UFFICIO USCITA 0 FORMATO testo
+                 CONTIENE "08:52  L-CENTRO  Valfonda, Centro diurno Il Faro  scendono 3" "07:52  PP-01  salgono 1"
+                 NON_CONTIENE ${DATI_PERSONALI} ${DATI_PARTICOLARI}
+                 ARGOMENTI giornata @PACCHETTO@ --data 2026-10-22 --mezzo ALFA-03)
+kzero_cassaforte(cassaforte_giornata_mezzo_titolare_tutti_i_dati TITOLARE USCITA 0 FORMATO testo
+                 CONTIENE "07:52  PP-01  Casa Bianchi" "Valfonda, Centro diurno Il Faro"
+                 ARGOMENTI giornata @PACCHETTO@ --data 2026-10-22 --mezzo ALFA-03 --includi-dati-personali --includi-dati-particolari)
+
+# Comandi della cassaforte.
+kzero_cassaforte(cassaforte_cassaforte TITOLARE USCITA 0 FORMATO testo
+                 CONTIENE "Utenti: TITOLARE (dati personali e particolari), UFFICIO (dati personali), SALUTE (dati particolari)."
+                          "Valori: 248 personali e 37 particolari (mai mostrati qui)." "conservazione fino al 2099-12-31"
+                 ARGOMENTI cassaforte @PACCHETTO@)
+kzero_cassaforte(cassaforte_cassaforte_json UFFICIO USCITA 0 FORMATO json SCHEMA cassaforte
+                 CONTIENE "\"comando\": \"cassaforte\"" "\"generazione\": 1"
+                 ARGOMENTI cassaforte @PACCHETTO@ --formato json)
+kzero_cassaforte(cassaforte_registro TITOLARE USCITA 0 FORMATO testo VARIABILI
+                 CONTIENE "1. ORA  TITOLARE  chiudi  aperte: dati personali e particolari; mostrate: nessuna; pacchetto chiuso"
+                          "2. ORA  TITOLARE  aggiungi-utente" "4. ORA  TITOLARE  registro"
+                 ARGOMENTI registro @PACCHETTO@)
+kzero_cassaforte(cassaforte_registro_json SALUTE USCITA 0 FORMATO json SCHEMA registro VARIABILI
+                 CONTIENE "\"catena_controllata\": true" "\"classi_aperte\": [\n        \"particolari\"\n      ]"
+                 ARGOMENTI registro @PACCHETTO@ --formato json)
+# Il registro dopo una giornata: utente, comando, classi aperte e mostrate, nessun dato.
+kzero_cassaforte(cassaforte_registro_dopo_giornata UFFICIO USCITA 0 FORMATO testo VARIABILI
+                 PREPARA giornata @PACCHETTO@ --data 2026-10-22 --mezzo ALFA-03 --includi-dati-personali --utente UFFICIO
+                         --password-da-ingresso
+                 PREPARA_INGRESSO "${PW_UFFICIO}"
+                 CONTIENE "4. ORA  UFFICIO  giornata  aperte: dati personali; mostrate: dati personali; giornata del 2026-10-22, mezzo ALFA-03"
+                 NON_CONTIENE ${DATI_PERSONALI} ${DATI_PARTICOLARI}
+                 ARGOMENTI registro @PACCHETTO@)
+
+# Chiusura del demo: identica alla riapertura; manifesto 1, cartella che c'e' gia', password corta.
+kzero_prova(cassaforte_chiudi BASE ${KZERO_DEMO} USCITA 0 FORMATO testo VARIABILI INGRESSO "una frase lunga per chiudere"
+            CONTIENE "riaperto e controllato, i dati sono identici all'originale" "Valori: 248 personali e 37 particolari"
+                     "va cancellata a mano"
+            ARGOMENTI chiudi @PACCHETTO@ --scrivi @NUOVA@ --utente A --conservazione 2030-12-31 --password-da-ingresso)
+kzero_prova(cassaforte_chiudi_json BASE ${KZERO_DEMO} USCITA 0 FORMATO json SCHEMA cassaforte VARIABILI
+            INGRESSO "una frase lunga per chiudere"
+            CONTIENE "\"comando\": \"chiudi\"" "\"voci_registro\": 1"
+            ARGOMENTI chiudi @PACCHETTO@ --scrivi @NUOVA@ --utente A --conservazione 2030-12-31 --password-da-ingresso --formato json)
+kzero_prova(cassaforte_chiudi_manifesto_1 BASE ${CMAKE_CURRENT_SOURCE_DIR}/esempi/k007-demo USCITA 1 FORMATO testo ERRORE K-ERR-034
+            INGRESSO "una frase lunga per chiudere"
+            ARGOMENTI chiudi @PACCHETTO@ --scrivi @NUOVA@ --utente A --conservazione 2030-12-31 --password-da-ingresso)
+kzero_prova(cassaforte_chiudi_cartella_esistente BASE ${KZERO_DEMO} USCITA 2 FORMATO testo ERRORE K-ERR-033
+            INGRESSO "una frase lunga per chiudere"
+            ARGOMENTI chiudi @PACCHETTO@ --scrivi @PACCHETTO@ --utente A --conservazione 2030-12-31 --password-da-ingresso)
+kzero_prova(cassaforte_chiudi_password_corta BASE ${KZERO_DEMO} USCITA 2 FORMATO testo ERRORE K-ERR-020
+            INGRESSO "corta" CONTIENE "almeno 15"
+            ARGOMENTI chiudi @PACCHETTO@ --scrivi @NUOVA@ --utente A --conservazione 2030-12-31 --password-da-ingresso)
+kzero_prova(cassaforte_chiudi_password_comune BASE ${KZERO_DEMO} USCITA 2 FORMATO testo ERRORE K-ERR-020
+            INGRESSO "aaaaaaaaaaaaaaaa"
+            ARGOMENTI chiudi @PACCHETTO@ --scrivi @NUOVA@ --utente A --conservazione 2030-12-31 --password-da-ingresso)
+kzero_prova(cassaforte_chiudi_senza_password BASE ${KZERO_DEMO} USCITA 2 FORMATO testo ERRORE K-ERR-019
+            ARGOMENTI chiudi @PACCHETTO@ --scrivi @NUOVA@ --utente A --conservazione 2030-12-31 --password-da-ingresso)
+# Pacchetto con cassaforte senza --utente; --utente su un pacchetto senza cassaforte; password sbagliata; utente sconosciuto.
+kzero_prova(cassaforte_serve_utente BASE ${KZERO_CASSAFORTE} USCITA 2 FORMATO testo ERRORE K-ERR-032
+            ARGOMENTI controlla @PACCHETTO@)
+kzero_prova(cassaforte_utente_senza_cassaforte USCITA 2 FORMATO testo ERRORE K-ERR-031
+            ARGOMENTI controlla ${KZERO_DEMO} --utente A)
+kzero_prova(cassaforte_password_sbagliata BASE ${KZERO_CASSAFORTE} USCITA 2 FORMATO testo ERRORE K-ERR-022
+            INGRESSO "${PW_UFFICIO}" ARGOMENTI controlla @PACCHETTO@ --utente TITOLARE --password-da-ingresso)
+kzero_prova(cassaforte_password_sbagliata_json BASE ${KZERO_CASSAFORTE} USCITA 2 FORMATO json SCHEMA errore ERRORE K-ERR-022
+            INGRESSO "${PW_UFFICIO}" ARGOMENTI giornata @PACCHETTO@ --data 2026-10-22 --utente TITOLARE --password-da-ingresso --formato json)
+kzero_prova(cassaforte_utente_sconosciuto BASE ${KZERO_CASSAFORTE} USCITA 2 FORMATO testo ERRORE K-ERR-021
+            INGRESSO "${PW_TITOLARE}" ARGOMENTI controlla @PACCHETTO@ --utente NESSUNO --password-da-ingresso)
+
+# Manomissioni: un byte cambiato nell'intestazione, nella fessura di un altro utente, nei dati; cassaforte troncata, vuota,
+# di un altro pacchetto, di una versione sconosciuta, con parametri assurdi; registro cambiato o mancante.
+foreach(caso "intestazione|100|K-ERR-028" "fessura_di_un_altro|-1|K-ERR-028" "versione|8|K-ERR-025" "parametri_assurdi|171|K-ERR-027")
+  string(REPLACE "|" ";" parti "${caso}")
+  list(GET parti 0 n)
+  list(GET parti 1 posizione)
+  list(GET parti 2 errore)
+  if(n STREQUAL "fessura_di_un_altro")
+    set(posizione 380)   # nella chiave pubblica di UFFICIO: TITOLARE apre la sua fessura, l'intestazione non torna
+  endif()
+  kzero_cassaforte(cassaforte_manomessa_${n} TITOLARE USCITA 1 FORMATO testo ERRORE ${errore}
+                   NON_CONTIENE ${DATI_PERSONALI} MODIFICA BYTE cassaforte.kzc ${posizione}
+                   ARGOMENTI controlla @PACCHETTO@)
+endforeach()
+kzero_cassaforte(cassaforte_manomessa_dati TITOLARE USCITA 1 FORMATO testo ERRORE K-ERR-028 MODIFICA BYTE cassaforte.kzc -1
+                 ARGOMENTI giornata @PACCHETTO@ --data 2026-10-22 --includi-dati-personali)
+kzero_cassaforte(cassaforte_troncata TITOLARE USCITA 1 FORMATO testo ERRORE K-ERR-024 MODIFICA TRONCA cassaforte.kzc 400
+                 ARGOMENTI controlla @PACCHETTO@)
+kzero_cassaforte(cassaforte_vuota TITOLARE USCITA 1 FORMATO testo ERRORE K-ERR-024 MODIFICA TRONCA cassaforte.kzc 0
+                 ARGOMENTI controlla @PACCHETTO@)
+kzero_cassaforte(cassaforte_di_un_altro_pacchetto TITOLARE USCITA 1 FORMATO testo ERRORE K-ERR-026
+                 MODIFICA IMPOSTA pacchetto.json /cassaforte/id "\"0123456789abcdef0123456789abcdef\""
+                 ARGOMENTI controlla @PACCHETTO@)
+kzero_cassaforte(cassaforte_registro_cambiato TITOLARE USCITA 1 FORMATO testo ERRORE K-ERR-029 MODIFICA BYTE registro.kzr -3
+                 ARGOMENTI controlla @PACCHETTO@)
+kzero_cassaforte(cassaforte_registro_mancante TITOLARE USCITA 1 FORMATO testo ERRORE K-ERR-029 MODIFICA ELIMINA registro.kzr
+                 ARGOMENTI controlla @PACCHETTO@)
+kzero_prova(cassaforte_mancante BASE ${KZERO_CASSAFORTE} USCITA 1 FORMATO testo RESOCONTO MODIFICA ELIMINA cassaforte.kzc
+            PROBLEMI "K-CTR-091|pacchetto.json|/cassaforte" CONTIENE "Controlli sul contenuto non eseguiti"
+            ARGOMENTI controlla @PACCHETTO@)
+kzero_cassaforte(cassaforte_mancante_comando TITOLARE USCITA 1 FORMATO testo ERRORE K-ERR-038 MODIFICA ELIMINA cassaforte.kzc
+                 ARGOMENTI cassaforte @PACCHETTO@)
+kzero_prova(cassaforte_non_dichiarata BASE ${KZERO_CASSAFORTE} USCITA 1 FORMATO testo RESOCONTO
+            MODIFICA IMPOSTA pacchetto.json /cassaforte false PROBLEMI "K-CTR-092|pacchetto.json|/cassaforte"
+            ARGOMENTI controlla @PACCHETTO@)
+kzero_cassaforte(cassaforte_altra_chiusura TITOLARE USCITA 1 FORMATO testo RESOCONTO
+                 MODIFICA IMPOSTA pacchetto.json /cassaforte/generazione 2
+                 PROBLEMI "K-CTR-093|pacchetto.json|/cassaforte/generazione"
+                 ARGOMENTI controlla @PACCHETTO@)
+# Un elemento tolto nei file normali dopo la chiusura: i suoi valori non trovano posto (K-CTR-094), mai sull'elemento sbagliato.
+kzero_cassaforte(cassaforte_elemento_tolto TITOLARE USCITA 1 FORMATO testo RESOCONTO MODIFICA TOGLI persone.json /persone/1
+                 PROBLEMI "K-CTR-094|persone.json|/persone" NON_CONTIENE ${DATI_PERSONALI}
+                 ARGOMENTI controlla @PACCHETTO@)
+kzero_cassaforte(cassaforte_valore_doppio TITOLARE USCITA 1 FORMATO testo RESOCONTO
+                 MODIFICA IMPOSTA persone.json /persone/0/nome "\"Nome in chiaro\""
+                 PROBLEMI "K-CTR-095|persone.json|/persone/0" ARGOMENTI controlla @PACCHETTO@)
+
+# Utenti e permessi.
+kzero_cassaforte(cassaforte_aggiungi_utente TITOLARE USCITA 0 FORMATO testo INGRESSO_IN_PIU "una password nuova e lunga"
+                 CONTIENE "Aggiunto l'utente NUOVO con i dati personali." "NUOVO (dati personali)" "Registro degli accessi: 4 voci."
+                 ARGOMENTI aggiungi-utente --scrivi @PACCHETTO@ --nuovo-utente NUOVO --permessi personali)
+kzero_cassaforte(cassaforte_aggiungi_utente_oltre_i_permessi UFFICIO USCITA 2 FORMATO testo ERRORE K-ERR-023
+                 INGRESSO_IN_PIU "una password nuova e lunga"
+                 ARGOMENTI aggiungi-utente --scrivi @PACCHETTO@ --nuovo-utente NUOVO --permessi tutti)
+kzero_cassaforte(cassaforte_aggiungi_utente_esistente TITOLARE USCITA 2 FORMATO testo ERRORE K-ERR-036
+                 INGRESSO_IN_PIU "una password nuova e lunga"
+                 ARGOMENTI aggiungi-utente --scrivi @PACCHETTO@ --nuovo-utente UFFICIO --permessi personali)
+kzero_cassaforte(cassaforte_togli_utente TITOLARE USCITA 0 FORMATO json SCHEMA cassaforte
+                 CONTIENE "\"comando\": \"togli-utente\"" NON_CONTIENE "\"codice\": \"UFFICIO\""
+                 ARGOMENTI togli-utente --scrivi @PACCHETTO@ --utente-da-togliere UFFICIO --formato json)
+kzero_cassaforte(cassaforte_togli_utente_oltre_i_permessi UFFICIO USCITA 2 FORMATO testo ERRORE K-ERR-023
+                 ARGOMENTI togli-utente --scrivi @PACCHETTO@ --utente-da-togliere SALUTE)
+kzero_cassaforte(cassaforte_togli_ultimo_con_tutti_i_permessi TITOLARE USCITA 2 FORMATO testo ERRORE K-ERR-036
+                 ARGOMENTI togli-utente --scrivi @PACCHETTO@ --utente-da-togliere TITOLARE)
+# L'utente tolto non apre la versione nuova.
+kzero_cassaforte(cassaforte_utente_tolto_non_apre UFFICIO USCITA 2 FORMATO testo ERRORE K-ERR-021
+                 PREPARA togli-utente --scrivi @PACCHETTO@ --utente TITOLARE --utente-da-togliere UFFICIO --password-da-ingresso
+                 PREPARA_INGRESSO "${PW_TITOLARE}"
+                 ARGOMENTI controlla @PACCHETTO@)
+# Dopo il cambio delle chiavi chi resta apre (busta e storia delle chiavi).
+kzero_cassaforte(cassaforte_dopo_il_cambio_delle_chiavi SALUTE USCITA 0 FORMATO testo
+                 PREPARA togli-utente --scrivi @PACCHETTO@ --utente TITOLARE --utente-da-togliere UFFICIO --password-da-ingresso
+                 PREPARA_INGRESSO "${PW_TITOLARE}"
+                 CONTIENE "Cassaforte aperta dall'utente SALUTE" ARGOMENTI controlla @PACCHETTO@)
+kzero_cassaforte(cassaforte_password_cambiata TITOLARE USCITA 2 FORMATO testo ERRORE K-ERR-022
+                 PREPARA password --scrivi @PACCHETTO@ --utente TITOLARE --password-da-ingresso
+                 PREPARA_INGRESSO "${PW_TITOLARE}" "la mia password nuova e lunga"
+                 ARGOMENTI controlla @PACCHETTO@)
+kzero_prova(cassaforte_password_nuova_apre BASE ${KZERO_CASSAFORTE} USCITA 0 FORMATO testo INGRESSO "la mia password nuova e lunga"
+            PREPARA password --scrivi @PACCHETTO@ --utente TITOLARE --password-da-ingresso
+            PREPARA_INGRESSO "${PW_TITOLARE}" "la mia password nuova e lunga"
+            ARGOMENTI controlla @PACCHETTO@ --utente TITOLARE --password-da-ingresso)
+kzero_cassaforte(cassaforte_password_per_un_altro_oltre_i_permessi UFFICIO USCITA 2 FORMATO testo ERRORE K-ERR-023
+                 INGRESSO_IN_PIU "una password nuova e lunga"
+                 ARGOMENTI password --scrivi @PACCHETTO@ --per-utente SALUTE)
+kzero_prova(cassaforte_password_per_un_altro BASE ${KZERO_CASSAFORTE} USCITA 0 FORMATO testo INGRESSO "${PW_TITOLARE}" "una password nuova e lunga"
+            CONTIENE "password nuova per l'utente SALUTE"
+            ARGOMENTI password --scrivi @PACCHETTO@ --utente TITOLARE --per-utente SALUTE --password-da-ingresso)
+
+# Conservazione: passata, ogni apertura lo ricorda (orologio del PC).
+kzero_cassaforte(cassaforte_conservazione_passata TITOLARE USCITA 0 FORMATO testo
+                 PREPARA conservazione --scrivi @PACCHETTO@ --utente TITOLARE --conservazione 2020-01-01 --password-da-ingresso
+                 PREPARA_INGRESSO "${PW_TITOLARE}"
+                 CONTIENE "Avviso K-CTR-097: La data di conservazione dei dati personali e particolari della cassaforte (2020-01-01) e' passata"
+                          "(data passata)"
+                 ARGOMENTI controlla @PACCHETTO@)
+kzero_cassaforte(cassaforte_conservazione_passata_giornata UFFICIO USCITA 0 FORMATO testo
+                 PREPARA conservazione --scrivi @PACCHETTO@ --utente TITOLARE --conservazione 2020-01-01 --password-da-ingresso
+                 PREPARA_INGRESSO "${PW_TITOLARE}"
+                 CONTIENE "Avviso: la data di conservazione dei dati (2020-01-01) e' passata"
+                 ARGOMENTI giornata @PACCHETTO@ --data 2026-10-22 --mezzo ALFA-03)
+kzero_cassaforte(cassaforte_conservazione_senza_tutti_i_permessi UFFICIO USCITA 2 FORMATO testo ERRORE K-ERR-023
+                 ARGOMENTI conservazione --scrivi @PACCHETTO@ --conservazione 2030-01-01)
+
+# Uscita in chiaro e richiusura nella stessa cassaforte.
+kzero_cassaforte(cassaforte_esporta TITOLARE USCITA 0 FORMATO testo
+                 CONTIENE "Uscita in chiaro del pacchetto DEMO-2026" "correggerli, richiuderli (kzero richiudi"
+                 ARGOMENTI esporta @PACCHETTO@ --scrivi @NUOVA@)
+kzero_cassaforte(cassaforte_esporta_senza_tutti_i_permessi UFFICIO USCITA 2 FORMATO testo ERRORE K-ERR-023
+                 ARGOMENTI esporta @PACCHETTO@ --scrivi @NUOVA@)
+kzero_cassaforte(cassaforte_richiudi TITOLARE USCITA 0 FORMATO testo
+                 PREPARA esporta @PACCHETTO@ --scrivi @NUOVA@ --utente TITOLARE --password-da-ingresso
+                 PREPARA_INGRESSO "${PW_TITOLARE}"
+                 CONTIENE "richiuso: dati sostituiti nella stessa cassaforte (chiusura numero 2)"
+                          "Utenti: TITOLARE (dati personali e particolari), UFFICIO (dati personali), SALUTE (dati particolari)."
+                 ARGOMENTI richiudi @NUOVA@ --scrivi @PACCHETTO@)
+kzero_cassaforte(cassaforte_richiudi_altro_pacchetto TITOLARE USCITA 1 FORMATO testo ERRORE K-ERR-037
+                 ARGOMENTI richiudi ${PROJECT_SOURCE_DIR}/esempi/demo-numeri --scrivi @PACCHETTO@)
+
+# Cancellazione: prima le chiavi, poi i file; resoconto da conservare.
+kzero_cassaforte(cassaforte_cancella TITOLARE USCITA 0 FORMATO testo VARIABILI
+                 CONTIENE "cancellata il ORA (UTC) dall'utente TITOLARE" "Conteneva 248 valori personali e 37 particolari, di 3 utenti."
+                          "restano, cifrate con le password di allora"
+                 ARGOMENTI cancella --scrivi @PACCHETTO@)
+kzero_cassaforte(cassaforte_cancella_json TITOLARE USCITA 0 FORMATO json SCHEMA cassaforte VARIABILI
+                 CONTIENE "\"cassaforte\": null" "\"voci_registro\": 3"
+                 ARGOMENTI cancella --scrivi @PACCHETTO@ --formato json)
+kzero_cassaforte(cassaforte_cancella_senza_tutti_i_permessi SALUTE USCITA 2 FORMATO testo ERRORE K-ERR-023
+                 ARGOMENTI cancella --scrivi @PACCHETTO@)
+kzero_prova(cassaforte_dopo_la_cancellazione BASE ${KZERO_CASSAFORTE} USCITA 1 FORMATO testo RESOCONTO
+            PREPARA cancella --scrivi @PACCHETTO@ --utente TITOLARE --password-da-ingresso PREPARA_INGRESSO "${PW_TITOLARE}"
+            PROBLEMI "K-CTR-091|pacchetto.json|/cassaforte" ARGOMENTI controlla @PACCHETTO@)
+# Dati personali in chiaro senza "dati_inventati": avviso a ogni lettura.
+kzero_prova(dati_in_chiaro_senza_dati_inventati BASE ${KZERO_DEMO} USCITA 0 FORMATO testo
+            MODIFICA TOGLI pacchetto.json /dati_inventati
+            CONTIENE "Avviso K-CTR-096: Il pacchetto contiene 248 valori personali e 37 particolari in chiaro"
+            ARGOMENTI controlla @PACCHETTO@)
 
 # --- Documentazione e architettura --------------------------------------------------
 add_test(NAME documentazione.errori_e_schemi

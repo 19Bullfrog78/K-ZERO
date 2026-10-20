@@ -1,0 +1,257 @@
+{
+  "luoghi": [
+    {
+      "codice": "L-RIMESSA-ALFA",
+      "comune": "Valfonda",
+      "coordinate": {
+        "lat": 46.4012,
+        "lon": 11.0431
+      },
+      "nome": "Valfonda, rimessa Autoservizi Alfa",
+      "tipo": "rimessa"
+    },
+    {
+      "codice": "L-RIMESSA-BETA",
+      "comune": "Sorgenta",
+      "coordinate": {
+        "lat": 46.4287,
+        "lon": 11.0105
+      },
+      "nome": "Sorgenta, rimessa Trasporti Beta",
+      "tipo": "rimessa"
+    },
+    {
+      "codice": "L-SOSTA-VALFONDA",
+      "comune": "Valfonda",
+      "coordinate": {
+        "lat": 46.3988,
+        "lon": 11.0466
+      },
+      "nome": "Valfonda, parcheggio pullman",
+      "tipo": "punto_sosta"
+    },
+    {
+      "codice": "F-PRADELLO",
+      "codici_esterni": [
+        {
+          "codice": "5101",
+          "sistema": "Trasporti Provinciali Valfonda",
+          "tipo": "fermata"
+        }
+      ],
+      "comune": "Pradello",
+      "coordinate": {
+        "lat": 46.4421,
+        "lon": 11.0712
+      },
+      "nome": "Pradello, Piazza",
+      "nomi_alternativi": [
+        "Pradello P.zza",
+        "Pradello Chiesa"
+      ],
+      "tipo": "fermata"
+    },
+    {
+      "codice": "F-CASTELROVO",
+      "comune": "Castelrovo",
+      "coordinate": {
+        "lat": 46.4268,
+        "lon": 11.0634
+      },
+      "nome": "Castelrovo, Bivio",
+      "tipo": "fermata"
+    },
+    {
+      "codice": "F-CASTELROVO-ALTO",
+      "comune": "Castelrovo",
+      "nome": "Castelrovo, Alto",
+      "nota": "Fermata nuova: coordinate da rilevare.",
+      "tipo": "fermata"
+    },
+    {
+      "codice": "F-MONTEBRINO",
+      "comune": "Montebrino",
+      "coordinate": {
+        "lat": 46.415,
+        "lon": 11.0811
+      },
+      "limiti_accesso": {
+        "altezza_massima_m": 3.2,
+        "divieti": [
+          {
+            "categoria": "M3",
+            "motivo": "cartello",
+            "nota": "Sottopasso ferroviario all'ingresso del paese."
+          },
+          {
+            "mezzo": "ALFA-02",
+            "motivo": "esperienza",
+            "nota": "Piazzale stretto: manovra difficile con questo mezzo."
+          }
+        ]
+      },
+      "nome": "Montebrino, Centro",
+      "tipo": "fermata"
+    },
+    {
+      "codice": "F-SORGENTA",
+      "comune": "Sorgenta",
+      "coordinate": {
+        "lat": 46.4301,
+        "lon": 11.0152
+      },
+      "nome": "Sorgenta, Municipio",
+      "tipo": "fermata"
+    },
+    {
+      "codice": "F-LAGOBELLO",
+      "comune": "Lagobello",
+      "coordinate": {
+        "lat": 46.452,
+        "lon": 11.023
+      },
+      "nome": "Lagobello, Lago",
+      "tipo": "fermata"
+    },
+    {
+      "codice": "F-STAZIONE",
+      "codici_esterni": [
+        {
+          "codice": "5120",
+          "sistema": "Trasporti Provinciali Valfonda",
+          "tipo": "fermata"
+        }
+      ],
+      "comune": "Valfonda",
+      "coordinate": {
+        "lat": 46.3965,
+        "lon": 11.0412
+      },
+      "nome": "Valfonda, Stazione FVV",
+      "tipo": "fermata"
+    },
+    {
+      "codice": "F-VALFONDA-PIAZZA",
+      "codici_esterni": [
+        {
+          "codice": "5122",
+          "sistema": "Trasporti Provinciali Valfonda",
+          "tipo": "fermata"
+        }
+      ],
+      "comune": "Valfonda",
+      "coordinate": {
+        "lat": 46.3991,
+        "lon": 11.045
+      },
+      "nome": "Valfonda, Piazza Grande",
+      "tipo": "fermata"
+    },
+    {
+      "codice": "L-MEDIE",
+      "comune": "Valfonda",
+      "coordinate": {
+        "lat": 46.4003,
+        "lon": 11.0478
+      },
+      "nome": "Valfonda, Scuola media",
+      "tipo": "scuola"
+    },
+    {
+      "codice": "L-PRIM",
+      "comune": "Valfonda",
+      "coordinate": {
+        "lat": 46.4009,
+        "lon": 11.0492
+      },
+      "nome": "Valfonda, Scuola primaria",
+      "tipo": "scuola"
+    },
+    {
+      "codice": "L-SUP",
+      "comune": "Valfonda",
+      "coordinate": {
+        "lat": 46.3979,
+        "lon": 11.0501
+      },
+      "nome": "Valfonda, Istituto superiore",
+      "tipo": "scuola"
+    },
+    {
+      "codice": "L-INFANZIA",
+      "comune": "Lagobello",
+      "coordinate": {
+        "lat": 46.4528,
+        "lon": 11.0241
+      },
+      "nome": "Lagobello, Scuola dell'infanzia",
+      "tipo": "scuola"
+    },
+    {
+      "codice": "L-CENTRO",
+      "comune": "Valfonda",
+      "coordinate": {
+        "lat": 46.3958,
+        "lon": 11.052
+      },
+      "nome": "Valfonda, Centro diurno Il Faro",
+      "sensibile": true,
+      "tipo": "centro"
+    },
+    {
+      "codice": "L-TRASB-PONTE",
+      "comune": "Sorgenta",
+      "coordinate": {
+        "lat": 46.421,
+        "lon": 11.0298
+      },
+      "nome": "Ponte di Sorgenta, piazzale",
+      "tipo": "punto_sosta",
+      "trasbordo": {
+        "autorizzato_da": "Consorzio Valle Alta sentita la Provincia",
+        "data": "2026-08-28",
+        "documento": "Prot. 2026/0457"
+      }
+    },
+    {
+      "codice": "L-TRASB-CROCE",
+      "comune": "Pradello",
+      "coordinate": {
+        "lat": 46.438,
+        "lon": 11.0688
+      },
+      "nome": "Croce di Pradello, parcheggio",
+      "tipo": "punto_trasbordo",
+      "trasbordo": {
+        "a_voce": true,
+        "autorizzato_da": "Consorzio Valle Alta",
+        "data": "2026-09-02",
+        "nota": "Autorizzato a voce dal responsabile del servizio; documento richiesto."
+      }
+    }
+  ],
+  "luoghi_privati": [
+    {
+      "codice": "PP-01",
+      "tipo": "porta_a_porta"
+    },
+    {
+      "codice": "PP-02",
+      "tipo": "porta_a_porta"
+    },
+    {
+      "codice": "PP-03",
+      "tipo": "porta_a_porta"
+    },
+    {
+      "codice": "PR-01",
+      "tipo": "ricovero_esterno"
+    },
+    {
+      "codice": "PP-04",
+      "tipo": "porta_a_porta"
+    }
+  ],
+  "schema": "luoghi",
+  "schema_versione": 2
+}

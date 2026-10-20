@@ -406,6 +406,13 @@ void Cassaforte::togli_utente(const std::string& codice) {
                                                ": togliendolo nessuno li potrebbe piu' aprire. Prima aggiungere un altro "
                                                "utente con quel permesso (per togliere tutto c'e' kzero cancella).");
     }
+    // Serve sempre qualcuno con tutti e due i permessi: senza, nessuno potrebbe richiudere, cambiare la conservazione o
+    // cancellare (DECISIONI.md, K-010).
+    if (suoi.tutti() && std::none_of(i.utenti.begin(), i.utenti.end(),
+                                     [&](const Utente& u) { return u.codice != codice && u.permessi.tutti(); }))
+        errore(Tipo::UtentiNonAmmessi, "L'utente " + codice + " e' l'ultimo con i dati personali e particolari: senza di lui "
+                                       "nessuno potrebbe richiudere i dati, cambiare la data di conservazione o cancellare la "
+                                       "cassaforte. Prima aggiungere un altro utente con tutti i permessi.");
     const bool me_stesso = codice == utente_;
     // Via l'utente e le sue buste.
     i.utenti.erase(std::remove_if(i.utenti.begin(), i.utenti.end(), [&](const Utente& u) { return u.codice == codice; }),

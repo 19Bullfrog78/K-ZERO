@@ -1,0 +1,16 @@
+{
+  "gruppi_servizi": [
+    {
+      "codice": "LOTTO-2",
+      "contratto": "CT-SCU",
+      "nome": "Lotto 2 Valle Alta",
+      "servizi": [
+        "S-SCU-AM",
+        "S-SCU-RM",
+        "S-DIS"
+      ]
+    }
+  ],
+  "schema": "gruppi_servizi",
+  "schema_versione": 1
+}

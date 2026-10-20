@@ -3,6 +3,7 @@
 
 #include <algorithm>
 #include <map>
+#include <set>
 #include <stdexcept>
 
 #include "cripto.hpp"
@@ -330,7 +331,15 @@ std::vector<Voce> separa(const std::string& file, JsonDati& documento, const std
     return voci;
 }
 
-bool unisci(const std::string& file, JsonDati& documento, const std::vector<const Voce*>& voci, std::vector<kzero::Problem>& problemi) {
+bool unisci(const std::string& file, JsonDati& documento, const std::vector<const Voce*>& voci, std::vector<kzero::Problem>& tutti) {
+    // Un problema per elemento e classe, non uno per valore (es. un elemento tolto con cinque valori nella cassaforte).
+    std::vector<kzero::Problem> problemi;
+    std::set<std::string> visti;
+    const auto aggiungi_unico = [&](kzero::Problem p) {
+        std::string chiave = std::to_string(static_cast<int>(p.check)) + "|" + std::to_string(p.variant) + "|" + p.where.pointer;
+        for (const kzero::Param& x : p.params) chiave += "|" + x.text;
+        if (visti.insert(chiave).second) problemi.push_back(std::move(p));
+    };
     // Prima si trova il posto di ogni voce nel documento com'e' (gli indici degli elenchi non cambiano), poi si scrive.
     struct Posto {
         std::string puntatore;   // il contenitore (oggetto o elenco), anche da creare
@@ -396,7 +405,7 @@ bool unisci(const std::string& file, JsonDati& documento, const std::vector<cons
                 if (stesso) uguali.push_back(i);
             }
             if (uguali.size() != 1) {
-                problemi.push_back(problema(kzero::Check::VaultValueOrphan, base + (uguali.empty() ? 0 : 2), file, esistente,
+                aggiungi_unico(problema(kzero::Check::VaultValueOrphan, base + (uguali.empty() ? 0 : 2), file, esistente,
                                             {kzero::text_param("file", file),
                                              kzero::text_param("elemento", descrivi_passo(passo))}));
                 trovato = false;
@@ -410,26 +419,29 @@ bool unisci(const std::string& file, JsonDati& documento, const std::vector<cons
         if (!trovato) {
             if (problemi.size() == problemi_prima || problemi.back().check != kzero::Check::VaultValueOrphan ||
                 problemi.back().where.pointer != esistente)
-                problemi.push_back(problema(kzero::Check::VaultValueOrphan, base, file, esistente,
+                aggiungi_unico(problema(kzero::Check::VaultValueOrphan, base, file, esistente,
                                             {kzero::text_param("file", file), kzero::text_param("elemento", "la parte del file che lo conteneva")}));
             ok = false;
             continue;
         }
         if (v->elemento) {
             if (!esiste || !nodo->is_array()) {
-                problemi.push_back(problema(kzero::Check::VaultValueOrphan, base, file, esistente,
+                aggiungi_unico(problema(kzero::Check::VaultValueOrphan, base, file, esistente,
                                             {kzero::text_param("file", file), kzero::text_param("elemento", "l'elenco che lo conteneva")}));
                 ok = false;
                 continue;
             }
         } else if (esiste && (!nodo->is_object() || nodo->contains(v->campo))) {
-            problemi.push_back(problema(kzero::Check::VaultValueConflict, base, file, esistente, {kzero::text_param("file", file)}));
+            aggiungi_unico(problema(kzero::Check::VaultValueConflict, base, file, esistente, {kzero::text_param("file", file)}));
             ok = false;
             continue;
         }
         posti.push_back({puntatore, v});
     }
-    if (!ok) return false;
+    if (!ok) {
+        tutti.insert(tutti.end(), problemi.begin(), problemi.end());
+        return false;
+    }
     JsonDati unito = documento;
     for (const Posto& p : posti) {
         JsonDati& contenitore = unito[JsonDati::json_pointer(p.puntatore)];
@@ -439,8 +451,9 @@ bool unisci(const std::string& file, JsonDati& documento, const std::vector<cons
         }
         if (contenitore.is_null()) contenitore = JsonDati::object();
         if (contenitore.contains(p.voce->campo)) {   // due voci per lo stesso campo
-            problemi.push_back(problema(kzero::Check::VaultValueConflict, p.voce->classe == Classe::Particolare ? 1 : 0, file,
+            aggiungi_unico(problema(kzero::Check::VaultValueConflict, p.voce->classe == Classe::Particolare ? 1 : 0, file,
                                         p.puntatore, {kzero::text_param("file", file)}));
+            tutti.insert(tutti.end(), problemi.begin(), problemi.end());
             return false;
         }
         contenitore[p.voce->campo] = p.voce->valore;

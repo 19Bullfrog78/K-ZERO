@@ -64,6 +64,7 @@ const Ambiente& ambiente() {
 void per_le_prove_imposta_ambiente(const Ambiente* a) { ambiente_prove = a; }
 
 std::unique_ptr<password::Ingresso> ingresso(const Parametri& parametri) {
+    if (ambiente().ingresso) return ambiente().ingresso();
     if (parametri.password_da_ingresso) return password::dall_ingresso_standard();
     std::unique_ptr<password::Ingresso> t = password::dal_terminale();
     if (!t)

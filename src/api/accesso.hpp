@@ -28,6 +28,8 @@ namespace kzero::api::accesso {
 struct Ambiente {
     registro::Orologio orologio = registro::ora_di_sistema;
     const cripto::PoliticaKdf* politica = &cripto::politica_di_rilascio();
+    // Solo prove interne: da dove leggere le password al posto del terminale o dell'ingresso standard.
+    std::function<std::unique_ptr<password::Ingresso>()> ingresso;
 };
 
 // L'ambiente dei comandi: quello del programma (orologio del sistema, politica di rilascio). Solo le prove interne ne
