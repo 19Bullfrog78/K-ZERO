@@ -65,7 +65,9 @@ jobs:
         env:
           ASAN_OPTIONS: halt_on_error=1:abort_on_error=1:detect_leaks=1
           UBSAN_OPTIONS: halt_on_error=1:print_stacktrace=1
-        run: ctest --test-dir build --output-on-failure
+        # In parallele (K-010): con i sanitizer le tre prove del "non verificato" (375 pacchetti ciascuna) durano piu' di
+        # dieci minuti l'una; in fila il lavoro durerebbe circa un'ora.
+        run: ctest --test-dir build --output-on-failure -j "$(nproc)"
 
   fuzzing:
     runs-on: ubuntu-24.04
