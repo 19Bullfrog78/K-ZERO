@@ -20,8 +20,12 @@ Separazione separa(const Lettura& lettura) {
         JsonDati normale = documento;
         const int versione = lettura.versioni.at(file);
         if (file != "pacchetto.json") {
-            for (Voce& v : kzero::api::separa(file, normale, f->schema, versione, &legame))
-                (v.classe == Classe::Particolare ? out.contenuto.particolari : out.contenuto.personali).push_back(std::move(v));
+            for (Voce& v : kzero::api::separa(file, normale, f->schema, versione, &legame)) {
+                std::vector<Voce>& dove = v.legato ? out.contenuto.legati
+                                          : v.classe == Classe::Particolare ? out.contenuto.particolari
+                                                                            : out.contenuto.personali;
+                dove.push_back(std::move(v));
+            }
             const ValoriPerClasse n = conta_valori(documento, f->schema, versione);
             out.contenuto.valori.personali += n.personali;
             out.contenuto.valori.particolari += n.particolari;
@@ -78,6 +82,7 @@ ValoriCassaforte valori_di(const cassaforte::Cassaforte& c) {
     v.generazione = r.generazione;
     for (const Classe classe : {Classe::Personale, Classe::Particolare})
         for (const Voce& x : c.voci(classe)) v.voci.push_back(&x);
+    for (const Voce& x : c.voci_legate()) v.voci.push_back(&x);
     return v;
 }
 

@@ -179,7 +179,9 @@ Analizzato analizza(std::string_view file) {
     i.autenticazione[kBase] = r.byte(cripto::kAutenticazione);
     if (!r.ok()) rovinata("autenticazione");
     a.fine = r.posizione();
-    if (r.resto() != i.sezioni[0].lunghezza + i.sezioni[1].lunghezza) rovinata("lunghezza del file");
+    std::uint64_t dati = 0;
+    for (const Sezione& s : i.sezioni) dati += s.lunghezza;
+    if (r.resto() != dati) rovinata("lunghezza del file");
     return a;
 }
 
@@ -221,6 +223,16 @@ Bytes ad_sezione(const Bytes& id, int livello, std::uint32_t versione, std::uint
     return ad;
 }
 
+Bytes ad_legati(const Bytes& id, std::uint32_t versione_personali, std::uint32_t versione_particolari, std::uint32_t generazione) {
+    Scrittore w;
+    w.byte(inizio(id));
+    w.u8(static_cast<std::uint8_t>(kLegati));
+    w.u32(versione_personali);
+    w.u32(versione_particolari);
+    w.u32(generazione);
+    return std::move(w.dati());
+}
+
 // L'elenco di chi ha un livello (personali o particolari): codici e chiavi pubbliche, nell'ordine dell'intestazione.
 Bytes lista(const Intestazione& i, int livello) {
     Scrittore w;
@@ -257,7 +269,7 @@ std::string testo_sezione(const std::vector<Voce>& voci) {
 
 // Le voci di una sezione decifrata. false se la forma non e' quella attesa (solo chi ha la chiave puo' averla scritta:
 // e' comunque un file da non usare).
-bool voci_di(std::string_view testo, Classe classe, std::vector<Voce>& out) {
+bool voci_di(std::string_view testo, Classe classe, std::vector<Voce>& out, bool legato) {
     JsonDati elenco;
     try {
         const JsonDati::parser_callback_t limite = [](int profondita, JsonDati::parse_event_t, JsonDati&) {
@@ -274,6 +286,7 @@ bool voci_di(std::string_view testo, Classe classe, std::vector<Voce>& out) {
     for (const JsonDati& j : elenco) {
         Voce v;
         if (!Voce::da_json(j, classe, v)) return false;
+        v.legato = legato;
         voci.push_back(std::move(v));
     }
     out = std::move(voci);
@@ -283,6 +296,11 @@ bool voci_di(std::string_view testo, Classe classe, std::vector<Voce>& out) {
 
 cripto::Segreto derivata(const cripto::Segreto& chiave_livello, std::uint64_t uso) {
     return cripto::derivata(chiave_livello, uso, kContesto);
+}
+
+cripto::Segreto chiave_legati(const Bytes& id, const cripto::Segreto& chiave_personali, const cripto::Segreto& chiave_particolari) {
+    return cripto::combinata(derivata(chiave_personali, kPerLegati), derivata(chiave_particolari, kPerLegati), inizio(id),
+                             std::string_view(kContestoLegati));
 }
 
 }  // namespace kzero::api::cassaforte::formato

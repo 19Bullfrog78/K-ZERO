@@ -228,9 +228,10 @@ std::vector<DefinizioneComando> comandi_cassaforte() {
         p.push_back(parametro_codice("--utente-da-togliere", "Il codice dell'utente da togliere.", true,
                                      [](Parametri& par, const std::string& v) { par.utente_da_togliere = v; }));
         c.push_back({"togli-utente",
-                     "Toglie un utente dalla cassaforte: chi lo toglie deve avere tutti i suoi permessi. Le chiavi dei dati che "
-                     "aveva si rifanno e i dati si ricifrano: l'utente tolto non apre la versione nuova. Non si toglie l'ultimo "
-                     "utente ne' l'ultimo che legge i dati personali o particolari.",
+                     "Toglie un utente dalla cassaforte: chi lo toglie deve avere i dati personali e particolari. Le chiavi dei "
+                     "dati che aveva si rifanno e i dati si ricifrano, anche quelli di chi va in un luogo sensibile (si aprono "
+                     "solo con tutti e due i permessi): l'utente tolto non apre la versione nuova. Non si toglie l'ultimo utente "
+                     "ne' l'ultimo che legge i dati personali o particolari.",
                      {}, p, cassaforte, esegui_togli_utente});
     }
     {

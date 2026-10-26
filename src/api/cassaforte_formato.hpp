@@ -20,10 +20,17 @@ using cripto::Bytes;
 constexpr unsigned char kMagia[8] = {'K', 'Z', '-', 'C', 'A', 'S', 'S', 'A'};
 constexpr unsigned char kMagiaLista[8] = {'K', 'Z', '-', 'L', 'I', 'S', 'T', 'A'};
 constexpr char kContesto[9] = "KZ-CASSA";   // contesto delle chiavi derivate (crypto_kdf, 8 caratteri)
-// Numeri delle chiavi derivate da una chiave di livello: ogni chiave ha un solo uso.
-constexpr std::uint64_t kPerSezione = 1, kPerAutenticazione = 2, kPerStoria = 3, kPerRegistro = 4;
+// Numeri delle chiavi derivate da una chiave di livello: ogni chiave ha un solo uso. kPerLegati: la parte di ogni chiave
+// di classe (personali, particolari) che entra nella chiave della sezione dei legati (chiave_legati).
+constexpr std::uint64_t kPerSezione = 1, kPerAutenticazione = 2, kPerStoria = 3, kPerRegistro = 4, kPerLegati = 5;
 
 constexpr int kBase = 0, kPersonali = 1, kParticolari = 2, kLivelli = 3;
+// Le sezioni dei dati, nell'ordine del file: personali, particolari, legati (aggiunta 1 del K-010: i dati personali di chi
+// e' legato a un luogo sensibile, cifrati con una chiave ricavata da tutte e due le chiavi di classe). kLegati e' il numero
+// che li distingue nei dati associati (i livelli sono 0, 1, 2).
+constexpr std::size_t kSezionePersonali = 0, kSezioneParticolari = 1, kSezioneLegati = 2, kSezioni = 3;
+constexpr int kLegati = 3;
+constexpr char kContestoLegati[] = "KZ-CASSA dati legati";
 constexpr std::size_t kVoceFessura = 1 + 4 + cripto::kChiave;                       // livello, versione, chiave
 constexpr std::size_t kInBusta = kId + 1 + 4 + cripto::kChiave;                      // codice, livello, versione, chiave
 constexpr std::size_t kBusta = cripto::kSovraccaricoBusta + kInBusta;               // 101 byte
@@ -144,7 +151,7 @@ struct Intestazione {
     std::vector<Utente> utenti;
     std::vector<Busta> buste;
     std::array<Bytes, kLivelli> storie;   // nonce + testo cifrato; vuota con la versione 1
-    std::array<Sezione, 2> sezioni;       // dati personali, dati particolari
+    std::array<Sezione, kSezioni> sezioni;   // dati personali, dati particolari, dati legati
     std::array<Bytes, kLivelli> autenticazione{{Bytes(cripto::kAutenticazione, 0), Bytes(cripto::kAutenticazione, 0),
                                                  Bytes(cripto::kAutenticazione, 0)}};
 
@@ -179,14 +186,21 @@ Bytes inizio(const Bytes& id);                                    // magia, vers
 Bytes ad_fessura(const Bytes& id, const Utente& u);
 Bytes ad_livello(const Bytes& id, int livello, std::uint32_t versione);   // buste e storie
 Bytes ad_sezione(const Bytes& id, int livello, std::uint32_t versione, std::uint32_t generazione);
+// La sezione dei legati: le versioni di tutte e due le chiavi di classe con cui e' cifrata.
+Bytes ad_legati(const Bytes& id, std::uint32_t versione_personali, std::uint32_t versione_particolari, std::uint32_t generazione);
 Bytes lista(const Intestazione& i, int livello);                 // chi ha un livello: codici e chiavi pubbliche
 Bytes contenuto_busta(const Bytes& id, int livello, std::uint32_t versione, const cripto::Segreto& chiave);
 
 // Il testo in chiaro di una sezione e ritorno (false se la forma non e' quella attesa).
 std::string testo_sezione(const std::vector<Voce>& voci);
-bool voci_di(std::string_view testo, Classe classe, std::vector<Voce>& out);
+// legato: le voci della sezione dei legati (Voce::legato).
+bool voci_di(std::string_view testo, Classe classe, std::vector<Voce>& out, bool legato = false);
 
 // La chiave derivata da una chiave di livello per un uso (crypto_kdf, contesto kContesto).
 cripto::Segreto derivata(const cripto::Segreto& chiave_livello, std::uint64_t uso);
+// La chiave della sezione dei legati: HKDF-SHA256 (cripto::combinata) della chiave derivata kPerLegati dei personali e di
+// quella dei particolari, con sale l'inizio del file (magia, versione, codice della cassaforte) e contesto kContestoLegati.
+// Senza tutte e due le chiavi di classe non si calcola.
+cripto::Segreto chiave_legati(const Bytes& id, const cripto::Segreto& chiave_personali, const cripto::Segreto& chiave_particolari);
 
 }  // namespace kzero::api::cassaforte::formato

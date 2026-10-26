@@ -56,7 +56,8 @@ const std::vector<DefinizioneControllo>& catalogo_controlli();
 // Il problema si puo' calcolare con le classi che l'utente puo' leggere (K-010)? No se il suo controllo richiede una classe
 // che non legge, oppure se il problema rivela, o sta in, un dato di quella classe (i dati non ci sono). classe_posizione =
 // la classe del dato in cui sta la posizione (riservatezza.hpp); in_trasportato = la posizione sta in un passeggero o in
-// una casa, i cui dati personali stanno con i particolari se sono legati a un luogo sensibile. Con tutte le classi
+// una casa, i cui dati personali, se sono legati a un luogo sensibile, stanno nella sezione dei legati e si decifrano
+// solo con tutti e due i permessi. Con tutte le classi
 // leggibili: sempre si'.
 bool verificabile(const DefinizioneControllo& d, int variante, Classe classe_posizione, bool in_trasportato,
                   const Visibilita& leggibili);

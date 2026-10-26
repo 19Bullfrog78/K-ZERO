@@ -36,12 +36,12 @@ std::string nuovo_id() { return cripto::esadecimale(cripto::casuali(kId)); }
 
 struct Cassaforte::Stato {
     Intestazione i;
-    std::array<Bytes, 2> cifrate;                            // testo cifrato delle sezioni
+    std::array<Bytes, kSezioni> cifrate;                     // testo cifrato delle sezioni
     Segreto kek;                                             // dalla password dell'utente che l'ha aperta
     Segreto segreta;                                         // la sua chiave X25519
     std::array<Segreto, kLivelli> chiavi;                    // chiavi di adesso dei suoi livelli (vuote per gli altri)
     std::array<std::map<std::uint32_t, Segreto>, kLivelli> vecchie;   // chiavi vecchie dei suoi livelli (dalla storia)
-    std::array<std::vector<Voce>, 2> voci;                   // le sezioni che puo' leggere
+    std::array<std::vector<Voce>, kSezioni> voci;            // le sezioni che puo' leggere (i legati: tutti e due i permessi)
 
     const Utente& io(const std::string& codice) const {
         const Utente* u = i.utente(codice);
@@ -75,17 +75,28 @@ struct Cassaforte::Stato {
         u.fessura = cripto::cifra(kek_utente, u.nonce.data(), chiaro.dati(), chiaro.dimensione(), ad_fessura(i.id, u));
     }
 
-    void cifra_sezione(int classe) {   // classe: 0 personali, 1 particolari
-        const int livello = classe == 0 ? kPersonali : kParticolari;
-        const Segreto chiave = cripto::derivata(chiavi[static_cast<std::size_t>(livello)], kPerSezione, kContesto);
-        Sezione& s = i.sezioni[static_cast<std::size_t>(classe)];
-        const std::string testo = testo_sezione(voci[static_cast<std::size_t>(classe)]);
+    // Cifra una sezione con le chiavi di adesso: personali e particolari con la chiave del loro livello, i legati con la
+    // chiave ricavata da tutte e due (chi la cifra le ha).
+    void cifra_sezione(std::size_t sezione) {
+        Sezione& s = i.sezioni[sezione];
+        const std::string testo = testo_sezione(voci[sezione]);
         s.nonce = cripto::casuali(cripto::kNonce);
-        Bytes& c = cifrate[static_cast<std::size_t>(classe)];
-        c = cripto::cifra(chiave, s.nonce.data(), reinterpret_cast<const unsigned char*>(testo.data()), testo.size(),
-                          ad_sezione(i.id, livello, i.versioni[static_cast<std::size_t>(livello)], i.generazione));
+        Bytes& c = cifrate[sezione];
+        const auto* dati = reinterpret_cast<const unsigned char*>(testo.data());
+        if (sezione == kSezioneLegati) {
+            c = cripto::cifra(chiave_legati(i.id, chiavi[kPersonali], chiavi[kParticolari]), s.nonce.data(), dati, testo.size(),
+                              ad_legati(i.id, i.versioni[kPersonali], i.versioni[kParticolari], i.generazione));
+        } else {
+            const int livello = sezione == kSezionePersonali ? kPersonali : kParticolari;
+            const std::size_t ls = static_cast<std::size_t>(livello);
+            c = cripto::cifra(cripto::derivata(chiavi[ls], kPerSezione, kContesto), s.nonce.data(), dati, testo.size(),
+                              ad_sezione(i.id, livello, i.versioni[ls], i.generazione));
+        }
         s.lunghezza = c.size();
         s.impronta = cripto::impronta(c);
+    }
+    void cifra_sezioni() {
+        for (std::size_t sezione = 0; sezione < kSezioni; ++sezione) cifra_sezione(sezione);
     }
 
     void autentica_lista(int livello) {
@@ -282,23 +293,33 @@ Cassaforte Cassaforte::apri(std::string_view file, const std::string& id_atteso,
         if (!cripto::verifica_autenticazione(i.autenticazione[static_cast<std::size_t>(l)], lista(i, l), chiave))
             manomessa(std::string("elenco di chi ha i dati ") + (l == kPersonali ? "personali" : "particolari"));
     }
-    // Sezioni: l'impronta di tutte e due (autenticata con l'intestazione), il contenuto di quelle dei suoi permessi.
+    // Sezioni: l'impronta di tutte (autenticata con l'intestazione), il contenuto di quelle dei suoi permessi. La sezione
+    // dei legati solo con tutti e due: la sua chiave si ricava dalle due chiavi di classe insieme.
     std::size_t inizio_sezione = a.fine;
-    for (int classe = 0; classe < 2; ++classe) {
-        const std::size_t cs = static_cast<std::size_t>(classe);
-        const Sezione& sez = i.sezioni[cs];
+    for (std::size_t sezione = 0; sezione < kSezioni; ++sezione) {
+        const Sezione& sez = i.sezioni[sezione];
         const auto* p = reinterpret_cast<const unsigned char*>(file.data()) + inizio_sezione;
-        s.cifrate[cs] = Bytes(p, p + sez.lunghezza);
+        s.cifrate[sezione] = Bytes(p, p + sez.lunghezza);
         inizio_sezione += static_cast<std::size_t>(sez.lunghezza);
-        if (cripto::impronta(s.cifrate[cs]) != sez.impronta) manomessa("sezione");
-        const int livello = classe == 0 ? kPersonali : kParticolari;
-        if (!ha(u->permessi, livello)) continue;
-        const Segreto chiave = cripto::derivata(s.chiavi[static_cast<std::size_t>(livello)], kPerSezione, kContesto);
+        if (cripto::impronta(s.cifrate[sezione]) != sez.impronta) manomessa("sezione");
         Segreto testo;
-        if (!cripto::decifra(chiave, sez.nonce.data(), s.cifrate[cs].data(), s.cifrate[cs].size(),
-                             ad_sezione(i.id, livello, i.versioni[static_cast<std::size_t>(livello)], i.generazione), testo))
-            manomessa("sezione dei dati");
-        if (!voci_di(testo.testo(), classe == 0 ? Classe::Personale : Classe::Particolare, s.voci[cs]))
+        bool decifrata = false;
+        if (sezione == kSezioneLegati) {
+            if (!u->permessi.tutti()) continue;
+            decifrata = cripto::decifra(chiave_legati(i.id, s.chiavi[kPersonali], s.chiavi[kParticolari]), sez.nonce.data(),
+                                        s.cifrate[sezione].data(), s.cifrate[sezione].size(),
+                                        ad_legati(i.id, i.versioni[kPersonali], i.versioni[kParticolari], i.generazione), testo);
+        } else {
+            const int livello = sezione == kSezionePersonali ? kPersonali : kParticolari;
+            const std::size_t ls = static_cast<std::size_t>(livello);
+            if (!ha(u->permessi, livello)) continue;
+            decifrata = cripto::decifra(cripto::derivata(s.chiavi[ls], kPerSezione, kContesto), sez.nonce.data(),
+                                        s.cifrate[sezione].data(), s.cifrate[sezione].size(),
+                                        ad_sezione(i.id, livello, i.versioni[ls], i.generazione), testo);
+        }
+        if (!decifrata) manomessa("sezione dei dati");
+        const Classe classe = sezione == kSezionePersonali ? Classe::Personale : Classe::Particolare;
+        if (!voci_di(testo.testo(), classe, s.voci[sezione], sezione == kSezioneLegati))
             manomessa("contenuto della sezione dei dati");
     }
     c.utente_ = utente;
@@ -332,10 +353,10 @@ Cassaforte Cassaforte::crea(const std::string& id, const std::string& conservazi
     s.segreta = std::move(coppia.segreta);
     s.scrivi_fessura(u, s.kek, s.segreta);
     i.utenti.push_back(std::move(u));
-    s.voci[0] = std::move(contenuto.personali);
-    s.voci[1] = std::move(contenuto.particolari);
-    s.cifra_sezione(0);
-    s.cifra_sezione(1);
+    s.voci[kSezionePersonali] = std::move(contenuto.personali);
+    s.voci[kSezioneParticolari] = std::move(contenuto.particolari);
+    s.voci[kSezioneLegati] = std::move(contenuto.legati);
+    s.cifra_sezioni();
     s.autentica_lista(kPersonali);
     s.autentica_lista(kParticolari);
     c.utente_ = utente;
@@ -347,8 +368,10 @@ Permessi Cassaforte::permessi() const { return s_->io(utente_).permessi; }
 Riepilogo Cassaforte::riepilogo() const { return riepilogo_di(s_->i); }
 
 const std::vector<Voce>& Cassaforte::voci(Classe classe) const {
-    return s_->voci[classe == Classe::Particolare ? 1 : 0];
+    return s_->voci[classe == Classe::Particolare ? kSezioneParticolari : kSezionePersonali];
 }
+
+const std::vector<Voce>& Cassaforte::voci_legate() const { return s_->voci[kSezioneLegati]; }
 
 std::uint32_t Cassaforte::versione_base() const { return s_->i.versioni[kBase]; }
 
@@ -392,10 +415,12 @@ void Cassaforte::togli_utente(const std::string& codice) {
     if (i.utenti.size() == 1)
         errore(Tipo::UtentiNonAmmessi, "L'utente " + codice + " e' l'ultimo della cassaforte: non si puo' togliere (per "
                                        "togliere tutto c'e' kzero cancella).");
-    if (!permessi().contiene(suoi))
-        errore(Tipo::PermessoMancante, "Per togliere l'utente " + codice + ", che ha " + testo_permessi(suoi) +
-                                           ", servono tutti i suoi permessi: l'utente " + utente_ + " ha " +
-                                           testo_permessi(permessi()) + ".");
+    // Togliere un utente rifa' le chiavi dei suoi livelli e ricifra i dati, anche quelli legati a un luogo sensibile, che si
+    // cifrano con tutte e due le chiavi di classe: serve chi ha tutti e due i permessi (aggiunta 1 del K-010, DECISIONI.md).
+    if (!permessi().tutti())
+        errore(Tipo::PermessoMancante, "Per togliere un utente servono i dati personali e particolari: le chiavi si rifanno e i "
+                                       "dati si ricifrano, anche quelli di chi va in un luogo sensibile, che si aprono solo con "
+                                       "tutti e due i permessi. L'utente " + utente_ + " ha " + testo_permessi(permessi()) + ".");
     for (int l : {kPersonali, kParticolari}) {
         if (!ha(suoi, l)) continue;
         const bool altri = std::any_of(i.utenti.begin(), i.utenti.end(),
@@ -447,8 +472,10 @@ void Cassaforte::togli_utente(const std::string& codice) {
     }
     i.buste.erase(std::remove_if(i.buste.begin(), i.buste.end(), [&](const Busta& b) { return b.codice == codice; }),
                   i.buste.end());
-    if (suoi.personali) s_->cifra_sezione(0);
-    if (suoi.particolari) s_->cifra_sezione(1);
+    // I dati dei livelli rifatti, e sempre i legati, cifrati con le due chiavi di classe (almeno una e' cambiata).
+    if (suoi.personali) s_->cifra_sezione(kSezionePersonali);
+    if (suoi.particolari) s_->cifra_sezione(kSezioneParticolari);
+    s_->cifra_sezione(kSezioneLegati);
     if (suoi.personali) s_->autentica_lista(kPersonali);
     if (suoi.particolari) s_->autentica_lista(kParticolari);
     if (!me_stesso) {
@@ -506,10 +533,10 @@ void Cassaforte::sostituisci_contenuto(Contenuto contenuto) {
     i.generazione += 1;
     i.valori_personali = contenuto.valori.personali;
     i.valori_particolari = contenuto.valori.particolari;
-    s_->voci[0] = std::move(contenuto.personali);
-    s_->voci[1] = std::move(contenuto.particolari);
-    s_->cifra_sezione(0);
-    s_->cifra_sezione(1);
+    s_->voci[kSezionePersonali] = std::move(contenuto.personali);
+    s_->voci[kSezioneParticolari] = std::move(contenuto.particolari);
+    s_->voci[kSezioneLegati] = std::move(contenuto.legati);
+    s_->cifra_sezioni();
 }
 
 void Cassaforte::lega_registro(std::uint32_t voci, const Bytes& impronta) {

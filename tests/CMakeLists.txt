@@ -46,6 +46,7 @@ gtest_discover_tests(test_registro PROPERTIES LABELS sicurezza)
 add_executable(test_cassaforte test_cassaforte.cpp)
 target_link_libraries(test_cassaforte PRIVATE kzero_api GTest::gtest_main)
 target_compile_options(test_cassaforte PRIVATE ${KZERO_WARNINGS})
+target_compile_definitions(test_cassaforte PRIVATE KZERO_CARTELLA_PROVE="${CMAKE_CURRENT_SOURCE_DIR}")
 gtest_discover_tests(test_cassaforte PROPERTIES LABELS sicurezza)
 
 # --- Strumento standard per confrontare le uscite JSON con gli schemi ---------------
@@ -956,6 +957,14 @@ kzero_cassaforte(cassaforte_togli_utente TITOLARE USCITA 0 FORMATO json SCHEMA c
                  ARGOMENTI togli-utente --scrivi @PACCHETTO@ --utente-da-togliere UFFICIO --formato json)
 kzero_cassaforte(cassaforte_togli_utente_oltre_i_permessi UFFICIO USCITA 2 FORMATO testo ERRORE K-ERR-023
                  ARGOMENTI togli-utente --scrivi @PACCHETTO@ --utente-da-togliere SALUTE)
+# Togliere un utente ricifra i dati legati a un luogo sensibile: servono tutti e due i permessi, anche per togliere chi ha i
+# soli dati personali (aggiunta 1 del K-010).
+kzero_cassaforte(cassaforte_togli_utente_servono_tutti_e_due_i_permessi UFFICIO USCITA 2 FORMATO testo ERRORE K-ERR-023
+                 PREPARA aggiungi-utente --scrivi @PACCHETTO@ --utente UFFICIO --nuovo-utente NUOVO --permessi personali
+                         --password-da-ingresso
+                 PREPARA_INGRESSO "${PW_UFFICIO}" "una password nuova e lunga"
+                 CONTIENE "Per togliere un utente servono i dati personali e particolari"
+                 ARGOMENTI togli-utente --scrivi @PACCHETTO@ --utente-da-togliere NUOVO)
 kzero_cassaforte(cassaforte_togli_ultimo_con_tutti_i_permessi TITOLARE USCITA 2 FORMATO testo ERRORE K-ERR-036
                  ARGOMENTI togli-utente --scrivi @PACCHETTO@ --utente-da-togliere TITOLARE)
 # L'utente tolto non apre la versione nuova.

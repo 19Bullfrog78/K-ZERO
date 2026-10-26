@@ -461,7 +461,7 @@ const std::vector<DefinizioneControllo>& catalogo_controlli() {
         // del piano richiedono quindi le due classi.
         const std::map<Check, Richiede> richiede = {
             {Check::NumbersOnlyPersonalData, PQ},     // la presenza di dati personali (anche quelli legati a luoghi sensibili)
-            {Check::PlaceWithoutCoordinates, PQ},     // le coordinate dei luoghi privati (le case legate stanno con i particolari)
+            {Check::PlaceWithoutCoordinates, PQ},     // le coordinate dei luoghi privati (le case legate: tutti e due i permessi)
             {Check::DwellTimesUndefined, Q},          // chi viaggia (tipi dei gruppi)
             {Check::MaxRideUndefined, Q},             // regole dei regolamenti per tipo di servizio e di gruppo
             {Check::AssistantNotRequested, Q},        // esigenze dei passeggeri
@@ -505,8 +505,8 @@ const std::vector<DefinizioneControllo>& catalogo_controlli() {
 bool verificabile(const DefinizioneControllo& d, int variante, Classe classe_posizione, bool in_trasportato,
                   const Visibilita& leggibili) {
     if ((d.richiede_personali && !leggibili.personali) || (d.richiede_particolari && !leggibili.particolari)) return false;
-    // I dati personali dei passeggeri e delle case legati a un luogo sensibile stanno con i particolari: senza i particolari
-    // un problema su un dato personale di un passeggero o di una casa puo' riguardarli.
+    // I dati personali dei passeggeri e delle case legati a un luogo sensibile si decifrano solo con tutti e due i permessi
+    // (sezione dei legati): senza tutti e due un problema su un dato personale di un passeggero o di una casa puo' riguardarli.
     const auto legge = [&](Classe c) {
         if (c == Classe::Comune) return true;
         if (c == Classe::Personale) return leggibili.personali && (leggibili.particolari || !in_trasportato);

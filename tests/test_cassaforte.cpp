@@ -3,9 +3,14 @@
 // che costruiscono file cambiati "come un altro programma" usano il formato documentato (cassaforte_formato.hpp).
 #include <algorithm>
 #include <chrono>
+#include <fstream>
 #include <functional>
+#include <iostream>
+#include <map>
 #include <set>
+#include <sstream>
 #include <string>
+#include <tuple>
 #include <vector>
 
 #include <gtest/gtest.h>
@@ -58,6 +63,13 @@ cassaforte::Contenuto contenuto() {
     c.personali.push_back(voce("persone.json", "P-A", "nome", "Rossi Mario", Classe::Personale));
     c.personali.push_back(voce("persone.json", "P-B", "nome", "Bianchi Anna", Classe::Personale));
     c.particolari.push_back(voce("servizi.json", "S-1", "tipo", "disabili", Classe::Particolare));
+    // Dati personali di chi va in un luogo sensibile (sezione dei legati: tutti e due i permessi).
+    Voce legato = voce("persone.json", "P-L", "nome", "Bianchi Luca", Classe::Particolare);
+    legato.legato = true;
+    c.legati.push_back(legato);
+    legato.campo = "casa";
+    legato.valore = "Casa Bianchi";
+    c.legati.push_back(legato);
     c.valori.personali = 2;
     c.valori.particolari = 1;
     return c;
@@ -459,8 +471,8 @@ TEST(Cassaforte, PermessoAlzatoAManoRifiutato) {
     EXPECT_EQ(tipo_errore(alzato, "C", kPwC), Tipo::Manomessa);
     // B stesso non apre (la sua fessura non corrisponde ai permessi scritti).
     EXPECT_NE(tipo_errore(alzato, "B", kPwB), static_cast<Tipo>(-1));
-    // Un utente con i soli personali (E) che toglie qualcuno non puo' controllare l'elenco dei particolari, ma non ha la
-    // chiave dei particolari: dopo il cambio delle chiavi nessuna busta dei particolari va a B.
+    // Un cambio delle chiavi non consegna mai a B la chiave dei particolari: chi ha i soli personali (E) non puo' farlo, chi
+    // puo' farlo se ne accorge.
     Cassaforte a = apri(file, "A", kPwA);
     a.aggiungi_utente("E", Permessi{true, false}, pw(kPwD), politica_prove());
     a.aggiungi_utente("F", Permessi{true, false}, pw(kPwC), politica_prove());
@@ -471,13 +483,21 @@ TEST(Cassaforte, PermessoAlzatoAManoRifiutato) {
         b->permessi.particolari = true;
         b->fessura.resize(cassaforte::formato::lunghezza_fessura(b->permessi));
     }, {&kb2.livelli[0], &kb2.livelli[1], nullptr});
+    // E apre (non controlla l'elenco dei particolari, non ne ha la chiave) ma non puo' rifare le chiavi: dall'aggiunta 1 togliere
+    // un utente lo fa solo chi ha tutti e due i permessi (i legati si ricifrano con le due chiavi di classe).
     Cassaforte e = apri(alzato2, "E", kPwD);
-    e.togli_utente("F");
-    const std::string dopo = e.file();
-    const cassaforte::formato::Analizzato x = cassaforte::formato::analizza(dopo);
-    for (const cassaforte::formato::Busta& b : x.intestazione.buste)
+    try {
+        e.togli_utente("F");
+        ADD_FAILURE() << "un utente con i soli dati personali ha rifatto le chiavi";
+    } catch (const ErroreCassaforte& x) {
+        EXPECT_EQ(x.tipo, Tipo::PermessoMancante);
+    }
+    // Chi puo' rifare le chiavi ha i particolari: controlla l'elenco e rifiuta il file prima di consegnare qualunque chiave.
+    EXPECT_EQ(tipo_errore(alzato2, "D", kPwD), Tipo::Manomessa);
+    EXPECT_EQ(tipo_errore(alzato2, "A", kPwA), Tipo::Manomessa);
+    // Nel file alzato non c'e' nessuna busta dei particolari per B.
+    for (const cassaforte::formato::Busta& b : cassaforte::formato::analizza(alzato2).intestazione.buste)
         EXPECT_FALSE(b.codice == "B" && b.livello == cassaforte::formato::kParticolari);
-    EXPECT_EQ(tipo_errore(dopo, "D", kPwD), Tipo::Manomessa);   // e chi ha i particolari se ne accorge ancora
 }
 
 // Una busta preparata da chi non aveva la chiave vecchia (es. da fuori, con la chiave pubblica che e' in chiaro) non vale.
@@ -510,4 +530,254 @@ TEST(Cassaforte, VersioneDelleChiaviAbbassata) {
         i.storie[0].clear();
     }, {&kd.livelli[0], nullptr, nullptr});
     EXPECT_EQ(tipo_errore(giu, "D", kPwD), Tipo::Manomessa);
+}
+
+namespace {
+
+// Tutte le chiavi che un utente si puo' procurare dal file con la sua password, come farebbe un altro programma: quelle
+// della sua fessura e quelle delle buste per lui (le chiavi vecchie della storia, con una cassaforte appena fatta o con un
+// solo cambio, sono gia' tra queste).
+std::vector<Segreto> chiavi_procurabili(const std::string& file, const std::string& utente, const std::string& password) {
+    using namespace cassaforte::formato;
+    Chiavi k = chiavi_di(file, utente, password);
+    std::vector<Segreto> out;
+    for (Segreto& x : k.livelli)
+        if (x.dimensione() == cripto::kChiave) out.push_back(std::move(x));
+    const Analizzato a = analizza(file);
+    const Utente* u = a.intestazione.utente(utente);
+    for (const Busta& b : a.intestazione.buste) {
+        if (b.codice != utente) continue;
+        Segreto dentro;
+        if (!cripto::apri_busta(b.busta, u->pubblica, k.segreta, dentro)) continue;
+        Lettore r(dentro.dati(), dentro.dimensione());
+        r.byte(cassaforte::kId);
+        r.u8();
+        r.u32();
+        const Bytes chiave = r.byte(cripto::kChiave);
+        if (r.ok()) out.emplace_back(chiave.data(), chiave.size());
+    }
+    return out;
+}
+
+// I testi in chiaro di tutte le sezioni che si aprono con le chiavi date: ogni chiave cosi' com'e', ogni sua chiave
+// derivata (usi da 1 a 5), la chiave dei legati calcolata con ogni coppia delle chiavi date e con una chiave inventata al
+// posto di quella che manca; ogni dato associato del formato.
+std::vector<std::string> testi_decifrabili(const std::string& file, const std::vector<Segreto>& chiavi) {
+    using namespace cassaforte::formato;
+    const Analizzato a = analizza(file);
+    const Intestazione& i = a.intestazione;
+    std::vector<Segreto> candidate;
+    const Bytes inventata = cripto::casuali(cripto::kChiave);
+    const Segreto altra(inventata.data(), inventata.size());
+    for (const Segreto& k : chiavi) {
+        candidate.emplace_back(k.dati(), k.dimensione());
+        for (std::uint64_t uso = 1; uso <= 5; ++uso) candidate.push_back(derivata(k, uso));
+        candidate.push_back(chiave_legati(i.id, k, altra));
+        candidate.push_back(chiave_legati(i.id, altra, k));
+        for (const Segreto& h : chiavi) candidate.push_back(chiave_legati(i.id, k, h));
+    }
+    const std::vector<Bytes> associati = {
+        ad_legati(i.id, i.versioni[kPersonali], i.versioni[kParticolari], i.generazione),
+        ad_sezione(i.id, kPersonali, i.versioni[kPersonali], i.generazione),
+        ad_sezione(i.id, kParticolari, i.versioni[kParticolari], i.generazione)};
+    std::vector<std::string> out;
+    std::size_t inizio = a.fine;
+    for (const Sezione& sez : i.sezioni) {
+        const auto* p = reinterpret_cast<const unsigned char*>(file.data()) + inizio;
+        inizio += static_cast<std::size_t>(sez.lunghezza);
+        for (const Segreto& k : candidate)
+            for (const Bytes& ad : associati) {
+                Segreto testo;
+                if (cripto::decifra(k, sez.nonce.data(), p, static_cast<std::size_t>(sez.lunghezza), ad, testo))
+                    out.emplace_back(testo.testo());
+            }
+    }
+    return out;
+}
+
+// Nessun testo decifrabile con le chiavi di quell'utente contiene i dati legati del contenuto delle prove.
+void nessun_legato(const std::string& file, const std::string& utente, const std::string& password) {
+    for (const std::string& t : testi_decifrabili(file, chiavi_procurabili(file, utente, password)))
+        for (const char* legato : {"Bianchi Luca", "Casa Bianchi"})
+            EXPECT_EQ(t.find(legato), std::string::npos) << utente << " decifra " << legato;
+}
+
+}  // namespace
+
+// Aggiunta 1 del K-010, punto 1: i dati personali di chi e' legato a un luogo sensibile si decifrano solo con tutti e due i
+// permessi. Prova sul file, non solo sull'uscita: chi ha i soli personali o i soli particolari prova tutte le chiavi che si
+// puo' procurare, su tutte le sezioni, e non legge mai quei dati; chi ha tutti e due si'. Lo stesso dopo un cambio delle
+// chiavi dei personali e dopo uno dei particolari.
+TEST(Cassaforte, LegatiSoloConTuttiEDueIPermessi) {
+    const std::string file = con_quattro_utenti();   // A e D tutti i permessi, B i soli personali, C i soli particolari
+    for (const auto& [utente, password, legati] :
+         {std::tuple{"A", kPwA, 2u}, std::tuple{"B", kPwB, 0u}, std::tuple{"C", kPwC, 0u}, std::tuple{"D", kPwD, 2u}})
+        EXPECT_EQ(apri(file, utente, password).voci_legate().size(), legati) << utente;
+    nessun_legato(file, "B", kPwB);
+    nessun_legato(file, "C", kPwC);
+    // Il metodo funziona: con le stesse chiavi B legge la sua sezione, A anche i legati.
+    bool personali_di_b = false;
+    for (const std::string& t : testi_decifrabili(file, chiavi_procurabili(file, "B", kPwB)))
+        personali_di_b = personali_di_b || t.find("Rossi Mario") != std::string::npos;
+    EXPECT_TRUE(personali_di_b);
+    bool legati_di_a = false;
+    for (const std::string& t : testi_decifrabili(file, chiavi_procurabili(file, "A", kPwA)))
+        legati_di_a = legati_di_a || t.find("Bianchi Luca") != std::string::npos;
+    EXPECT_TRUE(legati_di_a);
+
+    // Un cambio delle chiavi dei personali (D toglie un altro utente con i soli personali): i legati si ricifrano.
+    Cassaforte d = apri(file, "D", kPwD);
+    d.aggiungi_utente("E", Permessi{true, false}, pw("un utente in piu' con i personali"), politica_prove());
+    d.togli_utente("E");
+    const std::string dopo_personali = d.file();
+    EXPECT_NE(cassaforte::formato::analizza(dopo_personali).intestazione.sezioni[cassaforte::formato::kSezioneLegati].impronta,
+              cassaforte::formato::analizza(file).intestazione.sezioni[cassaforte::formato::kSezioneLegati].impronta);
+    EXPECT_EQ(apri(dopo_personali, "A", kPwA).voci_legate().size(), 2u);   // A: chiavi nuove in busta
+    EXPECT_TRUE(apri(dopo_personali, "B", kPwB).voci_legate().empty());
+    EXPECT_TRUE(apri(dopo_personali, "C", kPwC).voci_legate().empty());
+    nessun_legato(dopo_personali, "B", kPwB);
+    nessun_legato(dopo_personali, "C", kPwC);
+
+    // Un cambio delle chiavi dei particolari (D toglie C).
+    Cassaforte d2 = apri(dopo_personali, "D", kPwD);
+    d2.togli_utente("C");
+    const std::string dopo_particolari = d2.file();
+    EXPECT_EQ(apri(dopo_particolari, "A", kPwA).voci_legate().size(), 2u);
+    EXPECT_EQ(apri(dopo_particolari, "D", kPwD).voci_legate().size(), 2u);
+    EXPECT_TRUE(apri(dopo_particolari, "B", kPwB).voci_legate().empty());
+    nessun_legato(dopo_particolari, "B", kPwB);
+    // C, tolto, con la sua copia vecchia non legge comunque i legati (non li ha mai potuti leggere).
+    nessun_legato(dopo_personali, "C", kPwC);
+
+    // Togliere un utente rifa' le chiavi e ricifra i legati: serve chi ha tutti e due i permessi.
+    Cassaforte b = apri(dopo_particolari, "B", kPwB);
+    b.aggiungi_utente("F", Permessi{true, false}, pw("un altro utente con i personali"), politica_prove());
+    try {
+        b.togli_utente("F");
+        ADD_FAILURE() << "un utente con i soli dati personali ha rifatto le chiavi";
+    } catch (const ErroreCassaforte& e) {
+        EXPECT_EQ(e.tipo, Tipo::PermessoMancante);
+    }
+}
+
+namespace {
+
+// "file campo" -> quante voci, mai i valori.
+using Elenco = std::map<std::string, std::size_t>;
+Elenco elenco_di(const std::vector<Voce>& voci) {
+    Elenco e;
+    for (const Voce& v : voci) ++e[v.file + " " + v.campo];
+    return e;
+}
+
+std::string testo_elenco(const Elenco& e) {
+    std::string t;
+    for (const auto& [chiave, n] : e) t += "      " + chiave + ": " + std::to_string(n) + "\n";
+    return t.empty() ? "      (nessuna)\n" : t;
+}
+
+std::string leggi_file(const std::string& percorso) {
+    std::ifstream in(percorso, std::ios::binary);
+    if (!in) throw std::logic_error("file non trovato: " + percorso);
+    std::ostringstream s;
+    s << in.rdbuf();
+    return s.str();
+}
+
+// I testi in chiaro delle tre sezioni, decifrati come farebbe un altro programma con le chiavi della fessura di un utente con
+// tutti e due i permessi (la copia congelata non ha mai cambiato chiavi: quelle della fessura sono le chiavi di adesso).
+std::array<std::string, 3> sezioni_in_chiaro(const std::string& file, const std::string& utente, const std::string& password) {
+    using namespace cassaforte::formato;
+    const Chiavi k = chiavi_di(file, utente, password);
+    const Analizzato a = analizza(file);
+    const Intestazione& i = a.intestazione;
+    const Segreto& kp = k.livelli[kPersonali];
+    const Segreto& kq = k.livelli[kParticolari];
+    const std::array<Segreto, 3> chiavi{derivata(kp, kPerSezione), derivata(kq, kPerSezione), chiave_legati(i.id, kp, kq)};
+    const std::array<Bytes, 3> associati{ad_sezione(i.id, kPersonali, i.versioni[kPersonali], i.generazione),
+                                         ad_sezione(i.id, kParticolari, i.versioni[kParticolari], i.generazione),
+                                         ad_legati(i.id, i.versioni[kPersonali], i.versioni[kParticolari], i.generazione)};
+    std::array<std::string, 3> out;
+    std::size_t inizio = a.fine;
+    for (std::size_t x = 0; x < kSezioni; ++x) {
+        const Sezione& sez = i.sezioni[x];
+        Segreto testo;
+        if (!cripto::decifra(chiavi[x], sez.nonce.data(), reinterpret_cast<const unsigned char*>(file.data()) + inizio,
+                             static_cast<std::size_t>(sez.lunghezza), associati[x], testo))
+            throw std::logic_error("sezione non decifrata con le chiavi di " + utente);
+        out[x] = std::string(testo.testo());
+        inizio += static_cast<std::size_t>(sez.lunghezza);
+    }
+    return out;
+}
+
+}  // namespace
+
+// Aggiunta 1 del K-010, punto 1, sul demo: la copia congelata (tests/esempi/k010-cassaforte, chiusa con il programma vero e i
+// parametri di rilascio) aperta dai suoi tre utenti. Per ognuno l'elenco delle voci che decifra (file e campo, mai i valori),
+// stampato per il resoconto. Chi ha i soli personali o i soli particolari non decifra le voci legate a un luogo sensibile:
+// ne' aprendo la cassaforte, ne' provando sul file tutte le chiavi che si procura.
+TEST(Cassaforte, CopiaCongelataDelDemoVociPerUtente) {
+    const std::string cartella = std::string(KZERO_CARTELLA_PROVE) + "/esempi/k010-cassaforte/";
+    const std::string file = leggi_file(cartella + cassaforte::kFile);
+    const std::string id = cassaforte::leggi_intestazione(file).id;
+    struct Utente {
+        const char* codice;
+        const char* password;
+        Permessi permessi;
+    };
+    const Utente titolare{"TITOLARE", "congelata per sempre nelle prove", {true, true}};
+    const Utente ufficio{"UFFICIO", "ufficio legge solo i dati personali", {true, false}};
+    const Utente salute{"SALUTE", "salute legge solo i dati particolari", {false, true}};
+
+    const Cassaforte tutto = Cassaforte::apri(file, id, titolare.codice, pw(titolare.password), cripto::politica_di_rilascio());
+    const Elenco personali = elenco_di(tutto.voci(Classe::Personale));
+    const Elenco particolari = elenco_di(tutto.voci(Classe::Particolare));
+    const Elenco legati = elenco_di(tutto.voci_legate());
+    ASSERT_FALSE(legati.empty());   // il demo ha passeggeri che vanno al centro diurno
+    for (const Voce& v : tutto.voci_legate()) EXPECT_TRUE(v.legato && v.classe == Classe::Particolare) << v.file << " " << v.campo;
+
+    std::cout << "Voci decifrate (file campo: quante), copia congelata del demo:\n";
+    for (const Utente& u : {titolare, ufficio, salute}) {
+        const Cassaforte c = Cassaforte::apri(file, id, u.codice, pw(u.password), cripto::politica_di_rilascio());
+        EXPECT_EQ(c.permessi(), u.permessi);
+        const Elenco p = elenco_di(c.voci(Classe::Personale));
+        const Elenco q = elenco_di(c.voci(Classe::Particolare));
+        const Elenco l = elenco_di(c.voci_legate());
+        EXPECT_EQ(p, u.permessi.personali ? personali : Elenco{}) << u.codice;
+        EXPECT_EQ(q, u.permessi.particolari ? particolari : Elenco{}) << u.codice;
+        EXPECT_EQ(l, u.permessi.tutti() ? legati : Elenco{}) << u.codice;
+        std::cout << "  " << u.codice << " (" << cassaforte::testo_permessi_breve(u.permessi) << ")\n"
+                  << "    sezione dei personali:\n" << testo_elenco(p)
+                  << "    sezione dei particolari:\n" << testo_elenco(q)
+                  << "    sezione dei legati (personali + particolari):\n" << testo_elenco(l);
+    }
+
+    // Sul file: i testi in chiaro delle tre sezioni (con le chiavi di TITOLARE), poi tutto cio' che UFFICIO e SALUTE riescono
+    // a decifrare con le chiavi che si procurano. Nessuno dei due ottiene la sezione dei legati, ne' uno dei suoi valori che
+    // non sta anche in un'altra sezione; ognuno ottiene la sua.
+    const std::array<std::string, 3> chiaro = sezioni_in_chiaro(file, titolare.codice, titolare.password);
+    std::vector<std::string> solo_legati;
+    for (const Voce& v : tutto.voci_legate()) {
+        if (!v.valore.is_string()) continue;
+        const std::string t = v.valore.get<std::string>();
+        if (t.size() < 4 || t.find_first_of("\"\\") != std::string::npos) continue;
+        if (chiaro[cassaforte::formato::kSezionePersonali].find(t) == std::string::npos &&
+            chiaro[cassaforte::formato::kSezioneParticolari].find(t) == std::string::npos)
+            solo_legati.push_back(t);
+    }
+    ASSERT_FALSE(solo_legati.empty());
+    for (const auto& [u, sua] : {std::pair{ufficio, cassaforte::formato::kSezionePersonali},
+                                 std::pair{salute, cassaforte::formato::kSezioneParticolari}}) {
+        const std::vector<std::string> testi = testi_decifrabili(file, chiavi_procurabili(file, u.codice, u.password));
+        EXPECT_NE(std::find(testi.begin(), testi.end(), chiaro[sua]), testi.end()) << u.codice;
+        EXPECT_EQ(std::find(testi.begin(), testi.end(), chiaro[cassaforte::formato::kSezioneLegati]), testi.end())
+            << u.codice << " decifra la sezione dei legati";
+        std::size_t trovati = 0;
+        for (const std::string& t : testi)
+            for (const std::string& valore : solo_legati) trovati += t.find(valore) != std::string::npos;
+        EXPECT_EQ(trovati, 0u) << u.codice << " decifra dati legati";
+    }
+    std::cout << "  Sul file: UFFICIO e SALUTE non decifrano la sezione dei legati (" << solo_legati.size()
+              << " valori controllati, che non stanno in altre sezioni).\n";
 }

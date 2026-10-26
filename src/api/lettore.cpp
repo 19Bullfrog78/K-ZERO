@@ -1665,7 +1665,8 @@ void leggi_file(const std::string& file, const std::string& testo, Lettura& out,
     std::vector<ErroreSchema> errori = valida(d, f.schema, static_cast<int>(v));
     if (con_cassaforte && !(out.leggibili.personali && out.leggibili.particolari)) {
         // Per chi non puo' leggere una classe, i campi obbligatori di quella classe valgono come presenti ma non leggibili.
-        // Un dato personale puo' stare con i particolari (luoghi sensibili): senza i particolari non si sa quale manca davvero.
+        // Un dato personale puo' stare tra i legati (luoghi sensibili), che si decifrano solo con tutti e due i permessi: senza
+        // tutti e due non si sa quale manca davvero.
         errori.erase(std::remove_if(errori.begin(), errori.end(),
                                     [&](const ErroreSchema& e) {
                                         if (e.campo_mancante.empty()) return false;

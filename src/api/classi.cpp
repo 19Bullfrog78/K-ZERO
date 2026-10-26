@@ -102,7 +102,9 @@ bool uniforme(const JsonDati& radice, const JsonDati& valore, const Nodo& n, Cla
     return true;
 }
 
+// Un dato personale di chi e' legato a un luogo sensibile vale come particolare, e sta nella sezione dei legati.
 Classe effettiva(Classe c, bool promosso) { return c == Classe::Personale && promosso ? Classe::Particolare : c; }
+bool legato(Classe c, bool promosso) { return c == Classe::Personale && promosso; }
 
 bool con_codice(const Nodo& e) {
     if (!e.definizione->is_object()) return false;
@@ -178,6 +180,7 @@ void separa_in(const Contesto& ctx, JsonDati& valore, const Nodo& n, bool promos
                 x.campo = k;
                 x.valore = std::move(v);
                 x.classe = effettiva(f.classe, promosso);
+                x.legato = legato(f.classe, promosso);
                 voci.push_back(std::move(x));
                 valore.erase(k);
                 continue;
@@ -202,6 +205,7 @@ void separa_in(const Contesto& ctx, JsonDati& valore, const Nodo& n, bool promos
             v.elemento = true;
             v.valore = std::move(x);
             v.classe = effettiva(e.classe, promosso);
+            v.legato = legato(e.classe, promosso);
             voci.push_back(std::move(v));
         }
         valore = JsonDati::array();

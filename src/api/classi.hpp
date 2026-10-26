@@ -15,8 +15,9 @@
 //   classe, e nel file normale non resta traccia di quante sono;
 // - un oggetto che resta vuoto perche' tutti i suoi campi sono andati nella cassaforte si toglie anche lui (non dice
 //   piu' che c'era qualcosa); quando si apre la cassaforte si ricrea;
-// - i dati personali di un passeggero o di una casa legati a un luogo sensibile (riservatezza.hpp) vanno con i dati
-//   particolari: senza quel permesso non si possono decifrare.
+// - i dati personali di un passeggero o di una casa legati a un luogo sensibile (riservatezza.hpp) valgono come dati
+//   particolari e vanno in una sezione loro, i "legati", che si decifra solo con tutti e due i permessi (aggiunta 1 del
+//   K-010): un permesso solo non da' mai identita' e salute insieme.
 // Ogni valore resta legato al suo elemento con il codice stabile dell'elemento, mai con la posizione in un elenco: un
 // elemento con "codice" (obbligatorio nel suo schema) si riconosce dal codice; un elemento senza codice (es. una
 // fermata dentro un gruppo) dal suo contenuto comune (l'impronta BLAKE2b dei suoi dati comuni) e, tra elementi uguali,
@@ -42,7 +43,8 @@ struct Voce {
     std::string campo;              // il campo tolto; vuoto per un elemento intero
     bool elemento = false;          // true: un elemento intero, da aggiungere in fondo all'elenco del percorso
     JsonDati valore;
-    Classe classe = Classe::Personale;   // in quale parte della cassaforte sta (personali o particolari)
+    Classe classe = Classe::Personale;   // personale o particolare (un dato legato vale come particolare)
+    bool legato = false;                 // dato personale di chi e' legato a un luogo sensibile: sezione dei legati
 
     JsonDati in_json() const;
     // Da JSON (testo della cassaforte decifrato): false se la forma non e' quella attesa.
@@ -62,7 +64,7 @@ ValoriPerClasse conta_valori(const JsonDati& documento, const std::string& schem
 ValoriPerClasse conta_valori(const Voce& voce, const std::string& schema, int versione);
 
 // Toglie dal documento (gia' conforme allo schema) i valori personali e particolari e li restituisce come voci.
-// legame (puo' mancare): passeggeri e case legati a un luogo sensibile, i cui dati personali vanno con i particolari.
+// legame (puo' mancare): passeggeri e case legati a un luogo sensibile, i cui dati personali diventano voci "legate".
 std::vector<Voce> separa(const std::string& file, JsonDati& documento, const std::string& schema, int versione,
                          const LegameSensibile* legame);
 

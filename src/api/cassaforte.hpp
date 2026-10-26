@@ -7,6 +7,9 @@
 // - tre chiavi di livello: "base" (tutti gli utenti: autentica l'intestazione e cifra il registro), "personali" (cifra la
 //   sezione dei dati personali), "particolari" (cifra la sezione dei dati particolari). Ognuna ha una versione: quando si
 //   toglie un utente, le chiavi dei livelli che aveva si rifanno (versione + 1) e i dati si ricifrano;
+// - la sezione dei "legati" (i dati personali di chi e' legato a un luogo sensibile: nome, casa...) e' cifrata con una
+//   chiave ricavata da tutte e due le chiavi di classe insieme (HKDF, formato::chiave_legati): la decifra solo chi ha i
+//   dati personali e particolari, mai chi ne ha uno solo (aggiunta 1 del K-010);
 // - ogni utente ha una coppia X25519 e una "fessura": la sua chiave segreta X25519 e le chiavi dei soli livelli che ha,
 //   cifrate (XChaCha20-Poly1305) con la chiave ricavata dalla sua password (Argon2id). I dati associati della fessura sono
 //   codice, permessi, chiave pubblica, sale e parametri: cambiarne uno nell'intestazione e la fessura non si apre piu';
@@ -89,6 +92,7 @@ public:
 struct Contenuto {
     std::vector<Voce> personali;
     std::vector<Voce> particolari;
+    std::vector<Voce> legati;   // dati personali di chi e' legato a un luogo sensibile (Voce::legato)
     ValoriPerClasse valori;
 };
 
@@ -133,6 +137,8 @@ public:
     Riepilogo riepilogo() const;
     // Le voci di una classe che l'utente puo' leggere (vuoto per le altre).
     const std::vector<Voce>& voci(Classe classe) const;
+    // Le voci legate a un luogo sensibile: solo per chi ha tutti e due i permessi (vuoto per gli altri, che non le decifrano).
+    const std::vector<Voce>& voci_legate() const;
 
     // Chiave del registro per una versione della chiave base (la versione di adesso o una vecchia, dalla storia): ogni
     // utente la conosce. Lancia ErroreCassaforte se la versione non c'e'.
@@ -143,8 +149,9 @@ public:
     // Un utente nuovo con al massimo i permessi di chi lo aggiunge; password gia' normalizzata e controllata.
     void aggiungi_utente(const std::string& codice, const Permessi& permessi, const cripto::Segreto& password,
                          const cripto::PoliticaKdf& politica);
-    // Toglie un utente: chi lo toglie deve avere tutti i suoi permessi; le chiavi dei livelli che aveva si rifanno e si
-    // consegnano in una busta agli utenti rimasti che hanno quei livelli; le sezioni si ricifrano.
+    // Toglie un utente: chi lo toglie deve avere tutti e due i permessi (i legati si ricifrano con le due chiavi di classe);
+    // le chiavi dei livelli che aveva si rifanno e si consegnano in una busta agli utenti rimasti che hanno quei livelli; le
+    // sezioni di quei livelli e quella dei legati si ricifrano.
     void togli_utente(const std::string& codice);
     // Password nuova per se' (stessa chiave X25519) o per un altro utente con permessi che chi la da' ha tutti (coppia nuova).
     void cambia_password(const std::string& codice, const cripto::Segreto& password, const cripto::PoliticaKdf& politica);

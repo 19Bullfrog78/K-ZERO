@@ -205,6 +205,24 @@ Segreto derivata(const Segreto& chiave, std::uint64_t numero, const char (&conte
     return out;
 }
 
+Segreto combinata(const Segreto& prima, const Segreto& seconda, const Bytes& sale, std::string_view contesto) {
+    if (prima.dimensione() != kChiave || seconda.dimensione() != kChiave)
+        throw std::logic_error("combinata: chiave di lunghezza sbagliata");
+    Segreto materiale(2 * kChiave);
+    std::memcpy(materiale.dati(), prima.dati(), kChiave);
+    std::memcpy(materiale.dati() + kChiave, seconda.dati(), kChiave);
+    materiale.usa(2 * kChiave);
+    Segreto prk(crypto_kdf_hkdf_sha256_KEYBYTES);
+    prk.usa(crypto_kdf_hkdf_sha256_KEYBYTES);
+    if (crypto_kdf_hkdf_sha256_extract(prk.dati(), sale.data(), sale.size(), materiale.dati(), materiale.dimensione()) != 0)
+        throw std::runtime_error("combinata: HKDF non riuscito");
+    Segreto out(kChiave);
+    out.usa(kChiave);
+    if (crypto_kdf_hkdf_sha256_expand(out.dati(), kChiave, contesto.data(), contesto.size(), prk.dati()) != 0)
+        throw std::runtime_error("combinata: HKDF non riuscito");
+    return out;
+}
+
 bool uguali(const unsigned char* a, const unsigned char* b, std::size_t n) { return sodium_memcmp(a, b, n) == 0; }
 
 void azzera(void* p, std::size_t n) { sodium_memzero(p, n); }

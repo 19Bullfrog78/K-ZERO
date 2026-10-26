@@ -190,7 +190,7 @@ cripto::Segreto normalizzata(const std::string& t) {
 struct Preparata {
     std::string file;
     std::string registro;
-    std::string sezione_personali, sezione_particolari, testo_registro;
+    std::string sezione_personali, sezione_particolari, sezione_legati, testo_registro;
     std::map<std::string, JsonDati> normali;   // i file normali del demo
 };
 
@@ -202,6 +202,7 @@ const Preparata& preparata() {
         x.normali = s.normali;
         x.sezione_personali = cassaforte::formato::testo_sezione(s.contenuto.personali);
         x.sezione_particolari = cassaforte::formato::testo_sezione(s.contenuto.particolari);
+        x.sezione_legati = cassaforte::formato::testo_sezione(s.contenuto.legati);
         cassaforte::Cassaforte c = cassaforte::Cassaforte::crea(kIdFuzz, "2099-12-31", kUtenti[0], normalizzata(kPassword[0]),
                                                                 politica_fuzz(), std::move(s.contenuto));
         c.aggiungi_utente(kUtenti[1], cassaforte::Permessi{true, false}, normalizzata(kPassword[1]), politica_fuzz());
@@ -248,7 +249,8 @@ void prova_cassaforte(const std::uint8_t* dati, std::size_t n) {
                                                                           politica_fuzz());
             // Aperta: deve essere coerente con i permessi dell'utente e riscriversi in un file che si riapre.
             const cassaforte::Permessi p = c.permessi();
-            if ((!p.personali && !c.voci(Classe::Personale).empty()) || (!p.particolari && !c.voci(Classe::Particolare).empty()))
+            if ((!p.personali && !c.voci(Classe::Personale).empty()) || (!p.particolari && !c.voci(Classe::Particolare).empty()) ||
+                (!p.tutti() && !c.voci_legate().empty()))
                 guasto("cassaforte: voci decifrate senza il permesso");
             const std::string di_nuovo = c.file();
             (void)cassaforte::Cassaforte::apri(di_nuovo, kIdFuzz, kUtenti[u], normalizzata(kPassword[u]), politica_fuzz());
@@ -323,6 +325,7 @@ void scrivi_semi_cassaforte(const std::string& cartella) {
     scrivi("cassaforte", "seme-demo", p.file);
     scrivi("cassaforte-voci", "seme-personali", p.sezione_personali);
     scrivi("cassaforte-voci", "seme-particolari", p.sezione_particolari);
+    scrivi("cassaforte-voci", "seme-legati", p.sezione_legati);
     scrivi("registro", "seme-demo", p.registro);
     scrivi("registro-voci", "seme-demo", p.testo_registro);
     scrivi("password", "seme-frase", "una frase lunga come password");
@@ -336,6 +339,7 @@ int prova_semi_cassaforte() {
     prova_cassaforte(u(p.file), p.file.size());
     prova_cassaforte_voci(u(p.sezione_personali), p.sezione_personali.size());
     prova_cassaforte_voci(u(p.sezione_particolari), p.sezione_particolari.size());
+    prova_cassaforte_voci(u(p.sezione_legati), p.sezione_legati.size());
     prova_registro(u(p.registro), p.registro.size());
     prova_registro_voci(u(p.testo_registro), p.testo_registro.size());
     const std::string frase = "una frase lunga come password";
@@ -344,7 +348,7 @@ int prova_semi_cassaforte() {
     for (int k = 0; k < 3; ++k)
         (void)cassaforte::Cassaforte::apri(p.file, kIdFuzz, kUtenti[k], normalizzata(kPassword[k]), politica_fuzz());
     (void)registro::leggi(p.registro, aperta());
-    return 7;
+    return 8;
 }
 
 bool prova(const std::string& bersaglio, const std::uint8_t* dati, std::size_t n) {

@@ -117,6 +117,10 @@ inline Bytes impronta(const Bytes& b) { return impronta(b.data(), b.size()); }
 inline Bytes impronta(std::string_view s) { return impronta(reinterpret_cast<const unsigned char*>(s.data()), s.size()); }
 // Chiave derivata di 32 byte (crypto_kdf): contesto di 8 caratteri e numero.
 Segreto derivata(const Segreto& chiave, std::uint64_t numero, const char (&contesto)[9]);
+// Chiave di 32 byte ricavata da due chiavi insieme (HKDF-SHA256, RFC 5869: crypto_kdf_hkdf_sha256_extract con le due
+// chiavi una dopo l'altra come materiale e il sale dato, poi crypto_kdf_hkdf_sha256_expand con il contesto dato): senza
+// tutte e due le chiavi non si calcola (aggiunta 1 del K-010, DECISIONI.md).
+Segreto combinata(const Segreto& prima, const Segreto& seconda, const Bytes& sale, std::string_view contesto);
 
 // Confronto a tempo costante.
 bool uguali(const unsigned char* a, const unsigned char* b, std::size_t n);

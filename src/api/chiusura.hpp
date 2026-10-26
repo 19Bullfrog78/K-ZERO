@@ -17,7 +17,8 @@ struct Separazione {
 
 // Separa un pacchetto letto senza errori di forma (lettura.forma_valida()): ogni valore personale o particolare va nella
 // cassaforte, legato al suo elemento per codice (classi.hpp); i dati personali dei passeggeri e delle case legati a un
-// luogo sensibile vanno con i particolari (riservatezza.hpp). Il manifesto resta com'e' (si cambia con manifesto_chiuso).
+// luogo sensibile (riservatezza.hpp) vanno nella sezione dei legati, che si decifra solo con tutti e due i permessi. Il
+// manifesto resta com'e' (si cambia con manifesto_chiuso).
 Separazione separa(const Lettura& lettura);
 
 // Il manifesto con la cassaforte dichiarata (codice e numero della chiusura), o senza ("cassaforte": false).

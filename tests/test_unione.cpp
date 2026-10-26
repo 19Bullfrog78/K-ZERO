@@ -80,6 +80,7 @@ Chiuso chiudi(const InMemoria& chiaro) {
     c.normali.file["cassaforte.kzc"] = "finta";
     for (Voce& v : s.contenuto.personali) c.voci.push_back(std::move(v));
     for (Voce& v : s.contenuto.particolari) c.voci.push_back(std::move(v));
+    for (Voce& v : s.contenuto.legati) c.voci.push_back(std::move(v));
     return c;
 }
 
@@ -88,8 +89,13 @@ ValoriCassaforte valori(const Chiuso& c, Visibilita leggibili) {
     v.leggibili = leggibili;
     v.id = kId;
     v.generazione = 1;
-    for (const Voce& x : c.voci)
-        if (x.classe == Classe::Particolare ? leggibili.particolari : leggibili.personali) v.voci.push_back(&x);
+    // Come la cassaforte vera: i valori legati a un luogo sensibile solo a chi ha tutti e due i permessi.
+    for (const Voce& x : c.voci) {
+        const bool apre = x.legato                         ? leggibili.personali && leggibili.particolari
+                          : x.classe == Classe::Particolare ? leggibili.particolari
+                                                            : leggibili.personali;
+        if (apre) v.voci.push_back(&x);
+    }
     return v;
 }
 
@@ -469,7 +475,8 @@ TEST(Unione, ValoreDoppioEValoreInChiaro) {
 }
 
 // Le assenze (elementi tutti personali) vanno intere nella cassaforte: nel file normale l'elenco resta vuoto. I dati
-// personali dei passeggeri legati al centro diurno stanno con i particolari.
+// personali dei passeggeri legati al centro diurno sono particolari e stanno nella sezione dei legati: li legge solo chi ha
+// tutti e due i permessi (aggiunta 1 del K-010).
 TEST(Unione, AssenzeIntereEPasseggeriLegati) {
     const Chiuso c = chiudi(demo_in_chiaro());
     EXPECT_EQ(documento(c.normali, "assenze.json").at("assenze"), JsonDati::array());
@@ -477,8 +484,8 @@ TEST(Unione, AssenzeIntereEPasseggeriLegati) {
     for (const Voce& v : c.voci) {
         if (v.file != "servizi.json" || v.campo != "nome" || v.percorso.size() < 7) continue;
         const std::string codice = v.percorso.back().value("codice", "");
-        if (codice == "P-D1") nome_legato = v.classe == Classe::Particolare;
-        if (codice == "P-A1") nome_libero = v.classe == Classe::Personale;
+        if (codice == "P-D1") nome_legato = v.classe == Classe::Particolare && v.legato;
+        if (codice == "P-A1") nome_libero = v.classe == Classe::Personale && !v.legato;
     }
     EXPECT_TRUE(nome_legato);
     EXPECT_TRUE(nome_libero);
@@ -490,13 +497,19 @@ TEST(Unione, AssenzeIntereEPasseggeriLegati) {
     EXPECT_EQ(servizi.find("Bianchi Luca"), std::string::npos);
     EXPECT_NE(servizi.find("Rossi Giulia"), std::string::npos);
     EXPECT_EQ(l.documenti.at("assenze.json").at("assenze").size(), 3u);
-    // Chi ha i soli particolari: niente assenze, il nome di P-D1 si'.
+    // Chi ha i soli particolari: niente assenze, e nemmeno il nome di P-D1 (e' un dato personale).
     const ValoriCassaforte part = valori(c, {false, true});
     const Lettura lp = leggi_pacchetto(c.normali, &part);
     ASSERT_TRUE(lp.forma_valida()) << elenco(lp.problemi);
     EXPECT_EQ(lp.documenti.at("assenze.json").at("assenze"), JsonDati::array());
-    EXPECT_NE(lp.documenti.at("servizi.json").dump().find("Bianchi Luca"), std::string::npos);
+    EXPECT_EQ(lp.documenti.at("servizi.json").dump().find("Bianchi Luca"), std::string::npos);
     EXPECT_EQ(lp.documenti.at("servizi.json").dump().find("Rossi Giulia"), std::string::npos);
+    // Chi ha tutti e due i permessi legge tutti e due i nomi.
+    const ValoriCassaforte tutti = valori(c, {true, true});
+    const Lettura lt = leggi_pacchetto(c.normali, &tutti);
+    ASSERT_TRUE(lt.forma_valida()) << elenco(lt.problemi);
+    EXPECT_NE(lt.documenti.at("servizi.json").dump().find("Bianchi Luca"), std::string::npos);
+    EXPECT_NE(lt.documenti.at("servizi.json").dump().find("Rossi Giulia"), std::string::npos);
 }
 
 // Cassaforte mancante, non dichiarata, di un'altra chiusura; valori per un file che non c'e'.

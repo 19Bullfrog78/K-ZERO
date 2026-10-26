@@ -409,7 +409,7 @@ TEST(Accesso, DatiDecifratiMaiSuDisco) {
     std::string pacchetto_chiuso;
     for (const std::string& nome : file_del_pacchetto) pacchetto_chiuso += leggi_testo(chiuso / nome);
     std::set<std::string> valori;
-    for (const auto* elenco : {&s.contenuto.personali, &s.contenuto.particolari})
+    for (const auto* elenco : {&s.contenuto.personali, &s.contenuto.particolari, &s.contenuto.legati})
         for (const Voce& v : *elenco)
             if (v.valore.is_string() && v.valore.get<std::string>().size() >= 6 &&
                 pacchetto_chiuso.find(v.valore.get<std::string>()) == std::string::npos)
@@ -503,15 +503,21 @@ Finta cassaforte_finta(const std::string& vera, const std::vector<Voce>& persona
             i.buste.push_back(std::move(b));
         }
     std::string sezioni;
-    for (std::size_t classe = 0; classe < i.sezioni.size(); ++classe) {
-        const int livello = classe == 0 ? kPersonali : kParticolari;
-        const std::size_t ls = static_cast<std::size_t>(livello);
-        const std::string testo = testo_sezione(classe == 0 ? personali : std::vector<Voce>{});
-        Sezione& s = i.sezioni[classe];
+    for (std::size_t sezione = 0; sezione < kSezioni; ++sezione) {
+        const std::string testo = testo_sezione(sezione == kSezionePersonali ? personali : std::vector<Voce>{});
+        const auto* dati = reinterpret_cast<const unsigned char*>(testo.data());
+        Sezione& s = i.sezioni[sezione];
         s.nonce = cripto::casuali(cripto::kNonce);
-        const Bytes c = cripto::cifra(derivata(k[ls], kPerSezione), s.nonce.data(),
-                                      reinterpret_cast<const unsigned char*>(testo.data()), testo.size(),
-                                      ad_sezione(i.id, livello, i.versioni[ls], i.generazione));
+        Bytes c;
+        if (sezione == kSezioneLegati) {
+            c = cripto::cifra(chiave_legati(i.id, k[kPersonali], k[kParticolari]), s.nonce.data(), dati, testo.size(),
+                              ad_legati(i.id, i.versioni[kPersonali], i.versioni[kParticolari], i.generazione));
+        } else {
+            const int livello = sezione == kSezionePersonali ? kPersonali : kParticolari;
+            const std::size_t ls = static_cast<std::size_t>(livello);
+            c = cripto::cifra(derivata(k[ls], kPerSezione), s.nonce.data(), dati, testo.size(),
+                              ad_sezione(i.id, livello, i.versioni[ls], i.generazione));
+        }
         s.lunghezza = c.size();
         s.impronta = cripto::impronta(c);
         sezioni.append(c.begin(), c.end());

@@ -49,8 +49,8 @@ bool file_riservato(const std::string& file);
 // personali di un passeggero legato a un luogo sensibile valgono come dati particolari. Si vedono solo insieme ai dati
 // particolari (--includi-dati-particolari, e il permesso di quei dati); altrimenti al loro posto c'e' il codice, che
 // nessuna uscita lega mai al nome: cosi' la regola regge tra uscite diverse, e il luogo si vede sempre (un luogo
-// "riservato" diceva comunque che la destinazione era sensibile). Nella cassaforte quei dati stanno con i particolari:
-// chi non ha quel permesso non li puo' decifrare.
+// "riservato" diceva comunque che la destinazione era sensibile). Nella cassaforte quei dati stanno nella sezione dei
+// legati, cifrata con tutte e due le chiavi di classe: chi non ha tutti e due i permessi non li puo' decifrare.
 // Chi e' legato (calcolato una volta sul pacchetto, dai dati comuni):
 // - i passeggeri di un gruppo che va (o parte) da una scuola o un centro in un luogo sensibile, o che ha una fermata in
 //   un luogo sensibile; i passeggeri che salgono o scendono in un luogo sensibile;
