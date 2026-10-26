@@ -175,10 +175,9 @@ TEST(Giornata, parametri_incompatibili_simmetrici) {
             }
 }
 
-// K-009, aggiunta 1: con i dati personali e senza quelli particolari, una giornata che mostra la casa di un passeggero
-// (punto porta a porta con il nome) non mostra il luogo sensibile, ne' il codice ne' il nome, in nessun punto: corse,
-// pezzi di corsa, attivita', inizio e fine dei turni. Nelle tre viste: tutti, il mezzo, la persona. Con i dati
-// particolari si vede; di base anche (la casa si vede solo con il codice).
+// Case dei passeggeri e luoghi sensibili (K-010, regola nuova): la casa di chi va al centro diurno (luogo sensibile del
+// demo) e il suo nome valgono come dati particolari, in ogni vista e in ogni corsa, anche in quella che non arriva al
+// centro (l'auto che porta il trasbordo); il centro si vede sempre, e non c'e' mai "riservato" al posto di un luogo.
 TEST(Giornata, case_e_luoghi_sensibili) {
     const std::vector<std::vector<std::string>> viste = {{}, {"--mezzo", "ALFA-03"}, {"--persona", "P-C"}};
     for (const auto& vista : viste) {
@@ -189,37 +188,33 @@ TEST(Giornata, case_e_luoghi_sensibili) {
         personali.push_back("--includi-dati-personali");
         const Json doc = giornata(personali);
         const std::string testo = doc.dump();
-        EXPECT_NE(testo.find("Casa Bianchi"), std::string::npos) << quale;
-        EXPECT_EQ(testo.find("\"L-CENTRO\""), std::string::npos) << quale;   // "CAL-CENTRO" e' un calendario
-        EXPECT_EQ(testo.find("Valfonda, Centro diurno"), std::string::npos) << quale;
-        // La corsa arriva a "riservato" e il trasferimento a vuoto parte da li'.
+        EXPECT_EQ(testo.find("Casa Bianchi"), std::string::npos) << quale;
+        EXPECT_EQ(testo.find("\"luogo\":\"riservato\""), std::string::npos) << quale;   // nessun luogo nascosto
+        EXPECT_EQ(testo.find("\"codice\":\"riservato\""), std::string::npos) << quale;
+        EXPECT_NE(testo.find("Valfonda, Centro diurno Il Faro"), std::string::npos) << quale;
         const Json* turno = nullptr;
         const Json* c = corsa(doc, "C-DIS-1", &turno);
         ASSERT_NE(c, nullptr) << quale;
-        EXPECT_EQ(c->at("passaggi").back().at("luogo"), "riservato") << quale;
-        EXPECT_EQ(c->at("passaggi").back().at("nome_luogo"), "riservato") << quale;
-        bool trasferimento = false;
-        for (const Json& e : turno->at("elementi"))
-            if (e.at("tipo") == "attivita" && e.at("attivita") == "VUOTO") {
-                trasferimento = true;
-                EXPECT_EQ(e.at("luogo").at("codice"), "riservato") << quale;
-                EXPECT_EQ(e.at("luogo").at("nome"), "riservato") << quale;
-            }
-        EXPECT_TRUE(trasferimento) << quale;
-        // Con i dati particolari, e di base, il centro si vede.
+        EXPECT_EQ(c->at("passaggi").back().at("luogo"), "L-CENTRO") << quale;
+        EXPECT_EQ(c->at("passaggi")[1].at("luogo"), "PP-01") << quale;
+        EXPECT_EQ(c->at("passaggi")[1].at("nome_luogo"), "PP-01") << quale;   // il codice al posto del nome
+        // Con i dati particolari la casa si vede con il nome.
         std::vector<std::string> tutti_i_dati = personali;
         tutti_i_dati.push_back("--includi-dati-particolari");
-        EXPECT_NE(giornata(tutti_i_dati).dump().find("Valfonda, Centro diurno Il Faro"), std::string::npos) << quale;
+        EXPECT_NE(giornata(tutti_i_dati).dump().find("Casa Bianchi"), std::string::npos) << quale;
         const std::string base = giornata(p).dump();
         EXPECT_NE(base.find("\"L-CENTRO\""), std::string::npos) << quale;
         EXPECT_EQ(base.find("Casa Bianchi"), std::string::npos) << quale;
     }
-    // Una corsa con una casa e nessun luogo sensibile resta com'e': il ramo di Montebrino dell'auto.
+    // L'auto porta Neri al trasbordo per il centro: la sua casa resta un codice anche se la corsa non arriva al centro.
     const Json auto_elettrica = giornata({"--data", "2026-10-22", "--mezzo", "ALFA-04", "--includi-dati-personali"});
     const Json* ramo = corsa(auto_elettrica, "C-DIS-R");
     ASSERT_NE(ramo, nullptr);
     std::vector<std::string> luoghi;
     for (const Json& ps : ramo->at("passaggi")) luoghi.push_back(ps.at("luogo").get<std::string>());
     EXPECT_EQ(luoghi, (std::vector<std::string>{"L-RIMESSA-ALFA", "PP-03", "L-TRASB-PONTE", "L-RIMESSA-ALFA"}));
-    EXPECT_EQ(ramo->at("passaggi")[1].at("nome_luogo"), "Casa Neri");
+    EXPECT_EQ(ramo->at("passaggi")[1].at("nome_luogo"), "PP-03");
+    EXPECT_EQ(auto_elettrica.dump().find("Casa Neri"), std::string::npos);
+    // Il garage presso la casa di un autista non e' una persona trasportata: si vede con i dati personali.
+    EXPECT_NE(auto_elettrica.dump().find("Garage presso l'abitazione di un autista"), std::string::npos);
 }

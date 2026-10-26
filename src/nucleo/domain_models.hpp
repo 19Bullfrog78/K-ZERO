@@ -1181,6 +1181,12 @@ struct Manifest {
     std::string timezone;   // nome IANA, es. "Europe/Rome": gli orari sono orari locali di questo fuso
     std::string currency;   // codice ISO 4217, es. "EUR": i costi sono in questa valuta
     int transfer_margin_min = 0;   // margine dei trasbordi: la corsa che riceve arriva prima di questo
+    // Manifesto versione 2 (K-010). Il porta a porta lascia capire un dato sulla salute (scelta di chi scrive i dati).
+    bool door_to_door_sensitive = false;
+    // La cassaforte dei dati personali: codice (32 cifre esadecimali) e generazione dei dati; vuoto = nessuna cassaforte.
+    std::string vault_id;
+    int vault_generation = 0;
+    bool has_vault() const { return !vault_id.empty(); }
     Source src;
 };
 

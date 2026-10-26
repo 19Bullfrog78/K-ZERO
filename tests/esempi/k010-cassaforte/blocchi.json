@@ -1,0 +1,25 @@
+{
+  "blocchi": [
+    {
+      "codice": "B-DIS",
+      "corse": [
+        "C-DIS-1"
+      ],
+      "forza": "mezzo_fisso",
+      "mezzo": "ALFA-03",
+      "nota": "Il centro diurno vuole sempre il mezzo con la pedana."
+    },
+    {
+      "codice": "B-LINEA",
+      "corse": [
+        "C-LIN-533",
+        "C-LIN-560"
+      ],
+      "forza": "tutto_fisso",
+      "mezzo": "ALFA-05",
+      "nota": "Mezzo e orari delle corse con le coincidenze dei treni, fissati dal committente."
+    }
+  ],
+  "schema": "blocchi",
+  "schema_versione": 1
+}

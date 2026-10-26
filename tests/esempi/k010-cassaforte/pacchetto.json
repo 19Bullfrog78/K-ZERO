@@ -1,0 +1,36 @@
+{
+  "aziende": [
+    {
+      "codice": "ALFA",
+      "nome": "Autoservizi Alfa"
+    },
+    {
+      "codice": "BETA",
+      "nome": "Trasporti Beta"
+    }
+  ],
+  "cassaforte": {
+    "generazione": 1,
+    "id": "a6278b648cccda21823f8ed572b60cb0"
+  },
+  "codice": "DEMO-2026",
+  "dati_inventati": true,
+  "fuso_orario": "Europe/Rome",
+  "impostazioni": {
+    "margine_trasbordo_minuti": 3,
+    "porta_a_porta_sensibile": true
+  },
+  "livello": "completo",
+  "nome": "Pacchetto dimostrativo K-Zero",
+  "origine": {
+    "nota": "Dati inventati per la dimostrazione e le prove: paesi, nomi, codici e coordinate non sono reali. Solo il regolamento R-TN riporta regole pubbliche, con la loro fonte.",
+    "tipo": "scenario"
+  },
+  "periodo": {
+    "al": "2027-08-31",
+    "dal": "2026-09-01"
+  },
+  "schema": "pacchetto",
+  "schema_versione": 2,
+  "valuta": "EUR"
+}

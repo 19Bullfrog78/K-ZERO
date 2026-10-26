@@ -1,0 +1,158 @@
+{
+  "rotazioni": [
+    {
+      "codice": "ROT-ALFA",
+      "lunghezza": 14,
+      "nome": "Primo e secondo, ciclo di 14 giorni",
+      "partenza": "2026-08-31",
+      "passo": "giorno",
+      "righe": [
+        {
+          "passi": [
+            [
+              "T-PRIMO"
+            ],
+            [
+              "T-DIS",
+              "T-SECONDO"
+            ],
+            [
+              "T-DIS",
+              "T-SECONDO"
+            ],
+            [
+              "T-PRIMO"
+            ],
+            [
+              "T-PRIMO"
+            ],
+            "riposo",
+            "riposo",
+            [
+              "T-DIS",
+              "T-SECONDO"
+            ],
+            [
+              "T-PRIMO"
+            ],
+            [
+              "T-PRIMO"
+            ],
+            [
+              "T-DIS",
+              "T-SECONDO"
+            ],
+            [
+              "T-DIS",
+              "T-SECONDO"
+            ],
+            [
+              "T-SABATO"
+            ],
+            "riposo"
+          ],
+          "persona": "P-A"
+        },
+        {
+          "passi": [
+            [
+              "T-DIS",
+              "T-SECONDO"
+            ],
+            [
+              "T-PRIMO"
+            ],
+            [
+              "T-PRIMO"
+            ],
+            [
+              "T-DIS",
+              "T-SECONDO"
+            ],
+            [
+              "T-DIS",
+              "T-SECONDO"
+            ],
+            [
+              "T-SABATO"
+            ],
+            "riposo",
+            [
+              "T-PRIMO"
+            ],
+            [
+              "T-DIS",
+              "T-SECONDO"
+            ],
+            [
+              "T-DIS",
+              "T-SECONDO"
+            ],
+            [
+              "T-PRIMO"
+            ],
+            [
+              "T-PRIMO"
+            ],
+            "riposo",
+            "riposo"
+          ],
+          "persona": "P-B"
+        }
+      ]
+    },
+    {
+      "codice": "ROT-BETA",
+      "lunghezza": 3,
+      "nome": "Linea 7 su 7, ciclo di 3 giorni",
+      "partenza": "2026-09-01",
+      "passo": "giorno",
+      "righe": [
+        {
+          "passi": [
+            [
+              "T-B-PRIMO",
+              "T-B-FESTIVO"
+            ],
+            "riposo",
+            [
+              "T-B-ASILO",
+              "T-B-SERA"
+            ]
+          ],
+          "persona": "P-B1"
+        },
+        {
+          "passi": [
+            [
+              "T-B-ASILO",
+              "T-B-SERA"
+            ],
+            [
+              "T-B-PRIMO",
+              "T-B-FESTIVO"
+            ],
+            "riposo"
+          ],
+          "persona": "P-B2"
+        },
+        {
+          "passi": [
+            "riposo",
+            [
+              "T-B-ASILO",
+              "T-B-SERA"
+            ],
+            [
+              "T-B-PRIMO",
+              "T-B-FESTIVO"
+            ]
+          ],
+          "persona": "P-B3"
+        }
+      ]
+    }
+  ],
+  "schema": "rotazioni",
+  "schema_versione": 1
+}

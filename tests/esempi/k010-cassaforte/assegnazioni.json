@@ -1,0 +1,46 @@
+{
+  "assegnazioni": [
+    {
+      "data": "2026-10-19",
+      "mezzo": "ALFA-07",
+      "turno": "T-SCUOLA-1"
+    },
+    {
+      "data": "2026-10-20",
+      "mezzo": "ALFA-07",
+      "turno": "T-SCUOLA-1"
+    },
+    {
+      "data": "2026-10-22",
+      "persona": "P-C",
+      "turno": "T-DIS"
+    },
+    {
+      "data": "2026-10-22",
+      "persona": "P-C",
+      "turno": "T-SECONDO"
+    },
+    {
+      "data": "2026-10-23",
+      "persona": "P-C",
+      "turno": "T-SECONDO"
+    },
+    {
+      "data": "2026-11-03",
+      "persona": "P-C",
+      "turno": "T-B-ASILO"
+    },
+    {
+      "data": "2026-11-03",
+      "persona": "P-C",
+      "turno": "T-B-SERA"
+    },
+    {
+      "data": "2026-11-15",
+      "persona": "P-A",
+      "turno": "T-GITA"
+    }
+  ],
+  "schema": "assegnazioni",
+  "schema_versione": 1
+}

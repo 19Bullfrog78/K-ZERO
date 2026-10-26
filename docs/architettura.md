@@ -73,7 +73,13 @@ Il programma e' diviso in tre piani, uno sopra l'altro:
 | `validazione.cpp` | Controllo con gli schemi (libreria valijson) e messaggi della libreria tradotti in italiano. |
 | `schemi_dati.cpp` | Schemi dei file di dati incorporati nel programma e **classe di ogni campo** (comune, personale, particolare), letta dalla marcatura dello schema. |
 | `controlli_catalogo.cpp` | Catalogo dei controlli K-CTR: codice, livello, cosa rivela il problema in se' (nessun dato, un dato personale o particolare), descrizione e testo dei messaggi (unico posto da tradurre). Presenta i messaggi seguendo le classi dei dati e i luoghi sensibili. |
-| `controllo.cpp` | Controllo completo di un pacchetto: forma, poi contenuto; ordine stabile dei problemi; i problemi che rivelano un dato particolare si contano soltanto, se non si chiede di vederli. |
+| `controllo.cpp` | Controllo completo di un pacchetto: forma, poi contenuto; ordine stabile dei problemi; i problemi che rivelano un dato particolare si contano soltanto, se non si chiede di vederli. Dal K-010 i controlli che hanno bisogno di una classe che l'utente non puo' aprire sono "non verificati", mai fatti su dati mancanti. |
+| `classi.cpp` | (K-010) La regola delle classi su un documento: conta i valori personali e particolari, li separa dai file normali e li riunisce, legati per codice dell'elemento (mai per posizione). Una regola sola per contare, chiudere e riaprire. |
+| `cripto.cpp`, `password.cpp`, `unicode.cpp` | (K-010) Le sole primitive di libsodium usate dal programma (cifratura autenticata, Argon2id, buste per chiave pubblica, autenticazione, memoria protetta); regole della password (NIST SP 800-63B-4, elenco delle password comuni) e normalizzazione Unicode NFC con utf8proc. |
+| `cassaforte.cpp`, `cassaforte_formato.cpp` | (K-010) La cassaforte: utenti, permessi, chiavi dei dati e cambio delle chiavi; il formato byte per byte (docs/cassaforte.md). |
+| `registro.cpp`, `disco.cpp` | (K-010) Il registro degli accessi (voci concatenate, cifrato, legato alla cassaforte); scritture atomiche e blocco della cartella. |
+| `accesso.cpp`, `chiusura.cpp` | (K-010) Aprire un pacchetto chiuso per un comando (utente, password, voce nel registro prima dei dati, visibilita' dai permessi); chiudere un pacchetto e riaprirlo per controllare che i dati siano identici. |
+| `comando_cassaforte.cpp` | (K-010) I comandi della cassaforte: chiudi, richiudi, esporta, cassaforte, registro, aggiungi-utente, togli-utente, password, conservazione, cancella. |
 
 - **I file incorporati**: gli schemi di `docs/schema` e il pacchetto dimostrativo `esempi/demo` entrano
   nel programma quando si compila (`cmake/incorpora.cmake`). Cosi' `kzero` controlla i dati sempre con
@@ -103,7 +109,11 @@ Il programma e' diviso in tre piani, uno sopra l'altro:
    con codice K-CTR e posizione (file + percorso JSON); i problemi dei turni ripetuti in molti giorni hanno i
    giorni nel campo `giorni`. Di base i problemi sui dati sulla salute sono solo contati (`problemi_riservati`) e le
    posizioni si fermano ai dati comuni (`posizione_completa_con` dice quale parametro mostra quella completa).
-6. Per un giorno: `kzero giornata <cartella> --data AAAA-MM-GG --formato json` (con `--persona` o `--mezzo` per
+6. Con un pacchetto chiuso (K-010) ogni comando che lo legge vuole `--utente <codice>` e la password; un'AI non la
+   deve avere (di base un assistente AI non riceve ne' nomi ne' dati sulla salute): lavora sulle uscite che la persona le
+   passa, o su un pacchetto "solo numeri".
+   L'uscita JSON dice cosa l'utente ha potuto aprire (`cassaforte`) e quali controlli non sono verificati.
+7. Per un giorno: `kzero giornata <cartella> --data AAAA-MM-GG --formato json` (con `--persona` o `--mezzo` per
    una sola persona o un solo mezzo) da' i turni del giorno con chi li fa, da dove viene l'assegnazione, il mezzo,
    corse e attivita' in ordine, tempi fermi, km e i turni scoperti o senza mezzo con il motivo. Se il pacchetto ha
    errori nei dati l'errore K-ERR-018 rimanda a `kzero controlla`.
@@ -115,6 +125,14 @@ un solo eseguibile con comandi; `--formato testo|json`; schema e versione in ogn
 fisso; codici di uscita 0 riuscito, 1 dati, 2 parametri, 3 interno; stesso input = stesso output
 (niente orologio ne' caso, date solo con `--data`); nessun file scritto senza `--scrivi`; dati personali
 solo con `--includi-dati-personali`, dati particolari solo con `--includi-dati-particolari`.
+
+Dal K-010, con la cassaforte, tre eccezioni e nessun'altra: l'**orologio** (l'ora delle voci del registro e la scadenza
+della data di conservazione), il **caso** (chiavi, sali e nonce: le uscite restano uguali, i byte della cassaforte no) e le
+**scritture del registro** senza `--scrivi` (ogni apertura scrive una voce). I comandi che cambiano la cassaforte (utenti,
+password, dati, conservazione, cancellazione) scrivono la cartella del pacchetto con `--scrivi`, anche quando e' la stessa
+da cui leggono. I parametri `--includi-dati-*` valgono solo entro i permessi dell'utente (altrimenti un errore K-ERR); i
+luoghi sensibili seguono i permessi, non i parametri. La password non e' mai un parametro: si chiede al terminale senza eco,
+oppure si legge dall'ingresso standard con `--password-da-ingresso`.
 
 Scelte di dettaglio:
 - il comando e' sempre il primo argomento; non c'e' `--help`: la descrizione completa e' `kzero descrivi`
@@ -133,7 +151,8 @@ anche in CLAUDE.md:
 - il programma lavora sul PC e **nessun comando usa la rete** (due prove: simboli del programma compilato e sorgenti).
   Quando servira' (es. le distanze da Google Maps), lo fara' solo un adattatore separato, acceso con un parametro
   esplicito, che manda fuori il minimo (coordinate, mai nomi o altri dati delle persone), con un suo mandato;
-- nessun file scritto senza `--scrivi`; nessun dato personale nei registri del programma (oggi non ne tiene);
+- nessun file scritto senza `--scrivi` (tranne il registro degli accessi, K-010); nessun dato personale nei registri
+  del programma (il registro degli accessi dice chi ha aperto cosa, mai i dati);
 - ogni dato in ingresso e' controllato con limiti di buon senso e la **lettura e' blindata** (K-009): solo file normali
   dentro la cartella del pacchetto, mai oltre 256 MB anche se il file non dice la dimensione o cresce; file malformati
   rifiutati senza blocchi;
@@ -144,7 +163,10 @@ anche in CLAUDE.md:
   [componenti.cdx.json](componenti.cdx.json) (CycloneDX);
 - le domande all'utente le fara' il programma stesso, a scelta multipla, senza AI; un assistente AI e' solo un aiuto
   facoltativo e di base non riceve ne' nomi ne' dati sulla salute;
-- i dati personali saranno cifrati, con piu' utenti e un registro degli accessi, con il mandato K-010.
+- (K-010) i dati personali e particolari veri stanno solo nella **cassaforte** del pacchetto (docs/cassaforte.md): cifrati
+  con libsodium, una password per utente, permessi per classe che decidono cosa si puo' decifrare, un registro degli
+  accessi concatenato e cifrato. I dati decifrati restano in memoria (protetta, dove la libreria lo permette); l'unica
+  uscita in chiaro su disco e' quella chiesta apposta (`kzero esporta --scrivi`).
 
 ## Dati: tre classi, due livelli
 
@@ -168,6 +190,12 @@ intero (un problema che rivela un dato sulla salute di base si conta soltanto), 
 personale o particolare: si fermano all'elemento comune piu' vicino; un'assenza diventa la persona, marcatura
 `x-kzero-titolare`) e per i **luoghi sensibili** (il legame tra un passeggero, o la sua casa, e un centro diurno e'
 riservato senza i dati particolari; una regola sola, `LegameSensibile` in riservatezza.hpp).
+
+Dal K-010 la stessa marcatura decide cosa va nella **cassaforte**: chiudendo un pacchetto (`kzero chiudi`) ogni valore
+personale o particolare lascia i file normali e va nella cassaforte, legato al suo elemento per codice; aprendolo, i valori
+che l'utente puo' decifrare si riuniscono in memoria e la forma si controlla sui dati uniti. Quello che l'utente non puo'
+aprire vale come presente ma non leggibile, e i controlli che ne hanno bisogno escono come "non verificati". Le uscite
+prendono la visibilita' dai permessi e dai parametri insieme.
 
 Il **livello** del pacchetto ("solo numeri", consigliato, oppure "completo") dice se ci possono essere
 passeggeri uno per uno e case; un pacchetto "solo numeri" che li contiene e' un errore (K-CTR-019).
@@ -211,6 +239,7 @@ docs/formato-dati.md e docs/schema coincidano con il programma.
 | `documentazione` | docs/errori.md, docs/controlli.md, docs/formato-dati.md e docs/schema coincidono con `kzero descrivi`; la tabella delle lettere di docs/formato-dati.md coincide con il programma. |
 | `architettura` | Il nucleo non stampa e non legge la riga di comando. |
 | `sicurezza` | (K-009) Niente rete nel programma compilato e nei sorgenti; protezioni del compilatore nella versione di rilascio per Linux; l'elenco dei componenti (docs/componenti.cdx.json) coincide con le versioni e le impronte fissate. |
+| `sicurezza` (K-010) | Prove interne della cassaforte e del registro: chiusura e riapertura identica, permessi, cambio delle chiavi, ogni byte cambiato, chiave pubblica sostituita, permesso alzato a mano, utente tolto, catena del registro, voce non scritta = nessun dato, interruzioni a meta' (processo fermato di colpo), comandi insieme, dati decifrati mai su disco; unione per codice dopo riordini e cancellazioni; "non verificato" su centinaia di pacchetti; (aggiunta 1) dati legati a un luogo sensibile decifrati solo con tutti e due i permessi, provato sul file anche dopo un cambio delle chiavi, cassaforte finta fatta da chi ha solo i file, registro riscritto prima dell'ancora, avvisi sulle password; sul programma vero la copia congelata della cassaforte versione 1 (tests/esempi/k010-cassaforte) per i tre tipi di utente, in testo e JSON. |
 | `fuzz` | (K-009) Ogni file del demo nel suo bersaglio di fuzzing e ogni caso gia' trovato dal fuzzing (tests/fuzz/casi), rigiocati come prove normali. Il fuzzing vero (libFuzzer, `-DKZERO_FUZZ=ON`) gira nel controllo GitHub per un tempo fisso e in locale a lungo (CLAUDE.md). |
 | `schemi` | Con lo strumento standard check-jsonschema: schemi validi per draft-07; ogni uscita JSON delle prove e ogni file dei pacchetti di esempio rispetta lo schema che dichiara. |
 | `scala` | Un pacchetto grande generato con un seme fisso (600 mezzi, 5.000 fermate, 10.000 corse; dal K-008 1.320 persone, 1.200 turni, rotazioni di lunghezze diverse, un anno di festivita') passa `kzero controlla` senza errori e `kzero giornata` su una data. Tempo e memoria si annotano nel DIARIO, non sono una soglia della prova. |
@@ -227,7 +256,9 @@ docs/formato-dati.md e docs/schema coincidano con il programma.
 - I messaggi della libreria di validazione sono in inglese e vengono tradotti: un messaggio che la
   traduzione non conosce compare come "non rispetta lo schema (...)" con il testo originale.
 - Windows (mandato del programma per Windows): argomenti con lettere accentate e a capo "CR LF" sono da sistemare e
-  provare li'; anche le prove della lettura blindata e le protezioni del compilatore per Windows (docs/sicurezza.md).
+  provare li'; anche le prove della lettura blindata e le protezioni del compilatore per Windows (docs/sicurezza.md) e,
+  per la cassaforte, la password dal terminale senza eco, il blocco della cartella, la sostituzione atomica dei file e la
+  memoria protetta.
 - Stesso input = stesso output vale a parita' di programma e di sistema. Tra sistemi diversi i valori
   calcolati con decimali potrebbero differire all'ultima cifra: per questo il JSON li arrotonda.
 - `kzero giornata` rifa' tutti i controlli del pacchetto prima di mostrare un giorno (con errori non mostra

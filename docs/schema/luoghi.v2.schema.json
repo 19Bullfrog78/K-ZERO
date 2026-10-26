@@ -118,6 +118,7 @@
     "luogo_privato": {
       "description": "Luogo privato, cioe' la casa di una persona: punto di salita porta a porta oppure ricovero di un mezzo presso un'abitazione. Tutto tranne codice e tipo e' un dato personale; ammesso solo nei pacchetti di livello completo.",
       "type": "object",
+      "x-kzero-trasportato": "casa",
       "additionalProperties": false,
       "required": ["codice", "tipo"],
       "properties": {

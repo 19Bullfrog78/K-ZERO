@@ -17,7 +17,10 @@
 #include <unistd.h>
 #endif
 
+#include "cassaforte.hpp"
+#include "controlli_catalogo.hpp"
 #include "formato_dati.hpp"
+#include "registro.hpp"
 #include "risorse.hpp"
 #include "schemi_dati.hpp"
 #include "tempo.hpp"
@@ -183,8 +186,29 @@ FileLetto PacchettoIncorporato::leggi(const std::string& nome, std::uintmax_t ma
     return out;
 }
 
+std::vector<Sorgente::Voce> PacchettoInMemoria::voci() const {
+    std::vector<Voce> v;
+    for (const auto& [nome, testo] : file) v.push_back({nome, false});
+    return v;
+}
+
+FileLetto PacchettoInMemoria::leggi(const std::string& nome, std::uintmax_t massimo) const {
+    FileLetto out;
+    const auto it = file.find(nome);
+    if (it == file.end()) return out;
+    if (it->second.size() > massimo) {
+        out.esito = FileLetto::Esito::TroppoGrande;
+        return out;
+    }
+    out.esito = FileLetto::Esito::Letto;
+    out.testo = it->second;
+    return out;
+}
+
 bool Lettura::forma_valida() const {
-    return std::all_of(problemi.begin(), problemi.end(), [](const Problem& p) { return p.check == Check::UnknownFile; });
+    // Gli avvisi (es. un file non riconosciuto, dati in chiaro) non fermano i controlli sul contenuto.
+    return std::all_of(problemi.begin(), problemi.end(),
+                       [](const Problem& p) { return definizione_controllo(p.check).livello == Livello::Avviso; });
 }
 
 namespace {
@@ -514,6 +538,11 @@ void manifesto(const JsonDati& d, Package& pk) {
     m.timezone = d.at("fuso_orario").get<std::string>();
     m.currency = d.at("valuta").get<std::string>();
     m.transfer_margin_min = d.at("impostazioni").at("margine_trasbordo_minuti").get<int>();
+    m.door_to_door_sensitive = c.vero(d.at("impostazioni"), "porta_a_porta_sensibile");   // versione 2
+    if (const auto v = d.find("cassaforte"); v != d.end() && v->is_object()) {               // versione 2
+        m.vault_id = v->at("id").get<std::string>();
+        m.vault_generation = v->at("generazione").get<int>();
+    }
     m.src = c.src("");
 }
 
@@ -1020,7 +1049,8 @@ void servizi(const JsonDati& d, Package& pk) {
         x.code = s.at("codice").get<std::string>();
         x.name = c.testo(s, "nome");
         x.external = c.esterni(s);
-        x.kind = valore_di(kTipiServizio, s.at("tipo").get<std::string>());
+        // Il tipo del servizio e quello del gruppo sono dati particolari obbligatori: mancano solo a chi non puo' leggerli.
+        x.kind = s.contains("tipo") ? valore_di(kTipiServizio, s.at("tipo").get<std::string>()) : ServiceKind::Other;
         x.kind_description = c.testo(s, "tipo_descrizione");
         x.contract = c.ref(s, "contratto", p);
         x.calendar = c.ref(s, "calendario", p);
@@ -1036,7 +1066,7 @@ void servizi(const JsonDati& d, Package& pk) {
             PassengerGroup y;
             y.code = g.at("codice").get<std::string>();
             y.name = c.testo(g, "nome");
-            y.type = valore_di(kTipiGruppo, g.at("tipo").get<std::string>());
+            y.type = g.contains("tipo") ? valore_di(kTipiGruppo, g.at("tipo").get<std::string>()) : GroupType::Other;
             y.type_description = c.testo(g, "tipo_descrizione");
             y.direction = g.at("verso").get<std::string>() == "ritorno" ? Direction::Return : Direction::Outbound;
             y.school = c.ref_opz(g, "scuola", pg);
@@ -1248,7 +1278,8 @@ void persone(const JsonDati& d, Package& pk) {
         Person x;
         x.code = s.at("codice").get<std::string>();
         x.company = c.ref(s, "azienda", p);
-        for (const auto& r : s.at("ruoli")) x.roles.push_back(r.get<std::string>() == "autista" ? PersonRole::Driver : PersonRole::Escort);
+        // Ruoli e rapporto sono dati personali obbligatori: mancano solo a chi non puo' leggerli (cassaforte, K-010).
+        for (const auto& r : c.elenco(s, "ruoli")) x.roles.push_back(r.get<std::string>() == "autista" ? PersonRole::Driver : PersonRole::Escort);
         x.name = c.testo(s, "nome");
         if (s.contains("casa")) {
             const auto& h = s.at("casa");
@@ -1257,14 +1288,18 @@ void persone(const JsonDati& d, Package& pk) {
         x.base_place = c.ref_opz(s, "presa_servizio", p);
         x.usual_vehicle = c.ref_opz(s, "mezzo_abituale", p);
         x.hypothetical = c.vero(s, "ipotetica");
-        const auto& rap = s.at("rapporto");
-        x.employment = valore_di<EmploymentKind>(
-            {{"titolare", EmploymentKind::Owner}, {"collaboratore_familiare", EmploymentKind::FamilyHelper}, {"socio", EmploymentKind::Partner},
-             {"dipendente_tempo_pieno", EmploymentKind::FullTime}, {"dipendente_part_time", EmploymentKind::PartTime},
-             {"a_chiamata", EmploymentKind::OnCall}, {"tempo_determinato", EmploymentKind::FixedTerm}, {"stagionale", EmploymentKind::Seasonal},
-             {"autonomo", EmploymentKind::SelfEmployed}, {"volontario", EmploymentKind::Volunteer}, {"altro", EmploymentKind::Other}},
-            rap.at("tipo").get<std::string>());
-        x.employment_description = c.testo(rap, "descrizione");
+        if (s.contains("rapporto")) {
+            const auto& rap = s.at("rapporto");
+            x.employment = valore_di<EmploymentKind>(
+                {{"titolare", EmploymentKind::Owner}, {"collaboratore_familiare", EmploymentKind::FamilyHelper}, {"socio", EmploymentKind::Partner},
+                 {"dipendente_tempo_pieno", EmploymentKind::FullTime}, {"dipendente_part_time", EmploymentKind::PartTime},
+                 {"a_chiamata", EmploymentKind::OnCall}, {"tempo_determinato", EmploymentKind::FixedTerm}, {"stagionale", EmploymentKind::Seasonal},
+                 {"autonomo", EmploymentKind::SelfEmployed}, {"volontario", EmploymentKind::Volunteer}, {"altro", EmploymentKind::Other}},
+                rap.at("tipo").get<std::string>());
+            x.employment_description = c.testo(rap, "descrizione");
+        } else {
+            x.employment = EmploymentKind::Other;
+        }
         if (s.contains("contratto_collettivo")) {
             x.agreement_code = s.at("contratto_collettivo").at("codice").get<std::string>();
             x.agreement_name = s.at("contratto_collettivo").at("nome").get<std::string>();
@@ -1551,7 +1586,7 @@ Problem problema(Check c, const std::string& file, std::string puntatore, std::v
 
 }  // namespace
 
-void leggi_file(const std::string& file, const std::string& testo, Lettura& out) {
+void leggi_file(const std::string& file, const std::string& testo, Lettura& out, const ValoriCassaforte* cassaforte) {
     const FileDati* trovato = file_dati_per_nome(file);
     if (!trovato) throw std::logic_error("file che non fa parte del formato: " + file);
     const FileDati& f = *trovato;
@@ -1588,7 +1623,7 @@ void leggi_file(const std::string& file, const std::string& testo, Lettura& out)
         for (const std::string& p : a.chiavi_ripetute) out.problemi.push_back(problema(Check::DuplicateKey, f.file, p));
         return;
     }
-    const JsonDati& d = *a.documento;
+    JsonDati d = std::move(*a.documento);
     if (!d.is_object() || !d.contains("schema") || !d.at("schema").is_string()) {
         out.problemi.push_back(problema(Check::WrongSchema, f.file, d.is_object() ? "/schema" : "",
                                         {text_param("atteso", f.schema)}, 0));
@@ -1613,7 +1648,35 @@ void leggi_file(const std::string& file, const std::string& testo, Lettura& out)
                                         {number_param("versione", v), text_param("supportate", supportate)}, 0));
         return;
     }
-    const std::vector<ErroreSchema> errori = valida(d, f.schema, static_cast<int>(v));
+    // Cassaforte (K-010): i valori in chiaro si contano prima dell'unione; poi i valori della cassaforte si mettono ognuno
+    // nel suo elemento, per codice (classi.hpp). Un valore che non trova il suo posto ferma il file.
+    const bool con_cassaforte = out.cassaforte_dichiarata && f.file != "pacchetto.json";
+    if (con_cassaforte) {
+        const ValoriPerClasse chiari = conta_valori(d, f.schema, static_cast<int>(v));
+        out.in_chiaro.personali += chiari.personali;
+        out.in_chiaro.particolari += chiari.particolari;
+        if (cassaforte) {
+            std::vector<const Voce*> voci;
+            for (const Voce* x : cassaforte->voci)
+                if (x->file == f.file) voci.push_back(x);
+            if (!voci.empty() && !unisci(f.file, d, voci, out.problemi)) return;
+        }
+    }
+    std::vector<ErroreSchema> errori = valida(d, f.schema, static_cast<int>(v));
+    if (con_cassaforte && !(out.leggibili.personali && out.leggibili.particolari)) {
+        // Per chi non puo' leggere una classe, i campi obbligatori di quella classe valgono come presenti ma non leggibili.
+        // Un dato personale puo' stare tra i legati (luoghi sensibili), che si decifrano solo con tutti e due i permessi: senza
+        // tutti e due non si sa quale manca davvero.
+        errori.erase(std::remove_if(errori.begin(), errori.end(),
+                                    [&](const ErroreSchema& e) {
+                                        if (e.campo_mancante.empty()) return false;
+                                        const Classe c = SchemiDati::incorporati().classe(
+                                            f.schema, static_cast<int>(v), e.puntatore + "/" + escape(e.campo_mancante));
+                                        return (c == Classe::Personale && !(out.leggibili.personali && out.leggibili.particolari)) ||
+                                               (c == Classe::Particolare && !out.leggibili.particolari);
+                                    }),
+                     errori.end());
+    }
     if (!errori.empty()) {
         for (const ErroreSchema& e : errori) {
             // Il valore sbagliato di un campo personale o particolare segue le classi dei dati.
@@ -1634,9 +1697,10 @@ void leggi_file(const std::string& file, const std::string& testo, Lettura& out)
     conta_classi(schema, d, schema, Classe::Comune, valori);
     if (valori.personali + valori.particolari > 0) out.riservati[f.file] = valori;
     out.versioni[f.file] = static_cast<int>(v);
+    out.documenti[f.file] = std::move(d);
 }
 
-Lettura leggi_pacchetto(const Sorgente& sorgente) {
+Lettura leggi_pacchetto(const Sorgente& sorgente, const ValoriCassaforte* cassaforte) {
     Lettura out;
     std::set<std::string>& presenti = out.presenti;
     std::set<std::string> cartelle;   // cartelle con il nome di un file del formato
@@ -1651,25 +1715,108 @@ Lettura leggi_pacchetto(const Sorgente& sorgente) {
             }
             continue;
         }
+        // La cassaforte e il suo registro (K-010) li legge chi apre la cassaforte, non questo lettore.
+        if (v.nome == cassaforte::kFile && !v.cartella) {
+            out.cassaforte_presente = true;
+            continue;
+        }
+        if (v.nome == registro::kFile && !v.cartella) continue;
         out.problemi.push_back(problema(Check::UnknownFile, v.nome, "", {text_param("file", v.nome)}, v.cartella ? 1 : 0));
     }
     if (!presenti.count("pacchetto.json")) out.problemi.push_back(problema(Check::MissingManifest, "pacchetto.json", ""));
 
+    const ValoriCassaforte* usabili = nullptr;   // i valori della cassaforte, se sono di questa chiusura
     for (const FileDati& f : file_dati()) {
-        if (!presenti.count(f.file) || cartelle.count(f.file)) continue;
-        FileLetto letto = sorgente.leggi(f.file, kMassimoByteFile);
-        switch (letto.esito) {
-            case FileLetto::Esito::Letto: break;
-            case FileLetto::Esito::TroppoGrande:
-                out.problemi.push_back(problema(Check::FileTooBig, f.file, "", {number_param("massimo", static_cast<long long>(kMassimoMBFile))}));
-                continue;
-            case FileLetto::Esito::Illeggibile: out.problemi.push_back(problema(Check::UnreadableFile, f.file, "")); continue;
-            case FileLetto::Esito::CollegamentoRotto: out.problemi.push_back(problema(Check::UnreadableFile, f.file, "", {}, 1)); continue;
-            case FileLetto::Esito::NonNormale: out.problemi.push_back(problema(Check::NotRegularFile, f.file, "")); continue;
-            case FileLetto::Esito::FuoriCartella: out.problemi.push_back(problema(Check::LinkOutsideFolder, f.file, "")); continue;
+        if (presenti.count(f.file) && !cartelle.count(f.file)) {
+            FileLetto letto = sorgente.leggi(f.file, kMassimoByteFile);
+            switch (letto.esito) {
+                case FileLetto::Esito::Letto: leggi_file(f.file, letto.testo, out, usabili); break;
+                case FileLetto::Esito::TroppoGrande:
+                    out.problemi.push_back(
+                        problema(Check::FileTooBig, f.file, "", {number_param("massimo", static_cast<long long>(kMassimoMBFile))}));
+                    break;
+                case FileLetto::Esito::Illeggibile: out.problemi.push_back(problema(Check::UnreadableFile, f.file, "")); break;
+                case FileLetto::Esito::CollegamentoRotto:
+                    out.problemi.push_back(problema(Check::UnreadableFile, f.file, "", {}, 1));
+                    break;
+                case FileLetto::Esito::NonNormale: out.problemi.push_back(problema(Check::NotRegularFile, f.file, "")); break;
+                case FileLetto::Esito::FuoriCartella: out.problemi.push_back(problema(Check::LinkOutsideFolder, f.file, "")); break;
+            }
         }
-        leggi_file(f.file, letto.testo, out);
+        if (f.file != "pacchetto.json") continue;
+        // Dopo il manifesto si sa se il pacchetto ha una cassaforte (versione 2): da qui in poi si legge di conseguenza.
+        if (!out.usato("pacchetto.json")) continue;
+        const kzero::Manifest& m = out.pacchetto.manifest;
+        out.cassaforte_dichiarata = !m.vault_id.empty();
+        if (!out.cassaforte_dichiarata) {
+            if (out.cassaforte_presente)
+                out.problemi.push_back(problema(Check::VaultUndeclared, "pacchetto.json",
+                                                out.versioni.at("pacchetto.json") >= 2 ? "/cassaforte" : ""));
+            continue;
+        }
+        out.leggibili = Visibilita{false, false};
+        if (!out.cassaforte_presente) {
+            out.problemi.push_back(problema(Check::VaultMissing, "pacchetto.json", "/cassaforte"));
+            continue;
+        }
+        if (!cassaforte) continue;
+        if (cassaforte->id != m.vault_id) throw std::logic_error("lettura: valori di un'altra cassaforte");
+        if (static_cast<long long>(cassaforte->generazione) != m.vault_generation) {
+            out.problemi.push_back(problema(Check::VaultGenerationMismatch, "pacchetto.json", "/cassaforte/generazione",
+                                            {number_param("manifesto", m.vault_generation),
+                                             number_param("cassaforte", static_cast<long long>(cassaforte->generazione))}));
+            continue;
+        }
+        usabili = cassaforte;
+        out.leggibili = cassaforte->leggibili;
     }
+
+    // Valori della cassaforte per file che non ci sono o che non sono stati letti: senza il loro elemento (uno per file e
+    // classe, non uno per valore).
+    if (usabili) {
+        std::set<std::pair<std::string, int>> senza_file;
+        for (const Voce* x : usabili->voci)
+            if (!presenti.count(x->file) || cartelle.count(x->file)) senza_file.insert({x->file, x->classe == Classe::Particolare ? 1 : 0});
+        for (const auto& [file, classe] : senza_file)
+            out.problemi.push_back(problema(Check::VaultValueOrphan, file, "",
+                                            {text_param("file", file), text_param("elemento", "il file " + file + ", che manca")}, classe));
+    }
+    // Dati personali o particolari in chiaro: nei file normali accanto alla cassaforte, o in un pacchetto senza cassaforte
+    // che non dice di avere dati inventati.
+    if (out.usato("pacchetto.json")) {
+        const kzero::Manifest& m = out.pacchetto.manifest;
+        Lettura::ValoriRiservati chiari = out.in_chiaro;
+        if (!out.cassaforte_dichiarata) {
+            chiari = {};
+            for (const auto& [file, x] : out.riservati) {
+                chiari.personali += x.personali;
+                chiari.particolari += x.particolari;
+            }
+        }
+        if (chiari.personali + chiari.particolari > 0 && (out.cassaforte_dichiarata || !m.invented))
+            out.problemi.push_back(problema(Check::ClearPersonalData, "", "",
+                                            {number_param("personali", static_cast<long long>(chiari.personali)),
+                                             number_param("particolari", static_cast<long long>(chiari.particolari))},
+                                            out.cassaforte_dichiarata ? 1 : 0));
+    }
+    return out;
+}
+
+std::optional<ManifestoLetto> leggi_manifesto(const Sorgente& sorgente) {
+    const FileLetto letto = sorgente.leggi("pacchetto.json", kMassimoByteFile);
+    if (letto.esito != FileLetto::Esito::Letto) return std::nullopt;
+    Lettura l;
+    leggi_file("pacchetto.json", letto.testo, l);
+    if (!l.usato("pacchetto.json")) return std::nullopt;
+    const kzero::Manifest& m = l.pacchetto.manifest;
+    ManifestoLetto out;
+    out.codice = m.code;
+    out.versione = l.versioni.at("pacchetto.json");
+    out.cassaforte = !m.vault_id.empty();
+    out.id = m.vault_id;
+    out.generazione = static_cast<std::uint32_t>(m.vault_generation);
+    out.dati_inventati = m.invented;
+    out.documento = l.documenti.at("pacchetto.json");
     return out;
 }
 

@@ -78,6 +78,201 @@ DefinizioneParametro parametro_mezzo() {
     return p;
 }
 
+// --- Cassaforte (K-010) ---------------------------------------------------------------------------------------------
+
+DefinizioneParametro parametro_utente(bool obbligatorio) {
+    DefinizioneParametro p;
+    p.nome = "--utente";
+    p.tipo = TipoParametro::Valore;
+    p.forma = FormaValore::Codice;
+    p.obbligatorio = obbligatorio;
+    p.descrizione = obbligatorio ? "Chi apre la cassaforte (codice dell'utente); la password si chiede dopo, mai come parametro."
+                                 : "Chi apre la cassaforte, se il pacchetto ne ha una (codice dell'utente); la password si chiede "
+                                   "dopo, mai come parametro. I dati e i parametri --includi-dati-* valgono entro i suoi permessi.";
+    p.applica = [](Parametri& par, const std::string& valore) { par.utente = valore; };
+    return p;
+}
+
+DefinizioneParametro parametro_password_da_ingresso() {
+    DefinizioneParametro p;
+    p.nome = "--password-da-ingresso";
+    p.tipo = TipoParametro::Interruttore;
+    p.descrizione = "Le password dall'ingresso standard, una per riga, nell'ordine in cui il comando le chiede (per le prove e "
+                    "per un'interfaccia); senza, si chiedono al terminale senza eco. Mai come parametro ne' in una variabile "
+                    "d'ambiente.";
+    p.applica = [](Parametri& par, const std::string&) { par.password_da_ingresso = true; };
+    return p;
+}
+
+DefinizioneParametro parametro_scrivi(const std::string& descrizione) {
+    DefinizioneParametro p;
+    p.nome = "--scrivi";
+    p.tipo = TipoParametro::Valore;
+    p.forma = FormaValore::Percorso;
+    p.obbligatorio = true;
+    p.descrizione = descrizione;
+    p.applica = [](Parametri& par, const std::string& valore) { par.scrivi = valore; };
+    return p;
+}
+
+DefinizioneParametro parametro_conservazione() {
+    DefinizioneParametro p;
+    p.nome = "--conservazione";
+    p.tipo = TipoParametro::Valore;
+    p.forma = FormaValore::Data;
+    p.obbligatorio = true;
+    p.descrizione = "Fino a quando si tengono i dati personali e particolari (GDPR art. 5 c. 1 lett. e): passata la data, ogni "
+                    "apertura lo ricorda.";
+    p.applica = [](Parametri& par, const std::string& valore) { par.conservazione = kzero::day_from_text(valore); };
+    return p;
+}
+
+DefinizioneParametro parametro_codice(const char* nome, std::string descrizione, bool obbligatorio,
+                                      void (*applica)(Parametri&, const std::string&)) {
+    DefinizioneParametro p;
+    p.nome = nome;
+    p.tipo = TipoParametro::Valore;
+    p.forma = FormaValore::Codice;
+    p.obbligatorio = obbligatorio;
+    p.descrizione = std::move(descrizione);
+    p.applica = applica;
+    return p;
+}
+
+DefinizioneParametro parametro_permessi() {
+    DefinizioneParametro p;
+    p.nome = "--permessi";
+    p.tipo = TipoParametro::Scelta;
+    p.valori = {"particolari", "personali", "tutti"};
+    p.obbligatorio = true;   // una scelta sui permessi si scrive sempre: nessun valore predefinito
+    p.descrizione = "I permessi del nuovo utente: i dati personali, quelli particolari (salute) o tutti e due; al massimo quelli "
+                    "di chi lo aggiunge.";
+    p.applica = [](Parametri& par, const std::string& valore) { par.permessi = valore; };
+    return p;
+}
+
+const char* kCartellaPacchetto = "Cartella del pacchetto dati, con il manifesto pacchetto.json.";
+
+std::vector<DefinizioneComando> comandi_cassaforte() {
+    const Schema cassaforte{"cassaforte", 1};
+    const auto base = [] { return std::vector<DefinizioneParametro>{parametro_formato(), parametro_password_da_ingresso()}; };
+    std::vector<DefinizioneComando> c;
+    {
+        auto p = base();
+        p.push_back(parametro_scrivi("La cartella nuova in cui scrivere il pacchetto chiuso (non deve esserci gia')."));
+        p.push_back(parametro_utente(true));
+        p.push_back(parametro_conservazione());
+        c.push_back({"chiudi",
+                     "Chiude un pacchetto in chiaro nella cassaforte: scrive in una cartella nuova i file normali senza i dati "
+                     "personali e particolari, la cassaforte cifrata con quei dati e il registro degli accessi. Chi chiude "
+                     "diventa il primo utente (con i permessi dei dati personali e particolari) e sceglie la password, chiesta "
+                     "due volte. Prima di dire fatto riapre il pacchetto e controlla che i dati siano identici. L'originale non "
+                     "si tocca: va cancellato a mano.",
+                     {{"cartella", "Cartella del pacchetto in chiaro da chiudere (manifesto versione 2)."}},
+                     p, cassaforte, esegui_chiudi});
+    }
+    {
+        auto p = base();
+        p.push_back(parametro_scrivi("La cartella del pacchetto chiuso da aggiornare (stessa cassaforte, stessi utenti, stesso "
+                                     "registro)."));
+        p.push_back(parametro_utente(true));
+        c.push_back({"richiudi",
+                     "Rimette nella cassaforte di un pacchetto chiuso i dati corretti di un'uscita in chiaro (kzero esporta): "
+                     "sostituisce i file normali e i dati della cassaforte, tiene utenti e registro. Serve chi ha i dati personali "
+                     "e particolari. Riapre e controlla prima di dire fatto.",
+                     {{"cartella", "Cartella del pacchetto in chiaro con i dati corretti."}},
+                     p, cassaforte, esegui_richiudi});
+    }
+    {
+        auto p = base();
+        p.push_back(parametro_scrivi("La cartella nuova in cui scrivere l'uscita in chiaro (non deve esserci gia')."));
+        p.push_back(parametro_utente(true));
+        c.push_back({"esporta",
+                     "Uscita in chiaro di un pacchetto chiuso, per correggere i dati: scrive in una cartella nuova il pacchetto "
+                     "con i dati che l'utente puo' aprire, in chiaro. Scritta nel registro. La cartella in chiaro va cancellata "
+                     "appena richiuso il pacchetto (kzero richiudi).",
+                     {{"cartella", kCartellaPacchetto}}, p, cassaforte, esegui_esporta});
+    }
+    {
+        auto p = base();
+        p.push_back(parametro_utente(true));
+        c.push_back({"cassaforte",
+                     "Mostra la cassaforte di un pacchetto: codice, chiusura, data di conservazione, quanti valori personali e "
+                     "particolari, utenti con i loro permessi, voci del registro. Mai i dati.",
+                     {{"cartella", kCartellaPacchetto}}, p, cassaforte, esegui_cassaforte});
+    }
+    {
+        auto p = base();
+        p.push_back(parametro_utente(true));
+        c.push_back({"registro",
+                     "Mostra il registro degli accessi alla cassaforte, dopo averne controllato la catena: per ogni voce data e "
+                     "ora (UTC), utente, comando, classi aperte e mostrate. Mai i dati. La lettura stessa e' una voce.",
+                     {{"cartella", kCartellaPacchetto}}, p, Schema{"registro", 1}, esegui_registro});
+    }
+    {
+        auto p = base();
+        p.push_back(parametro_scrivi("La cartella del pacchetto chiuso a cui aggiungere l'utente."));
+        p.push_back(parametro_utente(true));
+        p.push_back(parametro_codice("--nuovo-utente", "Il codice del nuovo utente.", true,
+                                     [](Parametri& par, const std::string& v) { par.nuovo_utente = v; }));
+        p.push_back(parametro_permessi());
+        c.push_back({"aggiungi-utente",
+                     "Aggiunge un utente alla cassaforte, con al massimo i permessi di chi lo aggiunge. Si chiedono la password "
+                     "di chi aggiunge e quella nuova del nuovo utente (due volte al terminale): l'ha scritta chi aggiunge, e il "
+                     "nuovo utente la cambia al primo uso (avviso K-CTR-100).",
+                     {}, p, cassaforte, esegui_aggiungi_utente});
+    }
+    {
+        auto p = base();
+        p.push_back(parametro_scrivi("La cartella del pacchetto chiuso da cui togliere l'utente."));
+        p.push_back(parametro_utente(true));
+        p.push_back(parametro_codice("--utente-da-togliere", "Il codice dell'utente da togliere.", true,
+                                     [](Parametri& par, const std::string& v) { par.utente_da_togliere = v; }));
+        c.push_back({"togli-utente",
+                     "Toglie un utente dalla cassaforte: chi lo toglie deve avere i dati personali e particolari. Le chiavi dei "
+                     "dati che aveva si rifanno e i dati si ricifrano, anche quelli di chi va in un luogo sensibile (si aprono "
+                     "solo con tutti e due i permessi): l'utente tolto non apre la versione nuova. Non si toglie l'ultimo utente "
+                     "ne' l'ultimo che legge i dati personali o particolari. Dopo, le password vanno cambiate (avvisi K-CTR-099 e, "
+                     "a ogni apertura di chi ha ricevuto le chiavi nuove in una busta, K-CTR-098).",
+                     {}, p, cassaforte, esegui_togli_utente});
+    }
+    {
+        auto p = base();
+        p.push_back(parametro_scrivi("La cartella del pacchetto chiuso."));
+        p.push_back(parametro_utente(true));
+        p.push_back(parametro_codice("--per-utente",
+                                     "Password nuova per un altro utente (persa la sua): serve avere tutti i suoi permessi. "
+                                     "Senza, si cambia la propria.",
+                                     false, [](Parametri& par, const std::string& v) { par.per_utente = v; }));
+        c.push_back({"password",
+                     "Cambia la propria password, oppure ne da' una nuova a un altro utente che l'ha persa (con --per-utente): "
+                     "non c'e' recupero ne' chiave di ripristino. Si chiedono la password di chi la cambia e quella nuova (due "
+                     "volte al terminale). In tutti e due i casi l'utente riceve anche una coppia di chiavi nuova; una password "
+                     "data a un altro va cambiata al primo uso (avviso K-CTR-100).",
+                     {}, p, cassaforte, esegui_password});
+    }
+    {
+        auto p = base();
+        p.push_back(parametro_scrivi("La cartella del pacchetto chiuso."));
+        p.push_back(parametro_utente(true));
+        p.push_back(parametro_conservazione());
+        c.push_back({"conservazione",
+                     "Cambia la data di conservazione dei dati della cassaforte. Serve chi ha i dati personali e particolari.",
+                     {}, p, cassaforte, esegui_conservazione});
+    }
+    {
+        auto p = base();
+        p.push_back(parametro_scrivi("La cartella del pacchetto chiuso di cui cancellare la cassaforte."));
+        p.push_back(parametro_utente(true));
+        c.push_back({"cancella",
+                     "Cancella la cassaforte e il suo registro: prima si distruggono le chiavi (le fessure degli utenti), poi i "
+                     "file. Stampa un resoconto da conservare (data, utente, quanti valori per classe, mai i dati). Serve chi ha "
+                     "i dati personali e particolari. Le copie vecchie del file restano cifrate dove sono.",
+                     {}, p, cassaforte, esegui_cancella});
+    }
+    return c;
+}
+
 std::vector<DefinizioneComando> crea_comandi() {
     std::vector<DefinizioneComando> c = {
         {"controlla",
@@ -85,15 +280,16 @@ std::vector<DefinizioneComando> crea_comandi() {
          "persone a bordo, trasbordi, coincidenze, attese e regolamenti. Elenca errori e avvisi con codice K-CTR e "
          "posizione, poi un riepilogo; esce con 1 se trova errori (gli avvisi non bloccano).",
          {{"cartella", "Cartella del pacchetto dati, con il manifesto pacchetto.json."}},
-         {parametro_formato(), parametro_dati_personali(), parametro_dati_particolari()},
-         {"controlla", 3},
+         {parametro_formato(), parametro_dati_personali(), parametro_dati_particolari(), parametro_utente(false),
+          parametro_password_da_ingresso()},
+         {"controlla", 4},
          esegui_controlla},
         {"descrivi",
          "Descrive il programma: comandi, argomenti, parametri, schemi JSON, file dei pacchetti dati, codici di uscita, "
          "di errore e dei controlli.",
          {},
          {parametro_formato()},
-         {"descrivi", 3},
+         {"descrivi", 4},
          esegui_descrivi},
         {"dimostrazione",
          "Stampa di prova con il pacchetto dimostrativo esempi/demo (dati inventati, incorporato nel programma): "
@@ -110,8 +306,8 @@ std::vector<DefinizioneComando> crea_comandi() {
          "nulla e rimanda a kzero controlla (gli avvisi non bloccano).",
          {{"cartella", "Cartella del pacchetto dati, con il manifesto pacchetto.json."}},
          {parametro_formato(), parametro_dati_personali(), parametro_dati_particolari(), parametro_data(), parametro_persona(),
-          parametro_mezzo()},
-         {"giornata", 1},
+          parametro_mezzo(), parametro_utente(false), parametro_password_da_ingresso()},
+         {"giornata", 2},
          esegui_giornata},
         {"versione",
          "Mostra la versione del programma.",
@@ -120,6 +316,7 @@ std::vector<DefinizioneComando> crea_comandi() {
          {"versione", 1},
          esegui_versione},
     };
+    for (DefinizioneComando& x : comandi_cassaforte()) c.push_back(std::move(x));
     for (auto& comando : c)
         std::sort(comando.parametri.begin(), comando.parametri.end(),
                   [](const DefinizioneParametro& a, const DefinizioneParametro& b) { return a.nome < b.nome; });
@@ -155,7 +352,8 @@ std::string forma_comando(const DefinizioneComando& c) {
 
 const std::vector<Schema>& schemi_ritirati() {
     // Versioni non piu' prodotte: i file restano in docs/schema per controllare le uscite salvate prima.
-    static const std::vector<Schema> s = {{"controlla", 1}, {"controlla", 2}, {"descrivi", 1}, {"descrivi", 2}, {"dimostrazione", 1}};
+    static const std::vector<Schema> s = {{"controlla", 1}, {"controlla", 2}, {"controlla", 3}, {"descrivi", 1}, {"descrivi", 2},
+                                          {"descrivi", 3}, {"dimostrazione", 1}, {"giornata", 1}};
     return s;
 }
 

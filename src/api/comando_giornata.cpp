@@ -9,6 +9,7 @@
 #include <set>
 #include <string>
 
+#include "accesso.hpp"
 #include "controllo.hpp"
 #include "errori.hpp"
 #include "esecutori.hpp"
@@ -70,12 +71,7 @@ const char* modo_mezzo(kzero::VehicleSource s) {
 class Giornata {
 public:
     Giornata(const kzero::Planner& piano, const Vista& vista)
-        : piano_(piano), idx_(piano.index()), vista_(vista), legame_(&idx_, vista.visibilita()) {}
-
-    // Luoghi sensibili (riservatezza.hpp): l'insieme e' l'intera giornata mostrata, perche' i turni sono legati dal
-    // mezzo, dalla persona, dai trasbordi e dall'assistente a bordo. Ogni luogo mostrato passa da luogo(), che lo
-    // dichiara: costruire una volta tutta la giornata dichiara tutto, prima di costruirla per davvero.
-    const LegameSensibile& legame() const { return legame_; }
+        : piano_(piano), idx_(piano.index()), vista_(vista) {}
 
     // Dove e' scritta un'assegnazione, filtrata come le posizioni dei problemi (riservatezza.hpp): di base non entra mai
     // in un dato personale o particolare; null se non si puo' mostrare.
@@ -88,15 +84,10 @@ public:
         return j;
     }
 
-    // Un luogo: codice e nome (filtrato secondo la classe), oppure "riservato" tutti e due (luogo sensibile).
+    // Un luogo: codice e nome, filtrato secondo la classe (la casa di chi va in un luogo sensibile vale come dato
+    // particolare: vista.campo, riservatezza.hpp).
     Json luogo(const kzero::Code& codice) const {
-        legame_.luogo(codice);
         Json j = Json::object();
-        if (legame_.nasconde_luogo(codice)) {
-            j["codice"] = kRiservato;
-            j["nome"] = kRiservato;
-            return j;
-        }
         j["codice"] = codice;
         const kzero::Place* l = idx_.place(codice);
         j["nome"] = l ? vista_.campo(l->src, "nome", l->name, l->code) : Json(nullptr);
@@ -359,13 +350,27 @@ private:
     const kzero::Planner& piano_;
     const kzero::Index& idx_;
     const Vista& vista_;
-    mutable LegameSensibile legame_;
 };
 
 // Dettaglio di una persona (assenze) da mostrare solo con i dati personali.
 Json personale(const Vista& vista, Json valore) { return vista.visibilita().personali ? valore : Json(kRiservato); }
 
-Json in_json(const DefinizioneComando& comando, const Resoconto& r, const Parametri& par, const Vista& vista) {
+// Cassaforte (K-010): cosa non e' verificato per chi non puo' aprire una classe (il piano del giorno dipende da tutte e due).
+Json non_verificato(const Visibilita& leggibili) {
+    Json nv = Json::array();
+    if (!leggibili.personali)
+        nv.push_back({{"servono", "personali"},
+                      {"cosa", "chi fa i turni e con quali mezzi: dipende da assenze, disponibilita', abilitazioni e "
+                               "autorizzazioni delle persone, che l'utente non puo' aprire"}});
+    if (!leggibili.particolari)
+        nv.push_back({{"servono", "particolari"},
+                      {"cosa", "chi fa i turni e con quali mezzi: dipende dagli usi dei mezzi e dalle autorizzazioni richiesti "
+                               "per tipo di servizio (dato particolare), che l'utente non puo' aprire"}});
+    return nv;
+}
+
+Json in_json(const DefinizioneComando& comando, const Resoconto& r, const Parametri& par, const Vista& vista,
+             const accesso::LetturaPerComando& cf) {
     const kzero::Package& p = r.lettura.pacchetto;
     const kzero::Planner piano(p);
     const kzero::Index& idx = piano.index();
@@ -383,6 +388,24 @@ Json in_json(const DefinizioneComando& comando, const Resoconto& r, const Parame
     pacchetto["periodo"] = {{"dal", kzero::text_from_day(p.manifest.period.from)}, {"al", kzero::text_from_day(p.manifest.period.to)}};
     j["pacchetto"] = pacchetto;
     j["controllo"] = {{"errori", r.errori}, {"avvisi", r.avvisi}};
+    if (cf.cassaforte) {
+        Json x = Json::object();
+        x["utente"] = cf.utente;
+        x["permessi"] = accesso::classi(cf.permessi.personali, cf.permessi.particolari);
+        x["conservazione"] = cf.cassaforte->conservazione;
+        x["conservazione_scaduta"] = cf.scaduta;
+        // Gli avvisi dell'apertura (K-CTR-097, K-CTR-098): la giornata non elenca i problemi, questi si' (ogni apertura).
+        Json avvisi = Json::array();
+        for (const kzero::Problem& p : cf.avvisi) {
+            const accesso::AvvisoMostrato a = accesso::mostra(p);
+            avvisi.push_back({{"codice", a.codice}, {"messaggio", a.messaggio}});
+        }
+        x["avvisi"] = avvisi;
+        j["cassaforte"] = x;
+    } else {
+        j["cassaforte"] = nullptr;
+    }
+    j["non_verificato"] = non_verificato(r.lettura.leggibili);
     j["data"] = kzero::text_from_day(d);
     j["giorno_della_settimana"] = chiave_giorno(kzero::weekday_of(d));
     Json festivita = Json::array();
@@ -407,12 +430,6 @@ Json in_json(const DefinizioneComando& comando, const Resoconto& r, const Parame
             continue;
         scelti.push_back(&sd);
     }
-    // Luoghi sensibili: prima si dichiara tutto quello che la giornata mostra (vedi Giornata::legame).
-    if (g.legame().attivo()) {
-        if (sola_persona && sola_persona->base_place) (void)g.luogo(sola_persona->base_place->code);
-        for (const kzero::ShiftDay* sd : scelti) (void)g.turno(*sd);
-    }
-
     Json vista_json = Json::object();
     vista_json["tipo"] = sola_persona ? "persona" : solo_mezzo ? "mezzo" : "tutti";
     vista_json["codice"] = sola_persona ? Json(sola_persona->code) : solo_mezzo ? Json(solo_mezzo->code) : Json(nullptr);
@@ -639,6 +656,16 @@ std::string in_testo(const Json& j) {
     t += "Giornata del " + j.at("data").get<std::string>() + ", " + giorno + apostrofo + " - pacchetto " +
          pk.at("codice").get<std::string>() + " \"" + pk.at("nome").get<std::string>() + "\"" +
          (j.at("dati_inventati").get<bool>() ? " (dati inventati)" : "") + "\n";
+    if (!j.at("cassaforte").is_null()) {
+        const Json& c = j.at("cassaforte");
+        std::string permessi;
+        for (const auto& x : c.at("permessi")) permessi += (permessi.empty() ? "dati " : " e ") + x.get<std::string>();
+        t += "Cassaforte aperta dall'utente " + c.at("utente").get<std::string>() + " (" + permessi + ").\n";
+        for (const auto& a : c.at("avvisi"))
+            t += "Avviso " + a.at("codice").get<std::string>() + ": " + a.at("messaggio").get<std::string>() + "\n";
+    }
+    for (const auto& x : j.at("non_verificato"))
+        t += "Non verificato (servono i dati " + x.at("servono").get<std::string>() + "): " + x.at("cosa").get<std::string>() + ".\n";
     const Json& v = j.at("vista");
     if (v.at("tipo") == "persona") {
         const Json& x = j.at("persona");
@@ -692,18 +719,17 @@ std::string in_testo(const Json& j) {
 
 Risultato esegui_giornata(const DefinizioneComando& comando, const Parametri& parametri) {
     const std::string& cartella = parametri.argomenti.at(0);
-    std::error_code ec;
-    if (cartella.empty() || !std::filesystem::is_directory(std::filesystem::path(cartella), ec))
-        throw ErroreKZero(Errore::CartellaNonTrovata,
-                          "Cartella del pacchetto non trovata: '" + cartella +
-                              "'. Indicare la cartella che contiene il manifesto pacchetto.json.");
-    const Visibilita visibilita{parametri.includi_dati_personali, parametri.includi_dati_particolari};
-    const Resoconto r = controlla_pacchetto(CartellaSuDisco(cartella), visibilita);
+    std::string nota = "giornata del " + kzero::text_from_day(*parametri.data);
+    if (!parametri.persona.empty()) nota += ", persona " + parametri.persona;
+    if (!parametri.mezzo.empty()) nota += ", mezzo " + parametri.mezzo;
+    accesso::LetturaPerComando lc = accesso::leggi_per_comando(cartella, parametri, comando.nome, nota);
+    const Visibilita visibilita = lc.visibilita;
+    const Resoconto r = controlla_lettura(std::move(lc.lettura), visibilita);
     if (r.errori > 0)
         throw ErroreKZero(Errore::PacchettoConErrori,
                           "Il pacchetto ha " + quanti(r.errori, "errore", "errori") +
                               " nei dati: la giornata non si mostra, perche' sarebbe falsata. Correggere prima gli errori: "
-                              "kzero controlla " + cartella);
+                              "kzero controlla " + cartella + (lc.utente.empty() ? "" : " --utente " + lc.utente));
     const kzero::Package& p = r.lettura.pacchetto;
     const kzero::Day d = *parametri.data;
     if (d < p.manifest.period.from || d > p.manifest.period.to)
@@ -717,7 +743,7 @@ Risultato esegui_giornata(const DefinizioneComando& comando, const Parametri& pa
     if (!parametri.mezzo.empty() && !idx.vehicle(parametri.mezzo))
         throw ErroreKZero(Errore::ElementoNonTrovato, "Il mezzo " + parametri.mezzo + " non c'e' nel pacchetto " + p.manifest.code +
                                                           " (mezzi.json).");
-    const Json j = in_json(comando, r, parametri, Vista(r.lettura, visibilita));
+    const Json j = in_json(comando, r, parametri, Vista(r.lettura, visibilita), lc);
     return {parametri.formato == Formato::Json ? testo_json(j) : in_testo(j), 0};
 }
 

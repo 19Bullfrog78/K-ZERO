@@ -2,8 +2,8 @@
 
 `kzero controlla <cartella>` controlla un pacchetto dati (spiegato in [formato-dati.md](formato-dati.md))
 e scrive un resoconto in testo o in JSON (schema `controlla`, file
-[schema/controlla.v3.schema.json](schema/controlla.v3.schema.json); le versioni 1, del K-007, e 2, del K-008, non sono piu'
-prodotte).
+[schema/controlla.v4.schema.json](schema/controlla.v4.schema.json); le versioni 1, del K-007, 2, del K-008, e 3, del K-009,
+non sono piu' prodotte).
 
 Ogni problema ha:
 - un **livello**: **errore** (il dato e' sbagliato e va corretto) oppure **avviso** (il dato e' accettabile,
@@ -23,14 +23,22 @@ Come si legge il resoconto:
   file con `--includi-dati-personali`. Serve a sapere cosa e' coinvolto se il pacchetto va perso o finisce alla persona
   sbagliata (docs/sicurezza.md). In JSON e' il campo `dati_riservati_presenti`;
 - **codice di uscita 0** se non ci sono errori (gli avvisi non bloccano), **1** se c'e' almeno un errore;
-- prima si controlla la **forma** dei file (K-CTR-001 ... K-CTR-008, K-CTR-048, K-CTR-053 e K-CTR-088 ... K-CTR-090): un
+- prima si controlla la **forma** dei file (K-CTR-001 ... K-CTR-008, K-CTR-048, K-CTR-053, K-CTR-088 ... K-CTR-090 e, per la
+  cassaforte, K-CTR-091 ... K-CTR-095): un
   file con un errore di forma non viene usato, e finche' c'e' un errore di forma i controlli sul **contenuto** (gli altri codici)
   non si fanno, perche' darebbero risultati falsati. Il resoconto lo dice;
 - i messaggi seguono le **classi dei dati**: di base, al posto di un dato personale (es. il nome di una casa)
   c'e' il codice dell'elemento e i dati particolari non compaiono; si vedono con `--includi-dati-personali`
   e `--includi-dati-particolari`. Dal K-009 anche le posizioni, e i problemi sui dati sulla salute non si elencano uno
   per uno (sezione "Dati personali e particolari nei problemi", qui sotto);
-- il programma non usa l'orologio: le date sono quelle del pacchetto.
+- il programma non usa l'orologio: le date sono quelle del pacchetto. L'unica eccezione e' K-CTR-097 (data di
+  conservazione della cassaforte passata, K-010);
+- con un pacchetto chiuso nella cassaforte (K-010, docs/cassaforte.md) si controllano i dati che l'utente puo' aprire,
+  uniti in memoria. Un controllo che ha bisogno di una classe che l'utente non puo' aprire (es. le persone a bordo senza i
+  dati particolari, o i turni senza i dati personali delle assenze) non si fa: il resoconto lo elenca tra i **non
+  verificati**, con la classe che serve (in JSON `non_verificato`), e non e' mai un risultato fatto su dati mancanti come se
+  fossero completi. Il resoconto dice anche chi ha aperto la cassaforte e cosa ha potuto aprire (in JSON `cassaforte`).
+  I parametri `--includi-dati-*` valgono solo entro i permessi dell'utente.
 
 I testi dei messaggi stanno tutti in un unico catalogo (`src/api/controlli_catalogo.cpp`), separato dai
 controlli: per tradurli in un'altra lingua basta tradurre il catalogo.
@@ -105,6 +113,8 @@ comunque la regola qui sopra):
 | K-CTR-076 | personale | tutti i casi | i ruoli di una persona |
 | K-CTR-078 | personale | alcuni casi | assenza, disponibilita', abilitazione o autorizzazione scaduta di una persona |
 | K-CTR-081 | personale | tutti i casi | le preferenze di una persona |
+| K-CTR-094 | particolare | alcuni casi | che un elemento aveva dati particolari nella cassaforte |
+| K-CTR-095 | particolare | alcuni casi | che un elemento ha un dato particolare nella cassaforte |
 
 Non sono in questo catalogo (arriveranno con la verifica delle regole e con il mandato "orari di lavoro"):
 posti a bordo, attese massime sulle corse, limiti di accesso confrontati con i mezzi, tempi per andare da un
@@ -233,3 +243,13 @@ Un nuovo controllo prende il codice successivo all'ultimo.
 | K-CTR-088 | errore | Non e' un file normale | Al posto di un file del pacchetto c'e' qualcosa che non e' un file normale: un dispositivo del sistema (es. `/dev/zero`, che non finisce mai), una "pipe", o un collegamento che porta a una di queste cose. Leggerlo potrebbe bloccare il programma o esaurire la memoria: non viene letto. | Mettere al suo posto il file di dati. |
 | K-CTR-089 | errore | Collegamento a un file fuori dalla cartella del pacchetto | Il file e' un collegamento (link simbolico) a un file che sta fuori dalla cartella del pacchetto: il pacchetto deve contenere tutti i suoi dati, e un collegamento preparato apposta potrebbe far leggere al programma un file qualsiasi del PC. Non viene letto. Un collegamento a un file dentro la cartella (anche in una sottocartella) va bene, e la cartella del pacchetto puo' essere a sua volta un collegamento (es. una cartella sincronizzata). | Copiare il file dentro la cartella del pacchetto. |
 | K-CTR-090 | errore | Cartella al posto di un file del pacchetto | Nella cartella del pacchetto c'e' una cartella con il nome di un file del formato (es. `persone.json`). Il file conta come presente ma non letto: i controlli sul contenuto non partono, cosi' non ci sono errori a catena sui codici che quel file avrebbe dato. | Togliere o rinominare la cartella e mettere al suo posto il file. |
+| K-CTR-091 | errore | Manca la cassaforte | Il manifesto (versione 2) dice che il pacchetto ha una cassaforte (`cassaforte` con il suo codice), ma il file `cassaforte.kzc` non c'e': i dati personali e particolari mancano (es. cartella copiata a meta'). E' un errore di forma: i controlli sul contenuto non partono, perche' i dati sarebbero incompleti. | Rimettere il file della cassaforte preso dalla stessa copia del pacchetto. |
+| K-CTR-092 | errore | Cassaforte non dichiarata nel manifesto | Nella cartella c'e' il file `cassaforte.kzc`, ma il manifesto dice `"cassaforte": false` o e' della versione 1: il manifesto viene da un'altra copia del pacchetto, e senza la sua dichiarazione la cassaforte non si apre. Errore di forma. | Rimettere il manifesto di questa copia del pacchetto. |
+| K-CTR-093 | errore | Cassaforte e file normali di chiusure diverse | Il numero della chiusura scritto nel manifesto (`cassaforte.generazione`) non e' quello della cassaforte: i file normali e la cassaforte vengono da copie diverse (es. una copia vecchia rimessa al suo posto) o una richiusura si e' interrotta a meta'. Errore di forma. | Rimettere la copia giusta, oppure rifare la richiusura (`kzero richiudi`). |
+| K-CTR-094 | errore | Valore della cassaforte senza il suo elemento | Un valore della cassaforte e' legato al suo elemento con il codice (o con la chiave dichiarata nello schema, es. turno e data di un'assegnazione del giorno), mai con la posizione in un elenco: se nei file normali l'elemento e' stato tolto o cambiato dopo la chiusura, il valore non trova piu' il suo posto, oppure ne trova piu' d'uno (codice ripetuto). Il valore non viene messo da nessuna parte e il file non viene usato (errore di forma): mai un nome sulla persona sbagliata. | Rimettere l'elemento com'era, oppure correggere i dati con un'uscita in chiaro e una richiusura (`kzero esporta`, `kzero richiudi`). |
+| K-CTR-095 | errore | Valore sia nella cassaforte sia in chiaro | Lo stesso campo di un elemento ha un valore nella cassaforte e uno scritto in chiaro nel file normale: non si sa quale vale. Il file non viene usato (errore di forma). | Togliere il valore in chiaro, oppure correggere i dati con un'uscita in chiaro e una richiusura. |
+| K-CTR-096 | avviso | Dati personali o particolari in chiaro | Il pacchetto ha valori personali o particolari in chiaro (contati con le classi degli schemi) e il manifesto non dice `"dati_inventati": true`; oppure, accanto alla cassaforte, ci sono valori personali o particolari scritti in chiaro nei file normali (es. aggiunti dopo la chiusura). I dati veri stanno solo nella cassaforte (docs/sicurezza.md). Si ripete ogni volta che un comando legge il pacchetto. | Chiudere il pacchetto nella cassaforte (`kzero chiudi`) e cancellare la cartella in chiaro; oppure, accanto a una cassaforte, `kzero esporta` e `kzero richiudi`. |
+| K-CTR-097 | avviso | Data di conservazione dei dati passata | La data di conservazione della cassaforte, scelta da chi l'ha chiusa, e' passata (GDPR art. 5 c. 1 lett. e): ogni apertura lo ricorda. E' l'unico controllo che usa l'orologio del PC (docs/sicurezza.md). | Cancellare la cassaforte (`kzero cancella`) se i dati non servono piu', oppure scrivere una data nuova (`kzero conservazione`) se c'e' un motivo per tenerli. |
+| K-CTR-098 | avviso | Password da cambiare: chiavi nuove ricevute in una busta | Quando si toglie un utente le chiavi si rifanno e arrivano agli altri utenti in una busta, che si apre con la chiave segreta custodita nella loro fessura, cioe' con la loro password. Chi e' stato tolto e conosceva la password di un collega (scritta, detta, uguale a un'altra) potrebbe aprire la fessura del collega e poi la busta. Ogni apertura lo ricorda a chi ha ancora chiavi in una busta (in `kzero controlla` tra i problemi; in `kzero giornata`, `kzero registro` e nei comandi della cassaforte tra gli avvisi), finche' non cambia la password (docs/cassaforte.md, aggiunta 1 del K-010). | Cambiare la propria password (`kzero password`): la fessura si rifa' con le chiavi di adesso e una coppia di chiavi nuova, e le buste non servono piu'. |
+| K-CTR-099 | avviso | Utente tolto: password da cambiare | Lo dice `kzero togli-utente`, a chi ha tolto l'utente: chi e' stato tolto, se conosceva la password di un altro utente, potrebbe aprire anche la cassaforte nuova. A chi ha tolto l'utente la cassaforte non lo ricorda piu' (la sua fessura ha gia' le chiavi nuove); agli altri si' (K-CTR-098). | Chi ha tolto l'utente cambia subito la sua password (`kzero password`); gli altri la cambiano alla prossima apertura. |
+| K-CTR-100 | avviso | Password scritta da un altro utente | Lo dicono `kzero aggiungi-utente` e `kzero password --per-utente`: la password del nuovo utente (o quella nuova di chi l'aveva persa) l'ha scritta un'altra persona, che quindi la conosce. | Al primo uso, l'utente cambia la sua password (`kzero password`), cosi' la conosce solo lui o lei. |

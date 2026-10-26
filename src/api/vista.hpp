@@ -7,6 +7,7 @@
 #include <string>
 
 #include "lettore.hpp"
+#include "pacchetto.hpp"
 #include "riservatezza.hpp"
 #include "schemi_dati.hpp"
 #include "uscita.hpp"
@@ -16,15 +17,19 @@ namespace kzero::api {
 // Filtro delle classi dei dati per i campi degli elementi di un pacchetto letto.
 class Vista {
 public:
-    Vista(const Lettura& lettura, Visibilita visibilita) : lettura_(lettura), visibilita_(visibilita) {}
+    // Il pacchetto deve essere stato letto e controllato nel contenuto (codici e riferimenti a posto).
+    Vista(const Lettura& lettura, Visibilita visibilita);
 
     const Visibilita& visibilita() const { return visibilita_; }
+    // Passeggeri e case legati a un luogo sensibile (riservatezza.hpp).
+    const LegameSensibile& legame() const { return legame_; }
 
     // Classe del campo di un elemento, dalla marcatura dello schema del suo file (versione letta). Un file non letto
     // conta come particolare: nel dubbio non si mostra.
     Classe classe(const kzero::Source& elemento, const std::string& campo) const;
 
-    // Valore di un campo dell'elemento: visibile, oppure sostituito dal codice (personale) o da "riservato".
+    // Valore di un campo dell'elemento: visibile, oppure sostituito dal codice (personale) o da "riservato". Un dato
+    // personale di un passeggero o di una casa legati a un luogo sensibile si vede solo insieme ai dati particolari.
     Json campo(const kzero::Source& elemento, const std::string& campo, Json valore, const std::string& codice) const;
 
     // Valore di una classe nota: visibile, oppure sostituito dal codice (personale) o da "riservato".
@@ -36,6 +41,8 @@ public:
 private:
     const Lettura& lettura_;
     Visibilita visibilita_;
+    kzero::Index indice_;
+    LegameSensibile legame_;
 };
 
 // --- Etichette dei valori del modello, come nei file dei dati ----------------------------------------------------

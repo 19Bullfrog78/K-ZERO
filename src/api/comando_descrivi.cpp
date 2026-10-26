@@ -29,7 +29,14 @@ const char* nome_tipo(TipoParametro t) {
     return "?";
 }
 
-const char* nome_forma(FormaValore f) { return f == FormaValore::Data ? "data" : "codice"; }
+const char* nome_forma(FormaValore f) {
+    switch (f) {
+        case FormaValore::Data: return "data";
+        case FormaValore::Codice: return "codice";
+        case FormaValore::Percorso: return "percorso";
+    }
+    return "?";
+}
 
 std::string unisci(const std::vector<std::string>& v, const std::string& separatore) {
     std::string s;
@@ -41,7 +48,8 @@ std::string unisci(const std::vector<std::string>& v, const std::string& separat
 std::string forma(const DefinizioneParametro& p) {
     switch (p.tipo) {
         case TipoParametro::Scelta: return p.nome + " <" + unisci(p.valori, "|") + ">";
-        case TipoParametro::Valore: return p.nome + (p.forma == FormaValore::Data ? " <AAAA-MM-GG>" : " <codice>");
+        case TipoParametro::Valore:
+            return p.nome + (p.forma == FormaValore::Data ? " <AAAA-MM-GG>" : p.forma == FormaValore::Codice ? " <codice>" : " <cartella>");
         case TipoParametro::Interruttore: break;
     }
     return p.nome;
@@ -57,7 +65,7 @@ Json in_json(const DefinizioneParametro& p) {
     j["tipo"] = nome_tipo(p.tipo);
     if (p.tipo == TipoParametro::Scelta) {
         j["valori"] = p.valori;
-        j["predefinito"] = p.predefinito;
+        if (!p.obbligatorio) j["predefinito"] = p.predefinito;
     }
     if (p.tipo == TipoParametro::Valore) j["forma"] = nome_forma(p.forma);
     j["obbligatorio"] = p.obbligatorio;
@@ -194,7 +202,7 @@ std::string descrizione_testo() {
         for (const auto& a : c.argomenti) t += rientro + riempi("<" + a.nome + ">", larghezza_parametro) + "  " + a.descrizione + "\n";
         for (const auto& p : c.parametri) {
             t += rientro + riempi(forma(p), larghezza_parametro) + "  " + p.descrizione;
-            if (p.tipo == TipoParametro::Scelta) t += " Predefinito: " + p.predefinito + ".";
+            if (p.tipo == TipoParametro::Scelta && !p.obbligatorio) t += " Predefinito: " + p.predefinito + ".";
             if (p.obbligatorio) t += " Obbligatorio.";
             if (!p.incompatibili.empty()) t += " Non insieme a " + unisci(p.incompatibili, ", ") + ".";
             t += "\n";

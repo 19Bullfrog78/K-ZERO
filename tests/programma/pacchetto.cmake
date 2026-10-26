@@ -13,6 +13,9 @@
 #   AGGIUNGI    <file> <contenuto>                    aggiunge un file
 #   CARTELLA    <nome>                                aggiunge una cartella (al posto del file con quel nome, se c'e')
 #   PIPE        <file>                                mette una "pipe" al posto del file (non Windows)
+#   BYTE        <file> <posizione>                    cambia un byte (XOR con 1; posizione negativa: dalla fine) (K-010:
+#                                                    cassaforte e registro, file binari)
+#   TRONCA      <file> <lunghezza>                    tronca il file a quella lunghezza
 #   ALLUNGA     <file> <byte>                         porta il file a quella lunghezza con zeri "sparsi", che non
 #                                                    occupano il disco (Linux, comando truncate)
 #   COLLEGA     <file> <destinazione>                 mette un collegamento simbolico al posto del file (non Windows):
@@ -20,6 +23,7 @@
 #                                                    @DENTRO@ = al file spostato nella sottocartella "archivio",
 #                                                    altrimenti alla destinazione scritta (es. /dev/zero)
 # IMPOSTA e TOGLI riscrivono il file con lo stesso contenuto JSON (cambiano solo spazi e ordine dei campi).
+# Senza MODIFICA: copia esatta della base. La cartella "<pacchetto>.nuova" (negli argomenti @NUOVA@) si toglie ogni volta.
 cmake_minimum_required(VERSION 3.25)
 
 function(fallisci_pacchetto messaggio)
@@ -42,7 +46,11 @@ function(percorso_json puntatore uscita)
   set(${uscita} "${out}" PARENT_SCOPE)
 endfunction()
 
-file(REMOVE_RECURSE "${PACCHETTO}" "${PACCHETTO}.fuori")
+file(REMOVE_RECURSE "${PACCHETTO}" "${PACCHETTO}.fuori" "${PACCHETTO}.nuova")
+file(GLOB temporanee LIST_DIRECTORIES true "${CARTELLA}/.${NOME}.pacchetto.nuova.kzero-*")
+if(temporanee)
+  file(REMOVE_RECURSE ${temporanee})
+endif()
 file(MAKE_DIRECTORY "${PACCHETTO}")
 file(GLOB originali LIST_DIRECTORIES false "${PACCHETTO_BASE}/*")
 if(NOT originali)
@@ -50,7 +58,11 @@ if(NOT originali)
 endif()
 file(COPY ${originali} DESTINATION "${PACCHETTO}")
 
+# K-010: senza MODIFICA il pacchetto e' una copia esatta della base (es. un pacchetto chiuso, che i comandi cambiano).
 list(LENGTH MODIFICA quanti)
+if(quanti EQUAL 0)
+  return()
+endif()
 if(quanti LESS 2)
   fallisci_pacchetto("MODIFICA incompleta: ${MODIFICA}")
 endif()
@@ -72,6 +84,17 @@ if(operazione STREQUAL "IMPOSTA" OR operazione STREQUAL "TOGLI")
     fallisci_pacchetto("${operazione} ${nome_file} ${puntatore}: ${problema}")
   endif()
   file(WRITE "${file_modificato}" "${nuovo}\n")
+elseif(operazione STREQUAL "BYTE" OR operazione STREQUAL "TRONCA")
+  list(GET MODIFICA 2 numero)
+  if(operazione STREQUAL "TRONCA")
+    set(comando_byte "${CAMBIA_BYTE}" "${file_modificato}" tronca "${numero}")
+  else()
+    set(comando_byte "${CAMBIA_BYTE}" "${file_modificato}" "${numero}")
+  endif()
+  execute_process(COMMAND ${comando_byte} RESULT_VARIABLE esito_byte)
+  if(NOT esito_byte EQUAL 0)
+    fallisci_pacchetto("${operazione} ${nome_file} ${numero}: esito ${esito_byte}")
+  endif()
 elseif(operazione STREQUAL "SOSTITUISCI")
   file(READ "${file_modificato}" testo)
   list(GET MODIFICA 2 vecchio)

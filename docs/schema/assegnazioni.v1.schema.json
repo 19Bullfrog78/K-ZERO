@@ -12,6 +12,7 @@
       "type": "array",
       "items": {
         "description": "Un'assegnazione del singolo giorno: la persona, il mezzo o tutti e due.",
+        "x-kzero-chiave": ["turno", "data"],
         "type": "object",
         "additionalProperties": false,
         "required": ["data", "turno"],

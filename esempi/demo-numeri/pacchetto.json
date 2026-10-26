@@ -1,6 +1,6 @@
 {
   "schema": "pacchetto",
-  "schema_versione": 1,
+  "schema_versione": 2,
   "codice": "DEMO-NUMERI-2026",
   "nome": "Pacchetto dimostrativo K-Zero, solo numeri",
   "dati_inventati": true,
@@ -14,5 +14,6 @@
   "livello": "solo_numeri",
   "fuso_orario": "Europe/Rome",
   "valuta": "EUR",
-  "impostazioni": { "margine_trasbordo_minuti": 3 }
+  "impostazioni": { "margine_trasbordo_minuti": 3, "porta_a_porta_sensibile": true },
+  "cassaforte": false
 }

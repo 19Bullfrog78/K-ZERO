@@ -2,6 +2,8 @@
 #include "riservatezza.hpp"
 
 #include <algorithm>
+#include <map>
+#include <vector>
 
 #include "formato_dati.hpp"
 
@@ -91,34 +93,109 @@ bool file_riservato(const std::string& file) {
     return livelli.front().classe && *livelli.front().classe != Classe::Comune;
 }
 
-LegameSensibile::LegameSensibile(const kzero::Index* indice, const Visibilita& visibilita)
-    : indice_(indice),
-      attivo_(indice && visibile(Classe::Personale, visibilita) && !visibile(Classe::Particolare, visibilita) &&
-              std::any_of(indice->package().places.begin(), indice->package().places.end(),
-                          [](const kzero::Place& l) { return l.sensitive; })) {}
+namespace {
 
-void LegameSensibile::passeggero(const kzero::Code& codice) {
-    if (!attivo_ || riservato_) return;
-    const kzero::Passenger* q = indice_->passenger(codice);
-    riservato_ = q && !q->name.empty();
+// Insiemi disgiunti per le corse legate dai trasbordi.
+struct Insiemi {
+    std::vector<std::size_t> padre;
+    explicit Insiemi(std::size_t n) : padre(n) {
+        for (std::size_t i = 0; i < n; ++i) padre[i] = i;
+    }
+    std::size_t radice(std::size_t x) {
+        while (padre[x] != x) x = padre[x] = padre[padre[x]];
+        return x;
+    }
+    void unisci(std::size_t a, std::size_t b) { padre[radice(a)] = radice(b); }
+};
+
+}  // namespace
+
+LegameSensibile::LegameSensibile(const kzero::Index* indice) {
+    if (!indice) return;
+    const kzero::Package& p = indice->package();
+    std::set<kzero::Code> sensibili, porta_a_porta;
+    for (const kzero::Place& l : p.places) {
+        if (l.sensitive) sensibili.insert(l.code);
+        if (l.type == kzero::PlaceType::DoorToDoor) porta_a_porta.insert(l.code);
+    }
+    const bool tutto_il_porta_a_porta = p.manifest.door_to_door_sensitive;
+    if (sensibili.empty() && !(tutto_il_porta_a_porta && !porta_a_porta.empty())) return;
+    const auto sensibile = [&](const kzero::Code& c) { return sensibili.count(c) > 0; };
+    const auto casa_pap = [&](const kzero::Code& c) { return porta_a_porta.count(c) > 0; };
+
+    // Gruppi legati e loro passeggeri e case.
+    for (const kzero::Service& s : p.services)
+        for (const kzero::PassengerGroup& g : s.groups) {
+            bool legato = false;
+            if (g.school)
+                if (const kzero::School* sc = indice->school(g.school->code)) legato = sensibile(sc->place.code);
+            for (const auto& f : g.stops) legato = legato || sensibile(f.place.code);
+            for (const kzero::Passenger& q : g.passengers) {
+                bool lq = legato;
+                for (const auto* a : {q.boarding ? &*q.boarding : nullptr, q.alighting ? &*q.alighting : nullptr})
+                    if (a) lq = lq || sensibile(a->place.code) || (tutto_il_porta_a_porta && casa_pap(a->place.code));
+                if (lq) passeggeri_.insert(q.code);
+            }
+            if (legato)
+                for (const auto& f : g.stops)
+                    if (casa_pap(f.place.code)) case_.insert(f.place.code);
+        }
+    if (tutto_il_porta_a_porta) case_.insert(porta_a_porta.begin(), porta_a_porta.end());
+
+    // Corse: insieme alle corse legate dai trasbordi, quelle che passano da un luogo sensibile legano le case che toccano.
+    Insiemi insiemi(p.trips.size());
+    std::map<kzero::Code, std::size_t> trasbordo;
+    for (std::size_t i = 0; i < p.trips.size(); ++i)
+        for (const kzero::Passage& ps : p.trips[i].passages)
+            for (const auto& h : ps.transfers) {
+                const auto [it, nuovo] = trasbordo.emplace(h.code, i);
+                if (!nuovo) insiemi.unisci(i, it->second);
+            }
+    std::set<std::size_t> radici_sensibili;
+    for (std::size_t i = 0; i < p.trips.size(); ++i)
+        for (const kzero::Passage& ps : p.trips[i].passages)
+            if (sensibile(ps.place.code)) radici_sensibili.insert(insiemi.radice(i));
+    for (std::size_t i = 0; i < p.trips.size(); ++i)
+        if (radici_sensibili.count(insiemi.radice(i)))
+            for (const kzero::Passage& ps : p.trips[i].passages)
+                if (casa_pap(ps.place.code)) case_.insert(ps.place.code);
+
+    // Passeggeri e case si legano a vicenda, fino a quando non cambia piu' nulla.
+    for (bool cambiato = true; cambiato;) {
+        cambiato = false;
+        for (const kzero::Service& s : p.services)
+            for (const kzero::PassengerGroup& g : s.groups)
+                for (const kzero::Passenger& q : g.passengers)
+                    for (const auto* a : {q.boarding ? &*q.boarding : nullptr, q.alighting ? &*q.alighting : nullptr}) {
+                        if (!a || !casa_pap(a->place.code)) continue;
+                        const bool lq = passeggeri_.count(q.code) > 0, lc = case_.count(a->place.code) > 0;
+                        if (lq && !lc) cambiato = case_.insert(a->place.code).second || cambiato;
+                        if (lc && !lq) cambiato = passeggeri_.insert(q.code).second || cambiato;
+                    }
+    }
 }
 
-void LegameSensibile::luogo(const kzero::Code& codice) {
-    if (!attivo_ || riservato_) return;
-    const kzero::Place* l = indice_->place(codice);
-    riservato_ = l && l->type == kzero::PlaceType::DoorToDoor && (!l->name.empty() || !l->address.empty());
+bool LegameSensibile::legato(const std::string& tipo, const kzero::Code& codice) const {
+    if (tipo == "passeggero") return passeggero(codice);
+    if (tipo == "casa") return casa(codice);
+    return false;
 }
 
-bool LegameSensibile::nasconde_luogo(const kzero::Code& luogo) const {
-    if (!riservato_) return false;
-    const kzero::Place* l = indice_->place(luogo);
-    return l && l->sensitive;
+std::string trasportato(const kzero::Source& elemento, const Lettura& lettura) {
+    const auto sv = schema_di(elemento.file, &lettura);
+    if (!sv) return {};
+    const auto livelli = SchemiDati::incorporati().livelli(sv->first, sv->second, elemento.pointer);
+    const auto& ultimo = livelli.back();
+    return ultimo.previsto && ultimo.trasportato && ultimo.trasportato->is_string() ? ultimo.trasportato->get<std::string>()
+                                                                                   : std::string();
 }
 
-bool LegameSensibile::nasconde_scuola(const kzero::Code& scuola) const {
-    if (!riservato_) return false;
-    const kzero::School* s = indice_->school(scuola);
-    return s && nasconde_luogo(s->place.code);
+bool in_trasportato(const kzero::Source& posizione, const Lettura& lettura) {
+    const auto sv = schema_di(posizione.file, &lettura);
+    if (!sv) return false;
+    for (const auto& l : SchemiDati::incorporati().livelli(sv->first, sv->second, posizione.pointer))
+        if (l.previsto && l.trasportato) return true;
+    return false;
 }
 
 }  // namespace kzero::api

@@ -1,7 +1,8 @@
 // K-Zero - ripete nelle prove normali i casi del fuzzing: ogni guasto trovato diventa un file in tests/fuzz/casi/<bersaglio>
 // e questa prova lo rigioca a ogni compilazione (anche con i sanitizer). Con --semi prova ogni file del pacchetto demo
 // nel suo bersaglio: il punto di partenza del fuzzing.
-// Uso: rigioca_fuzz <bersaglio> <file o cartella>...   |   rigioca_fuzz --semi
+// Con --scrivi-semi <cartella> scrive i semi dei bersagli della cassaforte (K-010), che hanno chiavi casuali.
+// Uso: rigioca_fuzz <bersaglio> <file o cartella>...   |   rigioca_fuzz --semi   |   rigioca_fuzz --scrivi-semi <cartella>
 #include <cstdio>
 #include <filesystem>
 #include <fstream>
@@ -32,7 +33,12 @@ int main(int argc, char** argv) {
             kzero::fuzz::prova_file_del_pacchetto(f, reinterpret_cast<const unsigned char*>(testo.data()), testo.size());
             ++provati;
         }
-        std::printf("%d file del demo provati nei loro bersagli\n", provati);
+        provati += kzero::fuzz::prova_semi_cassaforte();
+        std::printf("%d semi provati nei loro bersagli (file del demo e cassaforte)\n", provati);
+        return 0;
+    }
+    if (argc == 3 && std::string(argv[1]) == "--scrivi-semi") {
+        kzero::fuzz::scrivi_semi_cassaforte(argv[2]);
         return 0;
     }
     if (argc < 3) {

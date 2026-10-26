@@ -138,6 +138,132 @@
     },
     {
       "type": "library",
+      "bom-ref": "libsodium",
+      "name": "libsodium",
+      "version": "1.0.22",
+      "description": "Cifratura della cassaforte dei dati personali (K-010): XChaCha20-Poly1305, Argon2id, X25519, Ed25519, BLAKE2b. Costruita con il suo configure, make e make check (101 prove), senza sanitizer.",
+      "scope": "required",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "adbdd8f16149e81ac6078a03aca6fc03b592b89ef7b5ed83841c086191be3349"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "ISC"
+          }
+        }
+      ],
+      "purl": "pkg:github/jedisct1/libsodium@1.0.22-RELEASE",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://github.com/jedisct1/libsodium/releases/download/1.0.22-RELEASE/libsodium-1.0.22.tar.gz"
+        },
+        {
+          "type": "vcs",
+          "url": "https://github.com/jedisct1/libsodium"
+        },
+        {
+          "type": "documentation",
+          "url": "https://doc.libsodium.org"
+        }
+      ],
+      "properties": [
+        {
+          "name": "k-zero:uso",
+          "value": "programma"
+        },
+        {
+          "name": "k-zero:nota",
+          "value": "Firme dell'autore verificate al K-010: minisign (chiave RWQf6LRCGA9i53mlYecO4IzT51TGPpvWucNSCh1CBM0QTaLn73Y7GFO3) e GPG (impronta 54A2 B889 2CC3 D6A5 97B9 2B6C 2106 27AA BA70 9FE1), chiavi della documentazione ufficiale."
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "utf8proc",
+      "name": "utf8proc",
+      "version": "2.11.3",
+      "description": "Normalizzazione Unicode NFC delle password (K-010), Unicode 17.0.0. Si compila il solo file utf8proc.c.",
+      "scope": "required",
+      "hashes": [
+        {
+          "alg": "SHA-1",
+          "content": "e5e799221b45bbb90f5fdc5c69b6b8dfbf017e78"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "purl": "pkg:github/JuliaStrings/utf8proc@e5e799221b45bbb90f5fdc5c69b6b8dfbf017e78",
+      "externalReferences": [
+        {
+          "type": "vcs",
+          "url": "https://github.com/JuliaStrings/utf8proc.git"
+        }
+      ],
+      "properties": [
+        {
+          "name": "k-zero:uso",
+          "value": "programma"
+        },
+        {
+          "name": "k-zero:nota",
+          "value": "Fissata con l'impronta del commit git della versione v2.11.3 (il progetto non pubblica archivi di rilascio con impronta stabile)."
+        }
+      ]
+    },
+    {
+      "type": "data",
+      "bom-ref": "password_comuni",
+      "name": "SecLists, xato-net-10-million-passwords-1000000.txt",
+      "version": "75064ac792b5b554d17386abae3f0e38db7f923c",
+      "description": "Elenco delle password piu' usate (K-010, NIST SP 800-63B-4): il programma incorpora quelle di almeno 15 caratteri, normalizzate.",
+      "scope": "required",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "424a3e03a17df0a2bc2b3ca749d81b04e79d59cb7aeec8876a5a3f308d0caf51"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "purl": "pkg:github/danielmiessler/SecLists@75064ac792b5b554d17386abae3f0e38db7f923c#Passwords/Common-Credentials/xato-net-10-million-passwords-1000000.txt",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://raw.githubusercontent.com/danielmiessler/SecLists/75064ac792b5b554d17386abae3f0e38db7f923c/Passwords/Common-Credentials/xato-net-10-million-passwords-1000000.txt"
+        },
+        {
+          "type": "vcs",
+          "url": "https://github.com/danielmiessler/SecLists"
+        }
+      ],
+      "properties": [
+        {
+          "name": "k-zero:uso",
+          "value": "programma"
+        },
+        {
+          "name": "k-zero:nota",
+          "value": "Dati, non codice: le password del gruppo di dati di Mark Burnett (xato.net, 2015) raccolte in SecLists (licenza MIT del repository). Fissato con il commit e l'impronta del file."
+        }
+      ]
+    },
+    {
+      "type": "library",
       "bom-ref": "googletest",
       "name": "GoogleTest",
       "version": "1.15.2",

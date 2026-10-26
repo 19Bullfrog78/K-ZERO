@@ -368,6 +368,68 @@ const std::vector<DefinizioneControllo>& catalogo_controlli() {
             {Check::DirectoryInsteadOfFile, "K-CTR-090", E, N, "Cartella al posto di un file del pacchetto",
              {"C'e' una cartella che si chiama {file}, come un file del pacchetto: il file non e' stato letto. Togliere o "
               "rinominare la cartella e mettere al suo posto il file."}},
+            // Cassaforte dei dati personali (K-010)
+            {Check::VaultMissing, "K-CTR-091", E, N, "Manca la cassaforte",
+             {"Il manifesto dice che il pacchetto ha una cassaforte, ma il file cassaforte.kzc non c'e': i dati personali e "
+              "particolari mancano (es. cartella copiata a meta'). Rimettere il file della cassaforte preso dalla stessa copia "
+              "del pacchetto."}},
+            {Check::VaultUndeclared, "K-CTR-092", E, N, "Cassaforte non dichiarata nel manifesto",
+             {"Nella cartella c'e' il file della cassaforte (cassaforte.kzc), ma il manifesto non la dichiara (\"cassaforte\": "
+              "false o manifesto della versione 1): il manifesto e' di un'altra copia del pacchetto, e i dati personali e "
+              "particolari non si leggono. Rimettere il manifesto di questa copia."}},
+            {Check::VaultGenerationMismatch, "K-CTR-093", E, N, "Cassaforte e file normali di chiusure diverse",
+             {"Il manifesto e' della chiusura numero {manifesto}, la cassaforte della chiusura numero {cassaforte}: i file "
+              "normali e la cassaforte vengono da copie diverse del pacchetto (es. una copia vecchia rimessa al suo posto, o "
+              "una richiusura interrotta). Rimettere la copia giusta, o rifare la richiusura (kzero richiudi)."}},
+            {Check::VaultValueOrphan, "K-CTR-094", E, N, "Valore della cassaforte senza il suo elemento",
+             {"Un valore personale della cassaforte per {file} non trova il suo elemento ({elemento}): l'elemento e' stato tolto "
+              "o cambiato nei file normali dopo la chiusura. Il valore non e' stato messo da nessuna parte. Rimettere "
+              "l'elemento com'era, oppure correggere i dati con un'uscita in chiaro e una richiusura (kzero esporta, kzero "
+              "richiudi).",
+              "Un valore particolare della cassaforte per {file} non trova il suo elemento ({elemento}): l'elemento e' stato "
+              "tolto o cambiato nei file normali dopo la chiusura. Il valore non e' stato messo da nessuna parte. Rimettere "
+              "l'elemento com'era, oppure correggere i dati con un'uscita in chiaro e una richiusura (kzero esporta, kzero "
+              "richiudi).",
+              "Un valore personale della cassaforte per {file} trova piu' elementi uguali ({elemento}): non si sa a quale "
+              "va. Il valore non e' stato messo da nessuna parte. Correggere i dati con un'uscita in chiaro e una "
+              "richiusura (kzero esporta, kzero richiudi).",
+              "Un valore particolare della cassaforte per {file} trova piu' elementi uguali ({elemento}): non si sa a quale "
+              "va. Il valore non e' stato messo da nessuna parte. Correggere i dati con un'uscita in chiaro e una "
+              "richiusura (kzero esporta, kzero richiudi)."},
+             {{1, PA}, {3, PA}}},
+            {Check::VaultValueConflict, "K-CTR-095", E, N, "Valore sia nella cassaforte sia in chiaro",
+             {"Un valore personale di {file} c'e' sia nella cassaforte sia in chiaro nel file normale: non si sa quale vale. "
+              "Togliere il valore in chiaro, oppure correggere i dati con un'uscita in chiaro e una richiusura (kzero "
+              "esporta, kzero richiudi).",
+              "Un valore particolare di {file} c'e' sia nella cassaforte sia in chiaro nel file normale: non si sa quale vale. "
+              "Togliere il valore in chiaro, oppure correggere i dati con un'uscita in chiaro e una richiusura (kzero "
+              "esporta, kzero richiudi)."},
+             {{1, PA}}},
+            {Check::ClearPersonalData, "K-CTR-096", A, N, "Dati personali o particolari in chiaro",
+             {"Il pacchetto contiene {personali} valori personali e {particolari} particolari in chiaro e il manifesto non dice "
+              "\"dati_inventati\": se sono dati veri, vanno chiusi nella cassaforte (kzero chiudi), e poi la cartella in chiaro "
+              "va cancellata.",
+              "Nei file normali, accanto alla cassaforte, ci sono {personali} valori personali e {particolari} particolari in "
+              "chiaro (es. scritti dopo la chiusura): vanno messi nella cassaforte con un'uscita in chiaro e una richiusura "
+              "(kzero esporta, kzero richiudi)."}},
+            {Check::RetentionExpired, "K-CTR-097", A, N, "Data di conservazione dei dati passata",
+             {"La data di conservazione dei dati personali e particolari della cassaforte ({data}) e' passata: se i dati non "
+              "servono piu', cancellare la cassaforte (kzero cancella); se c'e' un motivo per tenerli, scrivere una data nuova "
+              "(kzero conservazione)."}},
+            {Check::KeysFromEnvelope, "K-CTR-098", A, N, "Password da cambiare: chiavi nuove ricevute in una busta",
+             {"Le chiavi della cassaforte sono state rifatte (un utente e' stato tolto) e l'utente {utente} le ha ricevute in "
+              "una busta, che si apre con la sua password: se l'utente tolto la conosceva, potrebbe aprire anche la cassaforte "
+              "nuova. Cambiare la password (kzero password): finche' non si cambia, ogni apertura lo ricorda."}},
+            {Check::UserRemovedPasswords, "K-CTR-099", A, N, "Utente tolto: password da cambiare",
+             {"L'utente {tolto} e' stato tolto e le chiavi sono state rifatte. Se conosceva la password di un altro utente "
+              "(scritta, detta, uguale a un'altra), con quella potrebbe aprire anche la cassaforte nuova: l'utente {utente} "
+              "cambi subito la sua (kzero password). Agli altri il programma lo ricorda a ogni apertura, finche' non la "
+              "cambiano (K-CTR-098)."}},
+            {Check::PasswordWrittenByOther, "K-CTR-100", A, N, "Password scritta da un altro utente",
+             {"L'utente {nuovo} e' stato aggiunto con una password scritta dall'utente {chi}: {nuovo} la cambi al primo uso "
+              "(kzero password), cosi' la conosce solo chi la usa.",
+              "La password nuova dell'utente {nuovo} l'ha scritta l'utente {chi}: {nuovo} la cambi al primo uso (kzero "
+              "password), cosi' la conosce solo chi la usa."}},
             // Contenuto: avvisi
             {Check::PlaceWithoutCoordinates, "K-CTR-035", A, N, "Luogo senza coordinate",
              {"Il luogo {luogo} non ha le coordinate: serviranno al calcolo delle distanze."}},
@@ -401,10 +463,70 @@ const std::vector<DefinizioneControllo>& catalogo_controlli() {
             {Check::ContractWithoutRegulation, "K-CTR-046", A, N, "Contratto senza regolamento valido per una parte del periodo",
              {"Il regolamento {regolamento} non vale per una parte del periodo del contratto {contratto}: dal {dal} al {al}."}},
         };
+        // Controlli che usano dati personali o particolari per giudicare altro (K-010, "non verificato" per chi non li puo'
+        // aprire). P = personali, Q = particolari.
+        struct Richiede {
+            bool personali, particolari;
+        };
+        const Richiede P{true, false}, Q{false, true}, PQ{true, true};
+        // Il piano del giorno (turni.hpp: chi fa ogni turno e con quale mezzo) toglie la persona o il mezzo per un fatto con le
+        // date: assenze, disponibilita', abilitazioni e autorizzazioni scadute (dati personali), usi del mezzo e
+        // autorizzazioni richiesti per tipo di servizio (dato particolare). Tutti i controlli fatti sulla persona o sul mezzo
+        // del piano richiedono quindi le due classi.
+        const std::map<Check, Richiede> richiede = {
+            {Check::NumbersOnlyPersonalData, PQ},     // la presenza di dati personali (anche quelli legati a luoghi sensibili)
+            {Check::PlaceWithoutCoordinates, PQ},     // le coordinate dei luoghi privati (le case legate: tutti e due i permessi)
+            {Check::DwellTimesUndefined, Q},          // chi viaggia (tipi dei gruppi)
+            {Check::MaxRideUndefined, Q},             // regole dei regolamenti per tipo di servizio e di gruppo
+            {Check::AssistantNotRequested, Q},        // esigenze dei passeggeri
+            {Check::ExpiresInPeriod, P},              // scadenze delle abilitazioni delle persone
+            {Check::CompanyWithoutNorms, P},          // abilitazioni delle persone
+            // Sul piano del giorno:
+            {Check::ShiftVehicleInconsistent, PQ},    // mezzo abituale della persona del giorno
+            {Check::PersonOverlap, PQ},
+            {Check::VehicleOverlap, PQ},
+            {Check::DayAssignmentAgainstFact, PQ},
+            {Check::DriverWithoutLicence, PQ},
+            {Check::VehicleWithoutUseForService, PQ},
+            {Check::PairingFixedViolated, PQ},
+            {Check::PersonWithoutCompetence, PQ},     // anche competenze delle persone e competenze richieste
+            {Check::VehicleAgainstConstraint, PQ},
+            {Check::OtherCompanyWithoutLoan, PQ},
+            {Check::BlockedTripOtherVehicle, PQ},
+            {Check::PersonRoleMismatch, PQ},
+            {Check::RecurringShiftPersonFact, PQ},
+            {Check::RecurringShiftVehicleFact, PQ},
+            {Check::PreferenceNotRespected, PQ},
+            {Check::PairingNotRespected, PQ},
+            {Check::ShiftVehicleToAssign, PQ},
+            {Check::PersonWithoutShifts, PQ},
+            {Check::VehicleNeverUsed, PQ},
+            {Check::EscortWithoutPerson, PQ},
+            {Check::EscortProviderDiffers, PQ},
+        };
+        for (DefinizioneControllo& d : c) {
+            const auto it = richiede.find(d.controllo);
+            if (it == richiede.end()) continue;
+            d.richiede_personali = it->second.personali;
+            d.richiede_particolari = it->second.particolari;
+        }
         std::sort(c.begin(), c.end(), [](const DefinizioneControllo& a, const DefinizioneControllo& b) { return a.codice < b.codice; });
         return c;
     }();
     return catalogo;
+}
+
+bool verificabile(const DefinizioneControllo& d, int variante, Classe classe_posizione, bool in_trasportato,
+                  const Visibilita& leggibili) {
+    if ((d.richiede_personali && !leggibili.personali) || (d.richiede_particolari && !leggibili.particolari)) return false;
+    // I dati personali dei passeggeri e delle case legati a un luogo sensibile si decifrano solo con tutti e due i permessi
+    // (sezione dei legati): senza tutti e due un problema su un dato personale di un passeggero o di una casa puo' riguardarli.
+    const auto legge = [&](Classe c) {
+        if (c == Classe::Comune) return true;
+        if (c == Classe::Personale) return leggibili.personali && (leggibili.particolari || !in_trasportato);
+        return leggibili.particolari;
+    };
+    return legge(d.rivela_variante(variante)) && legge(classe_posizione);
 }
 
 const DefinizioneControllo& definizione_controllo(Check c) {
@@ -504,6 +626,7 @@ struct Presentatore::Dati {
     const std::map<std::string, int>* versioni = nullptr;
     Visibilita visibilita;
     std::optional<kzero::Index> indice;
+    std::optional<LegameSensibile> legame;   // passeggeri e case legati a un luogo sensibile (riservatezza.hpp)
 };
 
 Presentatore::Presentatore(const kzero::Package* pacchetto, const std::map<std::string, int>* versioni, Visibilita visibilita)
@@ -511,7 +634,10 @@ Presentatore::Presentatore(const kzero::Package* pacchetto, const std::map<std::
     dati_->pacchetto = pacchetto;
     dati_->versioni = versioni;
     dati_->visibilita = visibilita;
-    if (pacchetto) dati_->indice.emplace(*pacchetto);
+    if (pacchetto) {
+        dati_->indice.emplace(*pacchetto);
+        dati_->legame.emplace(&*dati_->indice);
+    }
 }
 
 Presentatore::~Presentatore() = default;
@@ -577,7 +703,12 @@ std::string Presentatore::riferimento(kzero::Element e, const std::string& codic
     const std::string schema = src->file.substr(0, src->file.rfind(".json"));
     if (versione == dati_->versioni->end()) return codice;
     const Classe classe = SchemiDati::incorporati().classe(schema, versione->second, src->pointer + "/" + campo);
-    return visibile(classe, dati_->visibilita) ? codice + " (" + nome + ")" : codice;
+    // Il nome di un passeggero o di una casa legati a un luogo sensibile vale come dato particolare (riservatezza.hpp).
+    const bool legato = classe == Classe::Personale && dati_->legame &&
+                        ((e == kzero::Element::Passenger && dati_->legame->passeggero(codice)) ||
+                         (e == kzero::Element::Place && dati_->legame->casa(codice)));
+    const bool mostra = visibile(classe, dati_->visibilita) && (!legato || visibile(Classe::Particolare, dati_->visibilita));
+    return mostra ? codice + " (" + nome + ")" : codice;
 }
 
 std::string Presentatore::messaggio(const kzero::Problem& p) const {
@@ -588,20 +719,6 @@ std::string Presentatore::messaggio(const kzero::Problem& p) const {
     const std::string& modello = personale != d.personali.end() && !visibile(Classe::Personale, dati_->visibilita)
                                      ? personale->second
                                      : d.messaggi[static_cast<std::size_t>(p.variant)];
-    // Luoghi sensibili (riservatezza.hpp): l'insieme e' il messaggio. Se nomina un passeggero o la sua casa e non
-    // mostra i dati particolari, i luoghi sensibili che nomina (e le scuole o i centri che ci stanno) sono riservati.
-    LegameSensibile legame(dati_->indice ? &*dati_->indice : nullptr, dati_->visibilita);
-    for (const kzero::Param& x : p.params) {
-        if (x.kind != kzero::Param::Kind::Ref) continue;
-        if (x.element == kzero::Element::Passenger) legame.passeggero(x.text);
-        if (x.element == kzero::Element::Place) legame.luogo(x.text);
-    }
-    const auto sensibile = [&legame](const kzero::Param& x) {
-        if (x.kind != kzero::Param::Kind::Ref) return false;
-        if (x.element == kzero::Element::Place) return legame.nasconde_luogo(x.text);
-        if (x.element == kzero::Element::School) return legame.nasconde_scuola(x.text);
-        return false;
-    };
     std::string out;
     for (std::size_t i = 0; i < modello.size(); ++i) {
         if (modello[i] != '{') {
@@ -616,9 +733,7 @@ std::string Presentatore::messaggio(const kzero::Problem& p) const {
             (it->sensitivity == kzero::Param::Sensitivity::Personal && !visibile(Classe::Personale, dati_->visibilita)) ||
             (it->sensitivity == kzero::Param::Sensitivity::Particular && !visibile(Classe::Particolare, dati_->visibilita));
         std::string valore;
-        if (sensibile(*it)) {
-            valore = kRiservato;
-        } else if (nascosto) {
+        if (nascosto) {
             valore = it->hidden.empty() ? std::string(kRiservato) : it->hidden;
         } else {
             switch (it->kind) {

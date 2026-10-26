@@ -31,9 +31,17 @@ std::string valori_ammessi(const DefinizioneParametro& p) { return "Valori ammes
 
 // Forma di un valore libero, per i messaggi.
 std::string forma_valore(const DefinizioneParametro& p) {
-    return p.forma == FormaValore::Data
-               ? "Va scritto come una data AAAA-MM-GG che esiste nel calendario (es. 2026-10-15)."
-               : "Va scritto come un codice: lettere senza accenti, cifre, '-', '_' e '.', al massimo 64 caratteri (es. P-A).";
+    switch (p.forma) {
+        case FormaValore::Data: return "Va scritto come una data AAAA-MM-GG che esiste nel calendario (es. 2026-10-15).";
+        case FormaValore::Codice:
+            return "Va scritto come un codice: lettere senza accenti, cifre, '-', '_' e '.', al massimo 64 caratteri (es. P-A).";
+        case FormaValore::Percorso: return "Va scritto come il percorso di una cartella (al massimo 4096 caratteri, senza a capo).";
+    }
+    return "";
+}
+
+bool percorso_valido(const std::string& s) {
+    return !s.empty() && s.size() <= 4096 && s.find_first_of(std::string("\n\r\0", 3)) == std::string::npos;
 }
 
 // Valore ricopiato in un messaggio: al massimo 64 caratteri (un valore piu' lungo e' certamente sbagliato).
@@ -52,7 +60,12 @@ bool codice_valido(const std::string& s) {
 }
 
 bool valore_valido(const DefinizioneParametro& p, const std::string& valore) {
-    return p.forma == FormaValore::Data ? kzero::day_from_text(valore).has_value() : codice_valido(valore);
+    switch (p.forma) {
+        case FormaValore::Data: return kzero::day_from_text(valore).has_value();
+        case FormaValore::Codice: return codice_valido(valore);
+        case FormaValore::Percorso: return percorso_valido(valore);
+    }
+    return false;
 }
 
 const DefinizioneParametro* trova_parametro(const DefinizioneComando& c, const std::string& nome) {
@@ -176,6 +189,7 @@ Parametri leggi_parametri(const DefinizioneComando& c, const std::vector<std::st
             p.applica(risultato, valore);
             continue;
         }
+        if (o.count() == 0 && p.obbligatorio) continue;   // una scelta obbligatoria non ha un valore predefinito
         const std::string valore = o.count() == 1 ? o.results().front() : p.predefinito;
         if (std::find(p.valori.begin(), p.valori.end(), valore) == p.valori.end())
             throw ErroreKZero(Errore::ValoreNonAmmesso, "Valore non ammesso per " + p.nome + ": " + tra_apici(valore) +
@@ -190,8 +204,9 @@ Parametri leggi_parametri(const DefinizioneComando& c, const std::vector<std::st
     };
     for (const DefinizioneParametro& p : c.parametri)
         if (p.obbligatorio && !scritto(p.nome))
-            throw ErroreKZero(Errore::ParametroObbligatorio, "Manca il parametro " + p.nome + " del comando '" + c.nome +
-                                                                 "': " + p.descrizione + " " + forma_valore(p) + kVediDescrivi);
+            throw ErroreKZero(Errore::ParametroObbligatorio,
+                              "Manca il parametro " + p.nome + " del comando '" + c.nome + "': " + p.descrizione + " " +
+                                  (p.tipo == TipoParametro::Scelta ? valori_ammessi(p) : forma_valore(p)) + kVediDescrivi);
     for (const DefinizioneParametro& p : c.parametri)
         for (const std::string& altro : p.incompatibili)
             if (scritto(p.nome) && scritto(altro))

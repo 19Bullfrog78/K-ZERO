@@ -1,0 +1,69 @@
+{
+  "contratti": [
+    {
+      "assistente_fornito_da": "committente",
+      "azienda": "ALFA",
+      "codice": "CT-SCU",
+      "committente": "CVA",
+      "nome": "Trasporto scolastico e disabili, lotto 2",
+      "regolamento": "R-TN",
+      "regole": {
+        "categoria_riconosciuta": "M2",
+        "durata_massima_a_bordo_minuti": 60
+      },
+      "valido_al": "2027-08-31",
+      "valido_dal": "2026-09-01"
+    },
+    {
+      "assistente_fornito_da": "azienda",
+      "azienda": "BETA",
+      "codice": "CT-ASILO",
+      "committente": "CVA",
+      "nome": "Trasporto della scuola dell'infanzia di Lagobello",
+      "regolamento": "R-TN",
+      "regole": {
+        "durata_massima_a_bordo_minuti": 45
+      },
+      "valido_al": "2027-08-31",
+      "valido_dal": "2026-09-01"
+    },
+    {
+      "assistente_fornito_da": "committente",
+      "azienda": "ALFA",
+      "codice": "CT-LIN",
+      "committente": "TPV",
+      "nome": "Linee e supporto alle linee",
+      "regolamento": "R-INV",
+      "regole": {
+        "categoria_riconosciuta": "M3",
+        "posti_massimi": 54,
+        "posti_minimi": 30
+      },
+      "valido_al": "2027-08-31",
+      "valido_dal": "2026-09-01"
+    },
+    {
+      "assistente_fornito_da": "committente",
+      "azienda": "BETA",
+      "codice": "CT-LIN-BETA",
+      "committente": "TPV",
+      "nome": "Linea B620 Sorgenta - Montebrino",
+      "regolamento": "R-INV",
+      "valido_al": "2027-08-31",
+      "valido_dal": "2026-09-01"
+    },
+    {
+      "assistente_fornito_da": "committente",
+      "azienda": "ALFA",
+      "codice": "CT-GITA",
+      "committente": "PROLOCO",
+      "nome": "Gita sociale della Pro Loco al lago",
+      "nota": "Noleggio occasionale con conducente: si fa con l'autobus di linea, che ha la distrazione al noleggio.",
+      "regolamento": "R-INV",
+      "valido_al": "2026-11-15",
+      "valido_dal": "2026-11-15"
+    }
+  ],
+  "schema": "contratti",
+  "schema_versione": 1
+}

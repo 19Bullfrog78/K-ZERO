@@ -60,12 +60,17 @@ Resoconto controlla_lettura(Lettura lettura, const Visibilita& visibilita) {
         problemi.insert(problemi.end(), contenuto.begin(), contenuto.end());
     }
     const Presentatore presentatore(r.contenuto_controllato ? &r.lettura.pacchetto : nullptr, &r.lettura.versioni, visibilita);
+    const Visibilita& leggibili = r.lettura.leggibili;
     for (const kzero::Problem& p : problemi) {
         const DefinizioneControllo& d = definizione_controllo(p.check);
+        const Classe posizione = classe_della_posizione(p.where, r.lettura);
+        // Cassaforte (K-010): un problema che l'utente non puo' calcolare con le classi che apre non si mostra e non si conta
+        // (sarebbe fatto su dati mancanti): il resoconto dice quali controlli non sono verificati.
+        if (!verificabile(d, p.variant, posizione, in_trasportato(p.where, r.lettura), leggibili)) continue;
         (d.livello == Livello::Errore ? r.errori : r.avvisi) += 1;
         // Il problema rivela il piu' riservato tra cio' che dice in se' e il dato in cui sta la sua posizione. Se e' un
         // dato particolare (salute), di base si conta soltanto: niente codice, messaggio, posizione.
-        const Classe rivela = piu_riservata(d.rivela_variante(p.variant), classe_della_posizione(p.where, r.lettura));
+        const Classe rivela = piu_riservata(d.rivela_variante(p.variant), posizione);
         if (rivela == Classe::Particolare && !visibile(Classe::Particolare, visibilita)) {
             (d.livello == Livello::Errore ? r.errori_riservati : r.avvisi_riservati) += 1;
             continue;
@@ -77,6 +82,14 @@ Resoconto controlla_lettura(Lettura lettura, const Visibilita& visibilita) {
         r.problemi.push_back({d.livello, d.codice, presentatore.messaggio(p), dove.posizione, dove.ridotta, giorni, p.where});
     }
     std::stable_sort(r.problemi.begin(), r.problemi.end(), prima);
+    for (const Classe c : {Classe::Personale, Classe::Particolare}) {
+        if (c == Classe::Personale ? leggibili.personali : leggibili.particolari) continue;
+        Resoconto::NonVerificati nv;
+        nv.classe = c;
+        for (const DefinizioneControllo& d : catalogo_controlli())
+            if (c == Classe::Personale ? d.richiede_personali : d.richiede_particolari) nv.controlli.push_back(d.codice);
+        r.non_verificati.push_back(nv);
+    }
     return r;
 }
 

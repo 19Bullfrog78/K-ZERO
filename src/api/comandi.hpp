@@ -24,6 +24,15 @@ struct Parametri {
     std::optional<kzero::Day> data;       // --data (kzero giornata)
     std::string persona;                  // --persona: vuoto = non scritto
     std::string mezzo;                    // --mezzo: vuoto = non scritto
+    // Cassaforte (K-010)
+    std::string utente;                   // --utente: chi apre la cassaforte; vuoto = non scritto
+    bool password_da_ingresso = false;    // --password-da-ingresso: le password dall'ingresso standard, una per riga
+    std::string scrivi;                   // --scrivi: la cartella che il comando scrive o cambia; vuoto = non scritto
+    std::optional<kzero::Day> conservazione;   // --conservazione: fino a quando si tengono i dati
+    std::string nuovo_utente;             // --nuovo-utente
+    std::string permessi;                 // --permessi: personali, particolari, tutti
+    std::string utente_da_togliere;       // --utente-da-togliere
+    std::string per_utente;               // --per-utente: password nuova per un altro utente
     std::vector<std::string> argomenti;   // argomenti del comando (es. la cartella), nell'ordine della definizione
 };
 
@@ -41,8 +50,9 @@ enum class TipoParametro {
 
 // Forma di un valore libero; la controlla la lettura dei parametri, prima del comando.
 enum class FormaValore {
-    Data,     // AAAA-MM-GG, un giorno che esiste nel calendario
-    Codice,   // codice K-Zero: lettere senza accenti, cifre, '-', '_' e '.'; al massimo 64 caratteri
+    Data,      // AAAA-MM-GG, un giorno che esiste nel calendario
+    Codice,    // codice K-Zero: lettere senza accenti, cifre, '-', '_' e '.'; al massimo 64 caratteri
+    Percorso,  // una cartella: testo non vuoto, al massimo 4096 byte, senza a capo (K-010, --scrivi)
 };
 
 struct DefinizioneParametro {
@@ -51,7 +61,7 @@ struct DefinizioneParametro {
     std::vector<std::string> valori;    // Scelta: valori ammessi, in ordine alfabetico
     std::string predefinito;            // Scelta: valore usato se il parametro manca
     FormaValore forma = FormaValore::Codice;   // Valore: forma del valore
-    bool obbligatorio = false;                 // Valore: va sempre scritto
+    bool obbligatorio = false;                 // Valore e Scelta: va sempre scritto
     std::vector<std::string> incompatibili;    // parametri che non si possono scrivere insieme a questo
     std::string descrizione;
     // Mette il valore nei Parametri ("" per un interruttore presente).

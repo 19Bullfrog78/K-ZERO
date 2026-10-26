@@ -26,6 +26,18 @@ enum class Check {
     NotRegularFile,           // K-009: lettura blindata
     LinkOutsideFolder,
     DirectoryInsteadOfFile,
+    // Cassaforte dei dati personali (K-010): li segnala chi legge il pacchetto e la cassaforte (l'API).
+    VaultMissing,              // il manifesto dichiara la cassaforte, il file manca
+    VaultUndeclared,           // c'e' il file della cassaforte, il manifesto non la dichiara
+    VaultGenerationMismatch,   // cassaforte e file normali di chiusure diverse
+    VaultValueOrphan,          // un valore della cassaforte non trova il suo elemento
+    VaultValueConflict,        // un valore c'e' sia nella cassaforte sia in chiaro
+    ClearPersonalData,         // dati personali o particolari in chiaro (senza "dati_inventati", o accanto a una cassaforte)
+    RetentionExpired,          // data di conservazione passata
+    // Password da cambiare (K-010 aggiunta 1): avvisi dell'apertura e dei comandi della cassaforte.
+    KeysFromEnvelope,          // chi apre ha ricevuto chiavi nuove in una busta (un utente e' stato tolto)
+    UserRemovedPasswords,      // dopo aver tolto un utente: le password che conosceva vanno cambiate
+    PasswordWrittenByOther,    // password scritta da chi ha aggiunto l'utente o gliel'ha data
     // Turni (K-008): errori.
     ShiftPartInvalid,
     ShiftItemsOrder,

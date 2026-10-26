@@ -132,6 +132,15 @@ Un campo senza marcatura vale, per prudenza, come particolare: una prova control
 abbiano la loro classe, che i dati personali stiano solo nei luoghi privati e nei passeggeri, e quali sono
 i dati particolari.
 
+**Cassaforte** (K-010, [cassaforte.md](cassaforte.md)). In un pacchetto chiuso tutti i valori personali e particolari,
+scelti con queste stesse classi, stanno nella cassaforte cifrata (`cassaforte.kzc`); i file normali hanno solo i dati
+comuni e, da soli, non rispettano lo schema (mancano i campi obbligatori personali): lo schema si controlla sui dati
+uniti. Ogni valore e' legato al suo elemento con il codice; un elemento senza codice con la **chiave** dichiarata nello
+schema (`"x-kzero-chiave"`: turno e data di un'assegnazione del giorno, luogo di una fermata di un gruppo). Un elemento
+che ha valori nella cassaforte non va tolto ne' cambiato nei file normali: si corregge con un'uscita in chiaro e una
+richiusura (`kzero esporta`, `kzero richiudi`). Un pacchetto senza cassaforte con dati personali o particolari e senza
+`"dati_inventati": true` ha l'avviso K-CTR-096 a ogni lettura: i dati veri stanno solo nella cassaforte.
+
 Dal K-009 le stesse classi decidono anche le **posizioni** dei problemi (di base non entrano mai in un dato personale
 o particolare), quali problemi si contano soltanto (quelli sui dati sulla salute) e quanti dati personali e
 particolari ci sono in un pacchetto: docs/controlli.md e docs/sicurezza.md. Una marcatura puo' stare anche su un elemento
@@ -169,12 +178,16 @@ dell'elenco `luoghi`), **obbligatorio** (si'/no), **classe** (comune, personale,
 
 ### pacchetto.json
 
-Il manifesto: chi, quando, da dove vengono i dati, che livello di dati contiene. Schema:
-[docs/schema/pacchetto.v1.schema.json](schema/pacchetto.v1.schema.json).
+Il manifesto: chi, quando, da dove vengono i dati, che livello di dati contiene, se ha una cassaforte. Schemi:
+[docs/schema/pacchetto.v2.schema.json](schema/pacchetto.v2.schema.json) (versione attuale, K-010) e
+[docs/schema/pacchetto.v1.schema.json](schema/pacchetto.v1.schema.json) (versione 1, ancora letta: e' la versione 2 senza
+`cassaforte` e `porta_a_porta_sensibile`, e il fuso orario senza lunghezza massima; un manifesto 1 vale come "nessuna
+cassaforte" e "il porta a porta non e' sensibile"). Per passare alla 2 si scrive `"schema_versione": 2`, si aggiunge
+`"cassaforte": false` e si sceglie `porta_a_porta_sensibile`.
 
 | Campo | Obbl. | Classe | Significato |
 |---|---|---|---|
-| `codice` | si' | comune | Codice del pacchetto (serve a dire da quale pacchetto ne deriva un altro) |
+| `codice` | si' | comune | Codice del pacchetto (serve a dire da quale pacchetto ne deriva un altro; la cassaforte lo ripete per non finire in un altro pacchetto) |
 | `nome` | no | comune | Nome del pacchetto |
 | `dati_inventati` | no | comune | `true` = dati inventati (esempi, prove): non usarli come dati reali |
 | `aziende[]` | si' | comune | Aziende presenti nel pacchetto (una o piu'): `codice`, `nome` |
@@ -183,14 +196,16 @@ Il manifesto: chi, quando, da dove vengono i dati, che livello di dati contiene.
 | `origine.deriva_da` | no | comune | Codice del pacchetto da cui deriva |
 | `origine.nota` | no | comune | Note sull'origine dei dati |
 | `livello` | si' | comune | `solo_numeri` (consigliato) oppure `completo` |
-| `fuso_orario` | si' | comune | Nome IANA del fuso (es. `Europe/Rome`): gli orari sono orari locali di questo fuso |
+| `fuso_orario` | si' | comune | Nome IANA del fuso (es. `Europe/Rome`), al massimo 64 caratteri (versione 2): gli orari sono orari locali di questo fuso |
 | `valuta` | si' | comune | Codice ISO 4217 (es. `EUR`): i costi sono in questa valuta |
 | `impostazioni.margine_trasbordo_minuti` | si' | comune | Scelta di chi pianifica: la corsa che riceve un trasbordo deve arrivare almeno tanti minuti prima della corsa che consegna |
+| `impostazioni.porta_a_porta_sensibile` | si' (v2) | comune | `true` = chi viaggia porta a porta lascia capire un dato sulla salute (es. in Trentino il porta a porta e' di regola un servizio per persone con disabilita'): nome e casa di ogni passeggero porta a porta valgono come dati particolari, come quelli di chi va in un luogo sensibile (vedi "Luoghi sensibili"). `false` = il porta a porta non dice nulla sulla salute (es. trasporto scolastico in campagna) |
+| `cassaforte` | si' (v2) | comune | `false` = nessuna cassaforte; altrimenti `id` (codice della cassaforte, 32 cifre esadecimali) e `generazione` (cresce a ogni richiusura). Lo scrive il programma (`kzero chiudi`, `kzero richiudi`): vedi [cassaforte.md](cassaforte.md) |
 
 ```json
 {
   "schema": "pacchetto",
-  "schema_versione": 1,
+  "schema_versione": 2,
   "codice": "DEMO-2026",
   "nome": "Pacchetto dimostrativo K-Zero",
   "dati_inventati": true,
@@ -200,7 +215,8 @@ Il manifesto: chi, quando, da dove vengono i dati, che livello di dati contiene.
   "livello": "completo",
   "fuso_orario": "Europe/Rome",
   "valuta": "EUR",
-  "impostazioni": { "margine_trasbordo_minuti": 3 }
+  "impostazioni": { "margine_trasbordo_minuti": 3, "porta_a_porta_sensibile": true },
+  "cassaforte": false
 }
 ```
 
@@ -296,25 +312,29 @@ autorizzato). Tipi dei luoghi privati: `porta_a_porta` (la casa del passeggero, 
 Un punto di trasbordo e' un luogo di tipo `punto_trasbordo`, oppure un altro luogo pubblico (es. un punto di
 sosta) con il blocco `trasbordo`. Una casa non e' mai un punto di trasbordo.
 
-**Luoghi sensibili** (K-009, con l'aggiunta 1). Il nome e la posizione di un centro diurno sono dati comuni (e' un luogo
-pubblico), ma "Bianchi Luca scende al centro diurno", o "la corsa passa da Casa Bianchi e arriva al centro diurno", e'
-un dato sulla salute di chi ci va. Una regola sola per tutte le uscite, testo e JSON allo stesso modo: quando si vedono i
-dati personali (`--includi-dati-personali`) ma non quelli particolari, in un **insieme** che lascia riconoscere una
-persona trasportata - il nome di un passeggero, oppure la sua casa (un punto porta a porta con il nome o l'indirizzo) -
-ogni luogo sensibile diventa `"riservato"`: il codice e il nome, e la scuola o il centro che ci sta. L'insieme e'
-quello che l'uscita lega con i codici che mostra:
-- `kzero controlla`: il messaggio di un problema;
-- `kzero dimostrazione`: servizi e corse insieme (sono legati dai codici dei servizi e dei trasbordi); l'elenco dei
-  luoghi no, perche' non lega nessuno a un luogo;
-- `kzero giornata`: tutta la giornata mostrata, in ognuna delle tre viste (tutti, un mezzo, una persona): corse e pezzi
-  di corsa, attivita', luogo di inizio e di fine dei turni, presa servizio. Un turno solo non basta: il luogo si
-  leggerebbe nel turno dopo dello stesso mezzo, in quello che riceve il trasbordo o in quello dell'assistente a bordo.
+**Luoghi sensibili** (K-009; regola nuova dal K-010). Il nome e la posizione di un centro diurno sono dati comuni (e' un
+luogo pubblico), ma "Bianchi Luca scende al centro diurno", o "la corsa passa da Casa Bianchi e arriva al centro diurno",
+e' un dato sulla salute di chi ci va. Dal K-010 la regola vale **per la persona, non per il luogo**: il nome, la casa e
+gli altri dati personali di un passeggero **legato** a un luogo sensibile, e i dati della sua casa, valgono come **dati
+particolari**, in **tutte le uscite** (non solo dove compare il centro); il centro si vede sempre. Si vedono solo
+insieme ai dati particolari (`--includi-dati-particolari`, e con la cassaforte i permessi dei dati personali e
+particolari); altrimenti al loro posto c'e' il codice, che nessuna uscita lega mai al nome. Cosi' la regola regge tra
+uscite diverse: chi ha i soli dati personali non puo' leggere il nome in un'uscita e il centro accanto al codice della
+casa in un'altra. Nella cassaforte quei dati stanno in una sezione a parte, quella dei legati, che si decifra solo con
+tutti e due i permessi: chi ne ha uno solo (i personali o i particolari) non li puo' decifrare.
 
-Con `--includi-dati-particolari` si vede tutto; di base (senza dati personali) il luogo si vede, perche' passeggeri e case
-restano solo codici. Non riguarda il personale (lavorare in un centro, o il garage presso la casa di un autista, non e'
-un dato sulla salute di nessuno) ne' i conteggi. Nel demo il centro diurno `L-CENTRO` e' sensibile. I nomi e i codici
-liberi (servizi, gruppi, corse, turni, calendari, note) restano responsabilita' di chi scrive i dati: un nome come
-"Trasporto al centro diurno" accanto all'elenco dei passeggeri dice lo stesso (docs/sicurezza.md).
+Chi e' legato (calcolato sul pacchetto, dai dati comuni; una regola sola nel codice, `LegameSensibile`):
+- i passeggeri di un gruppo che va (o parte) da una scuola o un centro in un luogo sensibile, o che ha una fermata in un
+  luogo sensibile; i passeggeri che salgono o scendono in un luogo sensibile;
+- le case (punti porta a porta) dei passeggeri legati e quelle tra le fermate di un gruppo legato; le case toccate da
+  una corsa che, da sola o con i suoi trasbordi, passa da un luogo sensibile; e i passeggeri che salgono o scendono in
+  una casa legata;
+- con `porta_a_porta_sensibile: true` nel manifesto (versione 2): tutte le case porta a porta e i loro passeggeri.
+
+Non riguarda il personale (lavorare in un centro, o il garage presso la casa di un autista, non e' un dato sulla salute
+di nessuno) ne' i conteggi. Nel demo il centro diurno `L-CENTRO` e' sensibile e il porta a porta e' sensibile. I nomi e
+i codici liberi (servizi, gruppi, corse, turni, calendari, note) restano responsabilita' di chi scrive i dati: un nome
+come "Trasporto al centro diurno" accanto all'elenco dei passeggeri dice lo stesso (docs/sicurezza.md).
 
 ```json
 {

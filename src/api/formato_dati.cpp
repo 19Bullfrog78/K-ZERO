@@ -5,8 +5,8 @@ namespace kzero::api {
 
 const std::vector<FileDati>& file_dati() {
     static const std::vector<FileDati> elenco = {
-        {"pacchetto.json", "pacchetto", {1}, true,
-         "Manifesto: aziende, periodo, origine, livello dei dati, fuso orario, valuta, impostazioni."},
+        {"pacchetto.json", "pacchetto", {1, 2}, true,
+         "Manifesto: aziende, periodo, origine, livello dei dati, fuso orario, valuta, impostazioni, cassaforte."},
         {"aziende.json", "aziende", {1}, false,
          "Elenchi e impostazioni di ogni azienda: attivita', assenze, fermi, competenze, norme, ricovero, abbinamento."},
         {"norme.json", "norme", {1}, false,

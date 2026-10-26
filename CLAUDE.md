@@ -35,6 +35,12 @@ Si parte da Alpinabus (3 minibus + 1 auto) e si deve poter crescere fino a 500 m
   `./build/kzero giornata <cartella> --data AAAA-MM-GG [--persona CODICE | --mezzo CODICE]`
   (es. `./build/kzero giornata esempi/demo --data 2026-10-22 --persona P-C`; `--formato json`; con errori nei dati
   non mostra nulla e rimanda a kzero controlla, errore K-ERR-018)
+- Cassaforte dei dati personali (K-010, docs/cassaforte.md): `./build/kzero chiudi <cartella in chiaro> --scrivi <cartella
+  nuova> --utente CODICE --conservazione AAAA-MM-GG`; poi ogni comando su un pacchetto chiuso vuole `--utente CODICE` e la
+  password (dal terminale senza eco, oppure dall'ingresso standard con `--password-da-ingresso`; mai come parametro ne' in
+  una variabile d'ambiente). Altri comandi: `cassaforte`, `registro`, `esporta` e `richiudi` (correggere i dati),
+  `aggiungi-utente`, `togli-utente`, `password`, `conservazione`, `cancella`; quelli che cambiano la cassaforte vogliono
+  `--scrivi <cartella del pacchetto>`. Copia congelata della versione 1 con le password di prova: tests/esempi/k010-cassaforte.
 - Eseguire le prove: `ctest --test-dir build --output-on-failure`
 - Le prove sugli schemi JSON (`schema.*`) richiedono lo strumento standard check-jsonschema (versioni e
   impronte fissate), da installare prima di configurare in un ambiente Python dedicato:
@@ -46,9 +52,11 @@ Si parte da Alpinabus (3 minibus + 1 auto) e si deve poter crescere fino a 500 m
   -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build-san && ctest --test-dir build-san --output-on-failure`
 - Fuzzing (prove con dati casuali e deformati, libFuzzer, solo clang; su Ubuntu serve il pacchetto libclang-rt-18-dev):
   `CC=clang CXX=clang++ cmake -S . -B build-fuzz -DKZERO_FUZZ=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo &&
-  cmake --build build-fuzz --target fuzz_pacchetto fuzz_parametri fuzz_date_e_orari`, poi
-  `tests/fuzz/fuzz.sh build-fuzz <secondi per bersaglio> [cartella di lavoro] [bersagli]` (27 bersagli: `pacchetto-<file>`,
-  `parametri`, `date-e-orari`; nel controllo GitHub 20 secondi; in locale a lungo, es. `KZERO_FUZZ_PARALLELI=4
+  cmake --build build-fuzz --target fuzz_pacchetto fuzz_parametri fuzz_date_e_orari fuzz_cassaforte rigioca_fuzz`
+  (rigioca_fuzz prepara i semi della cassaforte, con chiavi nuove a ogni giro), poi
+  `tests/fuzz/fuzz.sh build-fuzz <secondi per bersaglio> [cartella di lavoro] [bersagli]` (32 bersagli: `pacchetto-<file>`,
+  `parametri`, `date-e-orari` e, dal K-010, `cassaforte`, `cassaforte-voci`, `registro`, `registro-voci`, `password`; nel
+  controllo GitHub 20 secondi; in locale a lungo, es. `KZERO_FUZZ_PARALLELI=4
   tests/fuzz/fuzz.sh build-fuzz 3600 ~/kzero-fuzz`). Un guasto lascia il file che lo provoca in
   `<lavoro>/guasti/<bersaglio>/`: si corregge e il file va in `tests/fuzz/casi/<bersaglio>/` (diventa una prova normale).
 - Sicurezza (cosa protegge K-Zero, rischi, consigli, violazioni): docs/sicurezza.md; elenco dei componenti esterni:
@@ -67,9 +75,9 @@ Si parte da Alpinabus (3 minibus + 1 auto) e si deve poter crescere fino a 500 m
   servira' (es. le distanze da Google Maps) lo fara' solo un adattatore separato, acceso con un parametro
   esplicito, che manda fuori il minimo (coordinate, mai nomi o altri dati delle persone), con un suo mandato.
   Non scrive file senza --scrivi; controlla ogni dato in ingresso con limiti di buon senso e rifiuta i file
-  malformati senza bloccarsi; conserva il minimo dei dati personali. Il mandato "privacy e sicurezza di base"
-  (K-009) viene prima di qualunque dato vero; la cassaforte dei dati personali (cifratura, utenti, registro degli
-  accessi) e' il mandato K-010. Dettagli e rischi che restano: docs/sicurezza.md.
+  malformati senza bloccarsi; conserva il minimo dei dati personali. I dati veri entrano solo dopo la sicurezza di base
+  (K-009) e la cassaforte dei dati personali (K-010: cifratura, utenti e permessi, registro degli accessi). Dettagli e
+  rischi che restano: docs/sicurezza.md e docs/cassaforte.md.
 
 ## Regole di lavoro
 - IMPORTANTE: K-Zero è un software professionale: stabile, solido, preciso.
@@ -90,7 +98,9 @@ Si parte da Alpinabus (3 minibus + 1 auto) e si deve poter crescere fino a 500 m
 - Tre piani (docs/architettura.md): nucleo in src/nucleo (modello, regole, calcolo: niente stampa, niente
   riga di comando); API in src/api (il contratto: riga di comando con uscita testo/JSON); adattatori sopra l'API.
 - Librerie con versione e impronta fissate: CLI11 2.7.2 (parametri), nlohmann/json 3.12.0 (JSON),
-  GoogleTest 1.15.2 (prove), valijson 1.1.3 (controllo dei dati con gli schemi; fissata con l'impronta del commit).
+  GoogleTest 1.15.2 (prove), valijson 1.1.3 (controllo dei dati con gli schemi; fissata con l'impronta del commit);
+  dal K-010 libsodium 1.0.22 (cifratura, solo le sue primitive come le documenta), utf8proc 2.11.3 (normalizzazione delle
+  password) e l'elenco delle password comuni di SecLists (fissato con il commit e l'impronta del file).
 - Dati: pacchetto = cartella con manifesto e un file JSON per tipo di dato (docs/formato-dati.md); schemi in
   docs/schema, incorporati nel programma insieme al pacchetto esempi/demo.
 - Nessun valore di regola e nessun nome di committente nel codice: le regole di un territorio o di un
@@ -113,16 +123,28 @@ Si parte da Alpinabus (3 minibus + 1 auto) e si deve poter crescere fino a 500 m
 - Stesso input = stesso output: ordinamenti stabili, nessun uso dell'orologio o del caso.
   Ogni comando che dipende da una data la riceve come parametro (`--data AAAA-MM-GG`).
 - Di base nessun comando scrive file; per scrivere serve `--scrivi <percorso>`.
+- Eccezioni della cassaforte (K-010), le uniche: l'orologio (ora delle voci del registro, scadenza della data di
+  conservazione), il caso (chiavi, sali, nonce: le uscite restano uguali, i byte della cassaforte no) e le scritture del
+  registro degli accessi senza `--scrivi`. Nessun parametro cambia l'ora; un'ora fissa e Argon2id leggero solo nelle prove
+  interne (accesso::Ambiente), mai nel programma kzero. I comandi che cambiano la cassaforte vogliono `--scrivi`.
 - Tre classi di dati, marcate campo per campo negli schemi ("x-kzero-classe"): comuni, personali (nomi,
   indirizzi, case, punti porta a porta, motivi scritti a mano), particolari (salute: esigenze, carrozzine,
   assistente necessario, servizio per disabili). Nelle uscite, testo e JSON allo stesso modo: di base i
   personali sono sostituiti dal codice e i particolari diventano "riservato"; si vedono solo con
-  `--includi-dati-personali` e `--includi-dati-particolari`. Vale anche nei messaggi, nelle posizioni (mai dentro un
+  `--includi-dati-personali` e `--includi-dati-particolari`, e con un pacchetto chiuso solo entro i permessi dell'utente
+  (oltre i permessi e' un errore K-ERR, mai un'uscita filtrata in silenzio). Vale anche nei messaggi, nelle posizioni (mai dentro un
   dato personale o particolare: si fermano all'elemento comune piu' vicino, regola ricavata dagli schemi) e nei
   problemi stessi (ogni controllo K-CTR dichiara cosa rivela; quelli sui dati sulla salute di base si contano
   soltanto). Con i nomi dei passeggeri o le loro case e senza i dati particolari, il legame con un luogo sensibile e'
   riservato in tutto l'insieme che l'uscita lega (il messaggio, servizi e corse, l'intera giornata): una regola sola,
-  `LegameSensibile` in src/api/riservatezza.hpp.
+  `LegameSensibile` in src/api/riservatezza.hpp. Dal K-010 segue i permessi, non i parametri, e nome e casa di chi va in
+  un luogo sensibile sono dati particolari in tutte le uscite (DECISIONI.md).
+- Cassaforte (K-010): i dati personali e particolari veri stanno solo nella cassaforte del pacchetto; ogni nuovo lettore
+  (es. il file del CTA) li scrive solo li', mai in file in chiaro. Dati decifrati mai su disco ne' in file temporanei
+  (l'unica eccezione e' l'uscita in chiaro esplicita di `kzero esporta --scrivi`). Ogni nuova uscita prende la visibilita'
+  dai permessi e dai parametri insieme; un controllo o un calcolo che ha bisogno di una classe che l'utente non puo'
+  aprire dice "non verificato", mai un risultato fatto su dati mancanti. Ogni apertura scrive prima la voce del registro:
+  senza voce, nessun dato.
 - Ogni nuova uscita, messaggio, posizione o registro passa dal filtro delle classi; nessun dato personale nei registri
   del programma. La lettura dei file e' blindata (solo file normali dentro la cartella del pacchetto, mai oltre il
   massimo di byte): ogni nuovo lettore di file esterni (es. il file del CTA) la usa.
@@ -146,3 +168,10 @@ Si parte da Alpinabus (3 minibus + 1 auto) e si deve poter crescere fino a 500 m
   R-TN, che riporta regole pubbliche con la fonte): non usarli come dati reali.
 - Un orario oltre le 24:00 resta tale ("24:12"), anche in uscita: non riportarlo alla mezzanotte.
 - Posti dei mezzi = posti per i passeggeri, conducente escluso (sul libretto il campo S.1 lo comprende).
+- Cassaforte (K-010): un valore si lega al suo elemento per codice (o per la chiave dichiarata nello schema,
+  `x-kzero-chiave`), mai per posizione; un valore senza il suo elemento e' un errore K-CTR, mai un'unione sbagliata.
+  Chi ha solo i dati personali non riceve mai la chiave dei particolari, nemmeno durante il cambio delle chiavi.
+- Cassaforte (K-010 aggiunta 1): i dati personali di chi va in un luogo sensibile stanno nella sezione dei legati, con
+  una chiave ricavata da quelle dei personali e dei particolari insieme: si ricifra a ogni cambio di una delle due, e
+  togliere un utente vuole tutti e due i permessi. Gli avvisi della cassaforte (password da cambiare, conservazione) hanno
+  i testi nel catalogo dei controlli (K-CTR-097 ... 100), mai scritti a parte in un comando.
