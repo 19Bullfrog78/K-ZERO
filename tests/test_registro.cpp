@@ -5,6 +5,7 @@
 #include <unistd.h>
 
 #include <algorithm>
+#include <array>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
@@ -34,6 +35,8 @@ namespace {
 
 const std::string kId = "00112233445566778899aabbccddeeff";
 const std::string kPw = "cavallo pesca lampione verde";
+const std::string kPwB = "barca gialla sul lago verde";
+const std::string kPwC = "il treno delle sette e mezza";
 
 Segreto pw(const std::string& t) {
     password::Problema p = password::Problema::Nessuno;
@@ -53,23 +56,28 @@ registro::Voce voce(const std::string& comando) {
     return v;
 }
 
-// Un registro riscritto da chi ha le chiavi (come un altro programma): voci date cosi' come sono, cifrate per formato.
-std::string riscritto(const JsonDati& voci, const cassaforte::Cassaforte& c) {
-    Bytes id;
-    cripto::da_esadecimale(kId, id);
+// Un registro scritto come farebbe un altro programma (docs/cassaforte.md): voci date cosi' come sono, cifrate con la
+// chiave del registro data, per la versione della chiave base data.
+std::string registro_cifrato(const JsonDati& voci, const Bytes& id, std::uint32_t versione_base, const Segreto& chiave) {
     cassaforte::formato::Scrittore w;
     const unsigned char magia[8] = {'K', 'Z', '-', 'R', 'E', 'G', 'I', 'S'};
     w.byte(magia, 8);
     w.u16(1);
     w.byte(id);
-    w.u32(c.versione_base());
+    w.u32(versione_base);
     const Bytes ad = w.dati();
     const Bytes nonce = cripto::casuali(cripto::kNonce);
     w.byte(nonce);
     const std::string testo = voci.dump();
-    w.byte(cripto::cifra(c.chiave_registro(c.versione_base()), nonce.data(), reinterpret_cast<const unsigned char*>(testo.data()),
-                         testo.size(), ad));
+    w.byte(cripto::cifra(chiave, nonce.data(), reinterpret_cast<const unsigned char*>(testo.data()), testo.size(), ad));
     return std::string(w.dati().begin(), w.dati().end());
+}
+
+// Un registro riscritto da chi ha le chiavi (come un altro programma).
+std::string riscritto(const JsonDati& voci, const cassaforte::Cassaforte& c) {
+    Bytes id;
+    cripto::da_esadecimale(kId, id);
+    return registro_cifrato(voci, id, c.versione_base(), c.chiave_registro(c.versione_base()));
 }
 
 JsonDati voci_json(const registro::Registro& r) {
@@ -445,4 +453,175 @@ TEST(Accesso, DatiDecifratiMaiSuDisco) {
         ++letti;
     }
     EXPECT_EQ(letti, file_del_pacchetto.size());
+}
+
+namespace {
+
+// Una cassaforte finta tutta coerente, preparata da chi ha solo i file (nessuna password, nessuna chiave), seguendo il
+// formato di docs/cassaforte.md: chiavi nuove per tutti i livelli con le versioni alzate, storie con chiavi vecchie
+// inventate (quelle vere non le conosce), una busta per ogni utente e livello (le chiavi pubbliche sono in chiaro), sezioni
+// cifrate con le chiavi nuove (dati inventati), autenticazioni rifatte, e il registro rifatto con la chiave base finta, con
+// l'ancora giusta nella cassaforte (cosi' nessun altro controllo la ferma prima di quello delle storie).
+struct Finta {
+    std::string cassaforte;
+    std::string registro;
+};
+
+Finta cassaforte_finta(const std::string& vera, const std::vector<Voce>& personali) {
+    using namespace cassaforte::formato;
+    Analizzato a = analizza(vera);
+    Intestazione& i = a.intestazione;
+    std::array<Segreto, kLivelli> k;
+    for (int l = 0; l < kLivelli; ++l) {
+        const std::size_t ls = static_cast<std::size_t>(l);
+        i.versioni[ls] += 1;
+        const Bytes b = cripto::casuali(cripto::kChiave);
+        k[ls] = Segreto(b.data(), b.size());
+        Scrittore storia;
+        for (std::uint32_t v = 1; v < i.versioni[ls]; ++v) {
+            storia.u32(v);
+            storia.byte(cripto::casuali(cripto::kChiave));
+        }
+        const Bytes nonce = cripto::casuali(cripto::kNonce);
+        Bytes s = nonce;
+        const Bytes c = cripto::cifra(derivata(k[ls], kPerStoria), nonce.data(), storia.dati().data(), storia.dati().size(),
+                                      ad_livello(i.id, l, i.versioni[ls]));
+        s.insert(s.end(), c.begin(), c.end());
+        i.storie[ls] = std::move(s);
+    }
+    i.buste.clear();
+    for (const Utente& u : i.utenti)
+        for (int l = 0; l < kLivelli; ++l) {
+            if (!ha(u.permessi, l)) continue;
+            const std::size_t ls = static_cast<std::size_t>(l);
+            const Bytes dentro = contenuto_busta(i.id, l, i.versioni[ls], k[ls]);
+            Busta b;
+            b.codice = u.codice;
+            b.livello = l;
+            b.versione = i.versioni[ls];
+            b.busta = cripto::sigilla(dentro.data(), dentro.size(), u.pubblica);
+            i.buste.push_back(std::move(b));
+        }
+    std::string sezioni;
+    for (std::size_t classe = 0; classe < i.sezioni.size(); ++classe) {
+        const int livello = classe == 0 ? kPersonali : kParticolari;
+        const std::size_t ls = static_cast<std::size_t>(livello);
+        const std::string testo = testo_sezione(classe == 0 ? personali : std::vector<Voce>{});
+        Sezione& s = i.sezioni[classe];
+        s.nonce = cripto::casuali(cripto::kNonce);
+        const Bytes c = cripto::cifra(derivata(k[ls], kPerSezione), s.nonce.data(),
+                                      reinterpret_cast<const unsigned char*>(testo.data()), testo.size(),
+                                      ad_sezione(i.id, livello, i.versioni[ls], i.generazione));
+        s.lunghezza = c.size();
+        s.impronta = cripto::impronta(c);
+        sezioni.append(c.begin(), c.end());
+    }
+    registro::Registro r = registro::nuovo(cripto::esadecimale(i.id));
+    registro::Voce v = voce("chiudi");
+    v.utente = i.utenti.front().codice;
+    registro::aggiungi(r, v);
+    i.registro_voci = 1;
+    i.registro_impronta = registro::impronta(r.voci.back());
+    for (int l : {kPersonali, kParticolari}) {
+        const std::size_t ls = static_cast<std::size_t>(l);
+        i.autenticazione[ls] = cripto::autentica(derivata(k[ls], kPerAutenticazione), lista(i, l));
+    }
+    Bytes h = scrivi_intestazione(i);
+    const Bytes prima(h.begin(), h.end() - static_cast<std::ptrdiff_t>(cripto::kAutenticazione));
+    const Bytes t = cripto::autentica(derivata(k[kBase], kPerAutenticazione), prima);
+    std::copy(t.begin(), t.end(), h.end() - static_cast<std::ptrdiff_t>(cripto::kAutenticazione));
+    Finta f;
+    f.cassaforte = std::string(h.begin(), h.end()) + sezioni;
+    f.registro = registro_cifrato(voci_json(r), i.id, i.versioni[kBase], derivata(k[kBase], kPerRegistro));
+    return f;
+}
+
+}  // namespace
+
+// Aggiunta 1 del K-010, punto 2 (sabotaggio dell'arbitro non scoperto): una cassaforte finta tutta coerente, preparata da
+// chi ha solo i file, con il suo registro. Ogni utente la rifiuta (le chiavi nuove non vengono da chi aveva quelle
+// vecchie: la storia non contiene la chiave della sua fessura) e il programma non mostra nessun dato (K-ERR-028). Senza il
+// controllo delle storie la cassaforte finta si aprirebbe davvero, con i dati inventati.
+TEST(Accesso, CassaforteFintaFattaSenzaPassword) {
+    CartellaDiLavoro lavoro;
+    AmbienteDiProva amb;
+    const fs::path chiuso = demo_chiuso(lavoro, amb);
+    const std::string c = chiuso.string();
+    amb.password = {kPw, kPwB};
+    comando({"aggiungi-utente", "--scrivi", c, "--utente", "A", "--nuovo-utente", "B", "--permessi", "personali"});
+    amb.password = {kPw, kPwC};
+    comando({"aggiungi-utente", "--scrivi", c, "--utente", "A", "--nuovo-utente", "C", "--permessi", "particolari"});
+    Voce inventata;
+    inventata.file = "persone.json";
+    inventata.percorso = JsonDati::array({"persone", JsonDati{{"codice", "P-A"}}});
+    inventata.campo = "nome";
+    inventata.valore = "Nome Inventato";
+    const Finta f = cassaforte_finta(leggi_testo(chiuso / cassaforte::kFile), {inventata});
+    const std::string id = leggi_manifesto(CartellaSuDisco(chiuso))->id;
+    const std::vector<std::pair<std::string, std::string>> utenti = {{"A", kPw}, {"B", kPwB}, {"C", kPwC}};
+    for (const auto& [utente, password] : utenti) {
+        try {
+            const cassaforte::Cassaforte aperta = cassaforte::Cassaforte::apri(f.cassaforte, id, utente, pw(password), politica_leggera());
+            ADD_FAILURE() << "la cassaforte finta si e' aperta per " << utente << " ("
+                          << aperta.voci(Classe::Personale).size() << " valori personali inventati)";
+        } catch (const cassaforte::ErroreCassaforte& e) {
+            EXPECT_EQ(e.tipo, cassaforte::ErroreCassaforte::Tipo::Manomessa) << utente << ": " << e.what();
+        }
+    }
+    // Sul programma, con la cassaforte e il registro finti al loro posto.
+    disco::scrivi_atomico(chiuso, cassaforte::kFile, f.cassaforte);
+    disco::scrivi_atomico(chiuso, registro::kFile, f.registro);
+    for (const auto& [utente, password] : utenti) {
+        amb.password = {password};
+        try {
+            const Risultato r = comando({"giornata", c, "--utente", utente, "--data", "2026-10-22"});
+            ADD_FAILURE() << "giornata mostrata a " << utente << " con la cassaforte finta (uscita " << r.codice << ")";
+        } catch (const ErroreKZero& e) {
+            EXPECT_EQ(e.definizione().codice, "K-ERR-028") << utente;
+        }
+    }
+}
+
+// Aggiunta 1 del K-010, punto 3 (sabotaggio dell'arbitro non scoperto): un utente con le chiavi riscrive il registro con lo
+// stesso numero di voci e la catena ricalcolata, ma una voce prima dell'ancora diversa (l'uscita in chiaro tolta e
+// sostituita). Il registro da solo e' coerente: lo scopre l'impronta dell'ultima voce che la cassaforte ricorda. K-ERR-029,
+// nessun dato.
+TEST(Accesso, RegistroRiscrittoPrimaDellAncora) {
+    CartellaDiLavoro lavoro;
+    AmbienteDiProva amb;
+    const fs::path chiuso = demo_chiuso(lavoro, amb);   // voce 1: chiudi
+    const std::string c = chiuso.string();
+    amb.password = {kPw};
+    comando({"esporta", c, "--scrivi", (lavoro / "uscita").string(), "--utente", "A"});   // voce 2
+    amb.password = {kPw, kPwB};
+    comando({"aggiungi-utente", "--scrivi", c, "--utente", "A", "--nuovo-utente", "B", "--permessi", "personali"});   // voce 3
+    const registro::Registro prima = registro_di(chiuso);
+    ASSERT_EQ(prima.voci.size(), 3u);
+    ASSERT_EQ(prima.voci[1].comando, "esporta");
+    const std::string id = leggi_manifesto(CartellaSuDisco(chiuso))->id;
+    const cassaforte::Cassaforte cf =
+        cassaforte::Cassaforte::apri(leggi_testo(chiuso / cassaforte::kFile), id, "A", pw(kPw), politica_leggera());
+    ASSERT_EQ(cf.riepilogo().registro_voci, 3u);   // l'ancora e' l'ultima voce
+    registro::Registro dopo = registro::nuovo(id);
+    for (registro::Voce v : prima.voci) {
+        if (v.comando == "esporta") {
+            v.comando = "controlla";
+            v.mostrate.clear();
+            v.nota.clear();
+        }
+        registro::aggiungi(dopo, std::move(v));   // numeri e catena ricalcolati
+    }
+    ASSERT_EQ(dopo.voci.size(), prima.voci.size());
+    // Da solo il registro riscritto e' coerente: stesse voci, catena giusta.
+    EXPECT_NO_THROW(registro::voci_dal_testo(voci_json(dopo).dump(), dopo.id, 0, Bytes()));
+    const std::string file = registro::scrivi(dopo, cf);
+    EXPECT_THROW(registro::leggi(file, cf), registro::ErroreRegistro);
+    disco::scrivi_atomico(chiuso, registro::kFile, file);
+    amb.password = {kPw};
+    try {
+        const Risultato r = comando({"giornata", c, "--utente", "A", "--data", "2026-10-22", "--includi-dati-personali"});
+        ADD_FAILURE() << "giornata mostrata con il registro riscritto (uscita " << r.codice << ")";
+    } catch (const ErroreKZero& e) {
+        EXPECT_EQ(e.definizione().codice, "K-ERR-029");
+    }
 }
