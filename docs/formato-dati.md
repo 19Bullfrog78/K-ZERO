@@ -317,10 +317,11 @@ luogo pubblico), ma "Bianchi Luca scende al centro diurno", o "la corsa passa da
 e' un dato sulla salute di chi ci va. Dal K-010 la regola vale **per la persona, non per il luogo**: il nome, la casa e
 gli altri dati personali di un passeggero **legato** a un luogo sensibile, e i dati della sua casa, valgono come **dati
 particolari**, in **tutte le uscite** (non solo dove compare il centro); il centro si vede sempre. Si vedono solo
-insieme ai dati particolari (`--includi-dati-particolari`, e con la cassaforte il permesso di quei dati); altrimenti al
-loro posto c'e' il codice, che nessuna uscita lega mai al nome. Cosi' la regola regge tra uscite diverse: chi ha i soli
-dati personali non puo' leggere il nome in un'uscita e il centro accanto al codice della casa in un'altra. Nella
-cassaforte quei dati stanno con i particolari: senza quel permesso non si possono decifrare.
+insieme ai dati particolari (`--includi-dati-particolari`, e con la cassaforte i permessi dei dati personali e
+particolari); altrimenti al loro posto c'e' il codice, che nessuna uscita lega mai al nome. Cosi' la regola regge tra
+uscite diverse: chi ha i soli dati personali non puo' leggere il nome in un'uscita e il centro accanto al codice della
+casa in un'altra. Nella cassaforte quei dati stanno in una sezione a parte, quella dei legati, che si decifra solo con
+tutti e due i permessi: chi ne ha uno solo (i personali o i particolari) non li puo' decifrare.
 
 Chi e' legato (calcolato sul pacchetto, dai dati comuni; una regola sola nel codice, `LegameSensibile`):
 - i passeggeri di un gruppo che va (o parte) da una scuola o un centro in un luogo sensibile, o che ha una fermata in un

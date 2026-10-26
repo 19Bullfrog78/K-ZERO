@@ -171,3 +171,7 @@ Si parte da Alpinabus (3 minibus + 1 auto) e si deve poter crescere fino a 500 m
 - Cassaforte (K-010): un valore si lega al suo elemento per codice (o per la chiave dichiarata nello schema,
   `x-kzero-chiave`), mai per posizione; un valore senza il suo elemento e' un errore K-CTR, mai un'unione sbagliata.
   Chi ha solo i dati personali non riceve mai la chiave dei particolari, nemmeno durante il cambio delle chiavi.
+- Cassaforte (K-010 aggiunta 1): i dati personali di chi va in un luogo sensibile stanno nella sezione dei legati, con
+  una chiave ricavata da quelle dei personali e dei particolari insieme: si ricifra a ogni cambio di una delle due, e
+  togliere un utente vuole tutti e due i permessi. Gli avvisi della cassaforte (password da cambiare, conservazione) hanno
+  i testi nel catalogo dei controlli (K-CTR-097 ... 100), mai scritti a parte in un comando.

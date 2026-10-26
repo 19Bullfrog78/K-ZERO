@@ -71,7 +71,8 @@ dell'elemento, un dato particolare diventa "riservato"; si vedono solo con `--in
   scende li', le case porta a porta toccate da quei giri) valgono come dati particolari **in tutte le uscite**, non solo
   dove compare il centro; il centro si vede sempre. Cosi' la regola regge tra uscite diverse: nessuna lega mai il codice
   della casa al nome senza i dati particolari ([formato-dati.md](formato-dati.md), "Luoghi sensibili"). Nella cassaforte
-  quei dati stanno con i particolari: chi non ne ha il permesso non li puo' decifrare. Una regola sola nel codice
+  quei dati stanno in una sezione a parte che si decifra solo con tutti e due i permessi (personali e particolari): chi
+  ne ha uno solo non li puo' decifrare, nemmeno lavorando sul file (aggiunta 1 del K-010). Una regola sola nel codice
   (`LegameSensibile`, src/api/riservatezza.hpp);
 - gli errori del programma (K-ERR) non nominano mai un file di soli dati personali.
 
@@ -84,8 +85,9 @@ dell'elemento, un dato particolare diventa "riservato"; si vedono solo con `--in
   casa); chiavi dalle password con **Argon2id** (256 MiB, 3 passaggi; parametri scritti nel file, rifiutati se abbassati
   o assurdi, prima di calcolare);
 - **piu' utenti con permessi**: dati personali, dati particolari o tutti e due; due chiavi dei dati separate e una
-  "fessura" per utente con le sole chiavi dei suoi permessi. Si danno al massimo i permessi che si hanno; togliere un
-  utente rifa' le chiavi e ricifra i dati; non si toglie l'ultimo che legge una classe, ne' l'ultimo con tutti i
+  "fessura" per utente con le sole chiavi dei suoi permessi; i dati di chi e' legato a un luogo sensibile con una chiave
+  ricavata da tutte e due. Si danno al massimo i permessi che si hanno; togliere un utente rifa' le chiavi e ricifra i
+  dati (lo fa chi ha tutti e due i permessi); non si toglie l'ultimo che legge una classe, ne' l'ultimo con tutti i
   permessi;
 - **intestazione autenticata**: utenti, chiavi pubbliche, permessi, parametri e versione sono autenticati con una chiave
   che hanno solo gli utenti (rifatta quando si toglie un utente); chi ha i dati particolari e' autenticato anche con la
@@ -192,8 +194,13 @@ non ha una password; non protegge da tutto. Detto onestamente:
   intera di prima.
 - **Un utente tolto che aveva ancora accesso alla cartella** e gli stessi permessi di chi lo toglie puo', in teoria,
   preparare il file in modo che gli utenti che non hanno piu' aperto la cassaforte con una password nuova accettino
-  chiavi che lui conosce (docs/cassaforte.md, "Cosa non si scopre"). Chi lo ha tolto se ne accorgerebbe aprendo. Rimedio:
-  dopo aver tolto un utente che poteva scrivere nella cartella, gli altri cambiano la password (`kzero password`).
+  chiavi che lui conosce (docs/cassaforte.md, "Cosa non si scopre"). Chi lo ha tolto se ne accorgerebbe aprendo.
+- **Un utente tolto che conosceva la password di un collega** (scritta, detta, uguale a un'altra) apre la fessura del
+  collega e poi la busta con le chiavi nuove: per la cassaforte e' il collega. Rimedio, ricordato dal programma: dopo
+  `kzero togli-utente` chi l'ha tolto cambia subito la sua password (K-CTR-099), e a ogni altro utente ogni apertura lo
+  ricorda finche' non la cambia (K-CTR-098). Cambiare la password da' anche una coppia di chiavi nuova, cosi' la
+  password vecchia non serve nemmeno per i cambi delle chiavi che verranno. Allo stesso modo una password scritta da
+  un altro (utente aggiunto, password persa) va cambiata al primo uso (K-CTR-100). Il programma non obbliga: avvisa.
 - **Il registro** lo puo' riscrivere tutto chi ha le chiavi e sa programmare (ogni utente le ha, per poterlo scrivere);
   le voci scritte dopo l'ultima modifica della cassaforte (le sole letture) si possono togliere senza che si veda. L'ora e'
   quella dell'orologio del PC, che chi usa il PC puo' cambiare. Un comando su una cartella in sola lettura non apre
@@ -214,8 +221,8 @@ non ha una password; non protegge da tutto. Detto onestamente:
   ("Il Faro", che si legge per esempio nel JSON della giornata): con la regola del K-010 il centro si vede comunque, e
   nome e casa di chi ci va restano dati particolari.
 - **Collegamenti tra i codici.** Chi ha i soli dati personali non legge mai nome e casa di chi e' legato a un luogo
-  sensibile (stanno con i particolari, in tutte le uscite). Restano gli orari e i km, per chi conosce la zona, e i nomi
-  liberi.
+  sensibile (sono dati particolari in tutte le uscite), e nemmeno chi ha i soli dati particolari (nella cassaforte si
+  decifrano solo con tutti e due i permessi). Restano gli orari e i km, per chi conosce la zona, e i nomi liberi.
 - **"Non verificato".** Chi non puo' aprire una classe vede meno controlli e una giornata "non verificata" in alcune
   parti: e' voluto (mai un risultato su dati mancanti come se fossero completi), ma chi ha tutti i permessi deve guardare
   anche lui il pacchetto.
@@ -242,8 +249,9 @@ non ha una password; non protegge da tutto. Detto onestamente:
   mai scritta nei file del PC. Nessun recupero: tenere **almeno due utenti con tutti i permessi** (es. il titolare e un
   sostituto), cosi' una password persa si sostituisce (`kzero password --per-utente`).
 - **Un utente della cassaforte per persona**, con i soli permessi che servono (es. l'ufficio i soli dati personali).
-  Chi lascia l'azienda si toglie subito (`kzero togli-utente`); se poteva ancora scrivere nella cartella, gli altri
-  cambiano la password.
+  Chi lascia l'azienda si toglie subito (`kzero togli-utente`), e poi tutti cambiano la password (il programma lo
+  ricorda: K-CTR-098, K-CTR-099). Chi riceve un utente nuovo o una password nuova scritta da un altro la cambia al primo
+  uso (K-CTR-100).
 - **Un utente per persona** anche sul PC, con la sua password, e il blocco dello schermo quando ci si allontana.
 - **Cifratura del disco** del sistema operativo, che **resta necessaria** anche con la cassaforte (copie in chiaro, file
   normali, file di scambio): su Windows BitLocker (Pro) o "Crittografia dispositivo" (Home); su Mac FileVault; su Linux la

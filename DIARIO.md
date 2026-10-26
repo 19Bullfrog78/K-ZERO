@@ -232,6 +232,48 @@
   controllata 1; utente tolto senza chiavi nuove 4; unione per posizione invece che per codice 3; regola dei luoghi
   sensibili tolta dalle uscite 19 (anche cosi' l'utente con i soli dati personali non legge i nomi: nella cassaforte
   stanno con i particolari); password di 8 caratteri accettata 1; blocco della cartella tolto 1. Tutti scoperti.
+- 2026-10-26 - K-010 aggiunta 1 (programma, nella proposta "K-010: cassaforte dei dati personali", dopo il controllo
+  dell'arbitro del 26/10). **1. Dati legati a un luogo sensibile solo con tutti e due i permessi.** Nome, casa,
+  indirizzo e coordinate di chi va in un luogo sensibile stanno in una terza sezione della cassaforte, "dei legati",
+  cifrata con una chiave ricavata dalle chiavi dei personali e dei particolari insieme (HKDF-SHA256 di libsodium; scelta
+  e motivi in DECISIONI.md): prima stavano con i particolari, e chi aveva i soli particolari li decifrava. A ogni cambio
+  di una delle due chiavi la sezione si ricifra, quindi togliere un utente ora lo fa solo chi ha tutti e due i permessi.
+  Formato ancora versione 1 (non e' su main): copia congelata tests/esempi/k010-cassaforte rifatta, stessi utenti e
+  password. Sulla copia del demo (prova interna Cassaforte.CopiaCongelataDelDemoVociPerUtente, solo file e campo):
+  UFFICIO (soli personali) decifra 106 voci di 23 campi, SALUTE (soli particolari) 35 voci di 9 campi, nessuno dei due le
+  24 voci legate (luoghi.json nome, indirizzo, comune, coordinate; servizi.json nome e casa; 4 ciascuno), nemmeno
+  provando sul file tutte le chiavi che si procura; TITOLARE tutte e tre le sezioni. **2. Cassaforte finta** fatta da
+  chi ha solo i file, con un registro riscritto con la chiave base finta: ogni utente la rifiuta (K-ERR-028), nessun dato
+  (Accesso.CassaforteFintaFattaSenzaPassword). **3. Registro riscritto prima dell'ancora** (stesse voci, catena
+  ricalcolata, una voce cambiata): K-ERR-029, nessun dato (Accesso.RegistroRiscrittoPrimaDellAncora). **4. Avvisi sulle
+  password**, testi nel catalogo dei controlli, uguali in testo e JSON: K-CTR-098 (chiavi nuove ricevute in una busta:
+  ogni apertura lo ricorda, in ogni comando, finche' l'utente non cambia la password), K-CTR-099 (dopo togli-utente),
+  K-CTR-100 (password scritta da un altro: dopo aggiungi-utente e password --per-utente). Cambiare la password, anche per
+  se', da' ora una coppia X25519 nuova (DECISIONI.md). La data di conservazione passata usa ovunque il testo del catalogo
+  (K-CTR-097). Uscite: cassaforte 1 e registro 1 con "avvisi" {codice, messaggio}, giornata 2 con cassaforte.avvisi
+  (schemi cambiati sul posto: non sono su main); controlli K-CTR-098 ... 100.
+  Prove: 701 su 701, 22 nuove (5 interne: legati sul file anche dopo un cambio delle chiavi di ciascun livello, copia
+  del demo, cassaforte finta, registro riscritto, avvisi sulle password in sequenza; 12 sul programma e 5 sugli schemi:
+  ogni avviso in ogni comando, togliere un utente con un solo permesso). Cambiate: Unione.AssenzeIntereEPasseggeriLegati
+  (chi ha i soli particolari non legge piu' il nome di P-D1; aggiunto chi ha tutti e due i permessi); lo strumento di
+  test_unione da' i legati solo con tutti e due i permessi, come la cassaforte; Cassaforte.PermessoAlzatoAManoRifiutato
+  (togliere un utente vuole tutti e due i permessi); Controlli.catalogo_coperto (100 controlli);
+  programma.cassaforte_conservazione_passata_giornata (testo del catalogo); piu' testi cercati in cinque prove sul
+  programma della cassaforte. Nessuna prova tolta.
+  Con i sanitizer 699 su 699 (senza le 2 prove sul programma di rilascio), 16 minuti e mezzo con 3 prove insieme.
+  Fuzzing in locale sul codice finale, i 32 bersagli 2 minuti ciascuno, 4 alla volta: 135.093 cassaforti deformate
+  (con la sezione dei legati), 124.143 contenuti della cassaforte, 992.588 registri e 685.694 elenchi di voci, 546.974
+  password, 67.538 file del pacchetto, 28.779 righe di comando, 4.274.162 date e orari. Nessun guasto.
+  Sabotaggio (prove rosse), quelli dell'arbitro: valori legati cifrati con la sola chiave dei particolari 57 (le 2 prove
+  interne sul file; le altre perche' la copia congelata non si apre piu': le uscite da sole non l'avrebbero scoperto,
+  perche' il programma non decifra i legati per chi ha un solo permesso); variante con la stessa chiave della sezione
+  dei particolari 57; controllo delle storie tolto 1 (la cassaforte finta si apriva per tutti e tre gli utenti, giornata
+  con uscita 0); impronta dell'ancora non confrontata 1. In piu': legati non ricifrati al cambio delle chiavi 5; avviso
+  K-CTR-098 mai mostrato 13; stessa coppia X25519 cambiando la propria password 1. Rifatti sul codice nuovo i 12 del
+  K-010: --includi-dati-* senza permesso 4, valori in un file temporaneo 1, voce del registro non scritta 1,
+  intestazione non controllata 3, elenchi non controllati 2, tutti e due 7, catena 1, utente tolto senza chiavi nuove
+  17, unione per posizione 3, LegameSensibile tolto dalle uscite 19, password di 8 caratteri 1, blocco tolto 1. Tutti
+  scoperti.
 
 ## Bug e limiti noti
 - Pause a casa: la regola (dai quanti minuti, entro quanti km da casa, deviazione massima) non e' ancora nei dati;
@@ -312,6 +354,9 @@
 - (K-010) Accorgersi di una copia vecchia della cassaforte rimessa al suo posto: il programma ricorda, fuori dalla
   cartella (es. nella cartella dell'utente sul PC), per ogni cassaforte il numero della chiusura e la versione delle
   chiavi piu' alti visti, e avvisa se ne trova di piu' bassi.
+- (K-010 aggiunta 1) Password scritta da un altro (utente aggiunto, password persa): oggi lo dice solo l'uscita del
+  comando a chi l'ha scritta (K-CTR-100). Per ricordarlo anche al nuovo utente a ogni sua apertura, finche' non la
+  cambia, serve un segno nella sua fessura ("password scritta da un altro"): un dato in piu' nel formato.
 
 ## Prossimi passi
 1. Mandato "orari di lavoro": regole degli orari degli autisti, pausa a casa, filosofia aziendale nei dati.

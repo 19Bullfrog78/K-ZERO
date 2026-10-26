@@ -53,8 +53,11 @@ Una regola sola, ricavata dalle marcature degli schemi (`x-kzero-classe`, src/ap
   il codice della persona: che l'elemento ci sia e' gia' un dato personale; nel file normale l'elenco resta vuoto;
 - un oggetto rimasto vuoto perche' tutti i suoi campi sono andati nella cassaforte si toglie (non dice che c'era
   qualcosa); all'apertura si ricrea;
-- i dati personali di un passeggero o di una casa legati a un luogo sensibile (formato-dati.md, "Luoghi sensibili")
-  vanno con i **particolari**: chi non ha quel permesso non li puo' decifrare.
+- i dati personali di un passeggero o di una casa legati a un luogo sensibile (formato-dati.md, "Luoghi sensibili"):
+  nome, casa, indirizzo, coordinate. Sono dati particolari e vanno in una **sezione a parte, quella dei legati**, cifrata
+  con una chiave ricavata dalla chiave dei personali **e** da quella dei particolari insieme: li decifra solo chi ha tutti
+  e due i permessi. Chi ne ha uno solo non li decifra, nemmeno lavorando sul file con le chiavi che si procura (aggiunta
+  1 del K-010; la prova interna lo verifica sul file, non solo sulle uscite).
 
 Il numero dei valori di ogni classe (contati come li conta `kzero controlla`) si scrive nell'intestazione: lo vedono
 anche gli utenti che non possono aprire quella classe, mai i valori.
@@ -70,34 +73,47 @@ scritto sia nella cassaforte sia in chiaro e' **K-CTR-095**: in tutti e due i ca
 sull'elemento sbagliato.
 
 **La forma si controlla sui dati uniti.** Per chi non ha un permesso, i campi obbligatori di quella classe valgono come
-presenti ma non leggibili (un dato personale di un passeggero puo' stare con i particolari: senza i particolari non si
-sa quale manca davvero), mai come mancanti.
+presenti ma non leggibili (un dato personale di un passeggero puo' stare nella sezione dei legati: senza tutti e due i
+permessi non si sa quale manca davvero), mai come mancanti.
 
 **Altri controlli** (docs/controlli.md): cassaforte dichiarata nel manifesto e mancante (K-CTR-091), presente e non
 dichiarata (K-CTR-092), cassaforte e file normali di chiusure diverse (K-CTR-093), dati personali o particolari in chiaro
-senza "dati inventati" o accanto alla cassaforte (K-CTR-096, avviso), data di conservazione passata (K-CTR-097, avviso).
+senza "dati inventati" o accanto alla cassaforte (K-CTR-096, avviso), data di conservazione passata (K-CTR-097, avviso),
+password da cambiare (K-CTR-098 ... K-CTR-100, avvisi: sezione "Utenti, permessi e chiavi").
 
 ## Utenti, permessi e chiavi
 
 - **Tre chiavi di livello**, casuali, di 32 byte: **base** (la hanno tutti: autentica l'intestazione e cifra il
   registro), **personali** (cifra la sezione dei dati personali), **particolari** (cifra la sezione dei dati
-  particolari). Ognuna ha una versione, che cresce quando la chiave si rifa'.
+  particolari). Ognuna ha una versione, che cresce quando la chiave si rifa'. La **sezione dei legati** (dati personali
+  di chi va in un luogo sensibile) e' cifrata con una chiave ricavata da quelle dei personali e dei particolari insieme
+  (HKDF-SHA256 di libsodium): serve averle tutte e due, nessuna delle due da sola basta.
 - **Una fessura per utente**: la sua chiave segreta X25519 e le chiavi dei soli livelli che ha, cifrate
   (XChaCha20-Poly1305) con la chiave ricavata dalla sua password (Argon2id). I dati associati della fessura sono codice,
   permessi, chiave pubblica, sale e parametri dell'utente: cambiarne uno nell'intestazione e la fessura non si apre piu'.
-- **Togliere un utente** rifa' la chiave base e le chiavi dei livelli che aveva (versione + 1), ricifra le sezioni e
-  consegna le chiavi nuove agli utenti rimasti che hanno quei livelli in una **busta** (`crypto_box_seal` per la loro
+- **Togliere un utente** rifa' la chiave base e le chiavi dei livelli che aveva (versione + 1), ricifra le sezioni di
+  quei livelli e sempre quella dei legati, e consegna le chiavi nuove agli utenti rimasti che hanno quei livelli in una **busta** (`crypto_box_seal` per la loro
   chiave pubblica), senza conoscere le loro password. Le chiavi vecchie vanno nella **storia** del livello, cifrata con la
   chiave nuova. Chi apre e ha nella fessura una chiave vecchia prende quella nuova dalla sua busta, e la accetta solo se la
   storia contiene la chiave che ha gia': la busta l'ha preparata qualcuno che aveva la chiave vecchia, non chiunque
   conosca la sua chiave pubblica (che e' in chiaro). Una busta per un livello che l'utente non ha nella sua fessura non
-  vale mai: i permessi non si alzano con le buste. Chi toglie un utente deve avere tutti i suoi permessi; non si toglie
-  l'ultimo utente, l'ultimo che legge i dati personali o particolari, ne' l'ultimo con tutti e due i permessi.
+  vale mai: i permessi non si alzano con le buste. Chi toglie un utente deve avere i dati personali **e** particolari,
+  anche per togliere chi ne aveva uno solo: la sezione dei legati si ricifra con tutte e due le chiavi (DECISIONI.md,
+  aggiunta 1 del K-010). Non si toglie l'ultimo utente, l'ultimo che legge i dati personali o particolari, ne' l'ultimo
+  con tutti e due i permessi.
 - **Aggiungere un utente**: chi lo aggiunge sceglie i permessi, al massimo i propri; il nuovo utente scrive la sua
   password e riceve una fessura con le chiavi di adesso dei suoi livelli.
-- **Password nuova**: per se', la fessura si rifa' con la password nuova (stessa coppia X25519); per un altro utente che
-  l'ha persa, chi gliela da' deve avere tutti i suoi permessi, e l'utente riceve una coppia X25519 nuova. Non esiste un
+- **Password nuova**: per se', oppure per un altro utente che l'ha persa (chi gliela da' deve avere tutti i suoi
+  permessi). In tutti e due i casi la fessura si rifa' con le chiavi di adesso e una **coppia X25519 nuova**, e le buste
+  di quell'utente non servono piu': chi conosceva la password vecchia (e con quella poteva aprire la fessura e leggere la
+  chiave segreta di allora) non apre le buste dei prossimi cambi delle chiavi (aggiunta 1 del K-010). Non esiste un
   recupero ne' una chiave di ripristino.
+- **Avvisi sulle password** (aggiunta 1 del K-010; testi nel catalogo dei controlli, docs/controlli.md; uguali in testo e
+  in JSON): dopo `kzero aggiungi-utente` e `kzero password --per-utente` la password l'ha scritta un'altra persona, che
+  la conosce: va cambiata al primo uso (**K-CTR-100**). Dopo `kzero togli-utente`: se l'utente tolto conosceva la
+  password di un collega, con quella aprirebbe la fessura del collega e poi la sua busta con le chiavi nuove; chi l'ha
+  tolto cambia subito la sua (**K-CTR-099**), e a chi ha ricevuto le chiavi nuove in una busta **ogni apertura** lo
+  ricorda, in ogni comando, finche' non cambia la password (**K-CTR-098**).
 - **Intestazione autenticata** (crypto_auth, HMAC-SHA-512-256): con una chiave ricavata dalla chiave base (solo chi apre
   la cassaforte la conosce, e si rifa' quando si toglie un utente) tutta l'intestazione; con una chiave ricavata dalla
   chiave dei personali l'elenco di chi ha i dati personali (codici e chiavi pubbliche); con una chiave ricavata dalla
@@ -149,8 +165,8 @@ parametri leggeri; il programma kzero non ha nessun parametro o variabile per ca
 - Un utente tolto che aveva ancora accesso alla cartella e tutti i permessi del livello che si rifa' potrebbe preparare
   una versione finta delle chiavi, con una storia che contiene le chiavi vecchie che conosceva: chi non ha piu' aperto
   la cassaforte con una password nuova dopo la sua uscita la accetterebbe. Chi ha tolto l'utente (o ha cambiato password
-  dopo) ha nella fessura la chiave nuova vera e se ne accorge (K-ERR-028). Rimedio: dopo aver tolto un utente che poteva
-  scrivere nella cartella, gli altri cambiano la password.
+  dopo) ha nella fessura la chiave nuova vera e se ne accorge (K-ERR-028). Rimedio: dopo aver tolto un utente, gli altri
+  cambiano la password; il programma lo ricorda a ogni apertura finche' non lo fanno (K-CTR-098).
 - L'ora e' quella dell'orologio del PC.
 - I tentativi con una password sbagliata (o su una cassaforte manomessa) non entrano nel registro: senza la password non
   c'e' la chiave per scrivere una voce, e chi prova le password su una copia del file non passa dal programma. Il registro
@@ -159,7 +175,7 @@ parametri leggeri; il programma kzero non ha nessun parametro o variabile per ca
 ## Il formato del file della cassaforte (versione 1)
 
 Tutti i numeri sono interi senza segno, **little-endian**. "testo8" = 1 byte di lunghezza (1-64) seguito dai byte del
-testo (un codice K-Zero: lettere senza accenti, cifre, `-`, `_`, `.`). Il file e' l'intestazione seguita dalle due
+testo (un codice K-Zero: lettere senza accenti, cifre, `-`, `_`, `.`). Il file e' l'intestazione seguita dalle tre
 sezioni; la sua lunghezza deve essere esattamente quella che l'intestazione dichiara.
 
 | Parte | Byte | Contenuto |
@@ -187,12 +203,13 @@ sezioni; la sua lunghezza deve essere esattamente quella che l'intestazione dich
 | - versione | 4 | della chiave dentro (almeno 2) |
 | - busta | 101 | `crypto_box_seal` (48 byte in piu') di: codice della cassaforte (16), livello (1), versione (4), chiave (32) |
 | storie | 3 x (4 + n) | per base, personali, particolari: lunghezza (0 con la versione 1), poi nonce (24) e testo cifrato delle chiavi vecchie: per ogni versione da 1 a quella di adesso meno uno, versione (4) e chiave (32) |
-| sezioni | 2 x (24 + 8 + 32) | per personali e particolari: nonce, lunghezza del testo cifrato, impronta BLAKE2b-256 del testo cifrato |
+| sezioni | 3 x (24 + 8 + 32) | per personali, particolari e legati: nonce, lunghezza del testo cifrato, impronta BLAKE2b-256 del testo cifrato |
 | autenticazione dei personali | 32 | crypto_auth dell'elenco di chi ha i dati personali |
 | autenticazione dei particolari | 32 | crypto_auth dell'elenco di chi ha i dati particolari |
 | autenticazione dell'intestazione | 32 | crypto_auth di tutti i byte dell'intestazione qui sopra |
 | sezione dei dati personali | n | testo cifrato |
 | sezione dei dati particolari | n | testo cifrato |
+| sezione dei legati | n | testo cifrato (dati personali di chi va in un luogo sensibile) |
 
 **Fessura** (testo in chiaro): chiave segreta X25519 (32), numero dei livelli (1), poi per ogni livello dell'utente in
 ordine base, personali, particolari: livello (1), versione (4), chiave (32). **Dati associati**: magia, versione del
@@ -200,8 +217,8 @@ formato, codice della cassaforte, codice dell'utente (testo8), permessi (1), chi
 **Chiave**: Argon2id della password normalizzata in NFC, con il sale e i parametri dell'utente (32 byte).
 
 **Chiavi derivate** da una chiave di livello (`crypto_kdf`, contesto `KZ-CASSA`): numero 1 = cifratura delle sezioni,
-2 = autenticazione (intestazione ed elenchi), 3 = storia, 4 = registro (solo dalla chiave base). Ogni chiave ha un solo
-uso.
+2 = autenticazione (intestazione ed elenchi), 3 = storia, 4 = registro (solo dalla chiave base), 5 = sezione dei legati
+(dalle chiavi dei personali e dei particolari). Ogni chiave ha un solo uso.
 
 **Sezioni**: XChaCha20-Poly1305 con la chiave derivata 1 del livello, nonce casuale; dati associati: magia, versione del
 formato, codice della cassaforte, livello (1 o 2), versione della chiave, generazione. Il testo in chiaro e' un elenco
@@ -209,6 +226,13 @@ JSON di voci, nell'ordine della separazione; ogni voce e' `{"file", "percorso", 
 `{"file", "percorso", "elemento"}` (un elemento intero, da aggiungere in fondo all'elenco del percorso). Il percorso e' un
 elenco di passi dal documento al contenitore: un testo (un campo) oppure, in un elenco, `{"codice": "..."}`,
 `{"chiave": {...}}` o `{"contenuto": "<impronta>", "n": <ordine>}`.
+
+**Sezione dei legati**: XChaCha20-Poly1305, nonce casuale, stesso testo in chiaro delle altre sezioni. **Chiave**:
+HKDF-SHA256 (RFC 5869, `crypto_kdf_hkdf_sha256_extract` e `crypto_kdf_hkdf_sha256_expand` di libsodium), con sale =
+magia, versione del formato e codice della cassaforte; materiale = la chiave derivata 5 della chiave dei personali
+seguita dalla chiave derivata 5 della chiave dei particolari (64 byte); contesto `KZ-CASSA dati legati`; 32 byte.
+**Dati associati**: magia, versione del formato, codice della cassaforte, il byte 3, versione della chiave dei personali,
+versione della chiave dei particolari, generazione. Si ricifra a ogni cambio di una delle due chiavi.
 
 **Storie**: XChaCha20-Poly1305 con la chiave derivata 3 della chiave di adesso del livello; dati associati: magia,
 versione del formato, codice della cassaforte, livello, versione di adesso.
@@ -245,3 +269,9 @@ schema/cassaforte.v1.schema.json)); `kzero registro` con lo schema `registro` (v
 (versione 2) hanno i campi `cassaforte` (chi l'ha aperta, con quali permessi, la data di conservazione) e
 `non_verificato`. Nessuna uscita contiene mai i valori della cassaforte se non quelli che l'utente puo' aprire e ha
 chiesto di vedere.
+
+Gli avvisi della cassaforte (K-CTR-097 data di conservazione passata, K-CTR-098 ... K-CTR-100 password da cambiare) hanno
+i testi del catalogo dei controlli, uguali in testo ("Avviso K-CTR-nnn: ...") e in JSON (`codice` e `messaggio`): in
+`kzero controlla` stanno tra i problemi; in `kzero giornata` nel campo `cassaforte.avvisi`; in `kzero registro` e nei
+comandi della cassaforte nel campo `avvisi`, dove le indicazioni del comando (es. la cartella in chiaro da cancellare)
+hanno `codice` null.
