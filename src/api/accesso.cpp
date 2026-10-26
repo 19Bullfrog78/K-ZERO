@@ -4,6 +4,7 @@
 #include <system_error>
 
 #include "chiusura.hpp"
+#include "controlli_catalogo.hpp"
 #include "disco.hpp"
 #include "errori.hpp"
 
@@ -275,11 +276,30 @@ LetturaPerComando leggi_per_comando(const std::string& cartella, const Parametri
     out.cassaforte = a.cassaforte.riepilogo();
     const ValoriCassaforte valori = chiusura::valori_di(a.cassaforte);
     out.lettura = leggi_pacchetto(sorgente, &valori);
-    out.scaduta = ambiente().orologio().substr(0, 10) > out.cassaforte->conservazione;
-    if (out.scaduta)
-        out.lettura.problemi.push_back(kzero::Problem{kzero::Check::RetentionExpired, 0, kzero::Source{"", "", 0, 0},
-                                                      {kzero::text_param("data", out.cassaforte->conservazione)}});
+    out.scaduta = conservazione_passata(*out.cassaforte);
+    out.avvisi = avvisi_dell_apertura(*out.cassaforte, out.utente);
+    for (const kzero::Problem& p : out.avvisi) out.lettura.problemi.push_back(p);
     return out;
+}
+
+bool conservazione_passata(const cassaforte::Riepilogo& r) { return ambiente().orologio().substr(0, 10) > r.conservazione; }
+
+kzero::Problem avviso(kzero::Check controllo, int variante, std::vector<std::pair<std::string, std::string>> parametri) {
+    kzero::Problem p{controllo, variante, kzero::Source{"", "", 0, 0}, {}};
+    for (auto& [nome, valore] : parametri) p.params.push_back(kzero::text_param(std::move(nome), std::move(valore)));
+    return p;
+}
+
+std::vector<kzero::Problem> avvisi_dell_apertura(const cassaforte::Riepilogo& r, const std::string& utente) {
+    std::vector<kzero::Problem> out;
+    if (conservazione_passata(r)) out.push_back(avviso(kzero::Check::RetentionExpired, 0, {{"data", r.conservazione}}));
+    if (r.chiavi_in_busta) out.push_back(avviso(kzero::Check::KeysFromEnvelope, 0, {{"utente", utente}}));
+    return out;
+}
+
+AvvisoMostrato mostra(const kzero::Problem& p) {
+    const Presentatore presentatore(nullptr, nullptr, Visibilita{});
+    return {definizione_controllo(p.check).codice, presentatore.messaggio(p)};
 }
 
 }  // namespace kzero::api::accesso

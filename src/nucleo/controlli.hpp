@@ -34,6 +34,10 @@ enum class Check {
     VaultValueConflict,        // un valore c'e' sia nella cassaforte sia in chiaro
     ClearPersonalData,         // dati personali o particolari in chiaro (senza "dati_inventati", o accanto a una cassaforte)
     RetentionExpired,          // data di conservazione passata
+    // Password da cambiare (K-010 aggiunta 1): avvisi dell'apertura e dei comandi della cassaforte.
+    KeysFromEnvelope,          // chi apre ha ricevuto chiavi nuove in una busta (un utente e' stato tolto)
+    UserRemovedPasswords,      // dopo aver tolto un utente: le password che conosceva vanno cambiate
+    PasswordWrittenByOther,    // password scritta da chi ha aggiunto l'utente o gliel'ha data
     // Turni (K-008): errori.
     ShiftPartInvalid,
     ShiftItemsOrder,

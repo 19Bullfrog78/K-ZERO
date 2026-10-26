@@ -394,6 +394,13 @@ Json in_json(const DefinizioneComando& comando, const Resoconto& r, const Parame
         x["permessi"] = accesso::classi(cf.permessi.personali, cf.permessi.particolari);
         x["conservazione"] = cf.cassaforte->conservazione;
         x["conservazione_scaduta"] = cf.scaduta;
+        // Gli avvisi dell'apertura (K-CTR-097, K-CTR-098): la giornata non elenca i problemi, questi si' (ogni apertura).
+        Json avvisi = Json::array();
+        for (const kzero::Problem& p : cf.avvisi) {
+            const accesso::AvvisoMostrato a = accesso::mostra(p);
+            avvisi.push_back({{"codice", a.codice}, {"messaggio", a.messaggio}});
+        }
+        x["avvisi"] = avvisi;
         j["cassaforte"] = x;
     } else {
         j["cassaforte"] = nullptr;
@@ -653,11 +660,9 @@ std::string in_testo(const Json& j) {
         const Json& c = j.at("cassaforte");
         std::string permessi;
         for (const auto& x : c.at("permessi")) permessi += (permessi.empty() ? "dati " : " e ") + x.get<std::string>();
-        t += "Cassaforte aperta dall'utente " + c.at("utente").get<std::string>() + " (" + permessi + ")";
-        if (c.at("conservazione_scaduta").get<bool>())
-            t += ". Avviso: la data di conservazione dei dati (" + c.at("conservazione").get<std::string>() +
-                 ") e' passata (kzero cancella, o kzero conservazione con una data nuova)";
-        t += ".\n";
+        t += "Cassaforte aperta dall'utente " + c.at("utente").get<std::string>() + " (" + permessi + ").\n";
+        for (const auto& a : c.at("avvisi"))
+            t += "Avviso " + a.at("codice").get<std::string>() + ": " + a.at("messaggio").get<std::string>() + "\n";
     }
     for (const auto& x : j.at("non_verificato"))
         t += "Non verificato (servono i dati " + x.at("servono").get<std::string>() + "): " + x.at("cosa").get<std::string>() + ".\n";

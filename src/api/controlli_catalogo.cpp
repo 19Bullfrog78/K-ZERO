@@ -416,6 +416,20 @@ const std::vector<DefinizioneControllo>& catalogo_controlli() {
              {"La data di conservazione dei dati personali e particolari della cassaforte ({data}) e' passata: se i dati non "
               "servono piu', cancellare la cassaforte (kzero cancella); se c'e' un motivo per tenerli, scrivere una data nuova "
               "(kzero conservazione)."}},
+            {Check::KeysFromEnvelope, "K-CTR-098", A, N, "Password da cambiare: chiavi nuove ricevute in una busta",
+             {"Le chiavi della cassaforte sono state rifatte (un utente e' stato tolto) e l'utente {utente} le ha ricevute in "
+              "una busta, che si apre con la sua password: se l'utente tolto la conosceva, potrebbe aprire anche la cassaforte "
+              "nuova. Cambiare la password (kzero password): finche' non si cambia, ogni apertura lo ricorda."}},
+            {Check::UserRemovedPasswords, "K-CTR-099", A, N, "Utente tolto: password da cambiare",
+             {"L'utente {tolto} e' stato tolto e le chiavi sono state rifatte. Se conosceva la password di un altro utente "
+              "(scritta, detta, uguale a un'altra), con quella potrebbe aprire anche la cassaforte nuova: l'utente {utente} "
+              "cambi subito la sua (kzero password). Agli altri il programma lo ricorda a ogni apertura, finche' non la "
+              "cambiano (K-CTR-098)."}},
+            {Check::PasswordWrittenByOther, "K-CTR-100", A, N, "Password scritta da un altro utente",
+             {"L'utente {nuovo} e' stato aggiunto con una password scritta dall'utente {chi}: {nuovo} la cambi al primo uso "
+              "(kzero password), cosi' la conosce solo chi la usa.",
+              "La password nuova dell'utente {nuovo} l'ha scritta l'utente {chi}: {nuovo} la cambi al primo uso (kzero "
+              "password), cosi' la conosce solo chi la usa."}},
             // Contenuto: avvisi
             {Check::PlaceWithoutCoordinates, "K-CTR-035", A, N, "Luogo senza coordinate",
              {"Il luogo {luogo} non ha le coordinate: serviranno al calcolo delle distanze."}},

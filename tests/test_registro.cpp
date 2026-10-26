@@ -631,3 +631,125 @@ TEST(Accesso, RegistroRiscrittoPrimaDellAncora) {
         EXPECT_EQ(e.definizione().codice, "K-ERR-029");
     }
 }
+
+namespace {
+
+// Gli avvisi della cassaforte (K-CTR-097 ... K-CTR-100) di un'uscita in testo: le righe "Avviso K-CTR-nnn: messaggio", come
+// coppie (codice, messaggio).
+bool della_cassaforte(const std::string& codice) { return codice >= "K-CTR-097" && codice <= "K-CTR-100"; }
+
+std::vector<std::pair<std::string, std::string>> avvisi_del_testo(const std::string& testo) {
+    std::vector<std::pair<std::string, std::string>> out;
+    std::istringstream in(testo);
+    for (std::string riga; std::getline(in, riga);) {
+        if (riga.rfind("Avviso K-CTR-", 0) != 0 || riga.compare(16, 2, ": ") != 0) continue;
+        const std::string codice = riga.substr(7, 9);
+        if (della_cassaforte(codice)) out.emplace_back(codice, riga.substr(18));
+    }
+    return out;
+}
+
+// Gli avvisi del catalogo di un'uscita JSON: i problemi di kzero controlla, gli avvisi della cassaforte in kzero giornata,
+// gli avvisi degli altri comandi (senza le indicazioni del comando, che non hanno codice).
+std::vector<std::pair<std::string, std::string>> avvisi_del_json(const std::string& uscita) {
+    const JsonDati j = JsonDati::parse(uscita);
+    const JsonDati& elenco = j.contains("problemi") ? j.at("problemi")
+                             : j.at("schema") == "giornata" ? j.at("cassaforte").at("avvisi")
+                                                             : j.at("avvisi");
+    std::vector<std::pair<std::string, std::string>> out;
+    for (const JsonDati& a : elenco)
+        if (a.at("codice").is_string() && della_cassaforte(a.at("codice").get<std::string>()))
+            out.emplace_back(a.at("codice").get<std::string>(), a.at("messaggio").get<std::string>());
+    return out;
+}
+
+bool ha_avviso(const std::vector<std::pair<std::string, std::string>>& avvisi, const std::string& codice) {
+    return std::any_of(avvisi.begin(), avvisi.end(), [&](const auto& a) { return a.first == codice; });
+}
+
+}  // namespace
+
+// Aggiunta 1 del K-010, punto 4: gli avvisi sulle password. Dopo aggiungi-utente e password --per-utente la password l'ha
+// scritta un altro (K-CTR-100); dopo togli-utente le password che l'utente tolto poteva conoscere vanno cambiate
+// (K-CTR-099); chi ha ricevuto chiavi nuove in una busta lo vede a ogni apertura, in ogni comando, finche' non cambia la
+// password (K-CTR-098). Testi del catalogo, uguali in testo e in JSON. Cambiare la password da' anche una coppia X25519
+// nuova: chi conosceva la password vecchia non apre le buste dei prossimi cambi delle chiavi.
+TEST(Accesso, AvvisiSullePassword) {
+    CartellaDiLavoro lavoro;
+    AmbienteDiProva amb;
+    const fs::path chiuso = demo_chiuso(lavoro, amb);   // A: tutti i permessi
+    const std::string c = chiuso.string();
+    const auto esegui = [&](const std::vector<std::string>& argomenti, const std::vector<std::string>& password) {
+        amb.password = password;
+        const Risultato r = comando(argomenti);
+        EXPECT_EQ(r.codice, 0) << argomenti[0];
+        return r.uscita;
+    };
+    const auto con_json = [](std::vector<std::string> argomenti) {
+        argomenti.insert(argomenti.end(), {"--formato", "json"});
+        return argomenti;
+    };
+    const auto pubblica = [&](const std::string& utente) {
+        const auto a = cassaforte::formato::analizza(leggi_testo(chiuso / cassaforte::kFile));
+        return a.intestazione.utente(utente)->pubblica;
+    };
+    const auto messaggio = [](kzero::Check controllo, int variante, std::vector<std::pair<std::string, std::string>> p) {
+        return accesso::mostra(accesso::avviso(controllo, variante, std::move(p))).messaggio;
+    };
+
+    // Utenti aggiunti: K-CTR-100, in testo (B) e in JSON (C, D).
+    const std::string b = esegui({"aggiungi-utente", "--scrivi", c, "--utente", "A", "--nuovo-utente", "B", "--permessi",
+                                  "personali"}, {kPw, kPwB});
+    EXPECT_NE(b.find("Avviso K-CTR-100: L'utente B e' stato aggiunto con una password scritta dall'utente A: B la cambi al "
+                     "primo uso (kzero password), cosi' la conosce solo chi la usa."), std::string::npos) << b;
+    const auto c_json = avvisi_del_json(esegui(con_json({"aggiungi-utente", "--scrivi", c, "--utente", "A", "--nuovo-utente",
+                                                         "C", "--permessi", "particolari"}), {kPw, kPwC}));
+    ASSERT_EQ(c_json.size(), 1u);
+    EXPECT_EQ(c_json[0].first, "K-CTR-100");
+    EXPECT_EQ(c_json[0].second, messaggio(kzero::Check::PasswordWrittenByOther, 0, {{"nuovo", "C"}, {"chi", "A"}}));
+    esegui({"aggiungi-utente", "--scrivi", c, "--utente", "A", "--nuovo-utente", "D", "--permessi", "personali"},
+           {kPw, "nuvole basse sopra il monte"});
+    const Bytes pubblica_b = pubblica("B");
+
+    // A toglie D: K-CTR-099 per A, che ha gia' le chiavi nuove (niente K-CTR-098 per lui).
+    const auto tolto = avvisi_del_json(esegui(con_json({"togli-utente", "--scrivi", c, "--utente", "A", "--utente-da-togliere",
+                                                        "D"}), {kPw}));
+    ASSERT_EQ(tolto.size(), 1u);
+    EXPECT_EQ(tolto[0].first, "K-CTR-099");
+    EXPECT_EQ(tolto[0].second, messaggio(kzero::Check::UserRemovedPasswords, 0, {{"tolto", "D"}, {"utente", "A"}}));
+
+    // Chi ha le chiavi in una busta (B e C: la chiave base e' cambiata per tutti) lo vede in ogni comando, testo e JSON
+    // uguali; A no.
+    const auto comandi_di = [&](const std::string& u) {
+        return std::vector<std::vector<std::string>>{{"controlla", c, "--utente", u},
+                                                     {"giornata", c, "--utente", u, "--data", "2026-10-22"},
+                                                     {"cassaforte", c, "--utente", u},
+                                                     {"registro", c, "--utente", u}};
+    };
+    for (const auto& [u, password] : {std::pair{std::string("B"), kPwB}, std::pair{std::string("C"), kPwC}}) {
+        const std::string atteso = messaggio(kzero::Check::KeysFromEnvelope, 0, {{"utente", u}});
+        for (const auto& argomenti : comandi_di(u)) {
+            const auto testo = avvisi_del_testo(esegui(argomenti, {password}));
+            const auto json = avvisi_del_json(esegui(con_json(argomenti), {password}));
+            EXPECT_EQ(testo, json) << u << " " << argomenti[0];
+            EXPECT_EQ(testo, (std::vector<std::pair<std::string, std::string>>{{"K-CTR-098", atteso}})) << u << " " << argomenti[0];
+        }
+    }
+    for (const auto& argomenti : comandi_di("A")) EXPECT_TRUE(avvisi_del_testo(esegui(argomenti, {kPw})).empty()) << argomenti[0];
+
+    // B cambia la sua password: nessun avviso, e da li' in poi nessun K-CTR-098; coppia X25519 nuova.
+    const std::string kPwB2 = "una frase nuova tutta per B";
+    EXPECT_TRUE(avvisi_del_testo(esegui({"password", "--scrivi", c, "--utente", "B"}, {kPwB, kPwB2})).empty());
+    for (const auto& argomenti : comandi_di("B"))
+        EXPECT_FALSE(ha_avviso(avvisi_del_testo(esegui(argomenti, {kPwB2})), "K-CTR-098")) << argomenti[0];
+    EXPECT_NE(pubblica("B"), pubblica_b);
+
+    // A da' una password nuova a C (persa): K-CTR-100 nella forma della password nuova; C con quella non ha piu' buste.
+    const std::string kPwC2 = "la password che A ha scritto per C";
+    const auto per_c = avvisi_del_testo(esegui({"password", "--scrivi", c, "--utente", "A", "--per-utente", "C"}, {kPw, kPwC2}));
+    ASSERT_EQ(per_c.size(), 1u);
+    EXPECT_EQ(per_c[0].first, "K-CTR-100");
+    EXPECT_EQ(per_c[0].second, messaggio(kzero::Check::PasswordWrittenByOther, 1, {{"nuovo", "C"}, {"chi", "A"}}));
+    for (const auto& argomenti : comandi_di("C"))
+        EXPECT_FALSE(ha_avviso(avvisi_del_testo(esegui(argomenti, {kPwC2})), "K-CTR-098")) << argomenti[0];
+}

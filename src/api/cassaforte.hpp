@@ -10,9 +10,10 @@
 // - la sezione dei "legati" (i dati personali di chi e' legato a un luogo sensibile: nome, casa...) e' cifrata con una
 //   chiave ricavata da tutte e due le chiavi di classe insieme (HKDF, formato::chiave_legati): la decifra solo chi ha i
 //   dati personali e particolari, mai chi ne ha uno solo (aggiunta 1 del K-010);
-// - ogni utente ha una coppia X25519 e una "fessura": la sua chiave segreta X25519 e le chiavi dei soli livelli che ha,
-//   cifrate (XChaCha20-Poly1305) con la chiave ricavata dalla sua password (Argon2id). I dati associati della fessura sono
-//   codice, permessi, chiave pubblica, sale e parametri: cambiarne uno nell'intestazione e la fessura non si apre piu';
+// - ogni utente ha una coppia X25519 (nuova a ogni cambio di password) e una "fessura": la sua chiave segreta X25519 e le
+//   chiavi dei soli livelli che ha, cifrate (XChaCha20-Poly1305) con la chiave ricavata dalla sua password (Argon2id). I
+//   dati associati della fessura sono codice, permessi, chiave pubblica, sale e parametri: cambiarne uno nell'intestazione
+//   e la fessura non si apre piu';
 // - quando le chiavi si rifanno, chi le rifa' le consegna agli altri utenti in una "busta" (crypto_box_seal per la loro
 //   chiave pubblica), senza conoscere le loro password. Una chiave arrivata in una busta vale solo se la "storia" di quel
 //   livello (le chiavi vecchie, cifrate con la chiave nuova) contiene la chiave che l'utente ha gia' nella sua fessura:
@@ -105,6 +106,9 @@ struct Riepilogo {
     std::vector<UtenteVisibile> utenti;
     std::uint32_t registro_voci = 0;   // l'ultima voce del registro legata alla cassaforte (vedi registro.hpp)
     cripto::Bytes registro_impronta;
+    // Chi ha aperto ha chiavi arrivate in una busta (le chiavi sono state rifatte e la sua fessura ha ancora le vecchie):
+    // vale finche' non cambia la password (avviso K-CTR-098). Sempre false senza un utente (leggi_intestazione).
+    bool chiavi_in_busta = false;
 };
 
 // Quanti byte occupa l'intestazione (con le fessure degli utenti): la parte da distruggere per prima nella cancellazione.
@@ -153,7 +157,9 @@ public:
     // le chiavi dei livelli che aveva si rifanno e si consegnano in una busta agli utenti rimasti che hanno quei livelli; le
     // sezioni di quei livelli e quella dei legati si ricifrano.
     void togli_utente(const std::string& codice);
-    // Password nuova per se' (stessa chiave X25519) o per un altro utente con permessi che chi la da' ha tutti (coppia nuova).
+    // Password nuova per se' o per un altro utente con permessi che chi la da' ha tutti. In tutti e due i casi una coppia X25519
+    // nuova e le chiavi di adesso nella fessura (le buste di quell'utente non servono piu'): chi conosceva la password
+    // vecchia, e con quella la chiave segreta X25519 di allora, non apre le buste dei prossimi cambi delle chiavi.
     void cambia_password(const std::string& codice, const cripto::Segreto& password, const cripto::PoliticaKdf& politica);
     void cambia_conservazione(const std::string& data);
     // Dati nuovi (richiusura): servono tutti e due i permessi; la generazione cresce di uno.

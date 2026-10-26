@@ -365,7 +365,11 @@ Cassaforte Cassaforte::crea(const std::string& id, const std::string& conservazi
 
 Permessi Cassaforte::permessi() const { return s_->io(utente_).permessi; }
 
-Riepilogo Cassaforte::riepilogo() const { return riepilogo_di(s_->i); }
+Riepilogo Cassaforte::riepilogo() const {
+    Riepilogo r = riepilogo_di(s_->i);
+    r.chiavi_in_busta = std::any_of(s_->i.buste.begin(), s_->i.buste.end(), [&](const Busta& b) { return b.codice == utente_; });
+    return r;
+}
 
 const std::vector<Voce>& Cassaforte::voci(Classe classe) const {
     return s_->voci[classe == Classe::Particolare ? kSezioneParticolari : kSezionePersonali];
@@ -491,27 +495,27 @@ void Cassaforte::cambia_password(const std::string& codice, const Segreto& passw
     Intestazione& i = s_->i;
     Utente* u = i.utente(codice);
     if (!u) errore(Tipo::UtenteSconosciuto, "L'utente " + codice + " non e' tra gli utenti della cassaforte.");
+    // Per un altro utente: chi da' la password nuova ha tutti i suoi permessi.
+    if (codice != utente_ && !permessi().contiene(u->permessi))
+        errore(Tipo::PermessoMancante, "Per dare una password nuova all'utente " + codice + ", che ha " +
+                                           testo_permessi(u->permessi) + ", servono tutti i suoi permessi: l'utente " + utente_ +
+                                           " ha " + testo_permessi(permessi()) + ".");
+    // Sempre una coppia X25519 nuova, anche per se' (aggiunta 1 del K-010): chi conosceva la password vecchia (es. un utente
+    // tolto) e con quella ha aperto la fessura conosce la chiave segreta di allora, e aprirebbe le buste dei prossimi cambi
+    // delle chiavi. La fessura nuova ha le chiavi di adesso: le buste dell'utente non servono piu'.
+    cripto::CoppiaBox coppia = cripto::nuova_coppia_box();
+    u->pubblica = coppia.pubblica;
+    u->sale = cripto::casuali(cripto::kSale);
+    u->kdf = politica.nuovi;
+    Segreto kek = cripto::deriva(password, u->sale.data(), u->kdf);
+    s_->scrivi_fessura(*u, kek, coppia.segreta);
     if (codice == utente_) {
-        u->sale = cripto::casuali(cripto::kSale);
-        u->kdf = politica.nuovi;
-        s_->kek = cripto::deriva(password, u->sale.data(), u->kdf);
-        s_->scrivi_fessura(*u, s_->kek, s_->segreta);
-    } else {
-        // Per un altro utente: chi da' la password nuova ha tutti i suoi permessi; la sua chiave segreta non si conosce,
-        // quindi l'utente riceve una coppia X25519 nuova.
-        if (!permessi().contiene(u->permessi))
-            errore(Tipo::PermessoMancante, "Per dare una password nuova all'utente " + codice + ", che ha " +
-                                               testo_permessi(u->permessi) + ", servono tutti i suoi permessi: l'utente " +
-                                               utente_ + " ha " + testo_permessi(permessi()) + ".");
-        cripto::CoppiaBox coppia = cripto::nuova_coppia_box();
-        u->pubblica = coppia.pubblica;
-        u->sale = cripto::casuali(cripto::kSale);
-        u->kdf = politica.nuovi;
-        const Segreto kek = cripto::deriva(password, u->sale.data(), u->kdf);
-        s_->scrivi_fessura(*u, kek, coppia.segreta);
-        if (u->permessi.personali) s_->autentica_lista(kPersonali);
-        if (u->permessi.particolari) s_->autentica_lista(kParticolari);
+        s_->kek = std::move(kek);
+        s_->segreta = std::move(coppia.segreta);
     }
+    // La chiave pubblica e' negli elenchi autenticati dei livelli dell'utente (chi cambia la password li ha tutti).
+    if (u->permessi.personali) s_->autentica_lista(kPersonali);
+    if (u->permessi.particolari) s_->autentica_lista(kParticolari);
     i.buste.erase(std::remove_if(i.buste.begin(), i.buste.end(), [&](const Busta& b) { return b.codice == codice; }),
                   i.buste.end());
 }

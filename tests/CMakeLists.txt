@@ -942,10 +942,21 @@ kzero_cassaforte(cassaforte_valore_doppio TITOLARE USCITA 1 FORMATO testo RESOCO
                  MODIFICA IMPOSTA persone.json /persone/0/nome "\"Nome in chiaro\""
                  PROBLEMI "K-CTR-095|persone.json|/persone/0" ARGOMENTI controlla @PACCHETTO@)
 
-# Utenti e permessi.
+# Utenti e permessi. Avvisi sulle password (aggiunta 1 del K-010, testi nel catalogo dei controlli, uguali in testo e JSON):
+# K-CTR-100 dopo aggiungi-utente e password --per-utente, K-CTR-099 dopo togli-utente, K-CTR-098 a ogni apertura di chi ha
+# ricevuto chiavi nuove in una busta.
+set(AVVISO_NUOVO "L'utente NUOVO e' stato aggiunto con una password scritta dall'utente TITOLARE: NUOVO la cambi al primo uso (kzero password), cosi' la conosce solo chi la usa.")
+set(AVVISO_TOLTO "L'utente UFFICIO e' stato tolto e le chiavi sono state rifatte. Se conosceva la password di un altro utente (scritta, detta, uguale a un'altra), con quella potrebbe aprire anche la cassaforte nuova: l'utente TITOLARE cambi subito la sua (kzero password). Agli altri il programma lo ricorda a ogni apertura, finche' non la cambiano (K-CTR-098).")
+set(AVVISO_BUSTA "Le chiavi della cassaforte sono state rifatte (un utente e' stato tolto) e l'utente SALUTE le ha ricevute in una busta, che si apre con la sua password: se l'utente tolto la conosceva, potrebbe aprire anche la cassaforte nuova. Cambiare la password (kzero password): finche' non si cambia, ogni apertura lo ricorda.")
 kzero_cassaforte(cassaforte_aggiungi_utente TITOLARE USCITA 0 FORMATO testo INGRESSO_IN_PIU "una password nuova e lunga"
                  CONTIENE "Aggiunto l'utente NUOVO con i dati personali." "NUOVO (dati personali)" "Registro degli accessi: 4 voci."
+                          "Avviso K-CTR-100: ${AVVISO_NUOVO}"
+                 NON_CONTIENE "Avviso K-CTR-098"
                  ARGOMENTI aggiungi-utente --scrivi @PACCHETTO@ --nuovo-utente NUOVO --permessi personali)
+kzero_cassaforte(cassaforte_aggiungi_utente_json TITOLARE USCITA 0 FORMATO json SCHEMA cassaforte
+                 INGRESSO_IN_PIU "una password nuova e lunga"
+                 CONTIENE "\"codice\": \"K-CTR-100\"" "\"messaggio\": \"${AVVISO_NUOVO}\""
+                 ARGOMENTI aggiungi-utente --scrivi @PACCHETTO@ --nuovo-utente NUOVO --permessi personali --formato json)
 kzero_cassaforte(cassaforte_aggiungi_utente_oltre_i_permessi UFFICIO USCITA 2 FORMATO testo ERRORE K-ERR-023
                  INGRESSO_IN_PIU "una password nuova e lunga"
                  ARGOMENTI aggiungi-utente --scrivi @PACCHETTO@ --nuovo-utente NUOVO --permessi tutti)
@@ -953,8 +964,12 @@ kzero_cassaforte(cassaforte_aggiungi_utente_esistente TITOLARE USCITA 2 FORMATO 
                  INGRESSO_IN_PIU "una password nuova e lunga"
                  ARGOMENTI aggiungi-utente --scrivi @PACCHETTO@ --nuovo-utente UFFICIO --permessi personali)
 kzero_cassaforte(cassaforte_togli_utente TITOLARE USCITA 0 FORMATO json SCHEMA cassaforte
-                 CONTIENE "\"comando\": \"togli-utente\"" NON_CONTIENE "\"codice\": \"UFFICIO\""
+                 CONTIENE "\"comando\": \"togli-utente\"" "\"codice\": \"K-CTR-099\"" "\"messaggio\": \"${AVVISO_TOLTO}\""
+                 NON_CONTIENE "\"codice\": \"UFFICIO\"" "\"codice\": \"K-CTR-098\""
                  ARGOMENTI togli-utente --scrivi @PACCHETTO@ --utente-da-togliere UFFICIO --formato json)
+kzero_cassaforte(cassaforte_togli_utente_testo TITOLARE USCITA 0 FORMATO testo
+                 CONTIENE "Tolto l'utente UFFICIO" "Avviso K-CTR-099: ${AVVISO_TOLTO}" NON_CONTIENE "Avviso K-CTR-098"
+                 ARGOMENTI togli-utente --scrivi @PACCHETTO@ --utente-da-togliere UFFICIO)
 kzero_cassaforte(cassaforte_togli_utente_oltre_i_permessi UFFICIO USCITA 2 FORMATO testo ERRORE K-ERR-023
                  ARGOMENTI togli-utente --scrivi @PACCHETTO@ --utente-da-togliere SALUTE)
 # Togliere un utente ricifra i dati legati a un luogo sensibile: servono tutti e due i permessi, anche per togliere chi ha i
@@ -976,7 +991,31 @@ kzero_cassaforte(cassaforte_utente_tolto_non_apre UFFICIO USCITA 2 FORMATO testo
 kzero_cassaforte(cassaforte_dopo_il_cambio_delle_chiavi SALUTE USCITA 0 FORMATO testo
                  PREPARA togli-utente --scrivi @PACCHETTO@ --utente TITOLARE --utente-da-togliere UFFICIO --password-da-ingresso
                  PREPARA_INGRESSO "${PW_TITOLARE}"
-                 CONTIENE "Cassaforte aperta dall'utente SALUTE" ARGOMENTI controlla @PACCHETTO@)
+                 CONTIENE "Cassaforte aperta dall'utente SALUTE" "Avviso K-CTR-098: ${AVVISO_BUSTA}" ARGOMENTI controlla @PACCHETTO@)
+set(DOPO_IL_CAMBIO PREPARA togli-utente --scrivi @PACCHETTO@ --utente TITOLARE --utente-da-togliere UFFICIO --password-da-ingresso
+                   PREPARA_INGRESSO "${PW_TITOLARE}")
+kzero_cassaforte(cassaforte_dopo_il_cambio_delle_chiavi_json SALUTE USCITA 0 FORMATO json SCHEMA controlla ${DOPO_IL_CAMBIO}
+                 CONTIENE "\"codice\": \"K-CTR-098\"" "\"messaggio\": \"${AVVISO_BUSTA}\""
+                 ARGOMENTI controlla @PACCHETTO@ --formato json)
+kzero_cassaforte(cassaforte_dopo_il_cambio_delle_chiavi_giornata SALUTE USCITA 0 FORMATO testo ${DOPO_IL_CAMBIO}
+                 CONTIENE "Cassaforte aperta dall'utente SALUTE (dati particolari).\nAvviso K-CTR-098: ${AVVISO_BUSTA}\n"
+                 ARGOMENTI giornata @PACCHETTO@ --data 2026-10-22)
+kzero_cassaforte(cassaforte_dopo_il_cambio_delle_chiavi_giornata_json SALUTE USCITA 0 FORMATO json SCHEMA giornata ${DOPO_IL_CAMBIO}
+                 CONTIENE "\"codice\": \"K-CTR-098\"" "\"messaggio\": \"${AVVISO_BUSTA}\""
+                 ARGOMENTI giornata @PACCHETTO@ --data 2026-10-22 --formato json)
+kzero_cassaforte(cassaforte_dopo_il_cambio_delle_chiavi_cassaforte SALUTE USCITA 0 FORMATO testo ${DOPO_IL_CAMBIO}
+                 CONTIENE "Avviso K-CTR-098: ${AVVISO_BUSTA}" ARGOMENTI cassaforte @PACCHETTO@)
+kzero_cassaforte(cassaforte_dopo_il_cambio_delle_chiavi_cassaforte_json SALUTE USCITA 0 FORMATO json SCHEMA cassaforte
+                 ${DOPO_IL_CAMBIO} CONTIENE "\"codice\": \"K-CTR-098\"" "\"messaggio\": \"${AVVISO_BUSTA}\""
+                 ARGOMENTI cassaforte @PACCHETTO@ --formato json)
+kzero_cassaforte(cassaforte_dopo_il_cambio_delle_chiavi_registro SALUTE USCITA 0 FORMATO testo VARIABILI ${DOPO_IL_CAMBIO}
+                 CONTIENE "Avviso K-CTR-098: ${AVVISO_BUSTA}" ARGOMENTI registro @PACCHETTO@)
+kzero_cassaforte(cassaforte_dopo_il_cambio_delle_chiavi_registro_json SALUTE USCITA 0 FORMATO json SCHEMA registro VARIABILI
+                 ${DOPO_IL_CAMBIO} CONTIENE "\"codice\": \"K-CTR-098\"" "\"messaggio\": \"${AVVISO_BUSTA}\""
+                 ARGOMENTI registro @PACCHETTO@ --formato json)
+# Chi ha tolto l'utente ha gia' le chiavi nuove nella sua fessura: nessun K-CTR-098.
+kzero_cassaforte(cassaforte_dopo_il_cambio_delle_chiavi_chi_ha_tolto TITOLARE USCITA 0 FORMATO testo ${DOPO_IL_CAMBIO}
+                 CONTIENE "Cassaforte aperta dall'utente TITOLARE" NON_CONTIENE "Avviso K-CTR-098" ARGOMENTI controlla @PACCHETTO@)
 kzero_cassaforte(cassaforte_password_cambiata TITOLARE USCITA 2 FORMATO testo ERRORE K-ERR-022
                  PREPARA password --scrivi @PACCHETTO@ --utente TITOLARE --password-da-ingresso
                  PREPARA_INGRESSO "${PW_TITOLARE}" "la mia password nuova e lunga"
@@ -990,7 +1029,12 @@ kzero_cassaforte(cassaforte_password_per_un_altro_oltre_i_permessi UFFICIO USCIT
                  ARGOMENTI password --scrivi @PACCHETTO@ --per-utente SALUTE)
 kzero_prova(cassaforte_password_per_un_altro BASE ${KZERO_CASSAFORTE} USCITA 0 FORMATO testo INGRESSO "${PW_TITOLARE}" "una password nuova e lunga"
             CONTIENE "password nuova per l'utente SALUTE"
+                     "Avviso K-CTR-100: La password nuova dell'utente SALUTE l'ha scritta l'utente TITOLARE: SALUTE la cambi al primo uso (kzero password), cosi' la conosce solo chi la usa."
             ARGOMENTI password --scrivi @PACCHETTO@ --utente TITOLARE --per-utente SALUTE --password-da-ingresso)
+kzero_prova(cassaforte_password_per_se BASE ${KZERO_CASSAFORTE} USCITA 0 FORMATO testo
+            INGRESSO "${PW_TITOLARE}" "la mia password nuova e lunga"
+            CONTIENE "password cambiata dall'utente TITOLARE" NON_CONTIENE "Avviso K-CTR-100" "Avviso K-CTR-098"
+            ARGOMENTI password --scrivi @PACCHETTO@ --utente TITOLARE --password-da-ingresso)
 
 # Conservazione: passata, ogni apertura lo ricorda (orologio del PC).
 kzero_cassaforte(cassaforte_conservazione_passata TITOLARE USCITA 0 FORMATO testo
@@ -1002,7 +1046,7 @@ kzero_cassaforte(cassaforte_conservazione_passata TITOLARE USCITA 0 FORMATO test
 kzero_cassaforte(cassaforte_conservazione_passata_giornata UFFICIO USCITA 0 FORMATO testo
                  PREPARA conservazione --scrivi @PACCHETTO@ --utente TITOLARE --conservazione 2020-01-01 --password-da-ingresso
                  PREPARA_INGRESSO "${PW_TITOLARE}"
-                 CONTIENE "Avviso: la data di conservazione dei dati (2020-01-01) e' passata"
+                 CONTIENE "Avviso K-CTR-097: La data di conservazione dei dati personali e particolari della cassaforte (2020-01-01) e' passata"
                  ARGOMENTI giornata @PACCHETTO@ --data 2026-10-22 --mezzo ALFA-03)
 kzero_cassaforte(cassaforte_conservazione_senza_tutti_i_permessi UFFICIO USCITA 2 FORMATO testo ERRORE K-ERR-023
                  ARGOMENTI conservazione --scrivi @PACCHETTO@ --conservazione 2030-01-01)

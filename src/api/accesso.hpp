@@ -72,10 +72,28 @@ cassaforte::Riepilogo cambia(const std::filesystem::path& cartella, const Manife
                              const cripto::Segreto& password, const std::string& comando,
                              const std::function<std::string(cassaforte::Cassaforte&)>& cambia, const Ambiente& ambiente);
 
+// La data di conservazione e' passata (orologio dell'ambiente)?
+bool conservazione_passata(const cassaforte::Riepilogo& r);
+
+// Gli avvisi di ogni apertura, dal catalogo dei controlli (testi solo li'): data di conservazione passata (K-CTR-097) e
+// chiavi nuove ricevute in una busta, password da cambiare (K-CTR-098). r = la cassaforte come la vede chi l'ha aperta (dopo
+// un cambiamento: com'e' dopo).
+std::vector<kzero::Problem> avvisi_dell_apertura(const cassaforte::Riepilogo& r, const std::string& utente);
+// Il problema di un avviso, dal catalogo dei controlli (es. K-CTR-099, K-CTR-100): un controllo senza posizione, con i
+// parametri dati (codici di utenti e date, mai dati personali).
+kzero::Problem avviso(kzero::Check controllo, int variante, std::vector<std::pair<std::string, std::string>> parametri);
+// Un avviso come lo mostrano le uscite che non elencano problemi (comandi della cassaforte, giornata): codice K-CTR e
+// messaggio del catalogo, uguali in testo e in JSON.
+struct AvvisoMostrato {
+    std::string codice;   // vuoto = un'indicazione del comando, fuori dal catalogo (es. la cartella in chiaro da cancellare)
+    std::string messaggio;
+};
+AvvisoMostrato mostra(const kzero::Problem& p);
+
 // La lettura di un pacchetto per un comando che mostra dati (controlla, giornata): senza cassaforte come sempre; con la
 // cassaforte chiede utente (--utente) e password, controlla che --includi-dati-* stiano nei permessi (K-ERR-023), apre
-// (voce nel registro) e unisce i valori che l'utente puo' leggere. Data di conservazione passata: avviso K-CTR-097 tra i
-// problemi della lettura.
+// (voce nel registro) e unisce i valori che l'utente puo' leggere. Gli avvisi dell'apertura (K-CTR-097, K-CTR-098) stanno
+// tra i problemi della lettura e, a parte, in avvisi.
 struct LetturaPerComando {
     Lettura lettura;
     Visibilita visibilita;                          // cosa mostrare: i parametri, entro i permessi
@@ -83,6 +101,7 @@ struct LetturaPerComando {
     std::string utente;
     cassaforte::Permessi permessi;
     bool scaduta = false;
+    std::vector<kzero::Problem> avvisi;
 };
 LetturaPerComando leggi_per_comando(const std::string& cartella, const Parametri& parametri, const std::string& comando,
                                     const std::string& nota);

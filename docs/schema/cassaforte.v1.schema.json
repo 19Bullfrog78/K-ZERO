@@ -66,7 +66,22 @@
       ]
     },
     "fatto": { "description": "Cosa e' stato fatto, in italiano.", "type": "string", "minLength": 1 },
-    "avvisi": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+    "avvisi": {
+      "description": "Avvisi, uguali a quelli dell'uscita in testo: prima le indicazioni del comando e i suoi avvisi del catalogo (es. K-CTR-099 dopo aver tolto un utente, K-CTR-100 per una password scritta da un altro utente), poi quelli di ogni apertura (K-CTR-097, K-CTR-098). Testi del catalogo dei controlli, docs/controlli.md.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["codice", "messaggio"],
+        "properties": {
+          "codice": {
+            "description": "Il controllo del catalogo; null per un'indicazione del comando (es. la cartella in chiaro da cancellare).",
+            "oneOf": [{ "type": "null" }, { "type": "string", "pattern": "^K-CTR-[0-9]{3}$" }]
+          },
+          "messaggio": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
     "cancellazione": {
       "description": "Resoconto della cancellazione, da conservare (solo per 'cancella'; null per gli altri comandi).",
       "oneOf": [

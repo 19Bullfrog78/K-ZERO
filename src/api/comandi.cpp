@@ -218,7 +218,8 @@ std::vector<DefinizioneComando> comandi_cassaforte() {
         p.push_back(parametro_permessi());
         c.push_back({"aggiungi-utente",
                      "Aggiunge un utente alla cassaforte, con al massimo i permessi di chi lo aggiunge. Si chiedono la password "
-                     "di chi aggiunge e quella nuova del nuovo utente (due volte al terminale).",
+                     "di chi aggiunge e quella nuova del nuovo utente (due volte al terminale): l'ha scritta chi aggiunge, e il "
+                     "nuovo utente la cambia al primo uso (avviso K-CTR-100).",
                      {}, p, cassaforte, esegui_aggiungi_utente});
     }
     {
@@ -231,7 +232,8 @@ std::vector<DefinizioneComando> comandi_cassaforte() {
                      "Toglie un utente dalla cassaforte: chi lo toglie deve avere i dati personali e particolari. Le chiavi dei "
                      "dati che aveva si rifanno e i dati si ricifrano, anche quelli di chi va in un luogo sensibile (si aprono "
                      "solo con tutti e due i permessi): l'utente tolto non apre la versione nuova. Non si toglie l'ultimo utente "
-                     "ne' l'ultimo che legge i dati personali o particolari.",
+                     "ne' l'ultimo che legge i dati personali o particolari. Dopo, le password vanno cambiate (avvisi K-CTR-099 e, "
+                     "a ogni apertura di chi ha ricevuto le chiavi nuove in una busta, K-CTR-098).",
                      {}, p, cassaforte, esegui_togli_utente});
     }
     {
@@ -245,7 +247,8 @@ std::vector<DefinizioneComando> comandi_cassaforte() {
         c.push_back({"password",
                      "Cambia la propria password, oppure ne da' una nuova a un altro utente che l'ha persa (con --per-utente): "
                      "non c'e' recupero ne' chiave di ripristino. Si chiedono la password di chi la cambia e quella nuova (due "
-                     "volte al terminale).",
+                     "volte al terminale). In tutti e due i casi l'utente riceve anche una coppia di chiavi nuova; una password "
+                     "data a un altro va cambiata al primo uso (avviso K-CTR-100).",
                      {}, p, cassaforte, esegui_password});
     }
     {

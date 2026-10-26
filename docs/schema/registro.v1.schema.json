@@ -4,7 +4,7 @@
   "description": "Uscita di 'kzero registro <cartella> --utente CODICE --formato json' (K-010): le voci del registro degli accessi alla cassaforte, dopo il controllo della catena (una voce tolta, cambiata o spostata ferma il comando). Ogni voce: numero, ora UTC (orologio del PC), utente, comando, classi aperte e mostrate, nota senza dati personali. La lettura stessa e' l'ultima voce. Spiegato in docs/cassaforte.md.",
   "type": "object",
   "additionalProperties": false,
-  "required": ["schema", "schema_versione", "utente", "pacchetto", "cassaforte", "catena_controllata", "conservazione", "conservazione_scaduta", "voci"],
+  "required": ["schema", "schema_versione", "utente", "pacchetto", "cassaforte", "catena_controllata", "conservazione", "conservazione_scaduta", "voci", "avvisi"],
   "definitions": {
     "codice": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$" },
     "classi": { "type": "array", "uniqueItems": true, "items": { "enum": ["personali", "particolari"] } }
@@ -38,6 +38,19 @@
           "classi_aperte": { "$ref": "#/definitions/classi" },
           "classi_mostrate": { "$ref": "#/definitions/classi" },
           "nota": { "type": "string" }
+        }
+      }
+    },
+    "avvisi": {
+      "description": "Gli avvisi di ogni apertura, uguali a quelli dell'uscita in testo: data di conservazione passata (K-CTR-097), chiavi nuove ricevute in una busta e password da cambiare (K-CTR-098). Testi del catalogo dei controlli, docs/controlli.md.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["codice", "messaggio"],
+        "properties": {
+          "codice": { "enum": ["K-CTR-097", "K-CTR-098"] },
+          "messaggio": { "type": "string", "minLength": 1 }
         }
       }
     }

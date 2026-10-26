@@ -108,7 +108,8 @@
             "utente",
             "permessi",
             "conservazione",
-            "conservazione_scaduta"
+            "conservazione_scaduta",
+            "avvisi"
           ],
           "properties": {
             "utente": {
@@ -133,6 +134,19 @@
             "conservazione_scaduta": {
               "description": "La data di conservazione e' passata (orologio del PC).",
               "type": "boolean"
+            },
+            "avvisi": {
+              "description": "Gli avvisi di ogni apertura, uguali a quelli dell'uscita in testo: data di conservazione passata (K-CTR-097), chiavi nuove ricevute in una busta e password da cambiare (K-CTR-098). Testi del catalogo dei controlli, docs/controlli.md.",
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["codice", "messaggio"],
+                "properties": {
+                  "codice": { "enum": ["K-CTR-097", "K-CTR-098"] },
+                  "messaggio": { "type": "string", "minLength": 1 }
+                }
+              }
             }
           }
         }

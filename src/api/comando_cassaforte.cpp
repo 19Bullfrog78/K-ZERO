@@ -4,7 +4,10 @@
 // nuova di una chiusura o di un'uscita in chiaro, oppure la cartella del pacchetto chiuso che cambia (DECISIONI.md, K-010).
 #include <algorithm>
 #include <filesystem>
+#include <optional>
 #include <string>
+#include <utility>
+#include <vector>
 
 #include "accesso.hpp"
 #include "chiusura.hpp"
@@ -33,7 +36,9 @@ struct Esito {
     std::optional<std::size_t> voci_registro;
     bool scaduta = false;
     std::string fatto;
-    std::vector<std::string> avvisi;
+    // Prima le indicazioni del comando e i suoi avvisi del catalogo (es. K-CTR-099), poi quelli di ogni apertura (K-CTR-097,
+    // K-CTR-098): aggiungi_avvisi_dell_apertura.
+    std::vector<accesso::AvvisoMostrato> avvisi;
     Json cancellazione = nullptr;
 };
 
@@ -52,6 +57,25 @@ Json riepilogo_json(const cassaforte::Riepilogo& r, bool scaduta, std::size_t vo
     return j;
 }
 
+// Gli avvisi, uguali in testo e in JSON: codice K-CTR (null per le indicazioni del comando) e messaggio.
+Json avvisi_json(const std::vector<accesso::AvvisoMostrato>& avvisi) {
+    Json out = Json::array();
+    for (const accesso::AvvisoMostrato& a : avvisi)
+        out.push_back({{"codice", a.codice.empty() ? Json(nullptr) : Json(a.codice)}, {"messaggio", a.messaggio}});
+    return out;
+}
+
+std::string avvisi_testo(const std::vector<accesso::AvvisoMostrato>& avvisi) {
+    std::string t;
+    for (const accesso::AvvisoMostrato& a : avvisi) t += "Avviso" + (a.codice.empty() ? "" : " " + a.codice) + ": " + a.messaggio + "\n";
+    return t;
+}
+
+void aggiungi_avvisi_dell_apertura(Esito& e) {
+    if (!e.cassaforte) return;
+    for (const kzero::Problem& p : accesso::avvisi_dell_apertura(*e.cassaforte, e.utente)) e.avvisi.push_back(accesso::mostra(p));
+}
+
 Risultato uscita(const DefinizioneComando& comando, const Parametri& par, const Esito& e) {
     const std::size_t voci = e.voci_registro.value_or(e.cassaforte ? e.cassaforte->registro_voci : 0);
     if (par.formato == Formato::Json) {
@@ -61,7 +85,7 @@ Risultato uscita(const DefinizioneComando& comando, const Parametri& par, const 
         j["pacchetto"] = {{"codice", e.pacchetto_codice}, {"nome", e.pacchetto_nome}};
         j["cassaforte"] = e.cassaforte ? riepilogo_json(*e.cassaforte, e.scaduta, voci) : Json(nullptr);
         j["fatto"] = e.fatto;
-        j["avvisi"] = e.avvisi;
+        j["avvisi"] = avvisi_json(e.avvisi);
         j["cancellazione"] = e.cancellazione;
         return {testo_json(j), 0};
     }
@@ -78,16 +102,11 @@ Risultato uscita(const DefinizioneComando& comando, const Parametri& par, const 
         t += "Utenti: " + u + ".\n";
         t += "Registro degli accessi: " + std::to_string(voci) + (voci == 1 ? " voce.\n" : " voci.\n");
     }
-    for (const std::string& a : e.avvisi) t += "Avviso: " + a + "\n";
+    t += avvisi_testo(e.avvisi);
     return {t, 0};
 }
 
-bool scaduta(const cassaforte::Riepilogo& r) { return accesso::ambiente().orologio().substr(0, 10) > r.conservazione; }
-
-std::string avviso_scaduta(const cassaforte::Riepilogo& r) {
-    return "La data di conservazione dei dati (" + r.conservazione + ") e' passata: se non servono piu', kzero cancella; se c'e' "
-           "un motivo per tenerli, kzero conservazione con una data nuova.";
-}
+bool scaduta(const cassaforte::Riepilogo& r) { return accesso::conservazione_passata(r); }
 
 // --- Strumenti ----------------------------------------------------------------------------------------------------------
 
@@ -263,10 +282,10 @@ Risultato esegui_chiudi(const DefinizioneComando& comando, const Parametri& par)
     e.fatto = "Pacchetto " + m.code + " chiuso nella cartella nuova: file normali senza dati personali, cassaforte cifrata e "
               "registro degli accessi; riaperto e controllato, i dati sono identici all'originale. L'utente " + par.utente +
               " ha i dati personali e particolari.";
-    e.avvisi.push_back("La cartella in chiaro '" + sorgente + "' non e' stata toccata: va cancellata a mano. Copie vecchie dei "
-                       "dati in chiaro possono restare sul disco (e nelle copie di sicurezza): serve anche la cifratura del "
-                       "disco (docs/sicurezza.md).");
-    if (e.scaduta) e.avvisi.push_back(avviso_scaduta(*e.cassaforte));
+    e.avvisi.push_back({"", "La cartella in chiaro '" + sorgente + "' non e' stata toccata: va cancellata a mano. Copie vecchie "
+                            "dei dati in chiaro possono restare sul disco (e nelle copie di sicurezza): serve anche la cifratura "
+                            "del disco (docs/sicurezza.md)."});
+    aggiungi_avvisi_dell_apertura(e);
     return uscita(comando, par, e);
 }
 
@@ -325,8 +344,8 @@ Risultato esegui_richiudi(const DefinizioneComando& comando, const Parametri& pa
     e.scaduta = scaduta(r);
     e.fatto = "Pacchetto " + manifesto.codice + " richiuso: dati sostituiti nella stessa cassaforte (chiusura numero " +
               std::to_string(generazione) + "), utenti e registro tenuti; controllato prima di scrivere.";
-    e.avvisi.push_back("La cartella in chiaro '" + sorgente + "' va cancellata a mano adesso.");
-    if (e.scaduta) e.avvisi.push_back(avviso_scaduta(r));
+    e.avvisi.push_back({"", "La cartella in chiaro '" + sorgente + "' va cancellata a mano adesso."});
+    aggiungi_avvisi_dell_apertura(e);
     return uscita(comando, par, e);
 }
 
@@ -376,10 +395,11 @@ Risultato esegui_esporta(const DefinizioneComando& comando, const Parametri& par
     e.scaduta = scaduta(*e.cassaforte);
     e.fatto = "Uscita in chiaro del pacchetto " + manifesto.codice + " scritta nella cartella nuova, con tutti i dati personali e "
               "particolari; scritta nel registro.";
-    e.avvisi.push_back("La cartella '" + par.scrivi + "' contiene i dati in chiaro: correggerli, richiuderli (kzero richiudi " +
-                       par.scrivi + " --scrivi " + chiusa.string() + " --utente " + par.utente +
-                       ") e cancellarla subito. Copie vecchie possono restare sul disco (cifratura del disco, docs/sicurezza.md).");
-    if (e.scaduta) e.avvisi.push_back(avviso_scaduta(*e.cassaforte));
+    e.avvisi.push_back({"", "La cartella '" + par.scrivi + "' contiene i dati in chiaro: correggerli, richiuderli (kzero "
+                            "richiudi " + par.scrivi + " --scrivi " + chiusa.string() + " --utente " + par.utente +
+                            ") e cancellarla subito. Copie vecchie possono restare sul disco (cifratura del disco, "
+                            "docs/sicurezza.md)."});
+    aggiungi_avvisi_dell_apertura(e);
     return uscita(comando, par, e);
 }
 
@@ -403,7 +423,7 @@ Risultato esegui_cassaforte(const DefinizioneComando& comando, const Parametri& 
     e.scaduta = scaduta(*e.cassaforte);
     e.fatto = "Cassaforte del pacchetto " + manifesto.codice + " aperta dall'utente " + par.utente + " (" +
               cassaforte::testo_permessi_breve(a.cassaforte.permessi()) + ").";
-    if (e.scaduta) e.avvisi.push_back(avviso_scaduta(*e.cassaforte));
+    aggiungi_avvisi_dell_apertura(e);
     return uscita(comando, par, e);
 }
 
@@ -417,6 +437,8 @@ Risultato esegui_registro(const DefinizioneComando& comando, const Parametri& pa
                                               "lettura del registro", accesso::ambiente());
     const cassaforte::Riepilogo r = a.cassaforte.riepilogo();
     const bool passata = scaduta(r);
+    std::vector<accesso::AvvisoMostrato> avvisi;
+    for (const kzero::Problem& p : accesso::avvisi_dell_apertura(r, par.utente)) avvisi.push_back(accesso::mostra(p));
     if (par.formato == Formato::Json) {
         Json j = documento(comando.schema);
         j["utente"] = par.utente;
@@ -435,6 +457,7 @@ Risultato esegui_registro(const DefinizioneComando& comando, const Parametri& pa
                             {"classi_mostrate", v.mostrate},
                             {"nota", v.nota}});
         j["voci"] = voci;
+        j["avvisi"] = avvisi_json(avvisi);
         return {testo_json(j), 0};
     }
     std::string t = "Registro degli accessi alla cassaforte del pacchetto " + manifesto.codice + " (" +
@@ -449,7 +472,7 @@ Risultato esegui_registro(const DefinizioneComando& comando, const Parametri& pa
         if (!v.nota.empty()) t += "; " + v.nota;
         t += "\n";
     }
-    if (passata) t += "Avviso: " + avviso_scaduta(r) + "\n";
+    t += avvisi_testo(avvisi);
     return {t, 0};
 }
 
@@ -457,8 +480,11 @@ Risultato esegui_registro(const DefinizioneComando& comando, const Parametri& pa
 
 namespace {
 
+// avviso = un avviso del catalogo proprio del comando (es. K-CTR-099 dopo aver tolto un utente), prima di quelli
+// dell'apertura; r = la cassaforte dopo il cambiamento.
 Risultato dopo_cambio(const DefinizioneComando& comando, const Parametri& par, const ManifestoLetto& manifesto,
-                      const cassaforte::Riepilogo& r, const std::string& fatto) {
+                      const cassaforte::Riepilogo& r, const std::string& fatto,
+                      const std::optional<kzero::Problem>& avviso = std::nullopt) {
     Esito e;
     e.comando = comando.nome;
     e.utente = par.utente;
@@ -467,7 +493,8 @@ Risultato dopo_cambio(const DefinizioneComando& comando, const Parametri& par, c
     e.cassaforte = r;
     e.scaduta = scaduta(r);
     e.fatto = fatto;
-    if (e.scaduta) e.avvisi.push_back(avviso_scaduta(r));
+    if (avviso) e.avvisi.push_back(accesso::mostra(*avviso));
+    aggiungi_avvisi_dell_apertura(e);
     return uscita(comando, par, e);
 }
 
@@ -490,7 +517,8 @@ Risultato esegui_aggiungi_utente(const DefinizioneComando& comando, const Parame
             return "aggiunto " + cosa;
         },
         accesso::ambiente());
-    return dopo_cambio(comando, par, manifesto, r, "Aggiunto " + cosa + ".");
+    return dopo_cambio(comando, par, manifesto, r, "Aggiunto " + cosa + ".",
+                       accesso::avviso(kzero::Check::PasswordWrittenByOther, 0, {{"nuovo", par.nuovo_utente}, {"chi", par.utente}}));
 }
 
 Risultato esegui_togli_utente(const DefinizioneComando& comando, const Parametri& par) {
@@ -509,7 +537,8 @@ Risultato esegui_togli_utente(const DefinizioneComando& comando, const Parametri
     return dopo_cambio(comando, par, manifesto, r,
                        "Tolto l'utente " + par.utente_da_togliere + ": le chiavi dei dati che aveva sono state rifatte e i dati "
                        "ricifrati; non apre piu' questa versione della cassaforte. Le copie vecchie del file restano leggibili "
-                       "con le chiavi di allora (docs/sicurezza.md).");
+                       "con le chiavi di allora (docs/sicurezza.md).",
+                       accesso::avviso(kzero::Check::UserRemovedPasswords, 0, {{"tolto", par.utente_da_togliere}, {"utente", par.utente}}));
 }
 
 Risultato esegui_password(const DefinizioneComando& comando, const Parametri& par) {
@@ -528,7 +557,11 @@ Risultato esegui_password(const DefinizioneComando& comando, const Parametri& pa
             return cosa;
         },
         accesso::ambiente());
-    return dopo_cambio(comando, par, manifesto, r, "Fatto: " + cosa + ". La password vecchia non apre piu' questa versione.");
+    std::optional<kzero::Problem> scritta_da_altri;
+    if (per != par.utente)
+        scritta_da_altri = accesso::avviso(kzero::Check::PasswordWrittenByOther, 1, {{"nuovo", per}, {"chi", par.utente}});
+    return dopo_cambio(comando, par, manifesto, r, "Fatto: " + cosa + ". La password vecchia non apre piu' questa versione.",
+                       scritta_da_altri);
 }
 
 Risultato esegui_conservazione(const DefinizioneComando& comando, const Parametri& par) {
@@ -606,9 +639,9 @@ Risultato esegui_cancella(const DefinizioneComando& comando, const Parametri& pa
               " voci). Conteneva " + std::to_string(r.valori.personali) + " valori personali e " +
               std::to_string(r.valori.particolari) + " particolari, di " + std::to_string(r.utenti.size()) +
               (r.utenti.size() == 1 ? " utente." : " utenti.") + " Conservare questo resoconto.";
-    e.avvisi.push_back("Le copie vecchie della cassaforte (sul disco, nelle copie di sicurezza, presso un utente tolto) restano, "
-                       "cifrate con le password di allora (docs/sicurezza.md). Nella cartella restano i file normali, senza dati "
-                       "personali: si possono cancellare.");
+    e.avvisi.push_back({"", "Le copie vecchie della cassaforte (sul disco, nelle copie di sicurezza, presso un utente tolto) "
+                            "restano, cifrate con le password di allora (docs/sicurezza.md). Nella cartella restano i file "
+                            "normali, senza dati personali: si possono cancellare."});
     e.cancellazione = {{"ora", ora},
                        {"cassaforte", r.id},
                        {"valori", {{"personali", r.valori.personali}, {"particolari", r.valori.particolari}}},
