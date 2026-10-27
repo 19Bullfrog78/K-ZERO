@@ -68,6 +68,9 @@ enum class Errore {
     UtentiNonAmmessi,
     PacchettoDiverso,
     CassaforteMancante,
+    // Orari di lavoro (K-011)
+    PeriodoRovesciato,
+    PeriodoIncompleto,
 };
 
 struct DefinizioneErrore {

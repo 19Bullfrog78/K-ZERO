@@ -73,6 +73,9 @@ const std::vector<DefinizioneErrore>& catalogo_errori() {
             {Errore::PacchettoDiverso, "K-ERR-037", CodiceUscita::ErroreDati, "Pacchetto in chiaro diverso da quello chiuso"},
             {Errore::CassaforteMancante, "K-ERR-038", CodiceUscita::ErroreDati,
              "Il manifesto dichiara una cassaforte che manca"},
+            {Errore::PeriodoRovesciato, "K-ERR-039", CodiceUscita::ErroreParametri, "Periodo che finisce prima di cominciare"},
+            {Errore::PeriodoIncompleto, "K-ERR-040", CodiceUscita::ErroreParametri,
+             "Periodo non scritto o scritto a meta' (--data, oppure --dal e --al)"},
         };
         std::sort(c.begin(), c.end(), [](const DefinizioneErrore& a, const DefinizioneErrore& b) {
             return a.codice < b.codice;

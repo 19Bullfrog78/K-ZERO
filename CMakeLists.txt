@@ -261,6 +261,7 @@ add_library(kzero_api STATIC
   src/api/comando_descrivi.cpp
   src/api/comando_dimostrazione.cpp
   src/api/comando_giornata.cpp
+  src/api/comando_ore.cpp
   src/api/comando_versione.cpp
   src/api/controlli_catalogo.cpp
   src/api/controllo.cpp

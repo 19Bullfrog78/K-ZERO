@@ -21,7 +21,8 @@ struct Parametri {
     Formato formato = Formato::Testo;
     bool includi_dati_personali = false;
     bool includi_dati_particolari = false;
-    std::optional<kzero::Day> data;       // --data (kzero giornata)
+    std::optional<kzero::Day> data;       // --data (kzero giornata, kzero ore)
+    std::optional<kzero::Day> dal, al;    // --dal e --al (kzero ore, K-011)
     std::string persona;                  // --persona: vuoto = non scritto
     std::string mezzo;                    // --mezzo: vuoto = non scritto
     // Cassaforte (K-010)

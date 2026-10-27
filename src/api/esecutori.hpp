@@ -11,6 +11,7 @@ Risultato esegui_controlla(const DefinizioneComando& comando, const Parametri& p
 Risultato esegui_descrivi(const DefinizioneComando& comando, const Parametri& parametri);
 Risultato esegui_dimostrazione(const DefinizioneComando& comando, const Parametri& parametri);
 Risultato esegui_giornata(const DefinizioneComando& comando, const Parametri& parametri);
+Risultato esegui_ore(const DefinizioneComando& comando, const Parametri& parametri);   // K-011: comando_ore.cpp
 Risultato esegui_versione(const DefinizioneComando& comando, const Parametri& parametri);
 // Cassaforte (K-010): comando_cassaforte.cpp
 Risultato esegui_chiudi(const DefinizioneComando& comando, const Parametri& parametri);
