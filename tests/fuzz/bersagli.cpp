@@ -21,6 +21,7 @@
 #include "comandi.hpp"
 #include "controllo.hpp"
 #include "errori.hpp"
+#include "orari.hpp"
 #include "formato_dati.hpp"
 #include "lettore.hpp"
 #include "parametri.hpp"
@@ -105,6 +106,19 @@ void prova_file_del_pacchetto(const std::string& file, const std::uint8_t* dati,
                               {"puntatore", p.posizione.pointer}});
         }
         json_valido(testo_json(elenco), "controllo di " + file);
+    }
+    // K-011: il resoconto degli orari (kzero ore) di una settimana, con tutti i dati: si costruisce senza guasti e conta solo
+    // giorni dentro la settimana chiesta.
+    if (lettura.forma_valida()) {
+        kzero::HoursRequest richiesta;
+        richiesta.report = true;
+        richiesta.from = lettura.pacchetto.manifest.period.from;
+        richiesta.to = richiesta.from + 6;
+        kzero::HoursReport orari;
+        (void)controlla_lettura(lettura, Visibilita{true, true}, &richiesta, &orari);
+        for (const kzero::PersonHours& ph : orari.persons)
+            for (const kzero::DayHours& dh : ph.days)
+                if (!dh.pd || dh.pd->day < richiesta.from || dh.pd->day > richiesta.to) guasto("orari: un giorno fuori dal periodo chiesto");
     }
 }
 
