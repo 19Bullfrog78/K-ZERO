@@ -34,7 +34,11 @@ Si parte da Alpinabus (3 minibus + 1 auto) e si deve poter crescere fino a 500 m
 - Giornata di un giorno (turni, chi li fa, mezzi, corse e attivita', turni scoperti o senza mezzo):
   `./build/kzero giornata <cartella> --data AAAA-MM-GG [--persona CODICE | --mezzo CODICE]`
   (es. `./build/kzero giornata esempi/demo --data 2026-10-22 --persona P-C`; `--formato json`; con errori nei dati
-  non mostra nulla e rimanda a kzero controlla, errore K-ERR-018)
+  non mostra nulla e rimanda a kzero controlla, errore K-ERR-018; gli errori del piano degli orari non bloccano)
+- Orari di lavoro (K-011) di un giorno o di un periodo (tempi per categoria, lavoro per regime, riposi, leggi che valgono e
+  perche', rientri, problemi): `./build/kzero ore <cartella> (--data AAAA-MM-GG | --dal AAAA-MM-GG --al AAAA-MM-GG)
+  [--persona CODICE]` (es. `./build/kzero ore esempi/demo --dal 2026-11-09 --al 2026-11-15 --persona P-A`; `--formato
+  json`; pacchetto di prova degli orari: tests/esempi/k011-orari)
 - Cassaforte dei dati personali (K-010, docs/cassaforte.md): `./build/kzero chiudi <cartella in chiaro> --scrivi <cartella
   nuova> --utente CODICE --conservazione AAAA-MM-GG`; poi ogni comando su un pacchetto chiuso vuole `--utente CODICE` e la
   password (dal terminale senza eco, oppure dall'ingresso standard con `--password-da-ingresso`; mai come parametro ne' in
@@ -71,6 +75,8 @@ Si parte da Alpinabus (3 minibus + 1 auto) e si deve poter crescere fino a 500 m
 - IMPORTANTE (Mauro, risposta 43), domande e AI: le domande all'utente le fara' il programma stesso, a scelta multipla,
   senza AI, con le risposte salvate nei dati. Un assistente AI e' solo un aiuto facoltativo e di base non riceve ne'
   nomi ne' dati sulla salute (le uscite di base sono gia' filtrate).
+- IMPORTANTE (K-011): le regole sugli orari sono dati (legge, contratto collettivo, azienda, persona); il programma conosce
+  solo i tipi di regola; la legge certa e' un errore, quella da confermare un avviso; senza dati mai "regolare".
 - IMPORTANTE (Mauro, 18/10), sicurezza: il programma lavora sul PC e oggi nessun comando usa la rete; quando
   servira' (es. le distanze da Google Maps) lo fara' solo un adattatore separato, acceso con un parametro
   esplicito, che manda fuori il minimo (coordinate, mai nomi o altri dati delle persone), con un suo mandato.
@@ -158,8 +164,7 @@ Si parte da Alpinabus (3 minibus + 1 auto) e si deve poter crescere fino a 500 m
 - L'assistente occupa un posto. Solo chi viaggia seduto sulla carrozzina toglie posti a sedere e chiede la
   pedana; la carrozzina piegata e gli altri ausili piegati vanno nel bagagliaio, oppure tra i sedili (occupando
   posti liberi) solo se il mezzo lo ammette. Tutto in fits(), una sola regola.
-- Pause a casa dell'autista e ricoveri esterni sono preferenze, mai obblighi. La regola della pausa a casa non e'
-  ancora nei dati (mandato "orari di lavoro"): senza regola il programma non giudica le pause.
+- La chiave del rientro e' nei dati dell'azienda e della persona; senza distanze il programma giudica solo quando e' certo.
 - Chi fa un turno: assegnazione del singolo giorno, poi servizio fisso, poi rotazione (vince il piu' preciso).
   Se nessuno lo da', il turno e' scoperto: il programma non inventa assegnazioni. Un fatto con le date
   (assenza, scadenza, fermo) su un turno ricorrente e' un avviso; sull'assegnazione del singolo giorno e' un errore.

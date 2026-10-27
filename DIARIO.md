@@ -274,12 +274,48 @@
   intestazione non controllata 3, elenchi non controllati 2, tutti e due 7, catena 1, utente tolto senza chiavi nuove
   17, unione per posizione 3, LegameSensibile tolto dalle uscite 19, password di 8 caratteri 1, blocco tolto 1. Tutti
   scoperti.
+- 2026-10-27 - K-011 (programma, proposta "K-011: orari di lavoro"): **orari di lavoro degli autisti**. Tempi di ogni
+  persona giorno per giorno per categoria (guida, altre mansioni, disponibilita', reperibilita', interruzione, riposo),
+  dalle categorie scritte dall'azienda (aziende.json versione 2: `attivita[].tempo`, `soste_non_scritte`); versione 1
+  leggibile con prudenza (K-CTR-101). **Leggi come dati** (norme.json versione 2): regimi con quando valgono (ruoli,
+  rapporti, contratti collettivi, tipi di servizio, persone trasportabili con il conducente, km del percorso), esclusioni,
+  estensione alla settimana (nota INL 61/2021), esclusioni tra regimi, servizi occasionali, casi non trattati, cambi
+  dell'ora; 11 tipi di regola, ognuno con la lettura certa e, se serve, la prudente; legge certa = errore, da confermare
+  = avviso con il motivo, senza dati mai "regolare". Demo: R-L138, R-561, R-234, R-CHIAMATA ed ESEMPIO-01 come al punto
+  3 del mandato (REGOLE.md, "Orari di lavoro", con le fonti e l'elenco del "da confermare" per il consulente del lavoro).
+  **Contratto della persona** (persone.json versione 2: ore previste e massime), **scelte dell'azienda e della persona**
+  (`scelte_orari`, preferenza o limite), **chiave del rientro** (Mauro, 20/10: fermo minimo, fattore della guida, km in
+  piu', forza; tolti HomeBreakRule, check_home_breaks e il peso della pausa). **`kzero ore`** (schema `ore` versione 1;
+  K-ERR-039 e 040). **Controlli K-CTR-101 ... 126**; gli errori del piano degli orari non bloccano kzero giornata e
+  kzero ore (schemi controlla 5, giornata 3, descrivi 5). Demo e demo "solo numeri" alla versione 2 (Alfa: fermo 30
+  minuti, fattore 2, preferenza; Beta: 45 minuti, fattore 1,5, 15 km, limite; P-E con il suo fermo; P-D con il suo
+  lavoro massimo; P-G a chiamata con 200 giornate dal 2023): 0 errori, 31 avvisi (prima 8). Per restare senza errori
+  ho corretto un turno, non una regola: la gita di domenica 15 novembre porta il 561 su tutta la settimana di P-A, che
+  senza il riposo regolare di 45 ore lo violava; ora venerdi' 13 il primo lo fa P-C (assegnazione del singolo giorno).
+  Pacchetto di prova tests/esempi/k011-orari (dati inventati, generato dal demo): i tre esempi della pausa di Mauro, una
+  violazione per tipo di regola, la corsa di 52 km con mezzi da 17, 8 e 9 posti, una corsa senza km, il titolare, il
+  lavoro a chiamata, il contratto collettivo, le ore del contratto, due autisti a bordo: 15 errori (tutti del piano), 89
+  avvisi. Prova di scala alla versione 2, con le leggi del demo: turni rifatti perche' le rispettino anche nella lettura
+  prudente (corse piu' corte, una pausa di almeno 45 minuti a meta' turno, chi fa il pomeriggio non fa il mattino dopo):
+  0 errori, 1 avviso (la media su 4 mesi del D.Lgs. 234 che esce dal periodo).
+  Trovati e corretti strada facendo: un riposo di 36-41 ore a meta' settimana, in una settimana con il riposo regolare,
+  veniva preso per un riposo settimanale ridotto da compensare (6 avvisi falsi nel demo, 84 nella scala); una giornata
+  senza corse faceva scattare l'estensione del 561 a tutta la settimana; una scelta dell'azienda sull'ampiezza riportava i
+  motivi delle leggi; uscita di kzero ore troppo grande (i dati delle corse ripetuti per ogni regime) e troppa memoria
+  (il documento intero e tre copie dell'uscita): ora una persona alla volta, le corse una volta sola al giorno.
+  Sabotaggio (uno alla volta, il codice rotto apposta; prove rosse), gli 11 del mandato: soste fino a 30 minuti non
+  contate 1 (Orari.soste_di_30_e_di_31_minuti); estensione del 561 solo al giorno 18; persone del mezzo senza il
+  conducente 4; interruzione 30 + 15 accettata 2; riposi ridotti non contati tra due settimanali 1; "da confermare"
+  trattato come certo 30; come assente 18; finestra prima del periodo contata come zero (nessuna verifica parziale) 15;
+  valore della persona ignorato 1; rientro con il diretto a zero tra luoghi diversi 1; limite rigido su un'assegnazione del
+  singolo giorno dato come errore 1. Tutti scoperti. Con i sanitizer 796 prove su 796, 30 minuti con 3 prove insieme
+  (le tre del "non verificato" sui 375 pacchetti ora sono le piu' lunghe). Tempi della prova di scala: in "Bug e limiti
+  noti".
 
 ## Bug e limiti noti
-- Pause a casa: la regola (dai quanti minuti, entro quanti km da casa, deviazione massima) non e' ancora nei dati;
-  senza regola check_home_breaks non giudica. La deviazione massima non e' ancora usata. La regola la scrivera' il
-  mandato "orari di lavoro". I pesi del calcolo (ObjectiveWeights) hanno ancora valori provvisori nel codice, non usati:
-  andranno nei dati con il mandato del calcolo.
+- I pesi del calcolo (ObjectiveWeights) hanno ancora valori provvisori nel codice, non usati: andranno nei dati con il
+  mandato del calcolo. Dal K-011 non c'e' piu' il peso della pausa (la pausa si giudica con la chiave del rientro); con
+  il calcolo nessun peso dovra' premiare i km o la fretta (art. 10 del Reg. 561/2006).
 - Il regolamento di esempio R-TN cita il testo unico 1.B.1 come fonte dell'attesa 25/20, ma per i servizi speciali la
   fonte e' la Carta della mobilita' 2013 (DGP 2649/2012, punto 5), che fissa anche la durata a bordo di regola entro
   40 minuti, non ancora nel regolamento di esempio: da sistemare con il mandato sulla verifica delle regole.
@@ -292,9 +328,9 @@
   andata"): restano perche' i dati sono inventati e le prove li usano.
 - Ricerca dei luoghi: le lettere di altri alfabeti (greco, cirillico...) non vengono ricondotte all'alfabeto latino.
 - Ora legale: nei due giorni del cambio una corsa che attraversa le 02:00-03:00 dura un'ora in piu' o in meno di
-  quanto risulta dagli orari (docs/formato-dati.md). Vale anche per i turni: nella notte del 25/10/2026 un turno
-  che attraversa le 02:00-03:00 (es. una reperibilita' notturna) dura un'ora in piu' di quanto dicono inizio e fine. Da tenere presente nel
-  mandato "orari di lavoro".
+  quanto risulta dagli orari (docs/formato-dati.md). Dal K-011 le date del cambio sono nei dati del paese
+  (`norme[].cambi_ora`) e un turno che lo attraversa da' un avviso (K-CTR-103): le durate degli orari di lavoro di quel
+  turno vanno controllate a mano, il programma non le corregge.
 - Su Windows (mandato del programma per Windows) sono da sistemare e provare gli argomenti con lettere accentate e gli a
   capo CR LF, e da provare la lettura blindata (pipe, dispositivi, collegamenti e scorciatoie, cartelle sincronizzate come
   OneDrive con i "file su richiesta") e le protezioni del compilatore equivalenti (/GS, /guard:cf, /DYNAMICBASE,
@@ -325,8 +361,18 @@
 - Windows (programma per Windows): per la cassaforte sono da fare e da provare li' la password dal terminale senza eco, il
   blocco della cartella, la sostituzione atomica dei file, la memoria protetta e il divieto dei "core dump"; oggi la
   costruzione di libsodium si ferma con un messaggio chiaro su un sistema non POSIX.
-- Le regole sugli orari di lavoro degli autisti (ore al giorno e alla settimana, riposi, pause) non sono ancora nei
-  dati ne' controllate: i turni si controllano solo per sovrapposizioni, abilitazioni, disponibilita' e assenze.
+- Orari di lavoro (K-011), casi che il programma non tratta: piu' conducenti a bordo (multipresenza, Reg. 561 art. 4 o,
+  7 e 8 c. 5: avviso K-CTR-108 se compare); le deroghe dei servizi occasionali lunghi (art. 8 c. 2 bis e 6 bis); l'art.
+  9 (traghetti e treni, tempo per raggiungere il mezzo) e l'art. 12 (deroghe del conducente) del 561. Per i dipendenti a
+  cui non vale la L. 138 (es. servizi non di linea fuori dal 561) la legge sugli orari da applicare e' da verificare:
+  oggi un avviso (K-CTR-107) e quegli orari non si giudicano. Il contratto collettivo vero (es. IC35) arrivera' dal
+  consulente del lavoro, come regime nei dati. Il registro di servizio (art. 16 del Reg. 561, per le linee fino a 50 km)
+  arrivera' con le stampe. Le letture "da confermare" sono in REGOLE.md, da portare al consulente.
+- kzero ore e kzero controlla rifanno tutti i controlli a ogni richiesta. Con la prova di scala (1.320 persone, un anno):
+  kzero controlla circa 11 secondi; kzero ore di una persona per l'anno o di tutti per una settimana circa 12 secondi; di
+  tutti per un mese 16 secondi; di tutti per l'anno 38 secondi in testo (192 MB, 1,4 GB di memoria) e circa 1 minuto in
+  JSON (1,6 GB di uscita, 3,4 GB di memoria, perche' l'uscita si prepara tutta prima di scriverla). Per periodi lunghi
+  di tutte le persone conviene chiedere un mese alla volta.
 
 ## Idee
 - Generare scenari "gonfiati" (50-500 mezzi) dai giri reali per provare il carico.
@@ -359,13 +405,16 @@
   cambia, serve un segno nella sua fessura ("password scritta da un altro"): un dato in piu' nel formato.
 
 ## Prossimi passi
-1. Mandato "orari di lavoro": regole degli orari degli autisti, pausa a casa, filosofia aziendale nei dati.
-2. Mandato piccolo "avviso sui nomi liberi": un avviso quando un nome libero (servizi, gruppi, turni, scuole e centri)
+1. Mandato piccolo "avviso sui nomi liberi": un avviso quando un nome libero (servizi, gruppi, turni, scuole e centri)
    lascia capire un dato personale o particolare.
-3. Lettore del file alunni del CTA, che lo trasforma nel formato K-Zero (con la lettura blindata del K-009) e scrive i
+2. Lettore del file alunni del CTA, che lo trasforma nel formato K-Zero (con la lettura blindata del K-009) e scrive i
    dati personali e particolari solo nella cassaforte, mai in file in chiaro.
-4. Programma per Windows da scaricare (i dati veri restano sul PC di Mauro), con le prove di sicurezza su Windows (anche
+3. Scadenziario: le scadenze in un posto solo (abilitazioni, autorizzazioni, revisioni, contratti, data di
+   conservazione, giornate a chiamata vicine al limite).
+4. Viste per zona e per ora: giornata e orari di un gruppo di comuni o di una fascia oraria.
+5. Programma per Windows da scaricare (i dati veri restano sul PC di Mauro), con le prove di sicurezza su Windows (anche
    quelle della cassaforte) e la correzione dei dati senza file in chiaro.
-5. Raccolta dati veri Alpinabus: mezzi, autisti (paese), giri di una giornata tipo.
-6. "Fotografia" dei giri attuali: km pieni, km a vuoto, tempi morti.
-7. Lettura dei paper e proposta del metodo di calcolo con OR-Tools.
+6. Raccolta dati veri Alpinabus: mezzi, autisti (paese), giri di una giornata tipo; le letture "da confermare" degli
+   orari di lavoro al consulente del lavoro (REGOLE.md).
+7. "Fotografia" dei giri attuali: km pieni, km a vuoto, tempi morti.
+8. Lettura dei paper e proposta del metodo di calcolo con OR-Tools.
