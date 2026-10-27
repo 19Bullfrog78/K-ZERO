@@ -2,9 +2,13 @@
 // 10 aziende, 600 mezzi, 5.000 fermate, 200 scuole, 2.000 servizi con la loro domanda, 10.000 corse (K-007);
 // dal K-008 anche 1.320 persone, 1.200 turni del giorno, una rotazione per azienda (lunghezze da 3 a 28 giorni e una a
 // passi di un mese), un anno di festivita', assenze coperte da assegnazioni del singolo giorno.
-// Ogni mezzo fa le sue corse una dopo l'altra (fasce di 55 minuti dalle 06:00): due turni al giorno per mezzo, il
-// mattino e il pomeriggio. Le righe di ogni rotazione si danno il cambio sui turni (il riposo scorre).
-// I dati sono coerenti: "kzero controlla" deve finire senza errori (e senza avvisi).
+// Ogni mezzo fa le sue corse una dopo l'altra (fasce di 40 minuti dalle 06:00): due turni al giorno per mezzo, il
+// mattino e il pomeriggio, ognuno con una pausa di almeno 45 minuti a meta'. Le righe di ogni rotazione si danno il
+// cambio sui turni della loro meta' della giornata (il riposo scorre): chi fa il pomeriggio non fa il mattino dopo.
+// Dal K-011 norme, aziende e persone sono alla versione 2: le leggi sugli orari sono quelle del pacchetto dimostrativo
+// (incorporate nel programma, cosi' la prova misura le regole vere), con le categorie dei tempi e le scelte delle aziende.
+// I dati sono coerenti: "kzero controlla" deve finire senza errori; restano solo gli avvisi delle regole che non si
+// possono verificare per intero ai bordi del periodo del pacchetto (tests/CMakeLists.txt).
 // Uso: genera_scala <cartella>   (la cartella viene creata; i file del pacchetto vengono sostituiti)
 #include <algorithm>
 #include <cmath>
@@ -17,6 +21,8 @@
 #include <vector>
 
 #include <nlohmann/json.hpp>
+
+#include "risorse.hpp"
 
 using Json = nlohmann::ordered_json;
 
@@ -33,17 +39,26 @@ constexpr int kFermatePerCorsa = 4;
 constexpr int kFermate = kComuni * kFermatePerComune;
 constexpr int kCorsePerAzienda = kServizi / kAziende * kCorsePerServizio;
 static_assert(kCorsePerAzienda == 1000, "la prova di scala ha 1.000 corse per azienda (DIARIO.md)");
-constexpr int kFasciaMinuti = 55;                // ogni corsa sta in una fascia: dura al massimo 52 minuti
+constexpr int kFasciaMinuti = 40;                // ogni corsa sta in una fascia: dura al massimo 36 minuti
 constexpr int kFascePerMattino = 8;              // fasce 0-7 il mattino, 8-16 il pomeriggio
 constexpr int kTurniPerAzienda = 2 * kMezziPerAzienda;   // 120
 constexpr int kRiposiPerGiorno = 12;             // righe della rotazione a riposo ogni giorno
 constexpr int kPersonePerAzienda = kTurniPerAzienda + kRiposiPerGiorno;   // 132
 constexpr int kAssenzePerAzienda = 10;
 constexpr int kPausaDiMezzogiorno = 40;   // minuti tra le fasce del mattino e quelle del pomeriggio
+constexpr int kPausaNelTurno = 45;        // minuti in piu' prima delle fasce 4 e 12, a meta' di ogni turno
+constexpr int kMetaDelleRighe = kPersonePerAzienda / 2;   // 66 righe per il mattino, 66 per il pomeriggio
+static_assert(kMetaDelleRighe > kMezziPerAzienda, "in ogni meta' della giornata qualcuno riposa");
 
-// Inizio della fascia k: dalle 06:00 ogni 55 minuti, con la pausa di mezzogiorno prima della fascia 8. Il turno del
-// mattino finisce (rientro e fine servizio compresi) prima che cominci quello del pomeriggio.
-int inizio_fascia(int k) { return 6 * 60 + kFasciaMinuti * k + (k >= kFascePerMattino ? kPausaDiMezzogiorno : 0); }
+// Inizio della fascia k: dalle 06:00 ogni 40 minuti, con la pausa di mezzogiorno prima della fascia 8 e quella a meta'
+// turno prima delle fasce 4 e 12. Il turno del mattino finisce (rientro e fine servizio compresi) prima che cominci
+// quello del pomeriggio. Con corse di al massimo 36 minuti ogni turno resta sotto le 6 ore e 30 di lavoro e le 4 ore e 30
+// di guida senza pausa, e la pausa a meta' turno dura almeno 49 minuti: le leggi sugli orari dei dati sono rispettate
+// anche nella lettura prudente.
+int inizio_fascia(int k) {
+    return 6 * 60 + kFasciaMinuti * k + (k >= kFascePerMattino ? kPausaDiMezzogiorno : 0) + (k >= 4 ? kPausaNelTurno : 0) +
+           (k >= 12 ? kPausaNelTurno : 0);
+}
 
 // Numeri pseudo-casuali con seme fisso (splitmix64): gli stessi su ogni macchina e con ogni compilatore.
 class Caso {
@@ -77,11 +92,19 @@ double arrotonda(double x, int decimali) {
     return std::round(x * f) / f;
 }
 
-Json documento(const char* schema) {
+Json documento(const char* schema, int versione = 1) {
     Json j = Json::object();
     j["schema"] = schema;
-    j["schema_versione"] = 1;
+    j["schema_versione"] = versione;
     return j;
+}
+
+// Le leggi sugli orari e i cambi dell'ora del pacchetto dimostrativo, incorporato nel programma.
+Json norme_della_dimostrazione() {
+    const auto testo = kzero::api::risorse::trova("esempi/demo/norme.json");
+    if (!testo) throw std::runtime_error("manca esempi/demo/norme.json tra i file incorporati");
+    const Json demo = Json::parse(testo->begin(), testo->end());
+    return demo.at("norme").at(0);
 }
 
 Json fonte(const char* punto) { return Json{{"punto", punto}}; }
@@ -324,13 +347,13 @@ int main(int argc, char** argv) {
                 Json passaggi = Json::array();
                 passaggi.push_back({{"luogo", "L-RIM-" + cifre(a + 1, 2)}, {"orario", orario(t)}});
                 for (int k = 0; k < kFermatePerCorsa; ++k) {
-                    t += caso.tra(4, 9);
+                    t += caso.tra(3, 6);
                     passaggi.push_back({{"luogo", fermata((kFermatePerCorsa * i + k) % kFermate)},
                                         {"orario", orario(t)},
                                         {"persone", Json::array({{{"gruppo", codice_gruppo}, {"salgono", salgono[static_cast<std::size_t>(k)]}}})},
                                         {"km", {{k == 0 ? "vuoti" : "pieni", caso.tra(10, 99) / 10.0}}}});
                 }
-                t += caso.tra(5, 12);
+                t += caso.tra(4, 8);
                 passaggi.push_back({{"luogo", scuola},
                                     {"orario", orario(t)},
                                     {"persone", Json::array({{{"gruppo", codice_gruppo}, {"scendono", totale}}})},
@@ -390,8 +413,9 @@ int main(int argc, char** argv) {
         scrivi(cartella, "tempi_sosta.json", tempi);
 
         // --- K-008: norme, aziende, persone, turni, rotazioni, assenze e sostituzioni -------------------------------
-        Json norme = documento("norme");
+        Json norme = documento("norme", 2);
         const Json fonte_norma = {{"documento", "Norme di prova (inventate)"}};
+        const Json demo = norme_della_dimostrazione();
         norme["norme"] = Json::array({{
             {"codice", "N-SC"},
             {"paese", "IT"},
@@ -403,23 +427,31 @@ int main(int argc, char** argv) {
             {"requisiti_guida", Json::array({{{"categorie", Json::array({"M2", "M3"})},
                                                {"alternative", Json::array({{{"abilitazioni", Json::array({"D", "CQC-P"})}}})},
                                                {"fonte", fonte_norma}}})},
+            {"regimi", demo.at("regimi")},
+            {"cambi_ora", demo.at("cambi_ora")},
         }});
         scrivi(cartella, "norme.json", norme);
 
-        Json aziende = documento("aziende");
+        Json aziende = documento("aziende", 2);
         Json& elenco_aziende = aziende["aziende"] = Json::array();
         for (int a = 0; a < kAziende; ++a)
             elenco_aziende.push_back(
                 {{"azienda", azienda(a)},
                  {"norme", "N-SC"},
-                 {"impostazioni", {{"ricovero_vicino_a_casa", "ammesso"}, {"abbinamento_autista_mezzo", "nessuno"}}},
-                 {"attivita", Json::array({{{"codice", "PRESA"}, {"nome", "Presa servizio"}, {"usa_il_mezzo", true}},
-                                           {{"codice", "VUOTO"}, {"nome", "Trasferimento a vuoto"}, {"usa_il_mezzo", true}},
-                                           {{"codice", "FINE"}, {"nome", "Fine servizio"}, {"usa_il_mezzo", true}}})},
-                 {"tipi_assenza", Json::array({{{"codice", "FERIE"}, {"nome", "Ferie"}}})}});
+                 {"impostazioni",
+                  {{"ricovero_vicino_a_casa", "ammesso"},
+                   {"abbinamento_autista_mezzo", "nessuno"},
+                   {"soste_non_scritte", {{"categoria", "disponibilita"}, {"oltre_minuti", 30}, {"categoria_oltre", "interruzione"}}}}},
+                 {"attivita", Json::array({{{"codice", "PRESA"}, {"nome", "Presa servizio"}, {"usa_il_mezzo", true}, {"tempo", "altre_mansioni"}},
+                                           {{"codice", "VUOTO"}, {"nome", "Trasferimento a vuoto"}, {"usa_il_mezzo", true}, {"tempo", "guida"}},
+                                           {{"codice", "FINE"}, {"nome", "Fine servizio"}, {"usa_il_mezzo", true}, {"tempo", "altre_mansioni"}}})},
+                 {"tipi_assenza", Json::array({{{"codice", "FERIE"}, {"nome", "Ferie"}}})},
+                 {"scelte_orari", Json::array({{{"tipo", "ampiezza_massima"}, {"massimo_minuti", 600}, {"forza", "preferenza"}},
+                                               {{"tipo", "giorni_consecutivi"}, {"massimo_giorni", 6}, {"forza", "limite"}}})},
+                 {"rientro", {{"fermo_minimo_minuti", 45}, {"fattore_guida", 2}, {"forza", "preferenza"}}}});
         scrivi(cartella, "aziende.json", aziende);
 
-        Json persone = documento("persone");
+        Json persone = documento("persone", 2);
         Json& elenco_persone = persone["persone"] = Json::array();
         for (int a = 0; a < kAziende; ++a)
             for (int i = 0; i < kPersonePerAzienda; ++i)
@@ -428,6 +460,7 @@ int main(int argc, char** argv) {
                                           {"ruoli", Json::array({"autista"})},
                                           {"presa_servizio", "L-RIM-" + cifre(a + 1, 2)},
                                           {"rapporto", {{"tipo", "dipendente_tempo_pieno"}}},
+                                          {"ore", Json::array({{{"previste", {{"settimana", 39}}}, {"massime", {{"giorno", 10}, {"settimana", 48}}}}})},
                                           {"abilitazioni", Json::array({{{"tipo", "B"}}, {{"tipo", "D"}}, {{"tipo", "CQC-P"}}})}});
         scrivi(cartella, "persone.json", persone);
 
@@ -464,9 +497,11 @@ int main(int argc, char** argv) {
             }
         scrivi(cartella, "turni.json", turni);
 
-        // Rotazioni: la riga i al passo k fa il turno (i + k * salto) mod 132, oppure riposa se il numero e' 120 o piu'
-        // (salto = 132 / lunghezza: ogni riga lavora in quasi tutti i passi). Ogni giorno tutti i 120 turni hanno una
-        // persona e 12 persone riposano. Lunghezze diverse per azienda; l'ultima a passi di un mese.
+        // Rotazioni: le righe 0-65 fanno i turni del mattino (0-59), le righe 66-131 quelli del pomeriggio (60-119). La
+        // riga i al passo k fa il turno (i + k * salto) mod 66 della sua meta', oppure riposa se il numero e' 60 o piu'
+        // (salto = 66 / lunghezza: ogni riga lavora in quasi tutti i passi). Ogni giorno tutti i 120 turni hanno una
+        // persona e 12 persone riposano; nessuno passa dal pomeriggio al mattino del giorno dopo (riposo troppo corto).
+        // Lunghezze diverse per azienda; l'ultima a passi di un mese.
         const int lunghezze[kAziende] = {3, 5, 6, 7, 8, 10, 12, 14, 21, 4};
         const int partenza = giorno(2026, 8, 31);
         const auto passo_del_giorno = [&](int a, int d) {
@@ -474,7 +509,9 @@ int main(int argc, char** argv) {
             return ((d - partenza) % lunghezze[a] + lunghezze[a]) % lunghezze[a];
         };
         const auto turno_della_riga = [&](int a, int i, int k) {   // >= 120: riposo
-            return (i + k * (kPersonePerAzienda / lunghezze[a])) % kPersonePerAzienda;
+            const int meta = i / kMetaDelleRighe;
+            const int n = (i % kMetaDelleRighe + k * (kMetaDelleRighe / lunghezze[a])) % kMetaDelleRighe;
+            return n >= kMezziPerAzienda ? kTurniPerAzienda : meta * kMezziPerAzienda + n;
         };
         Json rotazioni = documento("rotazioni");
         Json& elenco_rotazioni = rotazioni["rotazioni"] = Json::array();
@@ -498,8 +535,8 @@ int main(int argc, char** argv) {
         }
         scrivi(cartella, "rotazioni.json", rotazioni);
 
-        // Assenze di un giorno, ognuna coperta da un'assegnazione del singolo giorno a una persona che quel giorno
-        // riposa (cosi' nessun turno resta scoperto e nessuno fa due turni).
+        // Assenze di un giorno, ognuna coperta da un'assegnazione del singolo giorno a una persona della stessa meta' della
+        // giornata che quel giorno riposa (cosi' nessun turno resta scoperto, nessuno fa due turni e i riposi restano).
         std::vector<int> giorni_di_scuola;
         for (int d = giorno(2026, 9, 14); d <= giorno(2027, 6, 11); ++d) {
             const int dow = ((d % 7) + 7 + 3) % 7;   // 0 = lunedi' (il 1970-01-01 era un giovedi')
@@ -517,8 +554,9 @@ int main(int argc, char** argv) {
                 const int k = passo_del_giorno(a, d);
                 int assente = (13 * n + a) % kPersonePerAzienda;
                 while (turno_della_riga(a, assente, k) >= kTurniPerAzienda) assente = (assente + 1) % kPersonePerAzienda;
-                int sostituto = 0;
+                int sostituto = assente / kMetaDelleRighe * kMetaDelleRighe;
                 while (turno_della_riga(a, sostituto, k) < kTurniPerAzienda) ++sostituto;
+                if (sostituto / kMetaDelleRighe != assente / kMetaDelleRighe) throw std::runtime_error("sostituto mancante");
                 elenco_assenze.push_back({{"persona", persona(a, assente)}, {"tipo", "FERIE"}, {"dal", data(d)}, {"al", data(d)}});
                 elenco_assegnazioni.push_back(
                     {{"data", data(d)}, {"turno", turno(a, turno_della_riga(a, assente, k))}, {"persona", persona(a, sostituto)}});

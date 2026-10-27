@@ -282,14 +282,14 @@ std::vector<DefinizioneComando> crea_comandi() {
          {{"cartella", "Cartella del pacchetto dati, con il manifesto pacchetto.json."}},
          {parametro_formato(), parametro_dati_personali(), parametro_dati_particolari(), parametro_utente(false),
           parametro_password_da_ingresso()},
-         {"controlla", 4},
+         {"controlla", 5},
          esegui_controlla},
         {"descrivi",
          "Descrive il programma: comandi, argomenti, parametri, schemi JSON, file dei pacchetti dati, codici di uscita, "
          "di errore e dei controlli.",
          {},
          {parametro_formato()},
-         {"descrivi", 4},
+         {"descrivi", 5},
          esegui_descrivi},
         {"dimostrazione",
          "Stampa di prova con il pacchetto dimostrativo esempi/demo (dati inventati, incorporato nel programma): "
@@ -303,11 +303,11 @@ std::vector<DefinizioneComando> crea_comandi() {
          "(rotazione, servizio fisso, assegnazione del singolo giorno), il mezzo, le corse (intere o a pezzi) e le "
          "attivita' in ordine con i passaggi, i tempi fermi e i km; i turni scoperti o senza mezzo con il motivo; i "
          "totali. Con --persona o --mezzo solo quella persona o quel mezzo. Se il pacchetto ha errori nei dati non mostra "
-         "nulla e rimanda a kzero controlla (gli avvisi non bloccano).",
+         "nulla e rimanda a kzero controlla (gli avvisi e gli errori del piano degli orari non bloccano).",
          {{"cartella", "Cartella del pacchetto dati, con il manifesto pacchetto.json."}},
          {parametro_formato(), parametro_dati_personali(), parametro_dati_particolari(), parametro_data(), parametro_persona(),
           parametro_mezzo(), parametro_utente(false), parametro_password_da_ingresso()},
-         {"giornata", 2},
+         {"giornata", 3},
          esegui_giornata},
         {"versione",
          "Mostra la versione del programma.",
@@ -352,8 +352,9 @@ std::string forma_comando(const DefinizioneComando& c) {
 
 const std::vector<Schema>& schemi_ritirati() {
     // Versioni non piu' prodotte: i file restano in docs/schema per controllare le uscite salvate prima.
-    static const std::vector<Schema> s = {{"controlla", 1}, {"controlla", 2}, {"controlla", 3}, {"descrivi", 1}, {"descrivi", 2},
-                                          {"descrivi", 3}, {"dimostrazione", 1}, {"giornata", 1}};
+    static const std::vector<Schema> s = {{"controlla", 1}, {"controlla", 2}, {"controlla", 3}, {"controlla", 4}, {"descrivi", 1},
+                                          {"descrivi", 2},  {"descrivi", 3},  {"descrivi", 4},  {"dimostrazione", 1},
+                                          {"giornata", 1},  {"giornata", 2}};
     return s;
 }
 

@@ -6,6 +6,7 @@
 #include <set>
 #include <tuple>
 
+#include "orari.hpp"
 #include "pacchetto.hpp"
 #include "ricerca.hpp"
 
@@ -73,6 +74,24 @@ Param days_param(std::string name, Day day) {
     p.name = std::move(name);
     p.kind = Param::Kind::Days;
     p.days = {day};
+    return p;
+}
+
+Param duration_param(std::string name, long long minutes) {
+    Param p;
+    p.name = std::move(name);
+    p.kind = Param::Kind::Duration;
+    p.number = minutes;
+    return p;
+}
+
+Param reasons_param(std::string name, std::vector<std::string> codes) {
+    Param p;
+    p.name = std::move(name);
+    p.kind = Param::Kind::Reasons;
+    std::sort(codes.begin(), codes.end());
+    codes.erase(std::unique(codes.begin(), codes.end()), codes.end());
+    for (const std::string& c : codes) p.text += (p.text.empty() ? "" : ",") + c;
     return p;
 }
 
@@ -270,6 +289,8 @@ private:
             case Element::AbsenceType:
             case Element::StopType:
             case Element::Competence: return true;   // elenchi di norme o aziende: controllati con ref_in
+            case Element::Regime:
+            case Element::WorkRule: return true;     // regimi e regole: controllati in controlli_orari.cpp
         }
         return false;
     }
@@ -1262,9 +1283,20 @@ private:
 
 }  // namespace
 
-std::vector<Problem> check_package(const Package& p) {
+std::vector<Problem> check_package(const Package& p, const HoursRequest* request, HoursReport* report) {
     std::vector<Problem> out = Checker(p).run();
-    check_shifts(p, out);
+    PlanCollector collector(p);
+    check_shifts(p, out, &collector);
+    // Orari di lavoro (K-011): i dati, poi il piano di tutto il periodo (le giornate raccolte dai controlli sui turni).
+    const Index idx(p);
+    check_hours_data(p, idx, out);
+    PlanData plans = collector.take(p);
+    if (request && report) {
+        check_hours(p, idx, plans, out, *request, report);
+        report->plan = std::move(plans);   // il resoconto punta alle giornate del piano: le tiene con se'
+    } else {
+        check_hours(p, idx, plans, out);
+    }
     return group_by_days(std::move(out));
 }
 

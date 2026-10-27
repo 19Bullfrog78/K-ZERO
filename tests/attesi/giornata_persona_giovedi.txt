@@ -1,7 +1,7 @@
 Giornata del 2026-10-22, giovedi' - pacchetto DEMO-2026 "Pacchetto dimostrativo K-Zero" (dati inventati)
 Persona P-C, azienda ALFA, presa servizio a L-RIMESSA-ALFA (Valfonda, rimessa Autoservizi Alfa)
 Festivita': nessuna.
-Controllo del pacchetto: nessun errore, 8 avvisi (dettagli con kzero controlla).
+Controllo del pacchetto: nessun errore, 31 avvisi (dettagli con kzero controlla).
 Dati personali: sostituiti dal codice; dati particolari: riservati.
 
 T-DIS "Centro diurno"  07:25-09:35 (2 ore e 10 minuti)  azienda ALFA, autista

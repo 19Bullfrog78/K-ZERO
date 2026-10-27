@@ -1,0 +1,1026 @@
+{
+  "schema": "persone",
+  "schema_versione": 2,
+  "persone": [
+    {
+      "codice": "P-A",
+      "azienda": "ALFA",
+      "ruoli": [
+        "autista"
+      ],
+      "nome": "Rossi Mario",
+      "casa": {
+        "indirizzo": "Via dei Prati 4",
+        "comune": "Valfonda",
+        "coordinate": {
+          "lat": 46.4105,
+          "lon": 11.0921
+        }
+      },
+      "presa_servizio": "L-RIMESSA-ALFA",
+      "rapporto": {
+        "tipo": "dipendente_tempo_pieno"
+      },
+      "contratto_collettivo": {
+        "codice": "ESEMPIO-01",
+        "nome": "Contratto collettivo di esempio (inventato)"
+      },
+      "ore": [
+        {
+          "dal": "2026-09-01",
+          "previste": {
+            "settimana": 39
+          },
+          "massime": {
+            "giorno": 10,
+            "settimana": 48
+          }
+        }
+      ],
+      "costo_orario": [
+        {
+          "dal": "2026-09-01",
+          "valore": 22.5
+        }
+      ],
+      "abilitazioni": [
+        {
+          "tipo": "B",
+          "scadenza": "2031-05-10"
+        },
+        {
+          "tipo": "D",
+          "scadenza": "2028-03-02",
+          "riferimento": "Patente n. VF0000001 (inventata)"
+        },
+        {
+          "tipo": "CQC-P",
+          "scadenza": "2028-03-02"
+        },
+        {
+          "tipo": "KB"
+        }
+      ],
+      "autorizzazioni": [
+        {
+          "committente": "CVA",
+          "riferimento": "Cartellino n. 12 (inventato)",
+          "scadenza": "2027-08-31"
+        }
+      ],
+      "competenze": [
+        "PEDANA",
+        "LINEA-B610"
+      ],
+      "preferenze": [
+        {
+          "tipo": "fascia_oraria",
+          "dalle": "06:00",
+          "alle": "21:30"
+        }
+      ]
+    },
+    {
+      "codice": "P-B",
+      "azienda": "ALFA",
+      "ruoli": [
+        "autista"
+      ],
+      "nome": "Bianco Anna",
+      "casa": {
+        "indirizzo": "Via del Lago 12",
+        "comune": "Lagobello",
+        "coordinate": {
+          "lat": 46.3972,
+          "lon": 11.0519
+        }
+      },
+      "presa_servizio": "L-RIMESSA-ALFA",
+      "rapporto": {
+        "tipo": "socio"
+      },
+      "abilitazioni": [
+        {
+          "tipo": "B"
+        },
+        {
+          "tipo": "D",
+          "scadenza": "2029-11-20"
+        },
+        {
+          "tipo": "CQC-P",
+          "scadenza": "2029-11-20"
+        },
+        {
+          "tipo": "KB"
+        }
+      ],
+      "autorizzazioni": [
+        {
+          "committente": "CVA",
+          "riferimento": "Cartellino n. 14 (inventato)",
+          "scadenza": "2027-08-31"
+        }
+      ],
+      "competenze": [
+        "PEDANA",
+        "LINEA-B610"
+      ],
+      "preferenze": [
+        {
+          "tipo": "giorni_liberi",
+          "giorni": [
+            "domenica"
+          ]
+        }
+      ]
+    },
+    {
+      "codice": "P-C",
+      "azienda": "ALFA",
+      "ruoli": [
+        "autista"
+      ],
+      "nome": "Verdi Carlo",
+      "casa": {
+        "indirizzo": "Piazza Grande 1",
+        "comune": "Valfonda"
+      },
+      "presa_servizio": "L-RIMESSA-ALFA",
+      "rapporto": {
+        "tipo": "titolare"
+      },
+      "abilitazioni": [
+        {
+          "tipo": "B"
+        },
+        {
+          "tipo": "D",
+          "scadenza": "2030-01-15"
+        },
+        {
+          "tipo": "CQC-P",
+          "scadenza": "2027-06-30"
+        },
+        {
+          "tipo": "KB"
+        }
+      ],
+      "autorizzazioni": [
+        {
+          "committente": "CVA",
+          "riferimento": "Cartellino n. 9 (inventato)",
+          "scadenza": "2027-08-31"
+        }
+      ],
+      "competenze": [
+        "PEDANA",
+        "LINEA-B610",
+        "ELETTRICO"
+      ],
+      "prestiti": [
+        {
+          "azienda": "BETA",
+          "accordo": "Accordo consortile n. 2/2026 tra Alfa e Beta (inventato)",
+          "dal": "2026-09-01",
+          "al": "2027-08-31"
+        }
+      ]
+    },
+    {
+      "codice": "P-D",
+      "azienda": "ALFA",
+      "ruoli": [
+        "autista",
+        "assistente"
+      ],
+      "nome": "Neri Paola",
+      "casa": {
+        "indirizzo": "Via Roma 30",
+        "comune": "Pradello",
+        "coordinate": {
+          "lat": 46.4418,
+          "lon": 11.0745
+        }
+      },
+      "presa_servizio": "PR-01",
+      "mezzo_abituale": "ALFA-04",
+      "rapporto": {
+        "tipo": "dipendente_part_time"
+      },
+      "ore": [
+        {
+          "previste": {
+            "settimana": 25
+          }
+        }
+      ],
+      "disponibilita": [
+        {
+          "giorni": [
+            "lunedi",
+            "martedi",
+            "mercoledi",
+            "giovedi",
+            "venerdi"
+          ],
+          "dalle": "06:30",
+          "alle": "14:00"
+        }
+      ],
+      "abilitazioni": [
+        {
+          "tipo": "B"
+        },
+        {
+          "tipo": "KB"
+        },
+        {
+          "tipo": "D",
+          "scadenza": "2031-02-01"
+        },
+        {
+          "tipo": "CQC-P",
+          "scadenza": "2031-02-01"
+        }
+      ],
+      "autorizzazioni": [
+        {
+          "committente": "CVA",
+          "riferimento": "Cartellino n. 17 (inventato)",
+          "scadenza": "2027-08-31"
+        }
+      ],
+      "competenze": [
+        "PEDANA",
+        "ELETTRICO"
+      ],
+      "scelte_orari": [
+        {
+          "tipo": "lavoro_massimo",
+          "periodo": "giornata",
+          "massimo_minuti": 420,
+          "forza": "preferenza",
+          "nota": "Part-time: giornate fino a 7 ore."
+        }
+      ]
+    },
+    {
+      "codice": "P-NUOVO",
+      "azienda": "ALFA",
+      "ruoli": [
+        "autista"
+      ],
+      "ipotetica": true,
+      "rapporto": {
+        "tipo": "tempo_determinato"
+      },
+      "abilitazioni": [
+        {
+          "tipo": "B"
+        },
+        {
+          "tipo": "D"
+        },
+        {
+          "tipo": "CQC-P"
+        }
+      ]
+    },
+    {
+      "codice": "P-B1",
+      "azienda": "BETA",
+      "ruoli": [
+        "autista"
+      ],
+      "nome": "Ferri Giulia",
+      "presa_servizio": "L-RIMESSA-BETA",
+      "rapporto": {
+        "tipo": "dipendente_tempo_pieno"
+      },
+      "abilitazioni": [
+        {
+          "tipo": "B"
+        },
+        {
+          "tipo": "D",
+          "scadenza": "2030-06-30"
+        },
+        {
+          "tipo": "CQC-P",
+          "scadenza": "2030-06-30"
+        }
+      ]
+    },
+    {
+      "codice": "P-B2",
+      "azienda": "BETA",
+      "ruoli": [
+        "autista"
+      ],
+      "nome": "Conti Marco",
+      "presa_servizio": "L-RIMESSA-BETA",
+      "rapporto": {
+        "tipo": "dipendente_tempo_pieno"
+      },
+      "abilitazioni": [
+        {
+          "tipo": "B"
+        },
+        {
+          "tipo": "D",
+          "scadenza": "2029-09-30"
+        },
+        {
+          "tipo": "CQC-P",
+          "scadenza": "2029-09-30"
+        }
+      ]
+    },
+    {
+      "codice": "P-B3",
+      "azienda": "BETA",
+      "ruoli": [
+        "autista"
+      ],
+      "nome": "Russo Elena",
+      "presa_servizio": "L-RIMESSA-BETA",
+      "rapporto": {
+        "tipo": "stagionale"
+      },
+      "abilitazioni": [
+        {
+          "tipo": "B"
+        },
+        {
+          "tipo": "D",
+          "scadenza": "2028-12-31"
+        },
+        {
+          "tipo": "CQC-P",
+          "scadenza": "2028-12-31"
+        }
+      ]
+    },
+    {
+      "codice": "P-B4",
+      "azienda": "BETA",
+      "ruoli": [
+        "assistente"
+      ],
+      "nome": "Greco Lucia",
+      "presa_servizio": "F-SORGENTA",
+      "rapporto": {
+        "tipo": "dipendente_part_time"
+      },
+      "competenze": [
+        "INFANZIA"
+      ]
+    },
+    {
+      "codice": "P-E",
+      "azienda": "ALFA",
+      "ruoli": [
+        "autista"
+      ],
+      "nome": "Galli Sara",
+      "casa": {
+        "indirizzo": "Via del Mulino 8",
+        "comune": "Valfonda",
+        "coordinate": {
+          "lat": 46.4121,
+          "lon": 11.0897
+        }
+      },
+      "presa_servizio": "L-RIMESSA-ALFA",
+      "mezzo_abituale": "ALFA-01",
+      "rapporto": {
+        "tipo": "dipendente_part_time"
+      },
+      "ore": [
+        {
+          "previste": {
+            "settimana": 20
+          }
+        }
+      ],
+      "abilitazioni": [
+        {
+          "tipo": "B"
+        },
+        {
+          "tipo": "D1",
+          "scadenza": "2029-04-18"
+        },
+        {
+          "tipo": "CQC-P",
+          "scadenza": "2029-04-18"
+        }
+      ],
+      "autorizzazioni": [
+        {
+          "committente": "CVA",
+          "riferimento": "Cartellino n. 21 (inventato)",
+          "scadenza": "2027-08-31"
+        }
+      ],
+      "competenze": [
+        "PEDANA"
+      ],
+      "rientro": {
+        "fermo_minimo_minuti": 45
+      }
+    },
+    {
+      "codice": "P-F",
+      "azienda": "ALFA",
+      "ruoli": [
+        "autista"
+      ],
+      "nome": "Moretti Luca",
+      "presa_servizio": "L-RIMESSA-ALFA",
+      "mezzo_abituale": "ALFA-02",
+      "rapporto": {
+        "tipo": "collaboratore_familiare"
+      },
+      "abilitazioni": [
+        {
+          "tipo": "B"
+        },
+        {
+          "tipo": "D",
+          "scadenza": "2032-10-02"
+        },
+        {
+          "tipo": "CQC-P",
+          "scadenza": "2032-10-02"
+        }
+      ]
+    },
+    {
+      "codice": "P-G",
+      "azienda": "ALFA",
+      "ruoli": [
+        "autista"
+      ],
+      "nome": "Fontana Rita",
+      "presa_servizio": "L-RIMESSA-ALFA",
+      "mezzo_abituale": "ALFA-06",
+      "rapporto": {
+        "tipo": "a_chiamata"
+      },
+      "abilitazioni": [
+        {
+          "tipo": "B"
+        },
+        {
+          "tipo": "D",
+          "scadenza": "2030-12-12"
+        },
+        {
+          "tipo": "CQC-P",
+          "scadenza": "2030-12-12"
+        }
+      ],
+      "giornate_a_chiamata": {
+        "giornate": 200,
+        "contate_dal": "2023-09-01"
+      }
+    },
+    {
+      "codice": "P-PAUSE",
+      "azienda": "ALFA",
+      "ruoli": [
+        "autista"
+      ],
+      "nome": "Esempi Pausa",
+      "presa_servizio": "L-RIMESSA-ALFA",
+      "rapporto": {
+        "tipo": "dipendente_tempo_pieno"
+      },
+      "abilitazioni": [
+        {
+          "tipo": "B",
+          "scadenza": "2031-05-10"
+        },
+        {
+          "tipo": "D",
+          "scadenza": "2028-03-02",
+          "riferimento": "Patente n. VF0000001 (inventata)"
+        },
+        {
+          "tipo": "CQC-P",
+          "scadenza": "2028-03-02"
+        },
+        {
+          "tipo": "KB"
+        }
+      ],
+      "autorizzazioni": [
+        {
+          "committente": "CVA",
+          "riferimento": "Cartellino n. 12 (inventato)",
+          "scadenza": "2027-08-31"
+        }
+      ],
+      "competenze": [
+        "PEDANA",
+        "LINEA-B610"
+      ]
+    },
+    {
+      "codice": "P-L138",
+      "azienda": "ALFA",
+      "ruoli": [
+        "autista"
+      ],
+      "nome": "Linea Lunga",
+      "presa_servizio": "L-RIMESSA-ALFA",
+      "rapporto": {
+        "tipo": "dipendente_tempo_pieno"
+      },
+      "abilitazioni": [
+        {
+          "tipo": "B",
+          "scadenza": "2031-05-10"
+        },
+        {
+          "tipo": "D",
+          "scadenza": "2028-03-02",
+          "riferimento": "Patente n. VF0000001 (inventata)"
+        },
+        {
+          "tipo": "CQC-P",
+          "scadenza": "2028-03-02"
+        },
+        {
+          "tipo": "KB"
+        }
+      ],
+      "autorizzazioni": [
+        {
+          "committente": "CVA",
+          "riferimento": "Cartellino n. 12 (inventato)",
+          "scadenza": "2027-08-31"
+        }
+      ],
+      "competenze": [
+        "PEDANA",
+        "LINEA-B610"
+      ]
+    },
+    {
+      "codice": "P-561-17",
+      "azienda": "ALFA",
+      "ruoli": [
+        "autista"
+      ],
+      "nome": "Mezzo Diciassette",
+      "presa_servizio": "L-RIMESSA-ALFA",
+      "rapporto": {
+        "tipo": "dipendente_tempo_pieno"
+      },
+      "abilitazioni": [
+        {
+          "tipo": "B",
+          "scadenza": "2031-05-10"
+        },
+        {
+          "tipo": "D",
+          "scadenza": "2028-03-02",
+          "riferimento": "Patente n. VF0000001 (inventata)"
+        },
+        {
+          "tipo": "CQC-P",
+          "scadenza": "2028-03-02"
+        },
+        {
+          "tipo": "KB"
+        }
+      ],
+      "autorizzazioni": [
+        {
+          "committente": "CVA",
+          "riferimento": "Cartellino n. 12 (inventato)",
+          "scadenza": "2027-08-31"
+        }
+      ],
+      "competenze": [
+        "PEDANA",
+        "LINEA-B610"
+      ]
+    },
+    {
+      "codice": "P-561-8",
+      "azienda": "ALFA",
+      "ruoli": [
+        "autista"
+      ],
+      "nome": "Mezzo Otto",
+      "presa_servizio": "L-RIMESSA-ALFA",
+      "rapporto": {
+        "tipo": "dipendente_tempo_pieno"
+      },
+      "abilitazioni": [
+        {
+          "tipo": "B",
+          "scadenza": "2031-05-10"
+        },
+        {
+          "tipo": "D",
+          "scadenza": "2028-03-02",
+          "riferimento": "Patente n. VF0000001 (inventata)"
+        },
+        {
+          "tipo": "CQC-P",
+          "scadenza": "2028-03-02"
+        },
+        {
+          "tipo": "KB"
+        }
+      ],
+      "autorizzazioni": [
+        {
+          "committente": "CVA",
+          "riferimento": "Cartellino n. 12 (inventato)",
+          "scadenza": "2027-08-31"
+        }
+      ],
+      "competenze": [
+        "PEDANA",
+        "LINEA-B610"
+      ]
+    },
+    {
+      "codice": "P-561-9",
+      "azienda": "ALFA",
+      "ruoli": [
+        "autista"
+      ],
+      "nome": "Mezzo Nove",
+      "presa_servizio": "L-RIMESSA-ALFA",
+      "rapporto": {
+        "tipo": "dipendente_tempo_pieno"
+      },
+      "abilitazioni": [
+        {
+          "tipo": "B",
+          "scadenza": "2031-05-10"
+        },
+        {
+          "tipo": "D",
+          "scadenza": "2028-03-02",
+          "riferimento": "Patente n. VF0000001 (inventata)"
+        },
+        {
+          "tipo": "CQC-P",
+          "scadenza": "2028-03-02"
+        },
+        {
+          "tipo": "KB"
+        }
+      ],
+      "autorizzazioni": [
+        {
+          "committente": "CVA",
+          "riferimento": "Cartellino n. 12 (inventato)",
+          "scadenza": "2027-08-31"
+        }
+      ],
+      "competenze": [
+        "PEDANA",
+        "LINEA-B610"
+      ]
+    },
+    {
+      "codice": "P-SENZA-KM",
+      "azienda": "ALFA",
+      "ruoli": [
+        "autista"
+      ],
+      "nome": "Senza Km",
+      "presa_servizio": "L-RIMESSA-ALFA",
+      "rapporto": {
+        "tipo": "dipendente_tempo_pieno"
+      },
+      "abilitazioni": [
+        {
+          "tipo": "B",
+          "scadenza": "2031-05-10"
+        },
+        {
+          "tipo": "D",
+          "scadenza": "2028-03-02",
+          "riferimento": "Patente n. VF0000001 (inventata)"
+        },
+        {
+          "tipo": "CQC-P",
+          "scadenza": "2028-03-02"
+        },
+        {
+          "tipo": "KB"
+        }
+      ],
+      "autorizzazioni": [
+        {
+          "committente": "CVA",
+          "riferimento": "Cartellino n. 12 (inventato)",
+          "scadenza": "2027-08-31"
+        }
+      ],
+      "competenze": [
+        "PEDANA",
+        "LINEA-B610"
+      ]
+    },
+    {
+      "codice": "P-TITOLARE",
+      "azienda": "ALFA",
+      "ruoli": [
+        "autista"
+      ],
+      "nome": "Titolare Prova",
+      "presa_servizio": "L-RIMESSA-ALFA",
+      "rapporto": {
+        "tipo": "titolare"
+      },
+      "abilitazioni": [
+        {
+          "tipo": "B",
+          "scadenza": "2031-05-10"
+        },
+        {
+          "tipo": "D",
+          "scadenza": "2028-03-02",
+          "riferimento": "Patente n. VF0000001 (inventata)"
+        },
+        {
+          "tipo": "CQC-P",
+          "scadenza": "2028-03-02"
+        },
+        {
+          "tipo": "KB"
+        }
+      ],
+      "autorizzazioni": [
+        {
+          "committente": "CVA",
+          "riferimento": "Cartellino n. 12 (inventato)",
+          "scadenza": "2027-08-31"
+        }
+      ],
+      "competenze": [
+        "PEDANA",
+        "LINEA-B610"
+      ]
+    },
+    {
+      "codice": "P-CHIAMATA",
+      "azienda": "ALFA",
+      "ruoli": [
+        "autista"
+      ],
+      "nome": "Chiamata Prova",
+      "presa_servizio": "L-RIMESSA-ALFA",
+      "rapporto": {
+        "tipo": "a_chiamata"
+      },
+      "abilitazioni": [
+        {
+          "tipo": "B",
+          "scadenza": "2031-05-10"
+        },
+        {
+          "tipo": "D",
+          "scadenza": "2028-03-02",
+          "riferimento": "Patente n. VF0000001 (inventata)"
+        },
+        {
+          "tipo": "CQC-P",
+          "scadenza": "2028-03-02"
+        },
+        {
+          "tipo": "KB"
+        }
+      ],
+      "autorizzazioni": [
+        {
+          "committente": "CVA",
+          "riferimento": "Cartellino n. 12 (inventato)",
+          "scadenza": "2027-08-31"
+        }
+      ],
+      "competenze": [
+        "PEDANA",
+        "LINEA-B610"
+      ],
+      "giornate_a_chiamata": {
+        "giornate": 398,
+        "contate_dal": "2023-09-01"
+      }
+    },
+    {
+      "codice": "P-CONTRATTO",
+      "azienda": "ALFA",
+      "ruoli": [
+        "autista"
+      ],
+      "nome": "Contratto Esempio",
+      "presa_servizio": "L-RIMESSA-ALFA",
+      "rapporto": {
+        "tipo": "dipendente_tempo_pieno"
+      },
+      "abilitazioni": [
+        {
+          "tipo": "B",
+          "scadenza": "2031-05-10"
+        },
+        {
+          "tipo": "D",
+          "scadenza": "2028-03-02",
+          "riferimento": "Patente n. VF0000001 (inventata)"
+        },
+        {
+          "tipo": "CQC-P",
+          "scadenza": "2028-03-02"
+        },
+        {
+          "tipo": "KB"
+        }
+      ],
+      "autorizzazioni": [
+        {
+          "committente": "CVA",
+          "riferimento": "Cartellino n. 12 (inventato)",
+          "scadenza": "2027-08-31"
+        }
+      ],
+      "competenze": [
+        "PEDANA",
+        "LINEA-B610"
+      ],
+      "contratto_collettivo": {
+        "codice": "ESEMPIO-01",
+        "nome": "Contratto collettivo di esempio (inventato)"
+      }
+    },
+    {
+      "codice": "P-RIENTRO-BETA",
+      "azienda": "BETA",
+      "ruoli": [
+        "autista"
+      ],
+      "nome": "Rientro Beta",
+      "presa_servizio": "L-RIMESSA-BETA",
+      "rapporto": {
+        "tipo": "dipendente_tempo_pieno"
+      },
+      "abilitazioni": [
+        {
+          "tipo": "B"
+        },
+        {
+          "tipo": "D",
+          "scadenza": "2030-06-30"
+        },
+        {
+          "tipo": "CQC-P",
+          "scadenza": "2030-06-30"
+        }
+      ]
+    },
+    {
+      "codice": "P-ORE",
+      "azienda": "ALFA",
+      "ruoli": [
+        "autista"
+      ],
+      "nome": "Ore Contratto",
+      "presa_servizio": "L-RIMESSA-ALFA",
+      "rapporto": {
+        "tipo": "dipendente_tempo_pieno"
+      },
+      "abilitazioni": [
+        {
+          "tipo": "B",
+          "scadenza": "2031-05-10"
+        },
+        {
+          "tipo": "D",
+          "scadenza": "2028-03-02",
+          "riferimento": "Patente n. VF0000001 (inventata)"
+        },
+        {
+          "tipo": "CQC-P",
+          "scadenza": "2028-03-02"
+        },
+        {
+          "tipo": "KB"
+        }
+      ],
+      "autorizzazioni": [
+        {
+          "committente": "CVA",
+          "riferimento": "Cartellino n. 12 (inventato)",
+          "scadenza": "2027-08-31"
+        }
+      ],
+      "competenze": [
+        "PEDANA",
+        "LINEA-B610"
+      ],
+      "ore": [
+        {
+          "previste": {
+            "settimana": 20
+          },
+          "massime": {
+            "giorno": 4
+          }
+        }
+      ]
+    },
+    {
+      "codice": "P-MULTI",
+      "azienda": "ALFA",
+      "ruoli": [
+        "autista"
+      ],
+      "nome": "Secondo Autista",
+      "presa_servizio": "L-RIMESSA-ALFA",
+      "rapporto": {
+        "tipo": "dipendente_tempo_pieno"
+      },
+      "abilitazioni": [
+        {
+          "tipo": "B",
+          "scadenza": "2031-05-10"
+        },
+        {
+          "tipo": "D",
+          "scadenza": "2028-03-02",
+          "riferimento": "Patente n. VF0000001 (inventata)"
+        },
+        {
+          "tipo": "CQC-P",
+          "scadenza": "2028-03-02"
+        },
+        {
+          "tipo": "KB"
+        }
+      ],
+      "autorizzazioni": [
+        {
+          "committente": "CVA",
+          "riferimento": "Cartellino n. 12 (inventato)",
+          "scadenza": "2027-08-31"
+        }
+      ],
+      "competenze": [
+        "PEDANA",
+        "LINEA-B610"
+      ]
+    },
+    {
+      "codice": "P-GUIDA",
+      "azienda": "ALFA",
+      "ruoli": [
+        "autista"
+      ],
+      "nome": "Guida Lunga",
+      "presa_servizio": "L-RIMESSA-ALFA",
+      "rapporto": {
+        "tipo": "dipendente_tempo_pieno"
+      },
+      "abilitazioni": [
+        {
+          "tipo": "B",
+          "scadenza": "2031-05-10"
+        },
+        {
+          "tipo": "D",
+          "scadenza": "2028-03-02",
+          "riferimento": "Patente n. VF0000001 (inventata)"
+        },
+        {
+          "tipo": "CQC-P",
+          "scadenza": "2028-03-02"
+        },
+        {
+          "tipo": "KB"
+        }
+      ],
+      "autorizzazioni": [
+        {
+          "committente": "CVA",
+          "riferimento": "Cartellino n. 12 (inventato)",
+          "scadenza": "2027-08-31"
+        }
+      ],
+      "competenze": [
+        "PEDANA",
+        "LINEA-B610"
+      ]
+    }
+  ]
+}

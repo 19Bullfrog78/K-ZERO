@@ -8,6 +8,7 @@
 #include "domain_models.hpp"
 #include "pacchetto.hpp"
 #include "pacchetto_demo.hpp"
+#include "orari.hpp"
 #include "turni.hpp"
 
 using namespace kzero;
@@ -243,88 +244,78 @@ TEST(Regole, handicap_con_accompagnatore_assistente_obbligatorio) {
     EXPECT_TRUE(needs_assistant(regola_assistente("R-INV"), con_d3, posti));
 }
 
-// Pause a casa (K-008): la regola (minuti e km) non e' ancora nei dati e non e' scritta nel codice; qui la scrive la
-// prova (60 minuti, 5 km). Senza regola, o senza le coordinate di casa, la funzione non giudica.
-// Luoghi e coordinate del demo: L-MEDIE (Valfonda) e F-LAGOBELLO, a circa 6 km.
+// Rientro (K-011): la pausa fuori dal posto (in rimessa o in un ricovero) e' giustificata con la chiave dell'azienda o della
+// persona (Mauro, 20/10): fermo minimo, fattore della guida a vuoto in piu', km a vuoto in piu' al massimo. Nessun valore nel
+// codice: la chiave la scrive la prova, come la scriverebbe l'azienda nei dati (es. 30 minuti e fattore 2 per Alfa).
 namespace {
 
-Trip tratto(const std::string& da, Minutes partenza, const std::string& a, Minutes arrivo) {
-    Trip t;
-    t.passages.resize(2);
-    t.passages[0].place.code = da;
-    t.passages[0].time = partenza;
-    t.passages[1].place.code = a;
-    t.passages[1].time = arrivo;
-    return t;
-}
-
-// Turno del giorno fatto di corse gia' pronte (le corse devono restare in vita finche' si usa il turno).
-ShiftDay turno_con(const std::vector<Trip>& corse) {
-    ShiftDay sd;
-    for (const Trip& t : corse) {
-        PlannedItem it;
-        it.trip = &t;
-        it.from = 0;
-        it.to = t.passages.size() - 1;
-        it.start = t.start();
-        it.end = t.end();
-        sd.items.push_back(it);
-    }
-    return sd;
-}
-
-Person autista_di_valfonda() {
-    Person p;
-    p.home = Home{"", "", per_codice(demo().places, "L-MEDIE").coord};
-    return p;
-}
-
-const HomeBreakRule kRegolaDiProva{60, 5.0, std::nullopt};   // scritta dalla prova, non dal programma
-
-BreakReport pause(const std::vector<Trip>& corse) {
-    const Index idx(demo());
-    const auto r = check_home_breaks(turno_con(corse), autista_di_valfonda(), kRegolaDiProva, [&](const Code& c) { return idx.place(c); });
-    return r ? *r : BreakReport{-1, -1, -1};
+ReturnJudgment rientro(int fermo, int guida_trasferimenti, bool stesso_luogo, int fermo_minimo, double fattore,
+                       std::optional<double> km_massimi = std::nullopt, double km = 0.0, bool km_noti = true) {
+    ReturnJudgment r;
+    r.stop = fermo;
+    r.transfers_driving = guida_trasferimenti;
+    r.same_place = stesso_luogo;
+    r.min_stop = fermo_minimo;
+    r.factor = fattore;
+    r.max_km = km_massimi;
+    r.transfers_km = km;
+    r.km_known = km_noti;
+    judge_return(r);
+    return r;
 }
 
 }  // namespace
 
-TEST(Regole, pausa_breve_non_conta) {
-    const BreakReport br = pause({tratto("L-MEDIE", ora("07:00"), "F-LAGOBELLO", ora("07:30")),
-                                  tratto("F-LAGOBELLO", ora("08:29"), "L-MEDIE", ora("09:00"))});   // 59 minuti fermo a Lagobello
-    EXPECT_EQ(br.near_home, 0);
-    EXPECT_EQ(br.far_from_home, 0);
-    EXPECT_EQ(br.unknown, 0);
+// Esempio a di Mauro: 20 minuti per andare e 20 per tornare, 30 minuti fermo: servono 2 x 40 = 80 minuti: non conviene.
+TEST(Regole, rientro_esempio_a_non_giustificato) {
+    const ReturnJudgment r = rientro(30, 40, true, 30, 2.0);
+    EXPECT_EQ(r.outcome, ReturnJudgment::Outcome::NotJustified);
+    EXPECT_EQ(r.why, ReturnJudgment::Why::StopBelowFactor);
 }
 
-TEST(Regole, pausa_lunga_lontano_segnalata) {
-    const BreakReport br = pause({tratto("L-MEDIE", ora("07:00"), "F-LAGOBELLO", ora("07:30")),
-                                  tratto("F-LAGOBELLO", ora("08:30"), "L-MEDIE", ora("09:00"))});   // 60 minuti fermo a Lagobello
-    EXPECT_EQ(br.far_from_home, 1);
-    EXPECT_EQ(br.near_home, 0);
-
-    // Controprova: la stessa pausa a Valfonda (vicino a casa) non e' segnalata.
-    const BreakReport bv = pause({tratto("F-LAGOBELLO", ora("07:00"), "L-MEDIE", ora("07:30")),
-                                  tratto("L-MEDIE", ora("09:00"), "F-LAGOBELLO", ora("09:30"))});
-    EXPECT_EQ(bv.far_from_home, 0);
-    EXPECT_EQ(bv.near_home, 1);
-
-    // Un luogo senza coordinate (F-CASTELROVO-ALTO): la pausa non si puo' giudicare.
-    EXPECT_EQ(pause({tratto("L-MEDIE", ora("07:00"), "F-CASTELROVO-ALTO", ora("07:30")),
-                     tratto("F-CASTELROVO-ALTO", ora("09:00"), "L-MEDIE", ora("09:30"))})
-                  .unknown,
-              1);
+// Esempio b: arrivo 19:05 e ripartenza 19:50 dallo stesso posto, 15 minuti (20 km) per andare e 15 per tornare: fermo 15
+// minuti, sotto il fermo minimo di 30.
+TEST(Regole, rientro_esempio_b_sotto_il_fermo_minimo) {
+    const ReturnJudgment r = rientro(15, 30, true, 30, 2.0, std::nullopt, 40.0);
+    EXPECT_EQ(r.outcome, ReturnJudgment::Outcome::NotJustified);
+    EXPECT_EQ(r.why, ReturnJudgment::Why::StopBelowMin);
 }
 
-// Senza regola della pausa (non ancora nei dati) o senza le coordinate di casa la funzione non giudica: nessun valore
-// di 5 km, 60 minuti o 10 km e' scritto nel codice.
-TEST(Regole, pausa_senza_dati_non_giudica) {
-    const std::vector<Trip> corse = {tratto("L-MEDIE", ora("07:00"), "F-LAGOBELLO", ora("07:30")),
-                                     tratto("F-LAGOBELLO", ora("09:00"), "L-MEDIE", ora("09:30"))};
-    const Index idx(demo());
-    const auto luogo = [&](const Code& c) { return idx.place(c); };
-    EXPECT_FALSE(check_home_breaks(turno_con(corse), autista_di_valfonda(), std::nullopt, luogo).has_value());
-    EXPECT_FALSE(check_home_breaks(turno_con(corse), Person{}, kRegolaDiProva, luogo).has_value());
+// Esempio c: 9:08 -> 12:00 dallo stesso posto, 18 minuti (12 km) per andare e 18 per tornare: fermo 2 ore e 16 minuti
+// contro 2 x 36 = 72 minuti: giustificato.
+TEST(Regole, rientro_esempio_c_giustificato) {
+    const ReturnJudgment r = rientro(136, 36, true, 30, 2.0, std::nullopt, 24.0);
+    EXPECT_EQ(r.outcome, ReturnJudgment::Outcome::Justified);
+    EXPECT_EQ(r.why, ReturnJudgment::Why::None);
+    // Al limite: 72 minuti bastano, 71 no.
+    EXPECT_EQ(rientro(72, 36, true, 30, 2.0).outcome, ReturnJudgment::Outcome::Justified);
+    EXPECT_EQ(rientro(71, 36, true, 30, 2.0).outcome, ReturnJudgment::Outcome::NotJustified);
+}
+
+// Km a vuoto in piu' oltre il massimo (facoltativo): non giustificato; senza i km dei trasferimenti non si giudica.
+TEST(Regole, rientro_km_massimi) {
+    EXPECT_EQ(rientro(136, 36, true, 30, 2.0, 20.0, 24.0).why, ReturnJudgment::Why::KmOverMax);
+    EXPECT_EQ(rientro(136, 36, true, 30, 2.0, 30.0, 24.0).outcome, ReturnJudgment::Outcome::Justified);
+    const ReturnJudgment senza_km = rientro(136, 36, true, 30, 2.0, 30.0, 0.0, false);
+    EXPECT_EQ(senza_km.outcome, ReturnJudgment::Outcome::NotJudged);
+    EXPECT_EQ(senza_km.why, ReturnJudgment::Why::NeedKm);
+}
+
+// Senza le distanze (il luogo dopo e' un altro: la guida diretta non si conosce) il programma giudica solo quando e' certo:
+// giustificato se basta anche contando tutti i trasferimenti come guida in piu'; non giustificato solo per il fermo minimo;
+// altrimenti non giudicato.
+TEST(Regole, rientro_senza_distanze_giudica_solo_se_certo) {
+    EXPECT_EQ(rientro(136, 36, false, 30, 2.0).outcome, ReturnJudgment::Outcome::Justified);
+    EXPECT_EQ(rientro(20, 36, false, 30, 2.0).why, ReturnJudgment::Why::StopBelowMin);
+    const ReturnJudgment r = rientro(60, 36, false, 30, 2.0);
+    EXPECT_EQ(r.outcome, ReturnJudgment::Outcome::NotJudged);
+    EXPECT_EQ(r.why, ReturnJudgment::Why::NeedDistances);
+}
+
+// Tragitto casa -> ricovero: senza coordinate nessun valore.
+TEST(Regole, tragitto_casa_senza_coordinate) {
     EXPECT_FALSE(commute_km(Person{}, Coord{46.4, 11.0}).has_value());
-    EXPECT_GT(*commute_km(autista_di_valfonda(), *per_codice(demo().places, "F-LAGOBELLO").coord), 10.0);
+    Person p;
+    p.home = Home{"", "", per_codice(demo().places, "L-MEDIE").coord};
+    EXPECT_GT(*commute_km(p, *per_codice(demo().places, "F-LAGOBELLO").coord), 10.0);
 }

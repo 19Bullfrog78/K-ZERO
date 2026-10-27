@@ -12,6 +12,7 @@
 #include <tuple>
 
 #include "controlli.hpp"
+#include "orari.hpp"
 #include "turni.hpp"
 
 namespace kzero {
@@ -34,8 +35,8 @@ using Pieces = std::vector<std::vector<std::pair<const PlannedItem*, const Shift
 
 class ShiftChecker {
 public:
-    ShiftChecker(const Package& p, std::vector<Problem>& out)
-        : p_(p), out_(out), plan_(p), idx_(plan_.index()), pieces_(p.trips.size()), escorts_(p.trips.size()) {
+    ShiftChecker(const Package& p, std::vector<Problem>& out, PlanCollector* collector)
+        : p_(p), out_(out), collector_(collector), plan_(p), idx_(plan_.index()), pieces_(p.trips.size()), escorts_(p.trips.size()) {
         // Cose che non cambiano da un giorno all'altro, preparate una volta sola.
         for (const Trip& t : p.trips) {
             trip_days_.push_back(plan_.days().days_of(t.calendar.code));
@@ -177,6 +178,7 @@ private:
 
     void one_day(Day d) {
         const std::vector<ShiftDay> plan = plan_.day(d);
+        if (collector_) collector_->add(d, plan);
         std::set<Code> present;
         for (const ShiftDay& sd : plan) present.insert(sd.shift->code);
         // Assegnazioni del giorno su un turno che quel giorno non c'e'.
@@ -582,6 +584,7 @@ private:
 
     const Package& p_;
     std::vector<Problem>& out_;
+    PlanCollector* collector_ = nullptr;
     Planner plan_;
     const Index& idx_;
     Pieces pieces_;
@@ -596,6 +599,6 @@ private:
 
 }  // namespace
 
-void check_shifts(const Package& p, std::vector<Problem>& out) { ShiftChecker(p, out).run(); }
+void check_shifts(const Package& p, std::vector<Problem>& out, PlanCollector* collector) { ShiftChecker(p, out, collector).run(); }
 
 }  // namespace kzero

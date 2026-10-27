@@ -192,7 +192,8 @@ TEST(Api, catalogo_controlli) {
         EXPECT_FALSE(c.messaggi.empty()) << c.codice;
         for (const auto& m : c.messaggi) {
             EXPECT_FALSE(m.empty()) << c.codice;
-            EXPECT_TRUE(std::regex_match(m, std::regex(R"(([^{}]|\{[a-z_]+\})*)"))) << c.codice << ": " << m;
+            // {nome} oppure {nome:forma} (K-011: i giorni come inizi di settimane, mesi o periodi).
+            EXPECT_TRUE(std::regex_match(m, std::regex(R"(([^{}]|\{[a-z_]+(:[a-z_]+)?\})*)"))) << c.codice << ": " << m;
             EXPECT_EQ(m.back(), '.') << c.codice << ": " << m;
         }
         EXPECT_NO_THROW(definizione_controllo(c.controllo));
@@ -746,7 +747,9 @@ TEST(Api, messaggi_senza_due_punti) {
                     kzero::Problem p{d.controllo, static_cast<int>(variante), kzero::Source{}, {}};
                     for (const std::string& modello : modelli)
                         for (std::size_t i = modello.find('{'); i != std::string::npos; i = modello.find('{', i + 1)) {
-                            kzero::Param x = kzero::text_param(modello.substr(i + 1, modello.find('}', i) - i - 1), "valore.");
+                            std::string nome = modello.substr(i + 1, modello.find('}', i) - i - 1);
+                            nome = nome.substr(0, nome.find(':'));   // {giorni:settimane} (K-011)
+                            kzero::Param x = kzero::text_param(nome, "valore.");
                             x.sensitivity = sensibilita;
                             x.hidden = "nascosto.";
                             p.params.push_back(x);

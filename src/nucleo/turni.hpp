@@ -133,46 +133,6 @@ Minutes idle_minutes(const ShiftDay& sd);
 const Code& end_place(const PlannedItem& it);
 const Code& start_place(const PlannedItem& it);
 
-// Regola della pausa a casa: dai quanti minuti in su conta, entro quanti km da casa e, se c'e', la deviazione
-// massima. NON e' ancora nei dati: la scrivera' il mandato "orari di lavoro" (la chiave della pausa e' da confermare
-// con Mauro). Nessun valore nel codice: senza regola la funzione non giudica.
-struct HomeBreakRule {
-    Minutes min_break = 0;
-    double radius_km = 0.0;
-    std::optional<double> max_detour_km;   // non ancora usata (limite noto)
-};
-
-// Pause del turno: quante cadono vicino a casa della persona, quante no, quante non si possono giudicare (luogo
-// senza coordinate).
-struct BreakReport {
-    int near_home = 0;
-    int far_from_home = 0;
-    int unknown = 0;
-};
-
-// Pause a casa in un turno. Nessun valore se manca la regola o se la persona non ha le coordinate di casa: senza
-// dato la funzione non giudica. find_place(codice) restituisce il luogo (const Place*) oppure nullptr.
-template <class FindPlace>
-std::optional<BreakReport> check_home_breaks(const ShiftDay& sd, const Person& p, const std::optional<HomeBreakRule>& rule,
-                                             FindPlace find_place) {
-    if (!rule || !p.home || !p.home->coord) return std::nullopt;
-    BreakReport rep;
-    for (std::size_t i = 1; i < sd.items.size(); ++i) {
-        const PlannedItem& prev = sd.items[i - 1];
-        const PlannedItem& next = sd.items[i];
-        if (next.start - prev.end < rule->min_break) continue;   // pausa breve: non conta
-        const Place* a = find_place(end_place(prev));
-        const Place* b = find_place(start_place(next));
-        if (!a || !b || !a->coord || !b->coord) {
-            ++rep.unknown;
-            continue;
-        }
-        const bool near = air_km(*a->coord, *p.home->coord) <= rule->radius_km && air_km(*b->coord, *p.home->coord) <= rule->radius_km;
-        near ? ++rep.near_home : ++rep.far_from_home;
-    }
-    return rep;
-}
-
 // Tragitto casa -> ricovero del mezzo (andata e ritorno), in km in linea d'aria; nessun valore senza coordinate.
 inline std::optional<double> commute_km(const Person& p, const Coord& depot) {
     if (!p.home || !p.home->coord) return std::nullopt;

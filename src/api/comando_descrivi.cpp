@@ -174,6 +174,7 @@ std::string descrizione_json(const Schema& schema) {
         Json jc = Json::object();
         jc["codice"] = c.codice;
         jc["livello"] = nome_livello(c.livello);
+        jc["natura"] = c.piano ? "piano" : "dati";
         jc["descrizione"] = c.descrizione;
         elenco_controlli.push_back(jc);
     }

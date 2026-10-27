@@ -109,7 +109,9 @@ Giorni del cambio dell'ora legale (in Europa l'ultima domenica di marzo e di ott
 quello scritto e una durata si calcola come differenza tra due orari scritti. Una corsa che attraversa
 l'ora del cambio (tra le 02:00 e le 03:00) dura quindi nella realta' un'ora in piu' o in meno di quanto
 risulta dai dati. E' un limite noto e voluto: i servizi di questo formato quasi mai viaggiano in quell'ora,
-e le corse notturne di quei due giorni vanno controllate a mano.
+e le corse notturne di quei due giorni vanno controllate a mano. Dal K-011 le date del cambio sono un dato del paese,
+con la fonte (`norme.json`, `cambi_ora`; in Europa la direttiva 2000/84/CE), mai il fuso orario del computer: un turno
+che attraversa l'ora del cambio ha l'avviso K-CTR-103 "da controllare a mano".
 
 ### Classi dei dati
 
@@ -168,6 +170,100 @@ nascita; per le persone delle aziende nemmeno idoneita' medica e cause delle ass
 salute e per pianificare non serve). K-Zero non li conserva mai. Un campo cosi' aggiunto a mano e' un errore
 ("campo non previsto").
 
+### Orari di lavoro: categorie di tempo, regimi, tipi di regola (K-011)
+
+I tempi di ogni persona si ricavano dai turni (chi fa il turno come in `kzero giornata`): la **giornata** della persona
+sono tutti i turni che comincia in quel giorno di calendario, anche di aziende diverse (prestiti: la legge somma le ore,
+D.Lgs. 234/2007 art. 4 c. 4); un turno oltre la mezzanotte resta del giorno in cui comincia. Il tempo tra due giornate e'
+**riposo**.
+
+**Categorie di tempo.** Ogni minuto della giornata ha una categoria, come nel Reg. (CE) 561/2006 (art. 4 e 16) e nel
+D.Lgs. 234/2007 (art. 3): `guida`, `altre_mansioni`, `disponibilita` (sul posto: pronto a partire, attesa con il mezzo),
+`reperibilita` (fuori dal posto di lavoro, a chiamata), `interruzione` (pausa, libero da ogni servizio). La categoria la
+da':
+- la **corsa**: guida per chi guida, disponibilita' per il secondo autista (D.Lgs. 234/2007 art. 3 b n. 2), altre
+  mansioni per l'assistente a bordo;
+- il **tipo di attivita'**, con il campo `tempo` dell'elenco dell'azienda (aziende.json versione 2); un'attivita' di guida
+  (es. un trasferimento a vuoto) vale come la corsa per chi non guida;
+- i **minuti non scritti** tra due elementi della giornata, con l'impostazione `soste_non_scritte` dell'azienda
+  (obbligatoria nella versione 2): una categoria, e se serve un'altra oltre N minuti (es. fino a 30 minuti
+  disponibilita', oltre interruzione).
+
+Un file aziende.json della versione 1 si legge ancora: un tipo senza categoria conta per prudenza come altre mansioni (mai
+come interruzione o riposo) e le soste non scritte come disponibilita'; le violazioni che vengono solo da questa prudenza
+sono avvisi, e l'azienda ha un avviso con l'elenco dei tipi (K-CTR-101).
+
+**Regimi.** Le leggi sugli orari e i contratti collettivi sono **dati** (norme.json versione 2, `regimi`): un regime e' un
+insieme di regole di una fonte, con dove si applica. Il programma conosce solo i **tipi di regola** (come si conta); i
+numeri e le fonti stanno nei dati. Un regime si applica a una persona in un giorno secondo:
+- i **ruoli** del turno (`autista`, `secondo_autista`, `assistente`), i **rapporti** della persona e i suoi **contratti
+  collettivi** (dati personali);
+- le **corse** del giorno: tipi di servizio (dato particolare), mezzo (persone trasportabili compreso il conducente:
+  posti + posti in piedi + 1; con i soli posti a sedere la condizione e' certa, solo con i posti in piedi e' da
+  confermare), percorso della corsa (km dal primo all'ultimo passaggio, pieni e vuoti, oppure i `km_totali`) ed
+  esclusioni (es. servizi regolari di linea fino a 50 km). Basta una corsa; ogni condizione puo' essere certa o da
+  confermare. Senza km il regime e' "non determinabile" (avviso K-CTR-102) e si controlla per prudenza come se valesse;
+  una giornata senza corse vale da confermare;
+- l'**estensione**: una sola corsa che fa scattare il regime vale per tutta la settimana (lunedi' 00:00 - domenica 24:00)
+  della persona, per alcune famiglie di regole (nota INL 61/2021: guida e riposi), e puo' **escludere** un altro regime
+  per quelle famiglie (o lasciarlo solo da confermare).
+
+I regimi si **sommano**: una persona in un giorno puo' averne piu' di uno (es. il 561 per guida e riposi e il 234 per
+l'orario di lavoro) e deve rispettarli tutti. Un giorno senza nessun regime non e' mai "regolare": `kzero ore` lo dice e,
+per un dipendente, `kzero controlla` da' un avviso (K-CTR-107). I contratti collettivi sono regimi di tipo
+`contratto_collettivo` nelle stesse norme, con la condizione `contratti_collettivi` (i codici scritti nelle persone):
+stessi tipi di regola, una sola lettura, un solo posto da tenere aggiornato.
+
+**Tipi di regola** (elenco chiuso, scritto nel programma; il "giorno" di ogni regola lo dice la regola, campo `periodo`):
+
+| Tipo | Cosa conta | Campi (minuti, giorni) |
+|---|---|---|
+| `conteggio_lavoro` | Come il regime conta il lavoro: categorie contate, soste fino a N minuti contate per intero, quota del tempo inoperoso fuori residenza (fuori dal comune della presa servizio) o in residenza | `nome_misura`, `categorie`, `soste_fino_a_minuti`, `inoperoso_fuori_residenza`, `inoperoso_in_residenza` |
+| `lavoro_massimo` | Lavoro nella giornata, nelle 24 ore dall'inizio, nella settimana, nel mese, o in media alla settimana su un periodo mobile; oltre il normale lo straordinario (avviso con l'obbligo scritto nei dati) | `periodo`, `massimo_minuti`, `normale_minuti`, `media`, `straordinario` |
+| `guida_continua` | Guida massima prima di un'interruzione che azzera il conto (anche in parti nell'ordine, es. 15 + 30; alcune solo per i servizi occasionali); interruzioni brevi contate nella guida; eccezione per le soste ai capolinea | `massimo_minuti`, `azzera_con`, `interrompono`, `interruzioni_brevi_contate`, `eccezione_soste_capolinea_oltre_minuti` |
+| `guida_massima` | Guida tra due riposi giornalieri (con l'estensione ammessa N volte a settimana), nella giornata, nella settimana, in due settimane, nel mese | `periodo`, `massimo_minuti`, `estensione` |
+| `lavoro_continuo` | Lavoro di fila senza pausa e pause minime secondo il lavoro della giornata, in parti di almeno N minuti | `massimo_minuti`, `pause`, `frazione_minima_minuti` |
+| `riposo_giornaliero` | Nelle 24 ore dall'inizio della giornata, entro 24 ore dalla fine del riposo precedente (regolare, frazionato nell'ordine, ridotto al massimo N volte tra due riposi settimanali), oppure tra due giornate; media su un periodo | `misura`, `minimo_minuti`, `frazionato`, `ridotto`, `media_riposo`, `reperibilita_interrompe` |
+| `riposo_settimanale` | Riposo in ogni settimana (un riposo a cavallo di due settimane conta in una sola), ridotto, regolari in due settimane, entro N periodi di 24 ore, cumulo con la settimana accanto, compensazione entro N settimane attaccata a un riposo | `minimo_minuti`, `ridotto`, `regolari_in_due_settimane`, `entro_periodi_di_24_ore`, `cumulo_settimane`, `compensazione` |
+| `lavoro_notturno` | Minuti di lavoro in una fascia (anche a cavallo della mezzanotte) e lavoro massimo nelle 24 ore con lavoro notturno | `fascia`, `massimo_minuti` |
+| `giornate_massime` | Giornate di lavoro in un periodo mobile di anni, a ritroso dal giorno (con le giornate prima del pacchetto della persona) | `massimo_giornate`, `anni` |
+| `ampiezza_massima` | Dalla prima all'ultima attivita' della giornata | `massimo_minuti` |
+| `giorni_consecutivi` | Giorni di lavoro di fila | `massimo_giorni` |
+
+**Letture certe e prudenti.** Una regola ha la sua lettura certa (i campi della regola) e, se la legge e' incerta, una
+lettura **prudente** piu' severa (`prudente`: gli stessi campi, che cambiano solo dove serve, e la `nota` che spiega
+perche'). Violare la lettura certa, con un regime che vale con certezza, e' un **errore**; violare solo la prudente, o
+solo con un regime, un rapporto, un tipo di servizio, un mezzo o i km da confermare, un **avviso "da confermare"** con i
+motivi. Una regola o un regime `da_confermare` senza lettura certa da' solo avvisi. Il programma non sceglie mai la
+lettura piu' comoda per dire "regolare", e una finestra che esce dal periodo del pacchetto si conta con i dati che ci
+sono: "verifica parziale" (K-CTR-104).
+
+**Che cosa conta come "ora" per il contratto della persona** (`persone[].ore[]`): il lavoro contato dal regime che vale
+quel giorno per la persona (es. il lavoro effettivo della L. 138, l'orario di lavoro del D.Lgs. 234); con piu' regimi,
+nella lettura certa il conteggio piu' basso tra quelli certi e in quella prudente il piu' alto; senza regime guida, altre
+mansioni e disponibilita' sul posto. Le ore `massime` sono limiti rigidi (errore K-CTR-119); le `previste` si mostrano in
+`kzero ore` con la differenza.
+
+**Scelte dell'azienda e della persona** (aziende.json e persone.json versione 2, `scelte_orari`): facoltative, con la
+forza `preferenza` (avviso) oppure `limite` (rigido: errore su un turno ricorrente, avviso su un'assegnazione del singolo
+giorno, perche' la scelta dell'utente vince). Tipi: `lavoro_massimo` (giornata, settimana, mese), `guida_massima`
+(giornata, settimana), `ampiezza_massima`, `riposo_giornaliero` (riposo minimo tra due giornate), `giorni_consecutivi`.
+Una scelta della persona vince su quella dell'azienda dello stesso tipo e periodo. La legge resta sempre sopra: una
+scelta piu' larga della legge si accetta con un avviso (K-CTR-106). Le preferenze del K-008 (`fascia_oraria`,
+`giorni_liberi`, `evita_turni`, `pausa_massima`) restano dove sono: le scelte nuove non le ripetono.
+
+**Chiave della pausa fuori dal posto (rientro)** (decisa da Mauro il 20/10). Rientro = tra due corse della giornata la
+persona (con o senza il mezzo) va in una rimessa (`rimesse.json`) o nel suo luogo di presa servizio, resta li' e torna;
+una pausa dove finisce la corsa prima e' "sul posto" e la chiave non la riguarda. La chiave (`rientro` dell'azienda, e
+della persona campo per campo) ha il **fermo minimo** in minuti, il **fattore della guida** a vuoto in piu', i **km a
+vuoto in piu' al massimo** (facoltativo) e la **forza**. Il rientro e' giustificato se il tempo fermo li' (dall'arrivo
+alla partenza) e' almeno il fermo minimo, se e' almeno il fattore per i minuti di guida a vuoto in piu' e, con il
+massimo, se i km a vuoto in piu' non lo superano. "In piu'" = i trasferimenti con il mezzo verso il luogo e indietro meno
+il trasferimento diretto che servirebbe comunque: zero se la corsa dopo comincia dove finisce quella prima. Altrimenti,
+senza distanze, il diretto non si conosce ma non e' mai negativo: giustificato con certezza se basta anche contando
+tutti i trasferimenti come in piu'; non giustificato con certezza se manca il fermo minimo; negli altri casi "non
+giudicato: servono le distanze" (K-CTR-125), mai "giustificato". Lo stesso per i km (`km_vuoti` delle attivita').
+
 ### Come si legge la tabella dei campi
 
 Per ogni file c'e' una tabella: **campo** (con il percorso: `luoghi[].nome` = il nome di ogni luogo
@@ -224,7 +320,9 @@ cassaforte" e "il porta a porta non e' sensibile"). Per passare alla 2 si scrive
 
 L'organizzazione la sceglie ogni azienda: qui stanno i suoi elenchi, con i suoi nomi, e le sue impostazioni.
 In un consorzio ogni azienda del manifesto ha la sua riga. Le `impostazioni` del manifesto sono un'altra cosa:
-scelte di chi pianifica, valide per tutto il pacchetto. Schema: [docs/schema/aziende.v1.schema.json](schema/aziende.v1.schema.json).
+scelte di chi pianifica, valide per tutto il pacchetto. Schemi: versione 2 (K-011, orari di lavoro)
+[docs/schema/aziende.v2.schema.json](schema/aziende.v2.schema.json); versione 1, che si legge ancora (senza le categorie
+di tempo: avviso K-CTR-101), [docs/schema/aziende.v1.schema.json](schema/aziende.v1.schema.json).
 
 | Campo | Obbl. | Classe | Significato |
 |---|---|---|---|
@@ -232,21 +330,32 @@ scelte di chi pianifica, valide per tutto il pacchetto. Schema: [docs/schema/azi
 | `aziende[].norme` | no | comune | Norme del paese che valgono per l'azienda (`norme.json`); senza, usi dei mezzi e abilitazioni non si controllano (avviso K-CTR-052) |
 | `aziende[].impostazioni.ricovero_vicino_a_casa` | si' | comune | Il mezzo puo' dormire in un ricovero vicino a casa dell'autista: `preferito`, `ammesso`, `mai` (= sempre in rimessa) |
 | `aziende[].impostazioni.abbinamento_autista_mezzo` | si' | comune | `nessuno`, `preferito`, `fisso` (ogni autista ha il suo mezzo, il mezzo abituale, e guida solo quello) |
-| `aziende[].attivita[]` | no | comune | Tipi di attivita' senza passeggeri dei turni: `codice`, `nome`, `usa_il_mezzo` (true = impegna il mezzo del turno), `nota` |
+| `aziende[].attivita[]` | no | comune | Tipi di attivita' senza passeggeri dei turni: `codice`, `nome`, `usa_il_mezzo` (true = impegna il mezzo del turno), `tempo` (versione 2, obbligatorio: la categoria di tempo), `nota` |
+| `aziende[].impostazioni.soste_non_scritte` | si' (v2) | comune | Versione 2: `categoria` dei minuti non scritti tra due elementi della giornata; con `oltre_minuti` e `categoria_oltre` le soste piu' lunghe hanno un'altra categoria |
+| `aziende[].impostazioni.margine_giornate_massime` | no | comune | Versione 2: avviso quando mancano tante giornate al limite delle giornate massime (es. lavoro a chiamata, K-CTR-109) |
+| `aziende[].scelte_orari[]` | no | comune | Versione 2: scelte dell'azienda sugli orari (`tipo`, `periodo`, `massimo_minuti`, `minimo_minuti` o `massimo_giorni`, `forza`, `nota`), vedi sopra |
+| `aziende[].rientro` | no | comune | Versione 2: chiave del rientro: `fermo_minimo_minuti`, `fattore_guida`, `km_vuoti_massimi` (facoltativo), `forza` |
+| `aziende[].speciali_esigenze[]` | no | comune | Versione 2: speciali esigenze dell'azienda per una regola di legge (`regola`, `riferimento`, `nota`), es. per lo straordinario non saltuario della L. 138 |
 | `aziende[].tipi_assenza[]` | no | comune | Tipi di assenza delle persone (es. ferie, permesso, formazione): `codice`, `nome`, `nota`. Mai la causa |
 | `aziende[].tipi_fermo[]` | no | comune | Tipi di fermo dei mezzi (es. revisione, manutenzione): `codice`, `nome`, `nota` |
 | `aziende[].competenze[]` | no | comune | Competenze che un turno o un servizio puo' richiedere (es. conosce la linea B610, formato per la pedana): `codice`, `nome`, `nota` |
 | `aziende[].nota` | no | comune | Note |
 
 Le impostazioni sono solo dati: il costo delle scelte lo mostrera' il calcolo. Nel codice non c'e' nessun tipo di
-attivita', assenza, fermo o competenza: sono nomi nei dati. I codici delle competenze si confrontano come testi: in un
+attivita', assenza, fermo o competenza: sono nomi nei dati. Nel demo (K-011) le categorie dubbie sono scelte per
+prudenza: `ATTESA` (attesa con il mezzo) e `SOSTA` (sosta al capolinea di Beta) sono disponibilita' e non interruzione,
+perche' il conducente resta con il mezzo e non e' libero da ogni servizio (per il 561 la disponibilita' non e' una
+interruzione, art. 4 d; per la L. 138 e' lavoro effettivo, art. 6; per il 234 non e' orario di lavoro, art. 3); `RICARICA`
+e `RISERVA` disponibilita'; `A-PIEDI` altre mansioni (spostarsi per il servizio e' lavoro). I codici delle competenze si confrontano come testi: in un
 consorzio le aziende che si scambiano persone usano gli stessi codici per le stesse competenze.
 
 ### norme.json
 
-Le norme di un paese che servono a controllare chi guida cosa e quale mezzo fa quale servizio. **Nessuna patente e
-nessun uso e' scritto nel programma**: tutto e' un dato con la fonte, e cio' che non e' certo si segna
-`da_confermare`. Schema: [docs/schema/norme.v1.schema.json](schema/norme.v1.schema.json).
+Le norme di un paese che servono a controllare chi guida cosa e quale mezzo fa quale servizio e, dalla versione 2
+(K-011), le leggi e i contratti collettivi sugli orari di lavoro. **Nessuna patente, nessun uso e nessun limite di
+orario e' scritto nel programma**: tutto e' un dato con la fonte, e cio' che non e' certo si segna `da_confermare`.
+Schemi: versione 2 [docs/schema/norme.v2.schema.json](schema/norme.v2.schema.json); versione 1, che si legge ancora
+(nessun regime: per i dipendenti l'avviso K-CTR-107), [docs/schema/norme.v1.schema.json](schema/norme.v1.schema.json).
 
 | Campo | Obbl. | Classe | Significato |
 |---|---|---|---|
@@ -258,6 +367,13 @@ nessun uso e' scritto nel programma**: tutto e' un dato con la fonte, e cio' che
 | `norme[].requisiti_guida[]` | no | comune | Requisiti per guidare: `categorie` (M1, M2, M3), `posti_da`, `posti_fino_a`, `rimorchio`, `usi` (facoltativi) e le `alternative`; `fonte`, `da_confermare`, `nota` |
 | `requisiti_guida[].alternative[]` | si' | comune | Modi di soddisfare il requisito (ne basta uno): `abilitazioni[]` da avere tutte insieme; facoltativi `posti_fino_a` e `lunghezza_fino_a_m` (es. la patente D1 fino a 16 posti e 8 m) |
 | `norme[].usi_per_servizio[]` | no | comune | Usi dei mezzi ammessi per tipo di servizio: `tipi_servizio`, `usi` (ne basta uno), `fonte`, `da_confermare`, `nota` |
+| `norme[].regimi[]` | no | comune | Versione 2: leggi e contratti collettivi sugli orari (sopra, "Orari di lavoro"): `codice`, `nome`, `tipo` (`legge`, `contratto_collettivo`), `fonte`, `valido_dal`, `valido_al`, `da_confermare`, `nota`, `si_applica`, `esclusioni`, `servizi_occasionali`, `estensione`, `esclude`, `casi_non_trattati`, `regole` |
+| `regimi[].si_applica` | no | comune | `ruoli`, `rapporti`, `contratti_collettivi`, `tipi_servizio` (ognuno con i valori `certi` e quelli `da_confermare`), `mezzi` (`persone_trasportabili_oltre`), `percorso` (`fino_a_km`, `oltre_km`), `come_regime` (le condizioni sulla corsa di un altro regime); senza una condizione vale per tutti |
+| `regimi[].esclusioni[]` | no | comune | Corse escluse: `tipi_servizio` (ogni tipo della corsa deve essere escluso), `percorso_fino_a_km`, `da_confermare`, `fonte`, `nota` |
+| `regimi[].estensione` | no | comune | `ambito` `settimana` e le `famiglie` di regole (`guida`, `riposi`, `lavoro`, `notturno`, `giornate`) per cui una corsa vale tutta la settimana |
+| `regimi[].esclude[]` | no | comune | Altri regimi esclusi (o lasciati da confermare) per alcune famiglie nei giorni o nelle settimane in cui questo vale con certezza: `regime`, `famiglie`, `effetto` (`esclude`, `da_confermare`) |
+| `regimi[].regole[]` | si' | comune | Regole: `codice` (unico nelle norme), `tipo`, `famiglia`, `fonte`, `periodo`, `misura`, i campi del tipo, `prudente`, `da_confermare`, `nota` |
+| `norme[].cambi_ora` | no | comune | Versione 2: `fonte` e `date` (`data`, `da`, `a`) dei cambi dell'ora del paese |
 | `norme[].nota` | no | comune | Note |
 
 Come si usano:
@@ -272,7 +388,10 @@ Come si usano:
   distrazione, vedi `mezzi.json`).
 
 Nel demo le norme italiane (`N-IT`): patenti e usi dal Codice della strada (artt. 82 e 116), la CQC dal D.Lgs.
-286/2005; il certificato KB per le autovetture a noleggio e la patente DE sono segnati "da confermare".
+286/2005; il certificato KB per le autovetture a noleggio e la patente DE sono segnati "da confermare". Dalla versione 2
+anche i regimi sugli orari R-L138 (L. 138/1958), R-561 (Reg. CE 561/2006), R-234 (D.Lgs. 234/2007), R-CHIAMATA (D.Lgs.
+81/2015 art. 13) e il contratto collettivo inventato ESEMPIO-01, con le fonti e le letture da confermare (REGOLE.md,
+"Orari di lavoro").
 
 ### luoghi.json
 
@@ -800,7 +919,8 @@ pedana resta sul mezzo. Schema: [docs/schema/tempi_sosta.v1.schema.json](schema/
 
 ### persone.json
 
-Le persone delle aziende: autisti, assistenti a bordo o tutti e due. Schema:
+Le persone delle aziende: autisti, assistenti a bordo o tutti e due. Schemi: versione 2 (K-011)
+[docs/schema/persone.v2.schema.json](schema/persone.v2.schema.json); versione 1, che si legge ancora,
 [docs/schema/persone.v1.schema.json](schema/persone.v1.schema.json).
 
 | Campo | Obbl. | Classe | Significato |
@@ -823,6 +943,9 @@ Le persone delle aziende: autisti, assistenti a bordo o tutti e due. Schema:
 | `persone[].competenze[]` | no | personale | Competenze (codici dell'elenco dell'azienda della persona) |
 | `persone[].preferenze[]` | no | personale | Preferenze (dati morbidi, sotto), con `dal` e `al` facoltativi |
 | `persone[].prestiti[]` | no | comune | Prestiti ad altre aziende: `azienda`, `accordo`, `dal`, `al` |
+| `persone[].scelte_orari[]` | no | personale | Versione 2: scelte sugli orari della persona, come quelle dell'azienda: vincono su quelle dello stesso tipo e periodo |
+| `persone[].rientro` | no | personale | Versione 2: chiave del rientro della persona; ogni campo scritto vince su quello dell'azienda |
+| `persone[].giornate_a_chiamata` | no | personale | Versione 2: `giornate` di lavoro con lo stesso datore prima del periodo del pacchetto, `contate_dal` un giorno (rapporto a chiamata) |
 | `persone[].nota` | no | personale | Note (non nel livello "solo numeri"; mai cause di assenza o dati sulla salute) |
 
 **Disponibilita' e preferenze.** La disponibilita' e' rigida: se per un giorno vale almeno una riga (per le date),
@@ -832,8 +955,9 @@ rispetta e' un avviso, mai un errore. Tipi: `giorni_liberi` (`giorni`), `fascia_
 `evita_turni` (`turni`), `pausa_massima` (`minuti`: nessuna pausa piu' lunga dentro un turno, es. "niente turni
 spezzati" con la soglia scelta dall'utente), `altro` (`descrizione`: mostrata, non controllata).
 
-**Ore, contratto collettivo, costo orario** sono solo dati: chi li verifica contro la legge e la filosofia
-aziendale e' il mandato "orari di lavoro".
+**Ore e contratto collettivo** (K-011): le ore `massime` sono limiti rigidi, le `previste` si mostrano con la
+differenza; che cosa conta come "ora" lo dice il regime che vale quel giorno (sopra, "Orari di lavoro"). Il contratto
+collettivo si collega ai regimi delle norme con il suo `codice`. Il costo orario resta solo un dato (servira' al calcolo).
 
 Una persona nel livello "completo" (nel livello "solo numeri" mancano `nome`, `casa` e `nota`):
 

@@ -2,8 +2,8 @@
 
 `kzero controlla <cartella>` controlla un pacchetto dati (spiegato in [formato-dati.md](formato-dati.md))
 e scrive un resoconto in testo o in JSON (schema `controlla`, file
-[schema/controlla.v4.schema.json](schema/controlla.v4.schema.json); le versioni 1, del K-007, 2, del K-008, e 3, del K-009,
-non sono piu' prodotte).
+[schema/controlla.v5.schema.json](schema/controlla.v5.schema.json); le versioni 1, del K-007, 2, del K-008, 3, del K-009, e
+4, del K-010, non sono piu' prodotte; la 5, del K-011, aggiunge la `natura` di ogni problema e gli errori del piano).
 
 Ogni problema ha:
 - un **livello**: **errore** (il dato e' sbagliato e va corretto) oppure **avviso** (il dato e' accettabile,
@@ -17,7 +17,8 @@ Ogni problema ha:
 Come si legge il resoconto:
 - prima gli errori, poi gli avvisi; ciascuno in ordine di file (nell'ordine del formato) e di posizione;
   stesso pacchetto = stesso resoconto, byte per byte;
-- in fondo un **riepilogo**: aziende, luoghi, servizi, corse, mezzi, persone, turni, errori, avvisi;
+- in fondo un **riepilogo**: aziende, luoghi, servizi, corse, mezzi, persone, turni, errori (quanti del piano degli
+  orari, K-011), avvisi;
 - prima del riepilogo, **quali dati personali e particolari contiene il pacchetto** (K-009): quanti valori di ogni
   classe, contati con le classi degli schemi, mai i valori stessi (es. "248 valori personali e 37 particolari"); file per
   file con `--includi-dati-personali`. Serve a sapere cosa e' coinvolto se il pacchetto va perso o finisce alla persona
@@ -115,10 +116,72 @@ comunque la regola qui sopra):
 | K-CTR-081 | personale | tutti i casi | le preferenze di una persona |
 | K-CTR-094 | particolare | alcuni casi | che un elemento aveva dati particolari nella cassaforte |
 | K-CTR-095 | particolare | alcuni casi | che un elemento ha un dato particolare nella cassaforte |
+| K-CTR-105 | personale | alcuni casi | la chiave del rientro di una persona |
+| K-CTR-106 | personale | alcuni casi | una scelta sugli orari di una persona |
+| K-CTR-107 | personale | tutti i casi | che una persona e' dipendente e nessuna legge sugli orari vale per lei |
+| K-CTR-108 | personale | tutti i casi | quale legge sugli orari vale per la persona (puo' dipendere dal suo rapporto) |
+| K-CTR-109 | personale | tutti i casi | le giornate di lavoro di una persona (lavoro a chiamata) |
+| K-CTR-110 | personale | tutti i casi | quale legge sugli orari vale per la persona e i suoi orari |
+| K-CTR-111 | personale | tutti i casi | quale legge sugli orari vale per la persona e i suoi orari |
+| K-CTR-112 | personale | tutti i casi | quale legge sugli orari vale per la persona e i suoi orari |
+| K-CTR-113 | personale | tutti i casi | quale legge sugli orari vale per la persona e i suoi orari |
+| K-CTR-114 | personale | tutti i casi | quale legge sugli orari vale per la persona e i suoi orari |
+| K-CTR-115 | personale | tutti i casi | quale legge sugli orari vale per la persona e i suoi orari |
+| K-CTR-116 | personale | tutti i casi | quale legge sugli orari vale per la persona e i suoi orari |
+| K-CTR-117 | personale | tutti i casi | quale legge sugli orari vale per la persona e i suoi orari |
+| K-CTR-118 | personale | tutti i casi | quale legge sugli orari vale per la persona e i suoi orari |
+| K-CTR-119 | personale | tutti i casi | le ore massime del contratto della persona |
+| K-CTR-120 | personale | tutti i casi | le ore massime del contratto della persona |
+| K-CTR-121 | personale | tutti i casi | una scelta sugli orari dell'azienda o della persona e gli orari della persona |
+| K-CTR-122 | personale | tutti i casi | una scelta sugli orari dell'azienda o della persona e gli orari della persona |
+| K-CTR-123 | personale | tutti i casi | la chiave del rientro (anche della persona) e la giornata della persona |
+| K-CTR-124 | personale | tutti i casi | la chiave del rientro (anche della persona) e la giornata della persona |
+| K-CTR-125 | personale | tutti i casi | la chiave del rientro (anche della persona) e la giornata della persona |
 
-Non sono in questo catalogo (arriveranno con la verifica delle regole e con il mandato "orari di lavoro"):
-posti a bordo, attese massime sulle corse, limiti di accesso confrontati con i mezzi, tempi per andare da un
-luogo all'altro tra due turni, km calcolati, limiti di legge sugli orari di lavoro e sulle pause.
+Nei problemi degli orari (K-CTR-107 ... K-CTR-125) quale legge vale per la persona e' un dato personale quando la legge
+dipende dal suo rapporto o dal suo contratto collettivo (es. la L. 138 vale per i dipendenti): allora la regola, la fonte
+e i valori si vedono solo con `--includi-dati-personali`, e di base il messaggio dice "una regola sugli orari (dati
+personali: riservati)". Per una legge che vale per tutti (es. il Reg. 561/2006, per chiunque guidi) la regola e i valori
+si vedono sempre. Nei motivi di un avviso "da confermare" il rapporto e il contratto collettivo sono personali, il tipo
+di servizio della corsa (e se la corsa e' un servizio occasionale) particolari: senza il loro parametro diventano "c'e' un motivo
+riservato".
+
+Non sono in questo catalogo (arriveranno con la verifica delle regole e con il calcolo): posti a bordo, attese massime
+sulle corse, limiti di accesso confrontati con i mezzi, tempi per andare da un luogo all'altro tra due turni, km
+calcolati.
+
+## Orari di lavoro (K-011)
+
+I controlli sugli orari (K-CTR-101 ... K-CTR-126) guardano tutto il periodo del pacchetto, persona per persona: i turni
+che fa ogni giorno (come in `kzero giornata`), le categorie di tempo di ogni minuto, le leggi e i contratti collettivi
+che valgono (i regimi delle norme, docs/formato-dati.md), il contratto della persona, le scelte dell'azienda e della
+persona, la chiave del rientro. Seguono il principio dell'arbitro:
+- dove la legge e' **certa** vale come **errore** (es. lavoro effettivo oltre le 10 ore della L. 138 per un dipendente su
+  una linea, K-CTR-110);
+- dove una lettura della legge e' **incerta**, o non si sa se la legge vale (un rapporto, un tipo di servizio, un mezzo
+  o un regime "da confermare", i km che mancano, le categorie presunte di aziende.json versione 1), il programma lo dice
+  e non decide: un **avviso** "da confermare" (es. K-CTR-111) con i **motivi** ("E' un avviso perche' ..."). Ogni regola
+  si valuta due volte: con le letture certe e i soli regimi certi, poi con le letture prudenti e anche i regimi da
+  confermare. Violare la prima e' un errore; violare solo la seconda un avviso;
+- dove mancano i dati il programma non dice mai "regolare": una regola che guarda fuori dal periodo del pacchetto (la
+  prima e l'ultima settimana, le medie su 4 settimane o 4 mesi, il triennio delle giornate a chiamata) si verifica solo
+  in parte (K-CTR-104); un dipendente senza nessuna legge sugli orari nei dati ha un avviso (K-CTR-107); un rientro senza
+  le distanze si giudica solo quando e' certo (K-CTR-125).
+
+Le scelte dell'azienda e della persona seguono i livelli del K-008: un limite rigido su un turno ricorrente e' un errore
+(K-CTR-121), su un'assegnazione del singolo giorno un avviso (la scelta dell'utente vince), una preferenza un avviso
+(K-CTR-122). La legge resta sempre sopra: una scelta piu' larga della legge si accetta con un avviso (K-CTR-106) e la
+legge si controlla lo stesso. Lo stesso per la chiave del rientro (K-CTR-123, K-CTR-124).
+
+**Errori del piano.** Le violazioni delle regole sugli orari (K-CTR-110, 113, 115, 117, 119, 121, 123) sono errori **del
+piano**, non **dei dati**: in JSON il campo `natura` del problema e' `piano` e il riepilogo conta `errori_del_piano`. Come
+ogni errore danno il codice di uscita 1, ma non bloccano `kzero giornata` e `kzero ore` (K-ERR-018 vale solo per gli
+errori nei dati): servono proprio a vedere il piano per correggerlo (DECISIONI.md). Gli errori del piano del K-008 (es.
+una persona in due turni insieme) restano errori nei dati.
+
+Per un utente della cassaforte che non puo' aprire i dati personali o quelli particolari, i controlli sugli orari del
+piano sono "non verificati" (le leggi che valgono dipendono dal rapporto e dal tipo di servizio, chi fa i turni dalle
+assenze), come gli altri controlli sul piano del giorno.
 
 ## Controlli sui turni, giorno per giorno
 
@@ -253,3 +316,29 @@ Un nuovo controllo prende il codice successivo all'ultimo.
 | K-CTR-098 | avviso | Password da cambiare: chiavi nuove ricevute in una busta | Quando si toglie un utente le chiavi si rifanno e arrivano agli altri utenti in una busta, che si apre con la chiave segreta custodita nella loro fessura, cioe' con la loro password. Chi e' stato tolto e conosceva la password di un collega (scritta, detta, uguale a un'altra) potrebbe aprire la fessura del collega e poi la busta. Ogni apertura lo ricorda a chi ha ancora chiavi in una busta (in `kzero controlla` tra i problemi; in `kzero giornata`, `kzero registro` e nei comandi della cassaforte tra gli avvisi), finche' non cambia la password (docs/cassaforte.md, aggiunta 1 del K-010). | Cambiare la propria password (`kzero password`): la fessura si rifa' con le chiavi di adesso e una coppia di chiavi nuova, e le buste non servono piu'. |
 | K-CTR-099 | avviso | Utente tolto: password da cambiare | Lo dice `kzero togli-utente`, a chi ha tolto l'utente: chi e' stato tolto, se conosceva la password di un altro utente, potrebbe aprire anche la cassaforte nuova. A chi ha tolto l'utente la cassaforte non lo ricorda piu' (la sua fessura ha gia' le chiavi nuove); agli altri si' (K-CTR-098). | Chi ha tolto l'utente cambia subito la sua password (`kzero password`); gli altri la cambiano alla prossima apertura. |
 | K-CTR-100 | avviso | Password scritta da un altro utente | Lo dicono `kzero aggiungi-utente` e `kzero password --per-utente`: la password del nuovo utente (o quella nuova di chi l'aveva persa) l'ha scritta un'altra persona, che quindi la conosce. | Al primo uso, l'utente cambia la sua password (`kzero password`), cosi' la conosce solo lui o lei. |
+| K-CTR-101 | avviso | Categorie di tempo non dette (aziende.json versione 1) | Un'azienda con turni ha un file aziende.json della versione 1: i tipi di attivita' non hanno la categoria di tempo e le soste non scritte tra due elementi della giornata non dicono come contano. Per prudenza le attivita' contano come altre mansioni (mai interruzione o riposo) e le soste come disponibilita'; le violazioni che vengono solo da questa prudenza sono avvisi. Un avviso per azienda, con l'elenco dei tipi. | Portare aziende.json alla versione 2: la categoria `tempo` di ogni attivita' e `soste_non_scritte` (docs/formato-dati.md). |
+| K-CTR-102 | avviso | Regime non determinabile: corsa senza i km del percorso | Una corsa fatta in un turno non ha i km del percorso (ne' sui passaggi ne' nei km totali) e le norme dell'azienda hanno un regime che dipende dal percorso (es. il Reg. 561/2006: linea fino a 50 km esclusa). Per prudenza si controlla come se il regime valesse, con avvisi da confermare. | Scrivere i km della corsa (passaggi o `km_totali`). |
+| K-CTR-103 | avviso | Turno che attraversa il cambio dell'ora | Un turno comincia prima e finisce dopo l'ora del cambio (ora legale, date nelle norme: `cambi_ora`): le durate del programma sono differenze tra orari scritti e possono avere un'ora in piu' o in meno. | Controllare a mano le durate di quel turno quel giorno. |
+| K-CTR-104 | avviso | Regola sugli orari verificata solo in parte | Una regola guarda giorni fuori dal periodo del pacchetto (la prima o l'ultima settimana, una media su 4 settimane o 4 mesi, il triennio delle giornate a chiamata, le 24 ore dopo l'ultimo giorno): con i dati che ci sono non e' violata, ma non si puo' dire "regolare". Una riga per regola, con le persone e i giorni. | Controllare con i turni di prima o di dopo (un pacchetto con un periodo piu' lungo, o le giornate a chiamata della persona). |
+| K-CTR-105 | avviso | Fermo minimo del rientro dentro le soste contate come lavoro | Il fermo minimo della chiave del rientro (dell'azienda o della persona) non supera le soste che una regola conta per intero come lavoro (L. 138/1958 art. 6: fino a 30 minuti). Non e' vietato (Mauro, 20/10): in un rientro cosi' breve il tempo fermo resta lavoro pagato. | Alzare il fermo minimo oltre le soste contate, se si vuole che il rientro tolga lavoro. |
+| K-CTR-106 | avviso | Scelta sugli orari piu' larga della legge | Una scelta dell'azienda o della persona (es. lavoro massimo 11 ore) e' piu' larga di una regola di legge delle norme: la legge resta sopra e si controlla lo stesso. | Allineare la scelta alla legge, oppure lasciarla sapendo che non allenta la legge. |
+| K-CTR-107 | avviso | Dipendente senza nessuna legge sugli orari nei dati | Una persona con un rapporto da dipendente lavora in giorni in cui nessun regime delle norme sugli orari vale per lei (es. un dipendente che guida un'auto: D.Lgs. 66/2003, non nei dati). Gli orari di quei giorni non si giudicano: non vuol dire "regolare". | Scrivere nelle norme il regime che vale (docs/formato-dati.md, `regimi`). |
+| K-CTR-108 | avviso | Caso di una legge sugli orari che il programma non tratta | Un turno ha un caso che il regime segna tra i `casi_non_trattati` (oggi la multipresenza del Reg. 561/2006: piu' autisti a bordo). | Controllare a mano le regole di quel caso. |
+| K-CTR-109 | avviso | Giornate di lavoro vicine al limite | Le giornate di lavoro della persona in un periodo mobile (es. 400 in tre anni per il lavoro a chiamata, D.Lgs. 81/2015 art. 13) sono vicine al limite, entro il margine scelto dall'azienda (`margine_giornate_massime`). | Tenere conto del limite nel piano; per il lavoro a chiamata, oltre il limite il rapporto cambia. |
+| K-CTR-110 | errore | Lavoro oltre una regola sugli orari | Con la lettura certa della legge (o del contratto collettivo) e un regime che vale con certezza, il lavoro supera il massimo: della giornata, delle 24 ore, della settimana, del mese, in media, di fila senza pausa, le pause che mancano, con il lavoro notturno, l'ampiezza della giornata, le giornate in un periodo, i giorni di fila. Il lavoro si conta come dice il regime (es. lavoro effettivo della L. 138, orario di lavoro del D.Lgs. 234). Errore del piano: non blocca `kzero giornata` e `kzero ore`. | Cambiare i turni o chi li fa (es. un'assegnazione del singolo giorno). |
+| K-CTR-111 | avviso | Lavoro forse oltre una regola sugli orari (da confermare) | Come K-CTR-110, ma solo con una lettura prudente o con un regime, un rapporto, un tipo di servizio, un mezzo o i km da confermare: il messaggio dice perche'. | Far confermare il caso (REGOLE.md, elenco per il consulente del lavoro) e, se vale, cambiare i turni. |
+| K-CTR-112 | avviso | Straordinario | Il lavoro supera il normale ma non il massimo di una regola con lo straordinario (es. tra 8 e 10 ore della L. 138): su un'assegnazione del singolo giorno il messaggio dice l'obbligo (es. la denuncia entro 48 ore); su un turno ricorrente cosa dice la legge dello straordinario non saltuario (da confermare), e se l'azienda ha le speciali esigenze nei dati il loro riferimento. | Fare quello che chiede la legge, oppure cambiare il turno. |
+| K-CTR-113 | errore | Guida oltre una regola sugli orari | Con la lettura certa e un regime certo, la guida supera il massimo: di fila senza l'interruzione che azzera il conto, tra due riposi giornalieri (con le estensioni ammesse), nella giornata, nella settimana, in due settimane, nel mese. Errore del piano. | Cambiare i turni o aggiungere le interruzioni. |
+| K-CTR-114 | avviso | Guida forse oltre una regola sugli orari (da confermare) | Come K-CTR-113, ma solo con una lettura prudente o con qualcosa da confermare: il messaggio dice perche'. | Far confermare il caso e, se vale, cambiare i turni. |
+| K-CTR-115 | errore | Riposo giornaliero sotto una regola sugli orari | Con la lettura certa e un regime certo, il riposo giornaliero manca o e' troppo corto: nelle 24 ore dall'inizio della giornata, entro 24 ore dalla fine del riposo precedente (regolare, frazionato nell'ordine, ridotto), troppi riposi ridotti tra due settimanali, la media, tra due giornate. Errore del piano. | Spostare l'inizio o la fine dei turni, o cambiare chi li fa. |
+| K-CTR-116 | avviso | Riposo giornaliero forse sotto una regola sugli orari (da confermare) | Come K-CTR-115, ma solo con una lettura prudente o con qualcosa da confermare: il messaggio dice perche'. | Far confermare il caso e, se vale, cambiare i turni. |
+| K-CTR-117 | errore | Riposo settimanale sotto una regola sugli orari | Con la lettura certa e un regime certo, il riposo settimanale manca: una settimana senza riposo (un riposo a cavallo di due settimane conta in una sola), due settimane senza un riposo regolare, il riposo che comincia oltre i periodi di 24 ore ammessi, una riduzione non compensata in tempo. Errore del piano. | Dare il riposo settimanale nel piano (es. un'assegnazione del singolo giorno per liberare la persona). |
+| K-CTR-118 | avviso | Riposo settimanale forse sotto una regola sugli orari (da confermare) | Come K-CTR-117, ma solo con una lettura prudente o con qualcosa da confermare; anche il cumulo di due riposi settimanali, che la regola ammette con un avviso. | Far confermare il caso e, se vale, cambiare i turni. |
+| K-CTR-119 | errore | Ore massime del contratto della persona superate | Il lavoro della persona supera le ore massime del suo contratto (`ore[].massime`: giorno, settimana, mese), contate come dice il regime che vale quel giorno (senza regime: guida, altre mansioni e disponibilita'). Errore del piano. | Cambiare i turni o chi li fa. |
+| K-CTR-120 | avviso | Ore massime del contratto della persona forse superate (da confermare) | Come K-CTR-119, ma solo con il conteggio prudente o con un regime da confermare. | Far confermare il caso e, se vale, cambiare i turni. |
+| K-CTR-121 | errore | Limite rigido dell'azienda o della persona superato | Una scelta dell'azienda o della persona con la forza `limite` (lavoro massimo, guida massima, ampiezza massima, riposo minimo tra due giornate, giorni di fila) e' superata su un turno ricorrente. Errore del piano. | Cambiare i turni, oppure cambiare la scelta. |
+| K-CTR-122 | avviso | Scelta dell'azienda o della persona non rispettata | Come K-CTR-121, ma per una preferenza, oppure per un limite su un'assegnazione del singolo giorno (la scelta dell'utente vince). | Valutare se cambiare il turno. |
+| K-CTR-123 | errore | Rientro non giustificato (limite rigido) | Tra due corse la persona va in una rimessa o in un ricovero, resta li' e torna, ma con la chiave del rientro (fermo minimo, fattore della guida a vuoto in piu', km a vuoto in piu' al massimo) il rientro non e' giustificato; la chiave e' un limite rigido e il turno e' ricorrente. Il messaggio dice il perche' con i numeri. Errore del piano. | Fare la pausa sul posto, oppure cambiare il turno. |
+| K-CTR-124 | avviso | Rientro non giustificato | Come K-CTR-123, ma la chiave e' una preferenza oppure il turno e' un'assegnazione del singolo giorno. | Valutare se fare la pausa sul posto. |
+| K-CTR-125 | avviso | Rientro non giudicato: servono le distanze o i km | Il luogo dopo il rientro e' diverso da quello prima e, senza le distanze, non si sa quanta guida a vuoto e' in piu' rispetto alla corsa diretta: il rientro non e' giustificato con certezza (nemmeno contando tutti i trasferimenti come in piu') ne' non giustificato con certezza. Oppure la chiave ha i km massimi e i trasferimenti non hanno i km. Mai "giustificato". | Scrivere i km a vuoto dei trasferimenti; le distanze arriveranno con il loro adattatore. |
+| K-CTR-126 | errore | Regola sugli orari scritta in modo incoerente | Un regime o una regola delle norme e' scritto in modo che il programma non puo' contare: due conteggi del lavoro, regole sul lavoro senza il conteggio, condizioni prese da un regime che le prende a sua volta da un altro, guida tra due riposi senza il riposo giornaliero "24_ore_dalla_fine_del_riposo", normale oltre il massimo, estensione che non supera il massimo, riposo ridotto oltre il minimo, normale senza lo straordinario, riposi ridotti tra due settimanali senza il riposo settimanale, fascia notturna vuota. | Correggere il regime nelle norme (docs/formato-dati.md). |

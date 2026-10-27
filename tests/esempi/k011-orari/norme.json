@@ -1,0 +1,488 @@
+{
+  "schema": "norme",
+  "schema_versione": 2,
+  "norme": [
+    {
+      "codice": "N-IT",
+      "nome": "Italia: abilitazioni per guidare, usi dei mezzi, requisiti",
+      "paese": "IT",
+      "abilitazioni": [
+        { "codice": "B", "nome": "Patente B", "fonte": { "documento": "Codice della strada", "punto": "art. 116, comma 3" } },
+        { "codice": "D1", "nome": "Patente D1", "fonte": { "documento": "Codice della strada", "punto": "art. 116, comma 3" } },
+        { "codice": "D", "nome": "Patente D", "fonte": { "documento": "Codice della strada", "punto": "art. 116, comma 3" } },
+        {
+          "codice": "DE",
+          "nome": "Patente DE (D con rimorchio)",
+          "fonte": { "documento": "Codice della strada", "punto": "art. 116, comma 3" }
+        },
+        {
+          "codice": "CQC-P",
+          "nome": "Carta di qualificazione del conducente (CQC) per il trasporto di persone",
+          "fonte": { "documento": "D.Lgs. 21 novembre 2005, n. 286", "riferimenti": "Direttiva 2003/59/CE" }
+        },
+        {
+          "codice": "KB",
+          "nome": "Certificato di abilitazione professionale di tipo KB",
+          "fonte": { "documento": "Codice della strada", "punto": "art. 116" }
+        },
+        {
+          "codice": "CARTA-COND",
+          "nome": "Carta del conducente (cronotachigrafo digitale)",
+          "fonte": { "documento": "Regolamento (UE) n. 165/2014" },
+          "nota": "Serve sui mezzi con il cronotachigrafo: quando, lo dira' il mandato sugli orari di lavoro (non e' tra i requisiti qui sotto)."
+        }
+      ],
+      "usi": [
+        { "codice": "LINEA", "nome": "Uso di terzi: servizio di linea", "fonte": { "documento": "Codice della strada", "punto": "art. 82" } },
+        { "codice": "NCC", "nome": "Uso di terzi: noleggio con conducente", "fonte": { "documento": "Codice della strada", "punto": "art. 82" } },
+        { "codice": "PROPRIO", "nome": "Uso proprio", "fonte": { "documento": "Codice della strada", "punto": "art. 82" } }
+      ],
+      "requisiti_guida": [
+        {
+          "categorie": ["M1"],
+          "alternative": [{ "abilitazioni": ["B"] }],
+          "fonte": { "documento": "Codice della strada", "punto": "art. 116, comma 3" },
+          "nota": "Autovetture fino a 8 posti oltre al conducente."
+        },
+        {
+          "categorie": ["M1"],
+          "usi": ["NCC"],
+          "alternative": [{ "abilitazioni": ["KB"] }],
+          "fonte": { "documento": "Codice della strada", "punto": "art. 116" },
+          "da_confermare": true,
+          "nota": "Certificato KB per guidare un'autovettura in servizio di noleggio con conducente o di piazza: comma dell'articolo da verificare."
+        },
+        {
+          "categorie": ["M2", "M3"],
+          "alternative": [{ "abilitazioni": ["D"] }, { "abilitazioni": ["D1"], "posti_fino_a": 16, "lunghezza_fino_a_m": 8 }],
+          "fonte": { "documento": "Codice della strada", "punto": "art. 116, comma 3" },
+          "nota": "La patente D1 vale per i mezzi fino a 16 posti oltre al conducente e lunghi al massimo 8 metri; oltre serve la D."
+        },
+        {
+          "categorie": ["M2", "M3"],
+          "rimorchio": true,
+          "alternative": [{ "abilitazioni": ["DE"] }],
+          "fonte": { "documento": "Codice della strada", "punto": "art. 116, comma 3" },
+          "da_confermare": true,
+          "nota": "Rimorchio oltre 750 kg. La D1E per i mezzi piccoli con rimorchio non e' ancora scritta."
+        },
+        {
+          "categorie": ["M2", "M3"],
+          "usi": ["LINEA", "NCC"],
+          "alternative": [{ "abilitazioni": ["CQC-P"] }],
+          "fonte": { "documento": "D.Lgs. 21 novembre 2005, n. 286", "riferimenti": "Direttiva 2003/59/CE" },
+          "nota": "Trasporto di persone per professione con le patenti D1 e D."
+        }
+      ],
+      "usi_per_servizio": [
+        {
+          "tipi_servizio": ["linea"],
+          "usi": ["LINEA"],
+          "fonte": { "documento": "Codice della strada", "punto": "artt. 82 e 87" },
+          "nota": "Un mezzo da noleggio puo' fare servizio di linea solo con la distrazione (art. 87, comma 4; circolare del Ministero dei trasporti n. 27690 del 27/11/2013)."
+        },
+        {
+          "tipi_servizio": ["altro"],
+          "usi": ["NCC"],
+          "fonte": { "documento": "Codice della strada", "punto": "art. 82" },
+          "da_confermare": true,
+          "nota": "Gite e noleggi occasionali. Un servizio 'altro' di genere diverso va scritto nel regolamento del suo contratto."
+        }
+      ],
+      "regimi": [
+        {
+          "codice": "R-L138",
+          "nome": "Orario di lavoro del personale viaggiante degli autoservizi pubblici di linea extraurbani",
+          "tipo": "legge",
+          "fonte": {
+            "documento": "L. 14 febbraio 1958, n. 138",
+            "riferimenti": "normattiva.it, urn:nir:stato:legge:1958-02-14;138"
+          },
+          "nota": "Riassunto per il pacchetto dimostrativo (letture dell'arbitro del 20/10/2026): le parti segnate da confermare vanno verificate con il consulente del lavoro.",
+          "si_applica": {
+            "ruoli": { "certi": ["autista", "secondo_autista"], "da_confermare": ["assistente"] },
+            "rapporti": {
+              "certi": ["dipendente_tempo_pieno", "dipendente_part_time", "tempo_determinato", "stagionale", "a_chiamata"],
+              "da_confermare": ["titolare", "socio", "collaboratore_familiare", "autonomo", "volontario", "altro"]
+            },
+            "tipi_servizio": { "certi": ["linea"], "da_confermare": ["scolastico", "disabili"] }
+          },
+          "regole": [
+            {
+              "codice": "L138-LAVORO-EFFETTIVO",
+              "tipo": "conteggio_lavoro",
+              "famiglia": "lavoro",
+              "fonte": { "documento": "L. 14 febbraio 1958, n. 138", "punto": "art. 6" },
+              "nome_misura": "lavoro effettivo",
+              "categorie": ["guida", "altre_mansioni", "disponibilita"],
+              "soste_fino_a_minuti": 30,
+              "inoperoso_fuori_residenza": { "categorie": ["interruzione", "reperibilita"], "percento": 12 },
+              "nota": "Lett. a: soste fino a 30 minuti; lett. f: almeno il 12% del tempo inoperoso fuori residenza (fuori dal comune della presa servizio) con il solo obbligo della reperibilita', escluso il riposo giornaliero.",
+              "prudente": {
+                "categorie": ["guida", "altre_mansioni", "disponibilita", "reperibilita"],
+                "inoperoso_in_residenza": { "categorie": ["interruzione"], "percento": 12 },
+                "nota": "Da confermare: la reperibilita' da casa conta come lavoro effettivo; il 12% vale anche nel comune della presa servizio."
+              }
+            },
+            {
+              "codice": "L138-GIORNO",
+              "tipo": "lavoro_massimo",
+              "famiglia": "lavoro",
+              "fonte": { "documento": "L. 14 febbraio 1958, n. 138", "punto": "artt. 2 e 3" },
+              "periodo": "giornata",
+              "normale_minuti": 480,
+              "massimo_minuti": 600,
+              "straordinario": {
+                "denuncia": "straordinario da denunciare entro 48 ore all'Ispettorato del lavoro e alla Motorizzazione civile",
+                "ricorrente": "lo straordinario non meramente saltuario e' vietato, salvo speciali esigenze dell'azienda",
+                "ricorrente_da_confermare": true
+              },
+              "nota": "8 ore al giorno; con lo straordinario al massimo 2 ore al giorno (10 in tutto)."
+            },
+            {
+              "codice": "L138-SETTIMANA",
+              "tipo": "lavoro_massimo",
+              "famiglia": "lavoro",
+              "fonte": {
+                "documento": "L. 14 febbraio 1958, n. 138",
+                "punto": "artt. 2 e 3",
+                "riferimenti": "Cass. sez. lav. n. 15419 del 04/12/2000"
+              },
+              "periodo": "settimana",
+              "normale_minuti": 2880,
+              "massimo_minuti": 3600,
+              "straordinario": {
+                "denuncia": "straordinario da denunciare entro 48 ore all'Ispettorato del lavoro e alla Motorizzazione civile",
+                "ricorrente": "lo straordinario non meramente saltuario e' vietato, salvo speciali esigenze dell'azienda",
+                "ricorrente_da_confermare": true
+              },
+              "nota": "48 ore a settimana insieme alle 8 al giorno; con lo straordinario al massimo 12 ore a settimana (60 in tutto). Settimana da lunedi' a domenica, come nel D.Lgs. 234/2007 (da confermare)."
+            },
+            {
+              "codice": "L138-NOTTE",
+              "tipo": "lavoro_notturno",
+              "famiglia": "notturno",
+              "fonte": { "documento": "L. 14 febbraio 1958, n. 138", "punto": "art. 4" },
+              "fascia": { "dalle": "22:00", "alle": "05:00" },
+              "nota": "Solo il conteggio del lavoro notturno."
+            },
+            {
+              "codice": "L138-GUIDA",
+              "tipo": "guida_continua",
+              "famiglia": "guida",
+              "fonte": { "documento": "L. 14 febbraio 1958, n. 138", "punto": "art. 5" },
+              "massimo_minuti": 300,
+              "azzera_con": [{ "parti_minuti": [31] }],
+              "interrompono": ["altre_mansioni", "disponibilita", "reperibilita", "interruzione"],
+              "eccezione_soste_capolinea_oltre_minuti": 15,
+              "nota": "Lettura certa: piu' di 5 ore di guida senza nessuna interruzione oltre 30 minuti. C. 4: non vale per i servizi a breve percorso e a frequenti corse con soste ai capolinea oltre 15 minuti (da confermare).",
+              "prudente": {
+                "azzera_con": [{ "parti_minuti": [60] }],
+                "interrompono": ["interruzione", "reperibilita"],
+                "interruzioni_brevi_contate": { "fino_a_minuti": 30, "quante": 2 },
+                "nota": "Si contano la guida e le prime due interruzioni fino a 30 minuti; solo un intervallo di almeno 1 ora azzera il conto."
+              }
+            },
+            {
+              "codice": "L138-RIPOSO",
+              "tipo": "riposo_giornaliero",
+              "famiglia": "riposi",
+              "fonte": { "documento": "L. 14 febbraio 1958, n. 138", "punto": "art. 7" },
+              "misura": "24_ore_dall_inizio_della_giornata",
+              "minimo_minuti": 540,
+              "nota": "Nelle 24 ore dall'inizio della giornata lavorativa un riposo ininterrotto mai sotto 9 ore, libero da ogni servizio (c. 3).",
+              "prudente": {
+                "media_riposo": {
+                  "minimo_minuti": 660,
+                  "giorni": 28,
+                  "esclusi_riposi_di_almeno_minuti": 1440,
+                  "salvo_interruzioni": [{ "minuti": 120, "quante": 1 }, { "minuti": 60, "quante": 2 }]
+                },
+                "nota": "Media di almeno 11 ore su 4 settimane (ogni 28 giorni consecutivi), senza il riposo settimanale e senza le giornate con un'interruzione di almeno 2 ore o due di almeno 1 ora (c. 2)."
+              }
+            },
+            {
+              "codice": "L138-SETTIMANALE",
+              "tipo": "riposo_settimanale",
+              "famiglia": "riposi",
+              "fonte": { "documento": "L. 14 febbraio 1958, n. 138", "punto": "art. 8" },
+              "minimo_minuti": 1440,
+              "cumulo_settimane": 2,
+              "nota": "Riposo settimanale di 24 ore consecutive, di norma la domenica; ammesso il cumulo di due riposi consecutivi (avviso).",
+              "prudente": {
+                "minimo_minuti": 1980,
+                "nota": "24 ore piu' il riposo giornaliero di 9 ore (\"senza pregiudizio del riposo continuato giornaliero\")."
+              }
+            }
+          ]
+        },
+        {
+          "codice": "R-561",
+          "nome": "Periodi di guida, interruzioni e periodi di riposo dei conducenti",
+          "tipo": "legge",
+          "fonte": {
+            "documento": "Reg. (CE) n. 561/2006 (testo consolidato al 31/12/2024)",
+            "riferimenti": "https://eur-lex.europa.eu/eli/reg/2006/561/2024-12-31/ita; nota INL n. 61 del 14/01/2021"
+          },
+          "nota": "Vale per chiunque guidi, con qualunque rapporto (art. 4 c). Una sola corsa non esclusa porta guida e riposi del 561 su tutta la settimana (nota INL 61/2021), al posto della L. 138.",
+          "si_applica": { "ruoli": { "certi": ["autista", "secondo_autista"] }, "mezzi": { "persone_trasportabili_oltre": 9 } },
+          "esclusioni": [
+            {
+              "tipi_servizio": ["linea"],
+              "percorso_fino_a_km": 50,
+              "fonte": { "documento": "Reg. (CE) n. 561/2006 (testo consolidato al 31/12/2024)", "punto": "art. 3 lett. a" },
+              "nota": "Servizi regolari di linea con percorso fino a 50 km."
+            },
+            {
+              "tipi_servizio": ["scolastico", "disabili"],
+              "percorso_fino_a_km": 50,
+              "da_confermare": true,
+              "fonte": {
+                "documento": "Reg. (CE) n. 561/2006 (testo consolidato al 31/12/2024)",
+                "punto": "art. 4 lett. n",
+                "riferimenti": "Reg. (UE) 2024/1258"
+              },
+              "nota": "Scolastico e disabili come servizi regolari specializzati: da confermare."
+            }
+          ],
+          "servizi_occasionali": { "tipi_servizio": ["altro"], "da_confermare": true },
+          "estensione": {
+            "ambito": "settimana",
+            "famiglie": ["guida", "riposi"],
+            "fonte": { "documento": "Nota INL n. 61 del 14/01/2021" }
+          },
+          "esclude": [
+            { "regime": "R-L138", "famiglie": ["guida", "riposi"], "effetto": "esclude" },
+            { "regime": "R-L138", "famiglie": ["lavoro"], "effetto": "da_confermare" }
+          ],
+          "casi_non_trattati": [
+            {
+              "caso": "multipresenza",
+              "fonte": {
+                "documento": "Reg. (CE) n. 561/2006 (testo consolidato al 31/12/2024)",
+                "punto": "art. 4 lett. o, artt. 7 e 8 c. 5"
+              },
+              "nota": "Piu' conducenti a bordo: regole non trattate dal programma."
+            }
+          ],
+          "regole": [
+            {
+              "codice": "561-GUIDA-CONTINUA",
+              "tipo": "guida_continua",
+              "famiglia": "guida",
+              "fonte": { "documento": "Reg. (CE) n. 561/2006 (testo consolidato al 31/12/2024)", "punto": "art. 7" },
+              "massimo_minuti": 270,
+              "azzera_con": [
+                { "parti_minuti": [45] },
+                { "parti_minuti": [15, 30] },
+                { "parti_minuti": [15, 15], "solo_servizi_occasionali": true }
+              ],
+              "interrompono": ["interruzione"],
+              "nota": "Dopo 4 ore e 30 di guida un'interruzione di almeno 45 minuti, oppure 15 seguiti da 30; per i servizi occasionali anche 15 + 15. Interruzione = solo riposo (art. 4 d)."
+            },
+            {
+              "codice": "561-GUIDA-GIORNO",
+              "tipo": "guida_massima",
+              "famiglia": "guida",
+              "fonte": { "documento": "Reg. (CE) n. 561/2006 (testo consolidato al 31/12/2024)", "punto": "art. 6 c. 1" },
+              "periodo": "tra_due_riposi",
+              "massimo_minuti": 540,
+              "estensione": { "massimo_minuti": 600, "volte_a_settimana": 2 },
+              "nota": "Periodo di guida giornaliero (tra due riposi giornalieri, art. 4 k): 9 ore, 10 ore al massimo due volte a settimana."
+            },
+            {
+              "codice": "561-GUIDA-SETTIMANA",
+              "tipo": "guida_massima",
+              "famiglia": "guida",
+              "fonte": { "documento": "Reg. (CE) n. 561/2006 (testo consolidato al 31/12/2024)", "punto": "art. 6 c. 2" },
+              "periodo": "settimana",
+              "massimo_minuti": 3360
+            },
+            {
+              "codice": "561-GUIDA-DUE-SETTIMANE",
+              "tipo": "guida_massima",
+              "famiglia": "guida",
+              "fonte": { "documento": "Reg. (CE) n. 561/2006 (testo consolidato al 31/12/2024)", "punto": "art. 6 c. 3" },
+              "periodo": "due_settimane",
+              "massimo_minuti": 5400
+            },
+            {
+              "codice": "561-RIPOSO-GIORNALIERO",
+              "tipo": "riposo_giornaliero",
+              "famiglia": "riposi",
+              "fonte": {
+                "documento": "Reg. (CE) n. 561/2006 (testo consolidato al 31/12/2024)",
+                "punto": "art. 8 c. 2 e 4, art. 4 g"
+              },
+              "misura": "24_ore_dalla_fine_del_riposo",
+              "minimo_minuti": 660,
+              "frazionato": { "parti_minuti": [180, 540] },
+              "ridotto": { "minimo_minuti": 540, "volte": 3 },
+              "nota": "Entro 24 ore dalla fine del riposo precedente: regolare 11 ore, oppure 3 + 9 in quest'ordine; ridotto da 9 a meno di 11 ore, al massimo 3 volte tra due riposi settimanali."
+            },
+            {
+              "codice": "561-RIPOSO-SETTIMANALE",
+              "tipo": "riposo_settimanale",
+              "famiglia": "riposi",
+              "fonte": {
+                "documento": "Reg. (CE) n. 561/2006 (testo consolidato al 31/12/2024)",
+                "punto": "art. 8 c. 6, 6 ter, 7 e 9"
+              },
+              "minimo_minuti": 2700,
+              "ridotto": { "minimo_minuti": 1440 },
+              "regolari_in_due_settimane": 1,
+              "entro_periodi_di_24_ore": 6,
+              "compensazione": { "entro_settimane": 3, "attaccata_a_riposo_minuti": 540 },
+              "nota": "In due settimane consecutive due riposi regolari (45 ore) oppure uno regolare e uno ridotto (24 ore); al piu' tardi dopo sei periodi di 24 ore; la riduzione si compensa entro la fine della terza settimana dopo, attaccata a un riposo di almeno 9 ore; un riposo a cavallo di due settimane conta in una sola."
+            }
+          ]
+        },
+        {
+          "codice": "R-234",
+          "nome": "Orario di lavoro di chi fa autotrasporto (direttiva 2002/15/CE)",
+          "tipo": "legge",
+          "fonte": {
+            "documento": "D.Lgs. 19 novembre 2007, n. 234",
+            "riferimenti": "normattiva.it, urn:nir:stato:decreto.legislativo:2007-11-19;234"
+          },
+          "nota": "Vale dove vale il Reg. 561/2006 (art. 2), ai dipendenti e agli autonomi.",
+          "si_applica": {
+            "come_regime": "R-561",
+            "ruoli": { "certi": ["autista", "secondo_autista"], "da_confermare": ["assistente"] },
+            "rapporti": {
+              "certi": [
+                "dipendente_tempo_pieno",
+                "dipendente_part_time",
+                "tempo_determinato",
+                "stagionale",
+                "a_chiamata",
+                "autonomo"
+              ],
+              "da_confermare": ["titolare", "socio", "collaboratore_familiare", "volontario", "altro"]
+            }
+          },
+          "regole": [
+            {
+              "codice": "234-ORARIO",
+              "tipo": "conteggio_lavoro",
+              "famiglia": "lavoro",
+              "fonte": { "documento": "D.Lgs. 19 novembre 2007, n. 234", "punto": "art. 3 lett. a" },
+              "nome_misura": "orario di lavoro",
+              "categorie": ["guida", "altre_mansioni"],
+              "nota": "Guida e altre mansioni; esclusi interruzioni, riposi e tempi di disponibilita'."
+            },
+            {
+              "codice": "234-SETTIMANA",
+              "tipo": "lavoro_massimo",
+              "famiglia": "lavoro",
+              "fonte": { "documento": "D.Lgs. 19 novembre 2007, n. 234", "punto": "art. 4" },
+              "periodo": "settimana",
+              "massimo_minuti": 3600,
+              "nota": "Al massimo 60 ore in una settimana (lunedi' 00:00 - domenica 24:00)."
+            },
+            {
+              "codice": "234-MEDIA",
+              "tipo": "lavoro_massimo",
+              "famiglia": "lavoro",
+              "fonte": { "documento": "D.Lgs. 19 novembre 2007, n. 234", "punto": "art. 4" },
+              "periodo": "settimana",
+              "massimo_minuti": 2880,
+              "media": { "mesi": 4 },
+              "da_confermare": true,
+              "nota": "Media di 48 ore a settimana su 4 mesi: la finestra (ogni 4 mesi consecutivi) e' una lettura prudente."
+            },
+            {
+              "codice": "234-PAUSE",
+              "tipo": "lavoro_continuo",
+              "famiglia": "lavoro",
+              "fonte": { "documento": "D.Lgs. 19 novembre 2007, n. 234", "punto": "art. 5" },
+              "massimo_minuti": 360,
+              "pause": [{ "lavoro_oltre_minuti": 360, "pausa_minuti": 30 }, { "lavoro_oltre_minuti": 540, "pausa_minuti": 45 }],
+              "frazione_minima_minuti": 15,
+              "nota": "Mai piu' di 6 ore di lavoro di fila; 30 minuti di pausa con un lavoro tra 6 e 9 ore, 45 oltre 9; in parti di almeno 15 minuti."
+            },
+            {
+              "codice": "234-NOTTE",
+              "tipo": "lavoro_notturno",
+              "famiglia": "notturno",
+              "fonte": { "documento": "D.Lgs. 19 novembre 2007, n. 234", "punto": "art. 7 e art. 3 lett. h" },
+              "fascia": { "dalle": "03:00", "alle": "04:00" },
+              "massimo_minuti": 600,
+              "nota": "Con lavoro notturno al massimo 10 ore di lavoro ogni 24 ore. Notte = almeno 4 ore consecutive tra le 00:00 e le 07:00: lettura certa = lavoro tra le 03:00 e le 04:00 (comune a ogni finestra possibile).",
+              "prudente": { "fascia": { "dalle": "00:00", "alle": "07:00" }, "nota": "Qualunque lavoro tra le 00:00 e le 07:00." }
+            }
+          ]
+        },
+        {
+          "codice": "R-CHIAMATA",
+          "nome": "Lavoro a chiamata: giornate massime",
+          "tipo": "legge",
+          "fonte": { "documento": "D.Lgs. 15 giugno 2015, n. 81", "punto": "art. 13 c. 3" },
+          "nota": "Oltre il limite il rapporto diventa a tempo pieno e indeterminato. Non vale per turismo, pubblici esercizi e spettacolo. Solo avvisi: le giornate di prima sono un dato approssimato e il modo di contare e' da confermare.",
+          "si_applica": { "rapporti": { "certi": ["a_chiamata"] } },
+          "regole": [
+            {
+              "codice": "CHIAMATA-GIORNATE",
+              "tipo": "giornate_massime",
+              "famiglia": "giornate",
+              "fonte": { "documento": "D.Lgs. 15 giugno 2015, n. 81", "punto": "art. 13 c. 3" },
+              "massimo_giornate": 400,
+              "anni": 3,
+              "da_confermare": true,
+              "nota": "400 giornate di effettivo lavoro con lo stesso datore in tre anni solari (triennio mobile a ritroso dal giorno: da confermare)."
+            }
+          ]
+        },
+        {
+          "codice": "ESEMPIO-01",
+          "nome": "Contratto collettivo di esempio (inventato)",
+          "tipo": "contratto_collettivo",
+          "fonte": { "documento": "Contratto collettivo ESEMPIO-01 (inventato)" },
+          "nota": "Regole inventate e diverse dalla legge, per provare i contratti collettivi senza dati veri: non e' un contratto vero.",
+          "si_applica": { "contratti_collettivi": { "certi": ["ESEMPIO-01"] } },
+          "regole": [
+            {
+              "codice": "ES01-AMPIEZZA",
+              "tipo": "ampiezza_massima",
+              "famiglia": "lavoro",
+              "fonte": { "documento": "Contratto collettivo ESEMPIO-01 (inventato)", "punto": "art. 1" },
+              "massimo_minuti": 840,
+              "nota": "Inventata: dalla prima all'ultima attivita' della giornata al massimo 14 ore."
+            },
+            {
+              "codice": "ES01-RIPOSO",
+              "tipo": "riposo_giornaliero",
+              "famiglia": "riposi",
+              "fonte": { "documento": "Contratto collettivo ESEMPIO-01 (inventato)", "punto": "art. 2" },
+              "misura": "tra_due_giornate",
+              "minimo_minuti": 600,
+              "nota": "Inventata: almeno 10 ore tra la fine di una giornata e l'inizio della successiva."
+            },
+            {
+              "codice": "ES01-GIORNI",
+              "tipo": "giorni_consecutivi",
+              "famiglia": "giornate",
+              "fonte": { "documento": "Contratto collettivo ESEMPIO-01 (inventato)", "punto": "art. 3" },
+              "massimo_giorni": 7,
+              "nota": "Inventata: al massimo 7 giorni di lavoro di fila."
+            }
+          ]
+        }
+      ],
+      "cambi_ora": {
+        "fonte": {
+          "documento": "Direttiva 2000/84/CE",
+          "punto": "artt. 2 e 3",
+          "riferimenti": "ora legale: dall'ultima domenica di marzo all'ultima domenica di ottobre, all'1:00 UTC"
+        },
+        "date": [
+          { "data": "2026-03-29", "da": "02:00", "a": "03:00" },
+          { "data": "2026-10-25", "da": "03:00", "a": "02:00" },
+          { "data": "2027-03-28", "da": "02:00", "a": "03:00" },
+          { "data": "2027-10-31", "da": "03:00", "a": "02:00" }
+        ]
+      },
+      "nota": "Riassunto per il pacchetto dimostrativo: i valori segnati 'da confermare' vanno verificati sul testo delle norme."
+    }
+  ]
+}

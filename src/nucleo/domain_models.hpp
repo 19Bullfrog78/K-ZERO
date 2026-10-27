@@ -85,6 +85,18 @@ enum class CenterType { Day, Therapy, SocioEducational, Other };   // diurno, te
 // Esigenze di salute di una persona o di un gruppo (dati particolari).
 enum class Need { Wheelchair, Assistant, Other };
 
+// Rapporto di lavoro di una persona (persone.json). Sono "lavoro dipendente", per il significato del formato: tempo pieno,
+// part-time, a chiamata, tempo determinato, stagionale (docs/formato-dati.md).
+enum class EmploymentKind {
+    Owner, FamilyHelper, Partner, FullTime, PartTime, OnCall, FixedTerm, Seasonal, SelfEmployed, Volunteer, Other
+};
+inline bool is_employee(EmploymentKind k) {
+    return k == EmploymentKind::FullTime || k == EmploymentKind::PartTime || k == EmploymentKind::OnCall ||
+           k == EmploymentKind::FixedTerm || k == EmploymentKind::Seasonal;
+}
+
+enum class ShiftRole { Driver, Escort, SecondDriver };   // autista, assistente a bordo, secondo autista
+
 // Macro categorie di una corsa, ricavate da chi trasporta (vedi derive_service).
 enum class ServiceType {
     Line,        // Servizi di Linee
@@ -290,6 +302,282 @@ struct Regulation {
     Source src;
 };
 
+// --- Orari di lavoro (K-011): categorie di tempo, regimi e tipi di regola -----------------------------------------
+// Le leggi sugli orari, i contratti collettivi e le scelte delle aziende sono dati (norme.json, aziende.json,
+// persone.json): il programma conosce solo i tipi di regola, cioe' COME si conta. I NUMERI e le fonti stanno nei dati.
+// Ogni regola ha una lettura certa e, se la legge e' incerta, una lettura prudente piu' severa: violare la certa e' un
+// errore, violare solo la prudente un avviso "da confermare". Il programma non sceglie mai la lettura piu' comoda per
+// dire "regolare" e, senza dati, non dice mai "regolare".
+
+// Categoria di un minuto del lavoro di una persona (Reg. CE 561/2006 art. 4 e 16, D.Lgs. 234/2007 art. 3). Il riposo
+// (tra due giornate) non e' una categoria degli elementi: e' il tempo fuori dalle giornate.
+enum class TimeCategory {
+    Driving,        // guida
+    OtherWork,      // altre mansioni
+    Availability,   // disponibilita' sul posto (pronto a partire, attesa con il mezzo)
+    OnCall,         // reperibilita' (fuori dal posto di lavoro, a chiamata)
+    Break,          // interruzione (pausa, libero da ogni servizio)
+};
+inline constexpr int kTimeCategories = 5;
+
+// Soste non scritte tra due elementi della giornata (aziende.json versione 2): fino a N minuti una categoria, oltre
+// un'altra (es. fino a 30 minuti disponibilita', oltre interruzione). Senza "oltre" vale sempre la prima.
+struct UnwrittenStops {
+    TimeCategory category = TimeCategory::Availability;
+    std::optional<int> over_minutes;
+    TimeCategory category_over = TimeCategory::Break;
+    Source src;
+};
+
+// Famiglia di una regola: guida, riposi, lavoro, notturno, giornate. Un regime che vale per tutta la settimana (nota INL
+// 61/2021) dice per quali famiglie e quali famiglie di un altro regime esclude.
+enum class RuleFamily { Driving, Rest, Work, Night, Days };
+
+// Tipi di regola: un elenco chiuso. Ognuno sa come si conta; i numeri stanno nei dati.
+enum class RuleType {
+    WorkCount,           // conteggio_lavoro: quali categorie e quali soste contano come lavoro
+    MaxWork,             // lavoro_massimo: nel giorno, nella settimana, nel mese, in media su un periodo; straordinario
+    ContinuousDriving,   // guida_continua: guida massima prima di un'interruzione che azzera il conto
+    MaxDriving,          // guida_massima: tra due riposi, nel giorno, nella settimana, in due settimane; estensioni
+    ContinuousWork,      // lavoro_continuo: lavoro massimo senza pausa e pause in base al lavoro del giorno
+    DailyRest,           // riposo_giornaliero: nelle 24 ore, regolare, frazionato, ridotto, media
+    WeeklyRest,          // riposo_settimanale: minimo, ridotto, entro N periodi di 24 ore, due settimane, cumulo, compensazione
+    NightWork,           // lavoro_notturno: conteggio di una fascia e limite di lavoro con lavoro notturno
+    MaxDays,             // giornate_massime: giornate di lavoro in un periodo mobile di anni
+    MaxSpan,             // ampiezza_massima: dalla prima all'ultima attivita' della giornata
+    ConsecutiveDays,     // giorni_consecutivi: giorni di lavoro di fila
+};
+
+// Il "giorno" di una regola lo dice la regola.
+enum class RulePeriod {
+    Workday,        // giornata: i turni che la persona comincia in quel giorno di calendario, anche oltre la mezzanotte
+    Day24,          // 24_ore: le 24 ore dall'inizio della giornata
+    Week,           // settimana: lunedi' 00:00 - domenica 24:00
+    TwoWeeks,       // due_settimane: due settimane consecutive
+    Month,          // mese di calendario
+    BetweenRests,   // tra_due_riposi: il periodo tra due riposi giornalieri (o settimanali)
+};
+
+enum class RestMeasure {
+    From24hStart,     // 24_ore_dall_inizio: nelle 24 ore dall'inizio della giornata un riposo ininterrotto
+    From24hEndRest,   // 24_ore_dalla_fine_del_riposo: entro 24 ore dalla fine del riposo precedente un nuovo riposo
+    BetweenWorkdays,  // tra_due_giornate: dalla fine di una giornata all'inizio della successiva
+};
+
+// Interruzione (o pausa) in parti, nell'ordine: es. 45, oppure 15 seguita da 30.
+struct BreakPattern {
+    std::vector<int> parts;
+    bool occasional_only = false;   // vale solo per i servizi occasionali del regime
+};
+
+// Tempo inoperoso contato in parte come lavoro (L. 138/1958 art. 6 lett. f: il 12% fuori residenza).
+struct IdleShare {
+    std::vector<TimeCategory> categories;
+    int percent = 0;
+};
+
+struct PauseNeed {
+    int work_over = 0;   // con un lavoro del giorno oltre questi minuti...
+    int pause = 0;       // ...pause per almeno questi minuti
+};
+
+struct ExceptBreaks {   // giornate escluse dalla media: con "quante" interruzioni di almeno "minuti"
+    int minutes = 0;
+    int count = 1;
+};
+
+// I parametri di una lettura (certa o prudente) di una regola. Ogni tipo usa i suoi; gli altri restano vuoti.
+struct RuleParams {
+    // conteggio_lavoro
+    std::string measure_name;                  // es. "lavoro effettivo", "orario di lavoro"
+    std::vector<TimeCategory> categories;      // categorie contate (conteggio); categorie che interrompono (guida continua)
+    std::optional<int> stops_up_to;            // soste (interruzioni, reperibilita') fino a N minuti contate per intero
+    std::optional<IdleShare> idle_away;        // tempo inoperoso fuori residenza contato in parte
+    std::optional<IdleShare> idle_home;        // tempo inoperoso in residenza contato in parte
+    // lavoro_massimo, guida_massima, ampiezza_massima, lavoro_notturno, guida_continua, lavoro_continuo
+    std::optional<int> max_minutes;
+    std::optional<int> normal_minutes;         // oltre il normale e fino al massimo: straordinario (avviso)
+    std::optional<int> average_weeks, average_months, average_days;   // media su un periodo mobile
+    std::optional<int> extension_max;          // guida_massima: estensione ammessa...
+    std::optional<int> extension_times;        // ...al massimo tante volte a settimana
+    // guida_continua
+    std::vector<BreakPattern> resets;
+    std::optional<int> short_counted_up_to;    // interruzioni brevi contate nella guida...
+    std::optional<int> short_counted_count;    // ...le prime N
+    std::optional<int> terminus_stops_over;    // eccezione: tutte le soste ai capolinea della giornata oltre N minuti
+    // lavoro_continuo
+    std::optional<int> fraction_min;           // pause in parti di almeno N minuti
+    std::vector<PauseNeed> pauses;
+    // riposo_giornaliero, riposo_settimanale
+    std::optional<int> min_minutes;
+    std::vector<int> split;                    // riposo frazionato: parti nell'ordine (es. 180, 540)
+    std::optional<int> reduced_min;            // riposo ridotto: almeno tanti minuti...
+    std::optional<int> reduced_times;          // ...al massimo tante volte (tra due riposi settimanali)
+    std::optional<int> rest_average_min;       // media del riposo giornaliero...
+    std::optional<int> rest_average_days;      // ...su tanti giorni consecutivi
+    std::optional<int> rest_average_exclude_from;   // senza i riposi di almeno tanti minuti (il settimanale)
+    std::vector<ExceptBreaks> rest_average_except;   // salvo le giornate con queste interruzioni
+    bool on_call_interrupts = true;            // la reperibilita' interrompe il riposo
+    std::optional<int> two_weeks_regular;      // in due settimane consecutive almeno tanti riposi regolari
+    std::optional<int> within_24h_periods;     // il riposo settimanale comincia entro tanti periodi di 24 ore
+    std::optional<int> cumulation_weeks;       // un riposo lungo vale per tante settimane accanto (cumulo)
+    std::optional<int> compensation_weeks;     // riduzione compensata entro la fine della N-esima settimana dopo...
+    std::optional<int> compensation_attached;  // ...attaccata a un riposo di almeno tanti minuti
+    // lavoro_notturno
+    std::optional<Minutes> band_from, band_to; // fascia (anche a cavallo della mezzanotte: 22:00-05:00)
+    // giornate_massime, giorni_consecutivi
+    std::optional<int> max_days;
+    std::optional<int> years;
+};
+
+// Straordinario (es. L. 138/1958 art. 3): cosa chiede la legge, scritto nei dati.
+struct Overtime {
+    std::string notice;            // es. "denuncia entro 48 ore all'Ispettorato del lavoro e alla Motorizzazione civile"
+    std::string recurring;         // es. "lo straordinario non meramente saltuario e' vietato, salvo speciali esigenze"
+    bool recurring_to_confirm = false;
+};
+
+struct WorkRule {
+    Code code;
+    RuleType type = RuleType::MaxWork;
+    RuleFamily family = RuleFamily::Work;
+    RulePeriod period = RulePeriod::Workday;
+    RestMeasure measure = RestMeasure::From24hStart;
+    RuleParams certain;                    // lettura certa
+    std::optional<RuleParams> prudent;     // lettura prudente (piu' severa), se la legge e' incerta
+    std::string prudent_note;
+    std::optional<Overtime> overtime;
+    RuleSource source;
+    bool to_confirm = false;               // senza lettura certa: solo avvisi
+    std::string note;
+    Source src;
+};
+
+// Valori di una condizione, certi o da confermare (es. i rapporti di lavoro a cui vale una legge).
+template <class T>
+struct Applies {
+    bool present = false;            // la condizione c'e' (senza: vale per tutti)
+    std::vector<T> certain, to_confirm;
+};
+
+// Persone trasportabili compreso il conducente (posti + posti in piedi + 1).
+struct VehicleCondition {
+    int persons_over = 0;
+    bool to_confirm = false;
+};
+
+struct RouteCondition {
+    std::optional<double> up_to_km, over_km;   // percorso della corsa fino a / oltre N km
+    bool to_confirm = false;
+};
+
+// Corse escluse da un regime (es. servizi regolari di linea con percorso fino a 50 km, Reg. 561/2006 art. 3 a).
+struct RegimeExclusion {
+    std::vector<ServiceKind> kinds;
+    std::optional<double> route_up_to_km;
+    bool to_confirm = false;
+    RuleSource source;
+    std::string note;
+    Source src;
+};
+
+enum class ExclusionEffect { Exclude, ToConfirm };   // l'altro regime non vale, oppure vale solo come "da confermare"
+
+struct RegimeOverride {
+    Ref regime;
+    std::vector<RuleFamily> families;
+    ExclusionEffect effect = ExclusionEffect::Exclude;
+    Source src;
+};
+
+// Casi della legge che il programma non tratta (es. la multipresenza del Reg. 561/2006): se compaiono, un avviso.
+enum class UntreatedCase { MultiManning };
+
+struct UntreatedCaseEntry {
+    UntreatedCase kind = UntreatedCase::MultiManning;
+    RuleSource source;
+    std::string note;
+    Source src;
+};
+
+enum class RegimeKind { Law, CollectiveAgreement };   // legge, contratto collettivo
+
+// Un regime: un insieme di regole di una fonte (una legge, un contratto collettivo), con dove si applica.
+struct Regime {
+    Code code;
+    std::string name;
+    RegimeKind kind = RegimeKind::Law;
+    RuleSource source;
+    std::optional<Day> valid_from, valid_to;
+    bool to_confirm = false;
+    std::string note;
+    // Dove si applica. Condizioni sulla persona: ruolo del turno, rapporto, contratto collettivo. Condizioni sulla corsa:
+    // tipo di servizio, mezzo, percorso, esclusioni (anche prese da un altro regime: come_regime).
+    Applies<ShiftRole> roles;
+    Applies<EmploymentKind> employments;
+    Applies<std::string> agreements;
+    Applies<ServiceKind> service_kinds;
+    std::optional<VehicleCondition> vehicle;
+    std::optional<RouteCondition> route;
+    std::vector<RegimeExclusion> exclusions;
+    std::optional<Ref> like;   // come_regime: le condizioni sulla corsa e le esclusioni di un altro regime
+    // Servizi occasionali (gite, noleggi): per le interruzioni che valgono solo per loro.
+    std::vector<ServiceKind> occasional;
+    bool occasional_to_confirm = false;
+    // Estensione: una corsa che lo fa scattare vale per tutta la settimana, per queste famiglie.
+    bool week_extension = false;
+    std::vector<RuleFamily> extension_families;
+    std::vector<RegimeOverride> overrides;   // altri regimi esclusi nei giorni (o nelle settimane) in cui vale
+    std::vector<UntreatedCaseEntry> untreated;
+    std::vector<WorkRule> rules;
+    Source src;
+};
+
+// Cambio dell'ora (ora legale): un dato del paese, con la fonte (in Europa la direttiva 2000/84/CE). L'orologio salta
+// dalle "from" alle "to" di quel giorno (es. 03:00 -> 02:00 l'ultima domenica di ottobre in Italia).
+struct ClockChange {
+    Day day = 0;
+    Minutes from = 0, to = 0;
+    Source src;
+};
+
+// Scelte dell'azienda o della persona sugli orari (livello 3): facoltative, preferenza oppure limite rigido.
+enum class ChoiceStrength { Preference, Limit };
+
+struct WorkChoice {
+    RuleType type = RuleType::MaxWork;   // lavoro_massimo, guida_massima, ampiezza_massima, riposo_giornaliero, giorni_consecutivi
+    RulePeriod period = RulePeriod::Workday;
+    int value = 0;                       // minuti (o giorni per giorni_consecutivi)
+    ChoiceStrength strength = ChoiceStrength::Preference;
+    std::string note;
+    Source src;
+};
+
+// La chiave della pausa fuori dal posto (rientro), decisa da Mauro il 20/10: fermo minimo, fattore della guida a vuoto
+// in piu', km a vuoto in piu' al massimo (facoltativo), forza. Ogni campo della persona vince su quello dell'azienda.
+struct ReturnKey {
+    std::optional<int> min_stop;          // minuti
+    std::optional<double> driving_factor;
+    std::optional<double> max_empty_km;
+    std::optional<ChoiceStrength> strength;
+    Source src;
+};
+
+// Speciali esigenze dell'azienda per una regola (es. lo straordinario della L. 138/1958 art. 3), con il riferimento.
+struct SpecialNeed {
+    Ref rule;
+    std::string reference;
+    std::string note;
+    Source src;
+};
+
+// Giornate di lavoro prima del periodo del pacchetto (rapporto a chiamata): quante, contate da quando.
+struct PriorDays {
+    int days = 0;
+    Day counted_from = 0;
+    Source src;
+};
+
 // --- Norme di un paese: abilitazioni, usi dei mezzi, requisiti per guidare ----------------------------------
 // Tutto e' un dato con la fonte: nessuna patente, nessun uso e nessun requisito e' scritto nel codice.
 
@@ -343,6 +631,10 @@ struct Norms {
     std::vector<NormEntry> uses;
     std::vector<DrivingRequirement> requirements;
     std::vector<ServiceUsesNorm> service_uses;
+    // Versione 2 (K-011): leggi e contratti collettivi sugli orari, cambi dell'ora.
+    std::vector<Regime> regimes;
+    std::vector<ClockChange> clock_changes;
+    RuleSource clock_source;
     std::string note;
     Source src;
 
@@ -866,9 +1158,6 @@ struct DwellTimes {
 
 enum class PersonRole { Driver, Escort };   // autista, assistente a bordo
 
-enum class EmploymentKind {
-    Owner, FamilyHelper, Partner, FullTime, PartTime, OnCall, FixedTerm, Seasonal, SelfEmployed, Volunteer, Other
-};
 
 struct HoursLimits {   // ore (con decimali) per giorno, settimana, mese
     std::optional<double> day, week, month;
@@ -952,6 +1241,11 @@ struct Person {
     std::vector<Ref> competences;
     std::vector<Preference> preferences;
     std::vector<Loan> loans;
+    // Versione 2 (K-011): scelte sugli orari per la persona (vincono su quelle dell'azienda), chiave del rientro, giornate
+    // di lavoro prima del pacchetto (dati personali).
+    std::vector<WorkChoice> choices;
+    std::optional<ReturnKey> return_key;
+    std::optional<PriorDays> prior_days;
     std::string note;                 // personale
     Source src;
 
@@ -987,7 +1281,6 @@ struct VehicleStop {
 // piu' generale al piu' preciso (vince il piu' preciso, turno per turno): rotazione, servizio fisso, assegnazione del
 // singolo giorno. Se nessuno da' una persona il turno e' scoperto: il programma non inventa assegnazioni.
 
-enum class ShiftRole { Driver, Escort, SecondDriver };   // autista, assistente a bordo, secondo autista
 
 // Mezzo del turno: preciso, il mezzo abituale dell'autista, da assegnare, nessuno.
 enum class ShiftVehicleMode { Specific, Usual, ToAssign, None };
@@ -1135,6 +1428,7 @@ struct ActivityType {
     Code code;
     std::string name;
     bool uses_vehicle = true;   // l'attivita' impegna il mezzo del turno (es. pulizia si', spostamento a piedi no)
+    std::optional<TimeCategory> time;   // categoria di tempo (aziende.json versione 2); senza: presunta, con un avviso
     std::string note;
     Source src;
 };
@@ -1153,6 +1447,12 @@ struct CompanySettings {
     DriverVehiclePairing pairing = DriverVehiclePairing::None;
     std::vector<ActivityType> activities;
     std::vector<ListEntry> absence_types, stop_types, competences;
+    // Versione 2 (K-011): orari di lavoro.
+    std::optional<UnwrittenStops> unwritten;   // obbligatorio nella versione 2; senza (versione 1): presunto, con un avviso
+    std::vector<WorkChoice> choices;           // scelte dell'azienda sugli orari
+    std::optional<ReturnKey> return_key;       // chiave della pausa fuori dal posto (rientro)
+    std::vector<SpecialNeed> special_needs;
+    std::optional<int> days_margin;            // avviso quando mancano tante giornate al limite (giornate_massime)
     std::string note;
     Source src;
 
@@ -1315,13 +1615,13 @@ inline bool needs_assistant(const ConditionsRule* rule, const OnBoard& b, int pa
 
 // --- Pesi del calcolo ----------------------------------------------------------------------------------------
 
-// Quanto pesa ogni voce nel calcolo. I valori sono DA DECIDERE con l'azienda (mandato del calcolo):
-// dicono al programma, ad esempio, quanti km a vuoto vale una pausa vicino a casa.
+// Quanto pesa ogni voce nel calcolo. I valori sono DA DECIDERE con l'azienda (mandato del calcolo), non ancora usati.
+// La pausa fuori dal posto non ha un peso: la giudica la chiave del rientro nei dati (K-011, orari.hpp); i pesi delle
+// preferenze e il costo delle scelte arriveranno con il calcolo.
 struct ObjectiveWeights {
     double per_empty_km = 1.0;              // ogni km a vuoto
     double per_idle_minute = 0.05;          // ogni minuto di mezzo fermo
     double per_commute_km = 0.5;            // ogni km casa-ricovero dell'autista
-    double per_missed_home_break = 10.0;    // pausa lunga lontano da casa
 };
 
 }  // namespace kzero

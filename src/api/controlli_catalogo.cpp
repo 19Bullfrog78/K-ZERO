@@ -11,10 +11,345 @@
 #include "pacchetto.hpp"
 #include "riservatezza.hpp"
 #include "tempo.hpp"
+#include "vista.hpp"
 
 namespace kzero::api {
 
 using kzero::Check;
+
+namespace {
+
+// --- Orari di lavoro (K-011) -----------------------------------------------------------------------------------------
+// I messaggi delle violazioni si compongono da pezzi: chi, cosa (per variante), quando. Gli avvisi "da confermare" finiscono
+// con {motivi} (Param::Kind::Reasons): ". E' un avviso perche' ...", vuoto per gli errori.
+
+struct Pezzo {
+    std::string cosa;
+    std::string quando = "{giorni}";
+};
+
+// {giorni:forma}: i giorni di inizio di settimane, mesi o periodi mobili (Presentatore, testo_inizi).
+const std::string kSettimana = "{giorni:settimane}";
+const std::string kDueSettimane = "{giorni:due_settimane}";
+const std::string kMese = "{giorni:mesi}";
+const std::string kPeriodi = "{giorni:periodi}";
+
+std::vector<std::string> componi(const std::string& testa, const std::vector<Pezzo>& pezzi, const std::string& coda) {
+    std::vector<std::string> v;
+    for (const Pezzo& p : pezzi) v.push_back(testa + p.cosa + ", " + p.quando + coda + ".");
+    return v;
+}
+
+std::map<int, std::string> componi_personali(const std::string& testo, const std::vector<Pezzo>& pezzi, const std::string& coda) {
+    std::map<int, std::string> m;
+    for (std::size_t i = 0; i < pezzi.size(); ++i) m[static_cast<int>(i)] = testo + ", " + pezzi[i].quando + coda + ".";
+    return m;
+}
+
+const std::vector<Pezzo> kLavoro = {
+    {"{misura} della giornata {misurato}, massimo {limite}"},
+    {"{misura} nelle 24 ore dall'inizio della giornata {misurato}, massimo {limite}"},
+    {"{misura} della settimana {misurato}, massimo {limite}", kSettimana},
+    {"{misura} del mese {misurato}, massimo {limite}", kMese},
+    {"media alla settimana del {misura} su {periodo} settimane {misurato}, massimo {limite}", kPeriodi},
+    {"lavoro di fila senza una pausa di almeno {frazione}: {misurato}, massimo {limite}"},
+    {"pause della giornata (in parti di almeno {frazione}) {misurato}, ma con {lavoro} di lavoro ne servono {limite}"},
+    {"con lavoro notturno (dalle {notte_dalle} alle {notte_alle}) il lavoro nelle 24 ore e' {misurato}, massimo {limite}"},
+    {"{misurato} giornate di lavoro in {anni} anni, massimo {limite}"},
+    {"ampiezza della giornata (dalla prima all'ultima attivita') {misurato}, massimo {limite}"},
+    {"{misurato} giorni di lavoro di fila, massimo {limite}"},
+    {"media alla settimana del {misura} su {periodo} mesi {misurato}, massimo {limite}", kPeriodi},
+    {"media alla settimana del {misura} su {periodo} giorni {misurato}, massimo {limite}", kPeriodi},
+};
+
+const std::vector<Pezzo> kGuida = {
+    {"guida di fila {misurato} dalle {dalle} senza l'interruzione che azzera il conto, massimo {limite}"},
+    {"guida tra due riposi giornalieri {misurato}, oltre il massimo con l'estensione di {limite}"},
+    {"guida tra due riposi giornalieri {misurato}, oltre {limite}: e' l'estensione numero {volte} della settimana, ne sono "
+     "ammesse {volte_massime}"},
+    {"guida della giornata {misurato}, massimo {limite}"},
+    {"guida della settimana {misurato}, massimo {limite}", kSettimana},
+    {"guida in due settimane consecutive {misurato}, massimo {limite}", kDueSettimane},
+    {"guida del mese {misurato}, massimo {limite}", kMese},
+};
+
+const std::vector<Pezzo> kRiposoGiornaliero = {
+    {"nelle 24 ore dall'inizio della giornata il riposo piu' lungo e' {misurato}, minimo {limite}"},
+    {"nelle 24 ore dalle {dalle} (fine del riposo precedente) nessun riposo di almeno {limite}: il piu' lungo e' {misurato}"},
+    {"{misurato} riposi giornalieri ridotti tra due riposi settimanali (questo di {riposo}), ne sono ammessi {limite}"},
+    {"media del riposo giornaliero su {periodo} giorni {misurato}, minimo {limite}", kPeriodi},
+    {"riposo tra la giornata prima e questa {misurato}, minimo {limite}"},
+};
+
+const std::vector<Pezzo> kRiposoSettimanale = {
+    {"nessun riposo settimanale di almeno {limite} (il riposo piu' lungo e' {misurato})", kSettimana},
+    {"nessun riposo settimanale regolare di almeno {limite} in due settimane consecutive (il riposo piu' lungo e' {misurato})",
+     kDueSettimane},
+    {"il riposo settimanale comincia {misurato} dopo la fine del precedente, oltre {limite} periodi di 24 ore",
+     "dalla fine del riposo settimanale {giorni}"},
+    {"la riduzione del riposo settimanale ({misurato} in meno) non e' compensata entro la fine della settimana numero {limite} dopo, "
+     "attaccata a un riposo",
+     kSettimana},
+    {"il riposo della settimana e' coperto da un riposo lungo di una settimana accanto (cumulo, minimo {limite} per settimana): "
+     "va confermato che il cumulo sia ammesso",
+     kSettimana},
+};
+
+const std::vector<Pezzo> kContratto = {
+    {"lavoro contato nella giornata {misurato}, massimo {limite}"},
+    {"lavoro contato nella settimana {misurato}, massimo {limite}", kSettimana},
+    {"lavoro contato nel mese {misurato}, massimo {limite}", kMese},
+};
+
+const std::vector<Pezzo> kScelte = {
+    {"lavoro della giornata {misurato}, massimo {limite}"},
+    {"lavoro della settimana {misurato}, massimo {limite}", kSettimana},
+    {"lavoro del mese {misurato}, massimo {limite}", kMese},
+    {"guida della giornata {misurato}, massimo {limite}"},
+    {"guida della settimana {misurato}, massimo {limite}", kSettimana},
+    {"ampiezza della giornata (dalla prima all'ultima attivita') {misurato}, massimo {limite}"},
+    {"riposo prima della giornata {misurato}, minimo {limite}"},
+    {"{misurato} giorni di lavoro di fila, massimo {limite}"},
+};
+
+std::vector<Pezzo> straordinario(const std::string& quando) {
+    return {{"{misurato} di {misura}, oltre il normale di {normale} (massimo {limite}) della regola {regola} ({fonte})", quando + ": {obbligo}"},
+            {"{misurato} di {misura}, oltre il normale di {normale} (massimo {limite}) della regola {regola} ({fonte})",
+             quando + ", in un turno ricorrente: {obbligo}"},
+            {"{misurato} di {misura}, oltre il normale di {normale} (massimo {limite}) della regola {regola} ({fonte})",
+             quando + ", in un turno ricorrente con le speciali esigenze dell'azienda ({riferimento}): {obbligo}"}};
+}
+
+void aggiungi_orari(std::vector<DefinizioneControllo>& c) {
+    const Livello E = Livello::Errore, A = Livello::Avviso;
+    const Classe N = Classe::Comune, PE = Classe::Personale;
+    const std::string motivi = "{motivi}";
+    const auto regola = [&](Check errore, const char* codice_errore, Check avviso, const char* codice_avviso, const char* descr_errore,
+                            const char* descr_avviso, const std::vector<Pezzo>& pezzi, const std::string& verbo,
+                            const std::string& verbo_forse) {
+        const std::string t = "La persona {persona} " + verbo + " la regola {regola} ({fonte}): ";
+        const std::string tf = "La persona {persona} " + verbo_forse + " la regola {regola} ({fonte}): ";
+        const std::string r = "La persona {persona} " + verbo + " una regola sugli orari (dati personali: riservati)";
+        const std::string rf = "La persona {persona} " + verbo_forse + " una regola sugli orari (dati personali: riservati)";
+        DefinizioneControllo e(errore, codice_errore, E, PE, descr_errore, componi(t, pezzi, ""), {}, componi_personali(r, pezzi, ""));
+        DefinizioneControllo a(avviso, codice_avviso, A, PE, descr_avviso, componi(tf, pezzi, motivi), {}, componi_personali(rf, pezzi, motivi));
+        for (DefinizioneControllo* d : {&e, &a}) {
+            d->piano = true;
+            d->personali_se_nascosti = true;
+        }
+        c.push_back(e);
+        c.push_back(a);
+    };
+
+    c.push_back({Check::TimeCategoryMissing, "K-CTR-101", A, N, "Categorie di tempo non dette (aziende.json versione 1)",
+                 {"L'azienda {azienda} non dice la categoria di tempo dei tipi di attivita' {tipi} ne' come contano le soste non "
+                  "scritte tra due elementi della giornata (aziende.json versione 1): per prudenza quelle attivita' contano come "
+                  "altre mansioni e le soste come disponibilita'. Le violazioni che vengono solo da questa prudenza sono avvisi.",
+                  "L'azienda {azienda} non dice come contano le soste non scritte tra due elementi della giornata (aziende.json "
+                  "versione 1): per prudenza contano come disponibilita'. Le violazioni che vengono solo da questa prudenza sono "
+                  "avvisi.",
+                  "L'azienda {azienda} non dice la categoria di tempo dei tipi di attivita' {tipi}: per prudenza contano come altre "
+                  "mansioni. Le violazioni che vengono solo da questa prudenza sono avvisi."}});
+    c.push_back({Check::RegimeUndeterminable, "K-CTR-102", A, N, "Regime non determinabile: corsa senza i km del percorso",
+                 {"La corsa {corsa} non ha i km del percorso (sui passaggi o i km totali): non si sa se valgono i regimi {regimi}, che "
+                  "dipendono dal percorso. Per prudenza si controlla come se valessero, con avvisi da confermare."}});
+    {
+        DefinizioneControllo d(Check::ClockChangeCrossed, "K-CTR-103", A, N, "Turno che attraversa il cambio dell'ora",
+                               {"Il turno {turno} attraversa il cambio dell'ora {giorni}: le durate del programma sono differenze tra "
+                                "gli orari scritti e possono avere un'ora in piu' o in meno. Va controllato a mano."});
+        d.piano = true;
+        c.push_back(d);
+    }
+    {
+        DefinizioneControllo d(Check::PartialVerification, "K-CTR-104", A, N, "Regola sugli orari verificata solo in parte",
+                               {"La regola {regola} ({fonte}) si verifica solo in parte {giorni} (persone: {persone}): i suoi periodi "
+                                "escono dal periodo del pacchetto e i dati di fuori non ci sono. Non vuol dire \"regolare\": va "
+                                "controllato con i turni di prima o di dopo."});
+        d.piano = true;
+        c.push_back(d);
+    }
+    {
+        DefinizioneControllo d(Check::ReturnStopBelowCountedStops, "K-CTR-105", A, N,
+                               "Fermo minimo del rientro dentro le soste contate come lavoro",
+                               {"Il fermo minimo del rientro dell'azienda {di_chi} ({fermo}) non supera le soste che la regola {regola} "
+                                "({fonte}) conta per intero come {misura} (fino a {soste}): in un rientro cosi' breve il tempo fermo "
+                                "resta lavoro.",
+                                "Il fermo minimo del rientro della persona {di_chi} ({fermo}) non supera le soste che la regola {regola} "
+                                "({fonte}) conta per intero come {misura} (fino a {soste}): in un rientro cosi' breve il tempo fermo "
+                                "resta lavoro."},
+                               {{1, PE}},
+                               {{1, "Il fermo minimo del rientro della persona {di_chi} non supera le soste che la regola {regola} "
+                                    "({fonte}) conta per intero come lavoro (dati personali: riservati)."}});
+        d.personali_se_nascosti = true;
+        c.push_back(d);
+    }
+    {
+        DefinizioneControllo d(Check::ChoiceLooserThanLaw, "K-CTR-106", A, N, "Scelta sugli orari piu' larga della legge",
+                               {"La scelta dell'azienda {di_chi} ({tipo}: {valore}) e' piu' larga della legge: la regola {regola} "
+                                "({fonte}) ha {legge}. Vale la legge, che resta sempre sopra.",
+                                "La scelta della persona {di_chi} ({tipo}: {valore}) e' piu' larga della legge: la regola {regola} "
+                                "({fonte}) ha {legge}. Vale la legge, che resta sempre sopra."},
+                               {{1, PE}},
+                               {{1, "Una scelta della persona {di_chi} sugli orari ({tipo}) e' piu' larga della legge (regola {regola}, "
+                                    "{fonte}; dati personali: riservati). Vale la legge, che resta sempre sopra."}});
+        d.personali_se_nascosti = true;
+        c.push_back(d);
+    }
+    {
+        DefinizioneControllo d(Check::EmployeeWithoutLaw, "K-CTR-107", A, PE, "Dipendente senza nessuna legge sugli orari nei dati",
+                               {"La persona {persona} e' dipendente, ma {giorni} nessuna legge sugli orari dei dati vale per lei: il "
+                                "programma non giudica gli orari di quei giorni (non vuol dire \"regolare\"). Serve il regime che vale, "
+                                "nelle norme dell'azienda."},
+                               {},
+                               {{0, "La persona {persona} lavora {giorni} senza nessuna legge sugli orari dei dati che valga per lei "
+                                    "(dati personali: riservati): il programma non giudica gli orari di quei giorni (non vuol dire "
+                                    "\"regolare\")."}});
+        d.piano = true;
+        c.push_back(d);
+    }
+    {
+        DefinizioneControllo d(Check::UntreatedLawCase, "K-CTR-108", A, PE, "Caso di una legge sugli orari che il programma non tratta",
+                               {"Nel turno {turno} la corsa {corsa} ha piu' autisti a bordo {giorni}: il regime {regime} ha regole sulla "
+                                "multipresenza ({fonte}) che il programma non tratta. Va controllato a mano."},
+                               {},
+                               {{0, "Nel turno {turno} la corsa {corsa} ha piu' autisti a bordo {giorni}: un caso di una legge sugli "
+                                    "orari che il programma non tratta (multipresenza; dati personali: riservati). Va controllato a "
+                                    "mano."}});
+        d.piano = true;
+        d.personali_se_nascosti = true;
+        c.push_back(d);
+    }
+    {
+        DefinizioneControllo d(Check::DaysNearLimit, "K-CTR-109", A, PE, "Giornate di lavoro vicine al limite",
+                               {"La persona {persona} si avvicina al limite della regola {regola} ({fonte}): {misurato} giornate di "
+                                "lavoro in {anni} anni, massimo {limite} (l'avviso scatta quando ne mancano {margine} o meno), {giorni}."},
+                               {},
+                               {{0, "La persona {persona} si avvicina al limite delle giornate di lavoro di una regola sugli orari "
+                                    "(dati personali: riservati), {giorni}."}});
+        d.piano = true;
+        d.personali_se_nascosti = true;
+        c.push_back(d);
+    }
+    regola(Check::LawWorkViolated, "K-CTR-110", Check::LawWorkToConfirm, "K-CTR-111", "Lavoro oltre una regola sugli orari",
+           "Lavoro forse oltre una regola sugli orari (da confermare)", kLavoro, "supera", "potrebbe superare");
+    {
+        std::vector<Pezzo> p = straordinario("{giorni}");
+        for (const Pezzo& x : straordinario(kSettimana)) p.push_back(x);
+        const std::string t = "Straordinario: la persona {persona} ha ";
+        std::vector<std::string> m;
+        std::map<int, std::string> pers;
+        for (std::size_t i = 0; i < p.size(); ++i) {
+            const std::string quando = i < 3 ? "{giorni}" : kSettimana;
+            m.push_back(t + p[i].cosa + (i < 3 ? " nella giornata" : "") + ", " + p[i].quando + motivi + ".");
+            pers[static_cast<int>(i)] = "Straordinario: la persona {persona} supera il lavoro normale di una regola sugli orari (dati "
+                                        "personali: riservati), " + quando + motivi + ".";
+        }
+        DefinizioneControllo d(Check::LawOvertime, "K-CTR-112", A, PE, "Straordinario", m, {}, pers);
+        d.piano = true;
+        d.personali_se_nascosti = true;
+        c.push_back(d);
+    }
+    regola(Check::LawDrivingViolated, "K-CTR-113", Check::LawDrivingToConfirm, "K-CTR-114", "Guida oltre una regola sugli orari",
+           "Guida forse oltre una regola sugli orari (da confermare)", kGuida, "supera", "potrebbe superare");
+    regola(Check::LawDailyRestViolated, "K-CTR-115", Check::LawDailyRestToConfirm, "K-CTR-116",
+           "Riposo giornaliero sotto una regola sugli orari", "Riposo giornaliero forse sotto una regola sugli orari (da confermare)",
+           kRiposoGiornaliero, "non rispetta", "potrebbe non rispettare");
+    regola(Check::LawWeeklyRestViolated, "K-CTR-117", Check::LawWeeklyRestToConfirm, "K-CTR-118",
+           "Riposo settimanale sotto una regola sugli orari", "Riposo settimanale forse sotto una regola sugli orari (da confermare)",
+           kRiposoSettimanale, "non rispetta", "potrebbe non rispettare");
+    {
+        const std::string t = "La persona {persona} supera le ore massime del suo contratto: ";
+        const std::string tf = "La persona {persona} potrebbe superare le ore massime del suo contratto: ";
+        const std::string r = "La persona {persona} supera le ore massime del suo contratto (dati personali: riservati)";
+        const std::string rf = "La persona {persona} potrebbe superare le ore massime del suo contratto (dati personali: riservati)";
+        DefinizioneControllo e(Check::ContractHoursExceeded, "K-CTR-119", E, PE, "Ore massime del contratto della persona superate",
+                               componi(t, kContratto, ""), {}, componi_personali(r, kContratto, ""));
+        DefinizioneControllo a(Check::ContractHoursToConfirm, "K-CTR-120", A, PE,
+                               "Ore massime del contratto della persona forse superate (da confermare)", componi(tf, kContratto, motivi),
+                               {}, componi_personali(rf, kContratto, motivi));
+        e.piano = a.piano = true;
+        c.push_back(e);
+        c.push_back(a);
+    }
+    {
+        std::vector<std::string> me, ma;
+        std::map<int, std::string> pe, pa;
+        for (int chi_sceglie = 0; chi_sceglie < 2; ++chi_sceglie)
+            for (std::size_t i = 0; i < kScelte.size(); ++i) {
+                const std::string di = chi_sceglie == 0 ? "dell'azienda" : "della persona";
+                const Pezzo& x = kScelte[i];
+                me.push_back("La persona {persona} supera un limite rigido " + di + " sugli orari: " + x.cosa + ", " + x.quando + ".");
+                ma.push_back("La persona {persona} non rispetta una scelta " + di + " sugli orari: " + x.cosa + ", " + x.quando + motivi + ".");
+                if (chi_sceglie == 1) {
+                    const int v = static_cast<int>(kScelte.size() + i);
+                    pe[v] = "La persona {persona} supera un limite rigido che ha scelto sugli orari (dati personali: riservati), " + x.quando + ".";
+                    pa[v] = "La persona {persona} non rispetta una sua scelta sugli orari (dati personali: riservati), " + x.quando + motivi + ".";
+                }
+            }
+        DefinizioneControllo e(Check::ChoiceLimitViolated, "K-CTR-121", E, PE, "Limite rigido dell'azienda o della persona superato",
+                               me, {}, pe);
+        DefinizioneControllo a(Check::ChoiceNotRespected, "K-CTR-122", A, PE, "Scelta dell'azienda o della persona non rispettata",
+                               ma, {}, pa);
+        e.piano = a.piano = true;
+        c.push_back(e);
+        c.push_back(a);
+    }
+    {
+        const std::string dove = "La persona {persona} rientra a {luogo} tra la corsa {corsa} e la corsa {corsa_dopo} e resta li' {fermo}";
+        const std::vector<std::string> perche = {
+            ", meno del fermo minimo di {fermo_minimo}: il rientro non e' giustificato",
+            "; il luogo dopo e' lo stesso, quindi tutta la guida a vuoto dei trasferimenti ({guida}) e' in piu' e con il fattore "
+            "{fattore} servono almeno {servono} di fermo: il rientro non e' giustificato",
+            "; i km a vuoto dei trasferimenti sono {km}, oltre il massimo di {km_massimi}: il rientro non e' giustificato"};
+        const std::string riservato_r = "La persona {persona} rientra a {luogo} tra la corsa {corsa} e la corsa {corsa_dopo}: il rientro "
+                                        "non e' giustificato secondo la sua chiave del rientro (dati personali: riservati)";
+        std::vector<std::string> me, ma;
+        std::map<int, std::string> pe, pa;
+        for (std::size_t i = 0; i < perche.size(); ++i) {
+            me.push_back(dove + perche[i] + " (limite rigido), {giorni}.");
+            ma.push_back(dove + perche[i] + ", {giorni}.");
+            pe[static_cast<int>(i)] = riservato_r + " (limite rigido), {giorni}.";
+            pa[static_cast<int>(i)] = riservato_r + ", {giorni}.";
+        }
+        DefinizioneControllo e(Check::ReturnNotJustifiedLimit, "K-CTR-123", E, PE, "Rientro non giustificato (limite rigido)", me, {}, pe);
+        DefinizioneControllo a(Check::ReturnNotJustified, "K-CTR-124", A, PE, "Rientro non giustificato", ma, {}, pa);
+        DefinizioneControllo g(
+            Check::ReturnNotJudged, "K-CTR-125", A, PE, "Rientro non giudicato: servono le distanze o i km",
+            {dove + " (guida a vuoto dei trasferimenti {guida}): senza le distanze non si sa quanta guida e' in piu' rispetto alla "
+                    "corsa diretta, e il rientro non si giudica (contando tutta la guida come in piu' servirebbero {servono} di fermo), "
+                    "{giorni}.",
+             dove + ": i trasferimenti non hanno tutti i km a vuoto e la chiave del rientro ha un massimo di {km_massimi}, quindi il "
+                    "rientro non si giudica, {giorni}."},
+            {},
+            {{0, "La persona {persona} rientra a {luogo} tra la corsa {corsa} e la corsa {corsa_dopo}: senza le distanze il rientro "
+                 "non si giudica (dati personali: riservati), {giorni}."},
+             {1, "La persona {persona} rientra a {luogo} tra la corsa {corsa} e la corsa {corsa_dopo}: senza i km a vuoto dei "
+                 "trasferimenti il rientro non si giudica (dati personali: riservati), {giorni}."}});
+        for (DefinizioneControllo* d : {&e, &a, &g}) {
+            d->piano = true;
+            d->personali_se_nascosti = true;
+            c.push_back(*d);
+        }
+    }
+    c.push_back({Check::WorkRuleIncoherent, "K-CTR-126", E, N, "Regola sugli orari scritta in modo incoerente",
+                 {"Il regime {regime} ha piu' di un conteggio del lavoro (tipo conteggio_lavoro): ne serve uno solo.",
+                  "Il regime {regime} ha regole sul lavoro ma nessun conteggio del lavoro (tipo conteggio_lavoro): non si sa cosa conta "
+                  "come lavoro.",
+                  "Il regime {regime} prende le condizioni sulla corsa da un regime che a sua volta le prende da un altro, o da se "
+                  "stesso (come_regime): va indicato il regime che ha le condizioni.",
+                  "Nel regime {regime} la regola {regola} (guida massima tra due riposi) non trova un riposo giornaliero misurato "
+                  "\"24_ore_dalla_fine_del_riposo\" nello stesso regime: non si sa dove finisce il periodo.",
+                  "Nel regime {regime} la regola {regola} ({tipo}) ha il normale uguale o oltre il massimo.",
+                  "Nel regime {regime} la regola {regola} ({tipo}) ha l'estensione che non supera il massimo.",
+                  "Nel regime {regime} la regola {regola} ({tipo}) ha il riposo ridotto piu' lungo del minimo.",
+                  "Nel regime {regime} la regola {regola} ({tipo}) ha il normale ma non dice cosa chiede la legge per lo "
+                  "straordinario (campo straordinario).",
+                  "Nel regime {regime} la regola {regola} ({tipo}) limita i riposi giornalieri ridotti tra due riposi settimanali, ma "
+                  "il regime non ha un riposo settimanale.",
+                  "Nel regime {regime} la regola {regola} ({tipo}) ha la fascia notturna che comincia e finisce alla stessa ora."}});
+}
+
+}  // namespace
 
 const std::vector<DefinizioneControllo>& catalogo_controlli() {
     // Nuovi controlli: codice successivo all'ultimo. Un codice non si cambia e non si riusa mai.
@@ -463,6 +798,7 @@ const std::vector<DefinizioneControllo>& catalogo_controlli() {
             {Check::ContractWithoutRegulation, "K-CTR-046", A, N, "Contratto senza regolamento valido per una parte del periodo",
              {"Il regolamento {regolamento} non vale per una parte del periodo del contratto {contratto}: dal {dal} al {al}."}},
         };
+        aggiungi_orari(c);
         // Controlli che usano dati personali o particolari per giudicare altro (K-010, "non verificato" per chi non li puo'
         // aprire). P = personali, Q = particolari.
         struct Richiede {
@@ -503,6 +839,28 @@ const std::vector<DefinizioneControllo>& catalogo_controlli() {
             {Check::VehicleNeverUsed, PQ},
             {Check::EscortWithoutPerson, PQ},
             {Check::EscortProviderDiffers, PQ},
+            // Orari di lavoro (K-011): il piano del giorno, e quale legge vale per la persona (rapporto e contratto collettivo,
+            // dati personali; tipo di servizio della corsa, dato particolare).
+            {Check::PartialVerification, PQ},
+            {Check::EmployeeWithoutLaw, PQ},
+            {Check::UntreatedLawCase, PQ},
+            {Check::DaysNearLimit, PQ},
+            {Check::LawWorkViolated, PQ},
+            {Check::LawWorkToConfirm, PQ},
+            {Check::LawOvertime, PQ},
+            {Check::LawDrivingViolated, PQ},
+            {Check::LawDrivingToConfirm, PQ},
+            {Check::LawDailyRestViolated, PQ},
+            {Check::LawDailyRestToConfirm, PQ},
+            {Check::LawWeeklyRestViolated, PQ},
+            {Check::LawWeeklyRestToConfirm, PQ},
+            {Check::ContractHoursExceeded, PQ},
+            {Check::ContractHoursToConfirm, PQ},
+            {Check::ChoiceLimitViolated, PQ},
+            {Check::ChoiceNotRespected, PQ},
+            {Check::ReturnNotJustifiedLimit, PQ},
+            {Check::ReturnNotJustified, PQ},
+            {Check::ReturnNotJudged, PQ},
         };
         for (DefinizioneControllo& d : c) {
             const auto it = richiede.find(d.controllo);
@@ -573,8 +931,69 @@ const char* nome_elementi(kzero::Element e) {
         case kzero::Element::Rotation: return "le rotazioni";
         case kzero::Element::FixedAssignment: return "i servizi fissi";
         case kzero::Element::Block: return "i blocchi";
+        case kzero::Element::Regime: return "i regimi sugli orari";
+        case kzero::Element::WorkRule: return "le regole sugli orari";
     }
     return "gli elementi";
+}
+
+// Motivi di un avviso sugli orari (K-011, Param::Kind::Reasons): il testo e la classe di ognuno. Un motivo personale o
+// particolare si vede solo con il suo parametro: senza, al suo posto "c'e' un motivo riservato".
+struct Motivo {
+    const char* codice;
+    Classe classe;
+    const char* testo;
+};
+
+const Motivo kMotivi[] = {
+    {"assegnazione_del_giorno", Classe::Comune, "e' un'assegnazione del singolo giorno (la scelta dell'utente vince)"},
+    {"categorie_presunte", Classe::Comune, "le categorie di tempo sono presunte (aziende.json versione 1)"},
+    {"contratto_collettivo", Classe::Personale, "va confermato se la legge vale per il contratto collettivo della persona"},
+    {"dati_incerti", Classe::Comune, "i dati non bastano a dirlo con certezza"},
+    {"eccezione_soste_capolinea", Classe::Comune, "puo' valere l'eccezione delle soste ai capolinea (da confermare)"},
+    {"giornate_prima_del_pacchetto", Classe::Comune, "non si sa quando sono state fatte le giornate prima del pacchetto"},
+    {"insieme_ad_altro_regime", Classe::Comune, "vale insieme a un altro regime e va confermato quale prevale"},
+    {"lettura_prudente", Classe::Comune, "viola solo la lettura prudente della regola (da confermare)"},
+    {"mezzo", Classe::Comune, "va confermato se la legge vale per le persone trasportabili del mezzo"},
+    {"mezzo_non_noto", Classe::Comune, "il mezzo del turno non e' noto"},
+    {"percorso_non_noto", Classe::Comune, "i km del percorso della corsa non sono noti"},
+    {"preferenza", Classe::Comune, "e' una preferenza, non un limite rigido"},
+    {"rapporto", Classe::Personale, "va confermato se la legge vale per il rapporto di lavoro della persona"},
+    {"regime_da_confermare", Classe::Comune, "il regime e' da confermare nei dati"},
+    {"regola_da_confermare", Classe::Comune, "la regola non ha una lettura certa (da confermare)"},
+    {"ruolo", Classe::Comune, "va confermato se la legge vale per il ruolo nel turno"},
+    {"giornata_senza_corse", Classe::Comune, "in una giornata senza corse non si sa quale legge vale"},
+    {"servizi_occasionali", Classe::Particolare, "va confermato se la corsa e' un servizio occasionale"},
+    {"straordinario_ricorrente", Classe::Comune, "va confermato cosa dice la legge dello straordinario in un turno ricorrente"},
+    {"tipo_di_servizio", Classe::Particolare, "va confermato se la legge vale per il tipo di servizio della corsa"},
+};
+
+std::string testo_motivi(const std::string& codici, const Visibilita& v) {
+    std::vector<std::string> testi;
+    bool personale = false, particolare = false;
+    std::size_t i = 0;
+    while (i < codici.size()) {
+        std::size_t j = codici.find(',', i);
+        if (j == std::string::npos) j = codici.size();
+        const std::string codice = codici.substr(i, j - i);
+        i = j + 1;
+        const Motivo* m = nullptr;
+        for (const Motivo& x : kMotivi)
+            if (codice == x.codice) m = &x;
+        if (!m) throw std::logic_error("motivo senza testo nel catalogo: " + codice);
+        if (!visibile(m->classe, v)) {
+            (m->classe == Classe::Particolare ? particolare : personale) = true;
+            continue;
+        }
+        testi.push_back(m->testo);
+    }
+    if (personale) testi.push_back("c'e' un motivo riservato (dati personali)");
+    if (particolare) testi.push_back("c'e' un motivo riservato (dati particolari)");
+    if (testi.empty()) return "";
+    // ". E' un avviso perche' ...": il modello finisce con il punto, dopo {motivi}.
+    std::string t = ". E' un avviso perche' ";
+    for (std::size_t k = 0; k < testi.size(); ++k) t += (k ? "; " : "") + testi[k];
+    return t;
 }
 
 // 12.5 -> "12,5"; al massimo 3 decimali.
@@ -619,6 +1038,37 @@ std::string testo_giorni(const std::vector<kzero::Day>& giorni) {
     if (periodi.size() <= kMassimo) return "in " + std::to_string(n) + " giorni (" + elenco + ")";
     return "in " + std::to_string(n) + " giorni tra il " + data(giorni.front()) + " e il " + data(giorni.back()) + " (i primi: " +
            elenco + "...)";
+}
+
+// Giorni di inizio di settimane, mesi o periodi mobili: "nella settimana che comincia il 2026-11-09", "in 3 settimane che
+// cominciano il 2026-11-09, il 2026-11-23 e il 2026-12-07".
+std::string testo_inizi(const std::vector<kzero::Day>& giorni, const std::string& forma) {
+    struct Forma {
+        const char *nome, *uno, *molti;
+    };
+    static const Forma forme[] = {{"settimane", "nella settimana che comincia", "settimane che cominciano"},
+                                  {"due_settimane", "nelle due settimane dalla settimana che comincia", "coppie di settimane che cominciano"},
+                                  {"mesi", "nel mese che comincia", "mesi che cominciano"},
+                                  {"periodi", "nel periodo che comincia", "periodi che cominciano"}};
+    const Forma* f = nullptr;
+    for (const Forma& x : forme)
+        if (forma == x.nome) f = &x;
+    if (!f) throw std::logic_error("forma dei giorni sconosciuta: " + forma);
+    const auto data = [](kzero::Day d) { return kzero::text_from_day(d); };
+    if (giorni.size() == 1) return std::string(f->uno) + " il " + data(giorni.front());
+    // I periodi mobili cominciano in giorni consecutivi: si raggruppano come i giorni dei problemi.
+    std::vector<std::string> pezzi;
+    if (forma == "periodi") {
+        for (const auto& [a, b] : periodi_di_giorni(giorni)) pezzi.push_back(a == b ? "il " + data(a) : "dal " + data(a) + " al " + data(b));
+    } else {
+        for (const kzero::Day d : giorni) pezzi.push_back("il " + data(d));
+    }
+    constexpr std::size_t kMassimo = 6;
+    std::string elenco;
+    for (std::size_t i = 0; i < pezzi.size() && i < kMassimo; ++i)
+        elenco += (i == 0 ? "" : i + 1 == pezzi.size() ? " e " : ", ") + pezzi[i];
+    if (pezzi.size() > kMassimo) elenco += "...";
+    return "in " + std::to_string(giorni.size()) + " " + f->molti + " " + elenco;
 }
 
 struct Presentatore::Dati {
@@ -695,7 +1145,9 @@ std::string Presentatore::riferimento(kzero::Element e, const std::string& codic
         case kzero::Element::Competence:
         case kzero::Element::Rotation:
         case kzero::Element::FixedAssignment:
-        case kzero::Element::Block: break;
+        case kzero::Element::Block:
+        case kzero::Element::Regime:
+        case kzero::Element::WorkRule: break;
     }
     if (!src || nome.empty() || !dati_->versioni) return codice;
     // La classe del nome viene dalla marcatura dello schema del file da cui viene l'elemento.
@@ -716,17 +1168,28 @@ std::string Presentatore::messaggio(const kzero::Problem& p) const {
     if (p.variant < 0 || static_cast<std::size_t>(p.variant) >= d.messaggi.size())
         throw std::logic_error(d.codice + ": variante del messaggio inesistente");
     const auto personale = d.personali.find(p.variant);
-    const std::string& modello = personale != d.personali.end() && !visibile(Classe::Personale, dati_->visibilita)
+    const bool nascosti = !d.personali_se_nascosti ||
+                          std::any_of(p.params.begin(), p.params.end(),
+                                      [](const kzero::Param& x) { return x.sensitivity == kzero::Param::Sensitivity::Personal; });
+    const std::string& modello = personale != d.personali.end() && !visibile(Classe::Personale, dati_->visibilita) && nascosti
                                      ? personale->second
                                      : d.messaggi[static_cast<std::size_t>(p.variant)];
     std::string out;
+    bool punto_da_valore = false;   // l'ultimo testo scritto e' un valore che finisce con il punto
     for (std::size_t i = 0; i < modello.size(); ++i) {
         if (modello[i] != '{') {
-            out += modello[i];
+            // Un valore che finisce con il punto, seguito (anche dopo un valore vuoto) dal punto della frase: un punto solo.
+            if (!(modello[i] == '.' && punto_da_valore)) out += modello[i];
+            punto_da_valore = false;
             continue;
         }
         const std::size_t fine = modello.find('}', i);
-        const std::string nome = modello.substr(i + 1, fine - i - 1);
+        std::string nome = modello.substr(i + 1, fine - i - 1);
+        std::string forma;   // {giorni:settimane}: i giorni come inizi di settimane, mesi o periodi
+        if (const std::size_t due_punti = nome.find(':'); due_punti != std::string::npos) {
+            forma = nome.substr(due_punti + 1);
+            nome = nome.substr(0, due_punti);
+        }
         const auto it = std::find_if(p.params.begin(), p.params.end(), [&](const kzero::Param& x) { return x.name == nome; });
         if (it == p.params.end()) throw std::logic_error(d.codice + ": manca il valore {" + nome + "} del messaggio");
         const bool nascosto =
@@ -744,12 +1207,17 @@ std::string Presentatore::messaggio(const kzero::Problem& p) const {
                 case kzero::Param::Kind::Date: valore = kzero::text_from_day(static_cast<kzero::Day>(it->number)); break;
                 case kzero::Param::Kind::Ref: valore = riferimento(it->element, it->text); break;
                 case kzero::Param::Kind::Elements: valore = nome_elementi(it->element); break;
-                case kzero::Param::Kind::Days: valore = testo_giorni(it->days); break;
+                case kzero::Param::Kind::Days: valore = forma.empty() ? testo_giorni(it->days) : testo_inizi(it->days, forma); break;
+                case kzero::Param::Kind::Duration: valore = durata(it->number); break;
+                case kzero::Param::Kind::Reasons: valore = testo_motivi(it->text, dati_->visibilita); break;
             }
         }
-        // Un valore che finisce con il punto, seguito dal punto della frase: un punto solo.
+        // Un valore che finisce con il punto, seguito dal punto della frase: un punto solo. Lo stesso per un valore che
+        // comincia con il punto (i motivi, K-011) dopo un testo che finisce con il punto.
         if (!valore.empty() && valore.back() == '.' && fine + 1 < modello.size() && modello[fine + 1] == '.') valore.pop_back();
+        if (!valore.empty() && valore.front() == '.' && !out.empty() && out.back() == '.') valore.erase(0, 1);
         out += valore;
+        if (!valore.empty()) punto_da_valore = valore.back() == '.';
         i = fine;
     }
     return out;

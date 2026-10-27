@@ -74,6 +74,34 @@ enum class Check {
     VehicleNeverUsed,
     EscortWithoutPerson,
     EscortProviderDiffers,
+    // Orari di lavoro (K-011): avvisi sui dati e sul piano.
+    TimeCategoryMissing,          // tipi di attivita' senza categoria di tempo, soste non scritte non definite (versione 1)
+    RegimeUndeterminable,         // corsa senza km o turno senza mezzo: non si sa se vale un regime
+    ClockChangeCrossed,           // un turno attraversa il cambio dell'ora
+    PartialVerification,          // una regola si verifica solo in parte (finestre fuori dal periodo del pacchetto)
+    ReturnStopBelowCountedStops,  // fermo minimo del rientro sotto le soste che il regime conta come lavoro
+    ChoiceLooserThanLaw,          // scelta dell'azienda o della persona piu' larga della legge
+    EmployeeWithoutLaw,           // un dipendente lavora in giorni senza nessuna legge sugli orari nei dati
+    UntreatedLawCase,             // un caso della legge che il programma non tratta (es. multipresenza)
+    DaysNearLimit,                // giornate di lavoro vicine al limite (es. rapporto a chiamata)
+    // Orari di lavoro (K-011): violazioni (errori del piano, non dei dati: non bloccano kzero giornata e kzero ore).
+    LawWorkViolated,              // lavoro: errore (legge o contratto collettivo, lettura certa)
+    LawWorkToConfirm,             // lavoro: avviso da confermare
+    LawOvertime,                  // straordinario: avviso
+    LawDrivingViolated,
+    LawDrivingToConfirm,
+    LawDailyRestViolated,
+    LawDailyRestToConfirm,
+    LawWeeklyRestViolated,
+    LawWeeklyRestToConfirm,
+    ContractHoursExceeded,        // ore massime del contratto della persona
+    ContractHoursToConfirm,
+    ChoiceLimitViolated,          // limite rigido dell'azienda o della persona su un turno ricorrente
+    ChoiceNotRespected,           // preferenza, o limite su un'assegnazione del singolo giorno
+    ReturnNotJustifiedLimit,      // rientro non giustificato, chiave rigida su un turno ricorrente
+    ReturnNotJustified,           // rientro non giustificato: avviso
+    ReturnNotJudged,              // rientro non giudicato: servono le distanze o i km
+    WorkRuleIncoherent,           // regola sugli orari scritta in modo incoerente (dato)
     // Contenuto: errori.
     DuplicateCode,
     UnknownReference,
@@ -129,6 +157,8 @@ enum class Element {
     // K-008
     Norms, CompanySettings, Licence, VehicleUse, ActivityType, AbsenceType, StopType, Competence, Person,
     Shift, Rotation, FixedAssignment, Block,
+    // K-011
+    Regime, WorkRule,
 };
 
 // Un valore da mettere nel messaggio, al posto di {nome}.
@@ -142,6 +172,10 @@ struct Param {
         Ref,        // un elemento: codice, e il nome se le classi dei dati lo permettono
         Elements,   // il nome di un tipo di elemento (es. "luoghi")
         Days,       // i giorni in cui succede il problema (i problemi uguali di molti giorni si raggruppano)
+        Duration,   // durata in minuti (K-011): "4 ore e 30 minuti"
+        Reasons,    // motivi di un avviso "da confermare" (K-011): codici separati da virgole, che il catalogo scrive in
+                    // italiano filtrando ognuno secondo la sua classe (es. il rapporto e' personale, il tipo di servizio
+                    // particolare)
     };
     // Classe del valore (docs/formato-dati.md). Un valore personale o particolare compare nel messaggio solo con
     // il parametro che lo permette (--includi-dati-personali, --includi-dati-particolari); altrimenti al suo posto
@@ -167,6 +201,8 @@ Param date_param(std::string name, Day value);
 Param ref_param(std::string name, Element element, std::string code);
 Param elements_param(std::string name, Element element);
 Param days_param(std::string name, Day day);
+Param duration_param(std::string name, long long minutes);
+Param reasons_param(std::string name, std::vector<std::string> codes);
 
 struct Problem {
     Check check;
@@ -178,10 +214,17 @@ struct Problem {
 // Controlli sul contenuto del pacchetto (dati gia' conformi agli schemi). Ordine dei problemi: quello dei dati.
 // I problemi uguali che succedono in giorni diversi (stesso controllo, stesso punto, stessi valori) diventano uno
 // solo, con tutti i giorni.
-std::vector<Problem> check_package(const Package& p);
+struct HoursRequest;   // orari.hpp
+struct HoursReport;
 
-// Controlli sui turni, giorno per giorno (controlli_turni.cpp): aggiunge i problemi a out.
-void check_shifts(const Package& p, std::vector<Problem>& out);
+// Con request e report (kzero ore, K-011) riempie anche il resoconto degli orari, nella stessa passata.
+std::vector<Problem> check_package(const Package& p, const HoursRequest* request = nullptr, HoursReport* report = nullptr);
+
+class PlanCollector;   // orari.hpp
+
+// Controlli sui turni, giorno per giorno (controlli_turni.cpp): aggiunge i problemi a out. Con collector raccoglie anche le
+// giornate delle persone per i controlli sugli orari (K-011), nella stessa passata sul periodo.
+void check_shifts(const Package& p, std::vector<Problem>& out, PlanCollector* collector = nullptr);
 
 // Raggruppa i problemi uguali di giorni diversi in uno solo (il primo, con tutti i giorni).
 std::vector<Problem> group_by_days(std::vector<Problem> problems);

@@ -1,0 +1,777 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "K-Zero - file di dati persone.json, versione 2",
+  "description": "Persone delle aziende (file persone.json): autisti e assistenti a bordo, con il rapporto di lavoro, le ore, la disponibilita', le abilitazioni, le autorizzazioni del committente, le competenze e le preferenze. Codice, azienda, presa servizio, mezzo abituale, ipotetica e prestiti sono dati comuni; tutto il resto e' personale. Minimizzazione: il formato non ha campi per codice fiscale, telefoni, mail, data di nascita, idoneita' medica. Versione 2 (K-011): scelte sugli orari per la persona (vincono su quelle dell'azienda), chiave del rientro della persona, giornate di lavoro prima del pacchetto (rapporto a chiamata): dati personali.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "schema_versione",
+    "persone"
+  ],
+  "properties": {
+    "schema": {
+      "const": "persone",
+      "x-kzero-classe": "comune"
+    },
+    "schema_versione": {
+      "const": 2,
+      "x-kzero-classe": "comune"
+    },
+    "persone": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "codice",
+          "azienda",
+          "ruoli",
+          "rapporto"
+        ],
+        "properties": {
+          "codice": {
+            "description": "Codice della persona: compare al posto del nome nelle uscite di base.",
+            "$ref": "#/definitions/codice",
+            "x-kzero-classe": "comune"
+          },
+          "azienda": {
+            "description": "Azienda della persona (dal manifesto).",
+            "$ref": "#/definitions/codice",
+            "x-kzero-classe": "comune"
+          },
+          "ruoli": {
+            "description": "Che cosa puo' fare: autista, assistente a bordo o tutti e due.",
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "enum": [
+                "autista",
+                "assistente"
+              ]
+            },
+            "x-kzero-classe": "personale"
+          },
+          "nome": {
+            "description": "Nome e cognome. Non ammesso nel livello 'solo numeri'.",
+            "$ref": "#/definitions/testo",
+            "x-kzero-classe": "personale"
+          },
+          "casa": {
+            "description": "Casa della persona (servira' per i ricoveri vicini a casa e per le pause). Non ammessa nel livello 'solo numeri'.",
+            "type": "object",
+            "additionalProperties": false,
+            "minProperties": 1,
+            "properties": {
+              "indirizzo": {
+                "$ref": "#/definitions/testo"
+              },
+              "comune": {
+                "$ref": "#/definitions/testo"
+              },
+              "coordinate": {
+                "$ref": "#/definitions/coordinate"
+              }
+            },
+            "x-kzero-classe": "personale"
+          },
+          "presa_servizio": {
+            "description": "Rimessa o luogo abituale di presa servizio (codice di un luogo).",
+            "$ref": "#/definitions/codice",
+            "x-kzero-classe": "comune"
+          },
+          "mezzo_abituale": {
+            "description": "Mezzo abituale della persona (per l'abbinamento autista-mezzo e per i turni con il 'mezzo abituale').",
+            "$ref": "#/definitions/codice",
+            "x-kzero-classe": "comune"
+          },
+          "ipotetica": {
+            "description": "true = persona non ancora assunta (scenari), come il mezzo ipotetico.",
+            "type": "boolean",
+            "x-kzero-classe": "comune"
+          },
+          "rapporto": {
+            "description": "Rapporto di lavoro; 'altro' con la descrizione.",
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "tipo"
+            ],
+            "properties": {
+              "tipo": {
+                "enum": [
+                  "titolare",
+                  "collaboratore_familiare",
+                  "socio",
+                  "dipendente_tempo_pieno",
+                  "dipendente_part_time",
+                  "a_chiamata",
+                  "tempo_determinato",
+                  "stagionale",
+                  "autonomo",
+                  "volontario",
+                  "altro"
+                ]
+              },
+              "descrizione": {
+                "$ref": "#/definitions/testo"
+              }
+            },
+            "if": {
+              "properties": {
+                "tipo": {
+                  "const": "altro"
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "descrizione"
+              ]
+            },
+            "x-kzero-classe": "personale"
+          },
+          "contratto_collettivo": {
+            "description": "Contratto collettivo (es. codice CNEL e nome).",
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "codice",
+              "nome"
+            ],
+            "properties": {
+              "codice": {
+                "$ref": "#/definitions/testo"
+              },
+              "nome": {
+                "$ref": "#/definitions/testo"
+              }
+            },
+            "x-kzero-classe": "personale"
+          },
+          "ore": {
+            "description": "Ore previste e ore massime, con le date in cui valgono. Sono solo dati: chi le verifica contro la legge e la filosofia aziendale e' il mandato sugli orari di lavoro.",
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "dal": {
+                  "description": "Primo giorno in cui vale (assente = dall'inizio).",
+                  "$ref": "#/definitions/data"
+                },
+                "al": {
+                  "description": "Ultimo giorno in cui vale (assente = senza fine).",
+                  "$ref": "#/definitions/data"
+                },
+                "previste": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "minProperties": 1,
+                  "properties": {
+                    "giorno": {
+                      "description": "Ore al giorno.",
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 24
+                    },
+                    "settimana": {
+                      "description": "Ore alla settimana.",
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 168
+                    },
+                    "mese": {
+                      "description": "Ore al mese.",
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 744
+                    }
+                  }
+                },
+                "massime": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "minProperties": 1,
+                  "properties": {
+                    "giorno": {
+                      "description": "Ore al giorno.",
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 24
+                    },
+                    "settimana": {
+                      "description": "Ore alla settimana.",
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 168
+                    },
+                    "mese": {
+                      "description": "Ore al mese.",
+                      "type": "number",
+                      "minimum": 0,
+                      "maximum": 744
+                    }
+                  }
+                }
+              }
+            },
+            "x-kzero-classe": "personale"
+          },
+          "disponibilita": {
+            "description": "Giorni e fasce in cui la persona e' disponibile (rigido). Se per un giorno vale almeno una riga per le date, fuori dalle sue fasce la persona non e' disponibile; senza righe per quel giorno, nessun limite.",
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "giorni",
+                "dalle",
+                "alle"
+              ],
+              "properties": {
+                "dal": {
+                  "description": "Primo giorno in cui vale (assente = dall'inizio).",
+                  "$ref": "#/definitions/data"
+                },
+                "al": {
+                  "description": "Ultimo giorno in cui vale (assente = senza fine).",
+                  "$ref": "#/definitions/data"
+                },
+                "giorni": {
+                  "$ref": "#/definitions/giorni",
+                  "minItems": 1
+                },
+                "dalle": {
+                  "$ref": "#/definitions/orario"
+                },
+                "alle": {
+                  "$ref": "#/definitions/orario"
+                }
+              }
+            },
+            "x-kzero-classe": "personale"
+          },
+          "costo_orario": {
+            "description": "Costo orario nella valuta del pacchetto, con le date in cui vale.",
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "valore"
+              ],
+              "properties": {
+                "dal": {
+                  "description": "Primo giorno in cui vale (assente = dall'inizio).",
+                  "$ref": "#/definitions/data"
+                },
+                "al": {
+                  "description": "Ultimo giorno in cui vale (assente = senza fine).",
+                  "$ref": "#/definitions/data"
+                },
+                "valore": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 1000
+                }
+              }
+            },
+            "x-kzero-classe": "personale"
+          },
+          "abilitazioni": {
+            "description": "Abilitazioni della persona (codici dell'elenco delle norme dell'azienda), con la scadenza e il riferimento.",
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "tipo"
+              ],
+              "properties": {
+                "tipo": {
+                  "$ref": "#/definitions/codice"
+                },
+                "scadenza": {
+                  "description": "Ultimo giorno di validita'.",
+                  "$ref": "#/definitions/data"
+                },
+                "riferimento": {
+                  "$ref": "#/definitions/testo"
+                }
+              }
+            },
+            "x-kzero-classe": "personale"
+          },
+          "autorizzazioni": {
+            "description": "Autorizzazioni del committente (es. cartellino di riconoscimento per i servizi speciali).",
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "committente"
+              ],
+              "properties": {
+                "committente": {
+                  "$ref": "#/definitions/codice"
+                },
+                "riferimento": {
+                  "$ref": "#/definitions/testo"
+                },
+                "scadenza": {
+                  "description": "Ultimo giorno di validita'.",
+                  "$ref": "#/definitions/data"
+                }
+              }
+            },
+            "x-kzero-classe": "personale"
+          },
+          "competenze": {
+            "description": "Competenze della persona (codici dell'elenco della sua azienda).",
+            "type": "array",
+            "uniqueItems": true,
+            "items": {
+              "$ref": "#/definitions/codice"
+            },
+            "x-kzero-classe": "personale"
+          },
+          "preferenze": {
+            "description": "Preferenze della persona: dati morbidi, distinti dalla disponibilita' (rigida). Oggi registrate, mostrate e controllate (avviso se non rispettate); le usera' il calcolo.",
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "tipo"
+              ],
+              "properties": {
+                "dal": {
+                  "description": "Primo giorno in cui vale (assente = dall'inizio).",
+                  "$ref": "#/definitions/data"
+                },
+                "al": {
+                  "description": "Ultimo giorno in cui vale (assente = senza fine).",
+                  "$ref": "#/definitions/data"
+                },
+                "tipo": {
+                  "description": "giorni_liberi = preferisce non lavorare in questi giorni della settimana; fascia_oraria = preferisce turni dentro questa fascia; evita_turni = preferisce non fare questi turni; pausa_massima = preferisce turni senza pause piu' lunghe di tanti minuti (es. niente turni spezzati); altro = scritta a parole (mostrata, non controllata).",
+                  "enum": [
+                    "giorni_liberi",
+                    "fascia_oraria",
+                    "evita_turni",
+                    "pausa_massima",
+                    "altro"
+                  ]
+                },
+                "giorni": {
+                  "$ref": "#/definitions/giorni"
+                },
+                "dalle": {
+                  "$ref": "#/definitions/orario"
+                },
+                "alle": {
+                  "$ref": "#/definitions/orario"
+                },
+                "turni": {
+                  "description": "Codici dei turni da evitare.",
+                  "type": "array",
+                  "minItems": 1,
+                  "uniqueItems": true,
+                  "items": {
+                    "$ref": "#/definitions/codice"
+                  }
+                },
+                "minuti": {
+                  "description": "Pausa piu' lunga accettata dentro un turno, in minuti.",
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 1440
+                },
+                "descrizione": {
+                  "$ref": "#/definitions/testo"
+                }
+              },
+              "allOf": [
+                {
+                  "if": {
+                    "properties": {
+                      "tipo": {
+                        "const": "giorni_liberi"
+                      }
+                    }
+                  },
+                  "then": {
+                    "required": [
+                      "giorni"
+                    ]
+                  }
+                },
+                {
+                  "if": {
+                    "properties": {
+                      "tipo": {
+                        "const": "fascia_oraria"
+                      }
+                    }
+                  },
+                  "then": {
+                    "required": [
+                      "dalle",
+                      "alle"
+                    ]
+                  }
+                },
+                {
+                  "if": {
+                    "properties": {
+                      "tipo": {
+                        "const": "evita_turni"
+                      }
+                    }
+                  },
+                  "then": {
+                    "required": [
+                      "turni"
+                    ]
+                  }
+                },
+                {
+                  "if": {
+                    "properties": {
+                      "tipo": {
+                        "const": "pausa_massima"
+                      }
+                    }
+                  },
+                  "then": {
+                    "required": [
+                      "minuti"
+                    ]
+                  }
+                },
+                {
+                  "if": {
+                    "properties": {
+                      "tipo": {
+                        "const": "altro"
+                      }
+                    }
+                  },
+                  "then": {
+                    "required": [
+                      "descrizione"
+                    ]
+                  }
+                }
+              ]
+            },
+            "x-kzero-classe": "personale"
+          },
+          "prestiti": {
+            "description": "Prestiti della persona ad altre aziende: entra nei turni di un'altra azienda solo se il prestito e' dichiarato.",
+            "$ref": "#/definitions/prestiti",
+            "x-kzero-classe": "comune"
+          },
+          "nota": {
+            "description": "Note sulla persona. Non ammesse nel livello 'solo numeri'. Mai cause di assenza o dati sulla salute.",
+            "$ref": "#/definitions/nota",
+            "x-kzero-classe": "personale"
+          },
+          "scelte_orari": {
+            "description": "Versione 2: scelte sugli orari per la persona, che vincono su quelle dell'azienda (stesso tipo e periodo).",
+            "type": "array",
+            "maxItems": 100,
+            "items": {
+              "$ref": "#/definitions/scelta"
+            },
+            "x-kzero-classe": "personale"
+          },
+          "rientro": {
+            "$ref": "#/definitions/rientro",
+            "x-kzero-classe": "personale"
+          },
+          "giornate_a_chiamata": {
+            "description": "Versione 2: giornate di lavoro con lo stesso datore prima del periodo del pacchetto, contate dal giorno indicato (rapporto a chiamata).",
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "giornate",
+              "contate_dal"
+            ],
+            "properties": {
+              "giornate": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 10000
+              },
+              "contate_dal": {
+                "$ref": "#/definitions/data"
+              }
+            },
+            "x-kzero-classe": "personale"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "codice": {
+      "description": "Codice K-Zero: scelto da chi scrive i dati, unico per tipo di elemento. Lettere senza accenti, cifre, '-', '_' e '.'; inizia con una lettera o una cifra; al massimo 64 caratteri.",
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+    },
+    "testo": {
+      "description": "Testo di una riga, non vuoto (al massimo 300 caratteri).",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 300,
+      "pattern": "\\S"
+    },
+    "nota": {
+      "description": "Testo libero, non vuoto (al massimo 2000 caratteri).",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2000,
+      "pattern": "\\S"
+    },
+    "data": {
+      "description": "Data AAAA-MM-GG che esiste nel calendario (es. 2026-09-14; il 29 febbraio solo negli anni bisestili).",
+      "type": "string",
+      "pattern": "^([0-9]{4}-((0[13578]|1[02])-(0[1-9]|[12][0-9]|3[01])|(0[469]|11)-(0[1-9]|[12][0-9]|30)|02-(0[1-9]|1[0-9]|2[0-8]))|([0-9]{2}(0[48]|[2468][048]|[13579][26])|([02468][048]|[13579][26])00)-02-29)$"
+    },
+    "orario": {
+      "description": "Orario HH:MM, ora locale del fuso del pacchetto. Dopo mezzanotte si continua a contare come in GTFS: 24:15 = 00:15 del giorno dopo; al massimo 47:59.",
+      "type": "string",
+      "pattern": "^([0-3][0-9]|4[0-7]):[0-5][0-9]$"
+    },
+    "coordinate": {
+      "description": "Posizione WGS84 in gradi decimali.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "lat",
+        "lon"
+      ],
+      "properties": {
+        "lat": {
+          "type": "number",
+          "minimum": -90,
+          "maximum": 90
+        },
+        "lon": {
+          "type": "number",
+          "minimum": -180,
+          "maximum": 180
+        }
+      }
+    },
+    "giorni": {
+      "description": "Giorni della settimana.",
+      "type": "array",
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "lunedi",
+          "martedi",
+          "mercoledi",
+          "giovedi",
+          "venerdi",
+          "sabato",
+          "domenica"
+        ]
+      }
+    },
+    "prestiti": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "azienda",
+          "accordo"
+        ],
+        "properties": {
+          "azienda": {
+            "description": "Azienda che riceve il prestito.",
+            "$ref": "#/definitions/codice"
+          },
+          "accordo": {
+            "description": "Riferimento dell'accordo.",
+            "$ref": "#/definitions/testo"
+          },
+          "dal": {
+            "$ref": "#/definitions/data"
+          },
+          "al": {
+            "$ref": "#/definitions/data"
+          }
+        }
+      }
+    },
+    "minuti": {
+      "description": "Minuti (al massimo 100000).",
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100000
+    },
+    "forza": {
+      "description": "preferenza (avviso) oppure limite (rigido: errore su un turno ricorrente, avviso su un'assegnazione del singolo giorno).",
+      "enum": [
+        "preferenza",
+        "limite"
+      ]
+    },
+    "scelta": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tipo",
+        "forza"
+      ],
+      "properties": {
+        "tipo": {
+          "enum": [
+            "lavoro_massimo",
+            "guida_massima",
+            "ampiezza_massima",
+            "riposo_giornaliero",
+            "giorni_consecutivi"
+          ]
+        },
+        "periodo": {
+          "description": "lavoro_massimo: giornata, settimana o mese; guida_massima: giornata o settimana.",
+          "enum": [
+            "giornata",
+            "settimana",
+            "mese"
+          ]
+        },
+        "massimo_minuti": {
+          "$ref": "#/definitions/minuti"
+        },
+        "minimo_minuti": {
+          "$ref": "#/definitions/minuti"
+        },
+        "massimo_giorni": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 366
+        },
+        "forza": {
+          "$ref": "#/definitions/forza"
+        },
+        "nota": {
+          "$ref": "#/definitions/nota"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "tipo": {
+                "const": "lavoro_massimo"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "periodo",
+              "massimo_minuti"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "tipo": {
+                "const": "guida_massima"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "periodo",
+              "massimo_minuti"
+            ],
+            "properties": {
+              "periodo": {
+                "enum": [
+                  "giornata",
+                  "settimana"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "tipo": {
+                "const": "ampiezza_massima"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "massimo_minuti"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "tipo": {
+                "const": "riposo_giornaliero"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "minimo_minuti"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "tipo": {
+                "const": "giorni_consecutivi"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "massimo_giorni"
+            ]
+          }
+        }
+      ]
+    },
+    "rientro": {
+      "description": "Chiave del rientro per la persona: ogni valore scritto vince su quello dell'azienda.",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "fermo_minimo_minuti": {
+          "$ref": "#/definitions/minuti"
+        },
+        "fattore_guida": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "km_vuoti_massimi": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 10000
+        },
+        "forza": {
+          "$ref": "#/definitions/forza"
+        }
+      },
+      "minProperties": 1
+    }
+  }
+}

@@ -1,0 +1,1582 @@
+{
+  "schema": "turni",
+  "schema_versione": 1,
+  "turni": [
+    {
+      "codice": "T-PAUSA-A",
+      "nome": "Esempio a della pausa",
+      "azienda": "ALFA",
+      "ruolo": "autista",
+      "calendario": "CAL-T-PAUSA-A",
+      "mezzo": {
+        "modo": "preciso",
+        "codice": "ALFA-05"
+      },
+      "inizio": "L-RIMESSA-ALFA",
+      "fine": "L-RIMESSA-ALFA",
+      "elementi": [
+        {
+          "attivita": "PRESA",
+          "luogo": "L-RIMESSA-ALFA",
+          "dalle": "09:00",
+          "alle": "09:10"
+        },
+        {
+          "attivita": "VUOTO",
+          "luogo": "L-RIMESSA-ALFA",
+          "dalle": "09:10",
+          "alle": "09:25",
+          "verso": "F-STAZIONE",
+          "km_vuoti": 1.0
+        },
+        {
+          "corsa": "C-PAUSA-A1"
+        },
+        {
+          "attivita": "VUOTO",
+          "luogo": "F-PAUSA-A",
+          "dalle": "10:00",
+          "alle": "10:20",
+          "verso": "L-RIMESSA-ALFA",
+          "km_vuoti": 10.0
+        },
+        {
+          "attivita": "PAUSA",
+          "luogo": "L-RIMESSA-ALFA",
+          "dalle": "10:20",
+          "alle": "10:50"
+        },
+        {
+          "attivita": "VUOTO",
+          "luogo": "L-RIMESSA-ALFA",
+          "dalle": "10:50",
+          "alle": "11:10",
+          "verso": "F-PAUSA-A",
+          "km_vuoti": 10.0
+        },
+        {
+          "corsa": "C-PAUSA-A2"
+        },
+        {
+          "attivita": "VUOTO",
+          "luogo": "F-STAZIONE",
+          "dalle": "11:40",
+          "alle": "11:50",
+          "verso": "L-RIMESSA-ALFA",
+          "km_vuoti": 1.0
+        },
+        {
+          "attivita": "FINE",
+          "luogo": "L-RIMESSA-ALFA",
+          "dalle": "11:50",
+          "alle": "12:00"
+        }
+      ]
+    },
+    {
+      "codice": "T-PAUSA-B",
+      "nome": "Esempio b della pausa",
+      "azienda": "ALFA",
+      "ruolo": "autista",
+      "calendario": "CAL-T-PAUSA-B",
+      "mezzo": {
+        "modo": "preciso",
+        "codice": "ALFA-05"
+      },
+      "inizio": "L-RIMESSA-ALFA",
+      "fine": "L-RIMESSA-ALFA",
+      "elementi": [
+        {
+          "attivita": "PRESA",
+          "luogo": "L-RIMESSA-ALFA",
+          "dalle": "18:00",
+          "alle": "18:10"
+        },
+        {
+          "attivita": "VUOTO",
+          "luogo": "L-RIMESSA-ALFA",
+          "dalle": "18:10",
+          "alle": "18:25",
+          "verso": "F-STAZIONE",
+          "km_vuoti": 1.0
+        },
+        {
+          "corsa": "C-PAUSA-B1"
+        },
+        {
+          "attivita": "VUOTO",
+          "luogo": "F-PAUSA-B",
+          "dalle": "19:05",
+          "alle": "19:20",
+          "verso": "L-RIMESSA-ALFA",
+          "km_vuoti": 20.0
+        },
+        {
+          "attivita": "PAUSA",
+          "luogo": "L-RIMESSA-ALFA",
+          "dalle": "19:20",
+          "alle": "19:35"
+        },
+        {
+          "attivita": "VUOTO",
+          "luogo": "L-RIMESSA-ALFA",
+          "dalle": "19:35",
+          "alle": "19:50",
+          "verso": "F-PAUSA-B",
+          "km_vuoti": 20.0
+        },
+        {
+          "corsa": "C-PAUSA-B2"
+        },
+        {
+          "attivita": "VUOTO",
+          "luogo": "F-STAZIONE",
+          "dalle": "20:20",
+          "alle": "20:30",
+          "verso": "L-RIMESSA-ALFA",
+          "km_vuoti": 1.0
+        },
+        {
+          "attivita": "FINE",
+          "luogo": "L-RIMESSA-ALFA",
+          "dalle": "20:30",
+          "alle": "20:40"
+        }
+      ]
+    },
+    {
+      "codice": "T-PAUSA-C",
+      "nome": "Esempio c della pausa",
+      "azienda": "ALFA",
+      "ruolo": "autista",
+      "calendario": "CAL-T-PAUSA-C",
+      "mezzo": {
+        "modo": "preciso",
+        "codice": "ALFA-05"
+      },
+      "inizio": "L-RIMESSA-ALFA",
+      "fine": "L-RIMESSA-ALFA",
+      "elementi": [
+        {
+          "attivita": "PRESA",
+          "luogo": "L-RIMESSA-ALFA",
+          "dalle": "07:50",
+          "alle": "08:00"
+        },
+        {
+          "attivita": "VUOTO",
+          "luogo": "L-RIMESSA-ALFA",
+          "dalle": "08:00",
+          "alle": "08:15",
+          "verso": "F-STAZIONE",
+          "km_vuoti": 1.0
+        },
+        {
+          "corsa": "C-PAUSA-C1"
+        },
+        {
+          "attivita": "VUOTO",
+          "luogo": "F-PAUSA-C",
+          "dalle": "09:08",
+          "alle": "09:26",
+          "verso": "L-RIMESSA-ALFA",
+          "km_vuoti": 12.0
+        },
+        {
+          "attivita": "PAUSA",
+          "luogo": "L-RIMESSA-ALFA",
+          "dalle": "09:26",
+          "alle": "11:42"
+        },
+        {
+          "attivita": "VUOTO",
+          "luogo": "L-RIMESSA-ALFA",
+          "dalle": "11:42",
+          "alle": "12:00",
+          "verso": "F-PAUSA-C",
+          "km_vuoti": 12.0
+        },
+        {
+          "corsa": "C-PAUSA-C2"
+        },
+        {
+          "attivita": "VUOTO",
+          "luogo": "F-STAZIONE",
+          "dalle": "12:30",
+          "alle": "12:40",
+          "verso": "L-RIMESSA-ALFA",
+          "km_vuoti": 1.0
+        },
+        {
+          "attivita": "FINE",
+          "luogo": "L-RIMESSA-ALFA",
+          "dalle": "12:40",
+          "alle": "12:50"
+        }
+      ]
+    },
+    {
+      "codice": "T-L138-GIO",
+      "nome": "Giornata lunga di linea",
+      "azienda": "ALFA",
+      "ruolo": "autista",
+      "calendario": "CAL-T-L138-GIO",
+      "mezzo": {
+        "modo": "preciso",
+        "codice": "ALFA-05"
+      },
+      "inizio": "L-RIMESSA-ALFA",
+      "fine": "L-RIMESSA-ALFA",
+      "elementi": [
+        {
+          "attivita": "PRESA",
+          "luogo": "L-RIMESSA-ALFA",
+          "dalle": "05:35",
+          "alle": "05:45"
+        },
+        {
+          "attivita": "VUOTO",
+          "luogo": "L-RIMESSA-ALFA",
+          "dalle": "05:45",
+          "alle": "05:55",
+          "verso": "F-PRADELLO",
+          "km_vuoti": 1.0
+        },
+        {
+          "corsa": "C-ORA-06"
+        },
+        {
+          "corsa": "C-ORA-07"
+        },
+        {
+          "corsa": "C-ORA-08"
+        },
+        {
+          "corsa": "C-ORA-09"
+        },
+        {
+          "corsa": "C-ORA-10"
+        },
+        {
+          "corsa": "C-ORA-11"
+        },
+        {
+          "corsa": "C-ORA-12"
+        },
+        {
+          "corsa": "C-ORA-13"
+        },
+        {
+          "corsa": "C-ORA-14"
+        },
+        {
+          "corsa": "C-ORA-15"
+        },
+        {
+          "corsa": "C-ORA-16"
+        },
+        {
+          "attivita": "VUOTO",
+          "luogo": "F-STAZIONE",
+          "dalle": "16:50",
+          "alle": "17:00",
+          "verso": "L-RIMESSA-ALFA",
+          "km_vuoti": 1.0
+        },
+        {
+          "attivita": "FINE",
+          "luogo": "L-RIMESSA-ALFA",
+          "dalle": "17:00",
+          "alle": "17:10"
+        }
+      ]
+    },
+    {
+      "codice": "T-L138-VEN",
+      "nome": "Riserva di notte",
+      "azienda": "ALFA",
+      "ruolo": "autista",
+      "calendario": "CAL-T-L138-VEN",
+      "mezzo": {
+        "modo": "nessuno"
+      },
+      "inizio": "L-RIMESSA-ALFA",
+      "fine": "L-RIMESSA-ALFA",
+      "elementi": [
+        {
+          "attivita": "RISERVA",
+          "luogo": "L-RIMESSA-ALFA",
+          "dalle": "01:00",
+          "alle": "03:00"
+        }
+      ]
+    },
+    {
+      "codice": "T-561-09",
+      "nome": "Linea corta",
+      "azienda": "ALFA",
+      "ruolo": "autista",
+      "calendario": "CAL-T-561-09",
+      "mezzo": {
+        "modo": "preciso",
+        "codice": "V-17"
+      },
+      "inizio": "L-RIMESSA-ALFA",
+      "fine": "L-RIMESSA-ALFA",
+      "elementi": [
+        {
+          "attivita": "PRESA",
+          "luogo": "L-RIMESSA-ALFA",
+          "dalle": "05:35",
+          "alle": "05:45"
+        },
+        {
+          "attivita": "VUOTO",
+          "luogo": "L-RIMESSA-ALFA",
+          "dalle": "05:45",
+          "alle": "05:55",
+          "verso": "F-PRADELLO",
+          "km_vuoti": 1.0
+        },
+        {
+          "corsa": "C-ORA-06"
+        },
+        {
+          "corsa": "C-ORA-07"
+        },
+        {
+          "corsa": "C-ORA-08"
+        },
+        {
+          "corsa": "C-ORA-09"
+        },
+        {
+          "attivita": "VUOTO",
+          "luogo": "F-PRADELLO",
+          "dalle": "09:50",
+          "alle": "10:00",
+          "verso": "L-RIMESSA-ALFA",
+          "km_vuoti": 1.0
+        },
+        {
+          "attivita": "FINE",
+          "luogo": "L-RIMESSA-ALFA",
+          "dalle": "10:00",
+          "alle": "10:10"
+        }
+      ]
+    },
+    {
+      "codice": "T-561-10",
+      "nome": "Linea corta",
+      "azienda": "ALFA",
+      "ruolo": "autista",
+      "calendario": "CAL-T-561-10",
+      "mezzo": {
+        "modo": "preciso",
+        "codice": "V-17"
+      },
+      "inizio": "L-RIMESSA-ALFA",
+      "fine": "L-RIMESSA-ALFA",
+      "elementi": [
+        {
+          "attivita": "PRESA",
+          "luogo": "L-RIMESSA-ALFA",
+          "dalle": "05:35",
+          "alle": "05:45"
+        },
+        {
+          "attivita": "VUOTO",
+          "luogo": "L-RIMESSA-ALFA",
+          "dalle": "05:45",
+          "alle": "05:55",
+          "verso": "F-PRADELLO",
+          "km_vuoti": 1.0
+        },
+        {
+          "corsa": "C-ORA-06"
+        },
+        {
+          "corsa": "C-ORA-07"
+        },
+        {
+          "corsa": "C-ORA-08"
+        },
+        {
+          "corsa": "C-ORA-09"
+        },
+        {
+          "attivita": "VUOTO",
+          "luogo": "F-PRADELLO",
+          "dalle": "09:50",
+          "alle": "10:00",
+          "verso": "L-RIMESSA-ALFA",
+          "km_vuoti": 1.0
+        },
+        {
+          "attivita": "FINE",
+          "luogo": "L-RIMESSA-ALFA",
+          "dalle": "10:00",
+          "alle": "10:10"
+        }
+      ]
+    },
+    {
+      "codice": "T-561-13",
+      "nome": "Linea corta",
+      "azienda": "ALFA",
+      "ruolo": "autista",
+      "calendario": "CAL-T-561-13",
+      "mezzo": {
+        "modo": "preciso",
+        "codice": "V-17"
+      },
+      "inizio": "L-RIMESSA-ALFA",
+      "fine": "L-RIMESSA-ALFA",
+      "elementi": [
+        {
+          "attivita": "PRESA",
+          "luogo": "L-RIMESSA-ALFA",
+          "dalle": "05:35",
+          "alle": "05:45"
+        },
+        {
+          "attivita": "VUOTO",
+          "luogo": "L-RIMESSA-ALFA",
+          "dalle": "05:45",
+          "alle": "05:55",
+          "verso": "F-PRADELLO",
+          "km_vuoti": 1.0
+        },
+        {
+          "corsa": "C-ORA-06"
+        },
+        {
+          "corsa": "C-ORA-07"
+        },
+        {
+          "corsa": "C-ORA-08"
+        },
+        {
+          "corsa": "C-ORA-09"
+        },
+        {
+          "attivita": "VUOTO",
+          "luogo": "F-PRADELLO",
+          "dalle": "09:50",
+          "alle": "10:00",
+          "verso": "L-RIMESSA-ALFA",
+          "km_vuoti": 1.0
+        },
+        {
+          "attivita": "FINE",
+          "luogo": "L-RIMESSA-ALFA",
+          "dalle": "10:00",
+          "alle": "10:10"
+        }
+      ]
+    },
+    {
+      "codice": "T-561-14",
+      "nome": "Linea corta",
+      "azienda": "ALFA",
+      "ruolo": "autista",
+      "calendario": "CAL-T-561-14",
+      "mezzo": {
+        "modo": "preciso",
+        "codice": "V-17"
+      },
+      "inizio": "L-RIMESSA-ALFA",
+      "fine": "L-RIMESSA-ALFA",
+      "elementi": [
+        {
+          "attivita": "PRESA",
+          "luogo": "L-RIMESSA-ALFA",
+          "dalle": "05:35",
+          "alle": "05:45"
+        },
+        {
+          "attivita": "VUOTO",
+          "luogo": "L-RIMESSA-ALFA",
+          "dalle": "05:45",
+          "alle": "05:55",
+          "verso": "F-PRADELLO",
+          "km_vuoti": 1.0
+        },
+        {
+          "corsa": "C-ORA-06"
+        },
+        {
+          "corsa": "C-ORA-07"
+        },
+        {
+          "corsa": "C-ORA-08"
+        },
+        {
+          "corsa": "C-ORA-09"
+        },
+        {
+          "attivita": "VUOTO",
+          "luogo": "F-PRADELLO",
+          "dalle": "09:50",
+          "alle": "10:00",
+          "verso": "L-RIMESSA-ALFA",
+          "km_vuoti": 1.0
+        },
+        {
+          "attivita": "FINE",
+          "luogo": "L-RIMESSA-ALFA",
+          "dalle": "10:00",
+          "alle": "10:10"
+        }
+      ]
+    },
+    {
+      "codice": "T-561-11",
+      "nome": "Linea di 52 km e linea corta, con lavoro di notte",
+      "azienda": "ALFA",
+      "ruolo": "autista",
+      "calendario": "CAL-T-561-11",
+      "mezzo": {
+        "modo": "preciso",
+        "codice": "V-17"
+      },
+      "inizio": "L-RIMESSA-ALFA",
+      "fine": "L-RIMESSA-ALFA",
+      "elementi": [
+        {
+          "attivita": "PRESA",
+          "luogo": "L-RIMESSA-ALFA",
+          "dalle": "03:30",
+          "alle": "03:45"
+        },
+        {
+          "attivita": "VUOTO",
+          "luogo": "L-RIMESSA-ALFA",
+          "dalle": "03:45",
+          "alle": "04:00",
+          "verso": "F-STAZIONE",
+          "km_vuoti": 1.0
+        },
+        {
+          "corsa": "C-52KM"
+        },
+        {
+          "corsa": "C-52KM-R"
+        },
+        {
+          "corsa": "C-ORA-07"
+        },
+        {
+          "corsa": "C-ORA-08"
+        },
+        {
+          "corsa": "C-ORA-09"
+        },
+        {
+          "corsa": "C-ORA-10"
+        },
+        {
+          "corsa": "C-ORA-11"
+        },
+        {
+          "corsa": "C-ORA-12"
+        },
+        {
+          "corsa": "C-ORA-13"
+        },
+        {
+          "corsa": "C-ORA-14"
+        },
+        {
+          "corsa": "C-ORA-15"
+        },
+        {
+          "attivita": "VUOTO",
+          "luogo": "F-PRADELLO",
+          "dalle": "15:50",
+          "alle": "16:00",
+          "verso": "L-RIMESSA-ALFA",
+          "km_vuoti": 1.0
+        },
+        {
+          "attivita": "FINE",
+          "luogo": "L-RIMESSA-ALFA",
+          "dalle": "16:00",
+          "alle": "16:10"
+        }
+      ]
+    },
+    {
+      "codice": "T-561-12",
+      "nome": "Linea tutto il giorno",
+      "azienda": "ALFA",
+      "ruolo": "autista",
+      "calendario": "CAL-T-561-12",
+      "mezzo": {
+        "modo": "preciso",
+        "codice": "V-17"
+      },
+      "inizio": "L-RIMESSA-ALFA",
+      "fine": "L-RIMESSA-ALFA",
+      "elementi": [
+        {
+          "attivita": "PRESA",
+          "luogo": "L-RIMESSA-ALFA",
+          "dalle": "04:35",
+          "alle": "04:45"
+        },
+        {
+          "attivita": "VUOTO",
+          "luogo": "L-RIMESSA-ALFA",
+          "dalle": "04:45",
+          "alle": "04:55",
+          "verso": "F-STAZIONE",
+          "km_vuoti": 1.0
+        },
+        {
+          "corsa": "C-ORA-05"
+        },
+        {
+          "corsa": "C-ORA-06"
+        },
+        {
+          "corsa": "C-ORA-07"
+        },
+        {
+          "corsa": "C-ORA-08"
+        },
+        {
+          "corsa": "C-ORA-09"
+        },
+        {
+          "corsa": "C-ORA-10"
+        },
+        {
+          "corsa": "C-ORA-11"
+        },
+        {
+          "corsa": "C-ORA-12"
+        },
+        {
+          "corsa": "C-ORA-13"
+        },
+        {
+          "corsa": "C-ORA-14"
+        },
+        {
+          "corsa": "C-ORA-15"
+        },
+        {
+          "corsa": "C-ORA-16"
+        },
+        {
+          "corsa": "C-ORA-17"
+        },
+        {
+          "attivita": "VUOTO",
+          "luogo": "F-PRADELLO",
+          "dalle": "17:50",
+          "alle": "18:00",
+          "verso": "L-RIMESSA-ALFA",
+          "km_vuoti": 1.0
+        },
+        {
+          "attivita": "FINE",
+          "luogo": "L-RIMESSA-ALFA",
+          "dalle": "18:00",
+          "alle": "18:10"
+        }
+      ]
+    },
+    {
+      "codice": "T-561-15",
+      "nome": "Gita della domenica",
+      "azienda": "ALFA",
+      "ruolo": "autista",
+      "calendario": "CAL-T-561-15",
+      "mezzo": {
+        "modo": "preciso",
+        "codice": "ALFA-01"
+      },
+      "inizio": "L-RIMESSA-ALFA",
+      "fine": "L-RIMESSA-ALFA",
+      "elementi": [
+        {
+          "attivita": "PRESA",
+          "luogo": "L-RIMESSA-ALFA",
+          "dalle": "07:45",
+          "alle": "08:00"
+        },
+        {
+          "corsa": "C-GITA-A"
+        },
+        {
+          "attivita": "ATTESA",
+          "luogo": "F-LAGOBELLO",
+          "dalle": "08:45",
+          "alle": "17:00"
+        },
+        {
+          "corsa": "C-GITA-R"
+        },
+        {
+          "attivita": "FINE",
+          "luogo": "L-RIMESSA-ALFA",
+          "dalle": "17:45",
+          "alle": "18:00"
+        }
+      ]
+    },
+    {
+      "codice": "T-52KM-8",
+      "nome": "Linea di 52 km con il mezzo da 8 posti",
+      "azienda": "ALFA",
+      "ruolo": "autista",
+      "calendario": "CAL-T-52KM-8",
+      "mezzo": {
+        "modo": "preciso",
+        "codice": "V-8"
+      },
+      "inizio": "L-RIMESSA-ALFA",
+      "fine": "L-RIMESSA-ALFA",
+      "elementi": [
+        {
+          "attivita": "PRESA",
+          "luogo": "L-RIMESSA-ALFA",
+          "dalle": "03:30",
+          "alle": "03:45"
+        },
+        {
+          "attivita": "VUOTO",
+          "luogo": "L-RIMESSA-ALFA",
+          "dalle": "03:45",
+          "alle": "04:00",
+          "verso": "F-STAZIONE",
+          "km_vuoti": 1.0
+        },
+        {
+          "corsa": "C-52KM"
+        },
+        {
+          "corsa": "C-52KM-R"
+        },
+        {
+          "attivita": "VUOTO",
+          "luogo": "F-STAZIONE",
+          "dalle": "06:30",
+          "alle": "06:40",
+          "verso": "L-RIMESSA-ALFA",
+          "km_vuoti": 1.0
+        },
+        {
+          "attivita": "FINE",
+          "luogo": "L-RIMESSA-ALFA",
+          "dalle": "06:40",
+          "alle": "06:50"
+        }
+      ]
+    },
+    {
+      "codice": "T-52KM-9",
+      "nome": "Linea di 52 km con il mezzo da 9 posti",
+      "azienda": "ALFA",
+      "ruolo": "autista",
+      "calendario": "CAL-T-52KM-9",
+      "mezzo": {
+        "modo": "preciso",
+        "codice": "V-9"
+      },
+      "inizio": "L-RIMESSA-ALFA",
+      "fine": "L-RIMESSA-ALFA",
+      "elementi": [
+        {
+          "attivita": "PRESA",
+          "luogo": "L-RIMESSA-ALFA",
+          "dalle": "03:30",
+          "alle": "03:45"
+        },
+        {
+          "attivita": "VUOTO",
+          "luogo": "L-RIMESSA-ALFA",
+          "dalle": "03:45",
+          "alle": "04:00",
+          "verso": "F-STAZIONE",
+          "km_vuoti": 1.0
+        },
+        {
+          "corsa": "C-52KM"
+        },
+        {
+          "corsa": "C-52KM-R"
+        },
+        {
+          "attivita": "VUOTO",
+          "luogo": "F-STAZIONE",
+          "dalle": "06:30",
+          "alle": "06:40",
+          "verso": "L-RIMESSA-ALFA",
+          "km_vuoti": 1.0
+        },
+        {
+          "attivita": "FINE",
+          "luogo": "L-RIMESSA-ALFA",
+          "dalle": "06:40",
+          "alle": "06:50"
+        }
+      ]
+    },
+    {
+      "codice": "T-SENZA-KM",
+      "nome": "Linea senza km",
+      "azienda": "ALFA",
+      "ruolo": "autista",
+      "calendario": "CAL-T-SENZA-KM",
+      "mezzo": {
+        "modo": "preciso",
+        "codice": "V-17"
+      },
+      "inizio": "L-RIMESSA-ALFA",
+      "fine": "L-RIMESSA-ALFA",
+      "elementi": [
+        {
+          "attivita": "PRESA",
+          "luogo": "L-RIMESSA-ALFA",
+          "dalle": "09:30",
+          "alle": "09:40"
+        },
+        {
+          "attivita": "VUOTO",
+          "luogo": "L-RIMESSA-ALFA",
+          "dalle": "09:40",
+          "alle": "09:55",
+          "verso": "F-STAZIONE",
+          "km_vuoti": 1.0
+        },
+        {
+          "corsa": "C-SENZA-KM"
+        },
+        {
+          "attivita": "VUOTO",
+          "luogo": "F-MONTEBRINO",
+          "dalle": "11:30",
+          "alle": "12:00",
+          "verso": "L-RIMESSA-ALFA",
+          "km_vuoti": 14.0
+        },
+        {
+          "attivita": "FINE",
+          "luogo": "L-RIMESSA-ALFA",
+          "dalle": "12:00",
+          "alle": "12:10"
+        }
+      ]
+    },
+    {
+      "codice": "T-TITOLARE",
+      "nome": "Linea del titolare",
+      "azienda": "ALFA",
+      "ruolo": "autista",
+      "calendario": "CAL-T-TITOLARE",
+      "mezzo": {
+        "modo": "preciso",
+        "codice": "ALFA-05"
+      },
+      "inizio": "L-RIMESSA-ALFA",
+      "fine": "L-RIMESSA-ALFA",
+      "elementi": [
+        {
+          "attivita": "PRESA",
+          "luogo": "L-RIMESSA-ALFA",
+          "dalle": "06:35",
+          "alle": "06:45"
+        },
+        {
+          "attivita": "VUOTO",
+          "luogo": "L-RIMESSA-ALFA",
+          "dalle": "06:45",
+          "alle": "06:55",
+          "verso": "F-STAZIONE",
+          "km_vuoti": 1.0
+        },
+        {
+          "corsa": "C-ORA-07"
+        },
+        {
+          "corsa": "C-ORA-08"
+        },
+        {
+          "corsa": "C-ORA-09"
+        },
+        {
+          "corsa": "C-ORA-10"
+        },
+        {
+          "corsa": "C-ORA-11"
+        },
+        {
+          "corsa": "C-ORA-12"
+        },
+        {
+          "corsa": "C-ORA-13"
+        },
+        {
+          "corsa": "C-ORA-14"
+        },
+        {
+          "corsa": "C-ORA-15"
+        },
+        {
+          "attivita": "VUOTO",
+          "luogo": "F-PRADELLO",
+          "dalle": "15:50",
+          "alle": "16:00",
+          "verso": "L-RIMESSA-ALFA",
+          "km_vuoti": 1.0
+        },
+        {
+          "attivita": "FINE",
+          "luogo": "L-RIMESSA-ALFA",
+          "dalle": "16:00",
+          "alle": "16:10"
+        }
+      ]
+    },
+    {
+      "codice": "T-CHIAMATA-23",
+      "nome": "Linea del mattino",
+      "azienda": "ALFA",
+      "ruolo": "autista",
+      "calendario": "CAL-T-CHIAMATA-23",
+      "mezzo": {
+        "modo": "preciso",
+        "codice": "ALFA-05"
+      },
+      "inizio": "L-RIMESSA-ALFA",
+      "fine": "L-RIMESSA-ALFA",
+      "elementi": [
+        {
+          "attivita": "PRESA",
+          "luogo": "L-RIMESSA-ALFA",
+          "dalle": "06:35",
+          "alle": "06:45"
+        },
+        {
+          "attivita": "VUOTO",
+          "luogo": "L-RIMESSA-ALFA",
+          "dalle": "06:45",
+          "alle": "06:55",
+          "verso": "F-STAZIONE",
+          "km_vuoti": 1.0
+        },
+        {
+          "corsa": "C-ORA-07"
+        },
+        {
+          "corsa": "C-ORA-08"
+        },
+        {
+          "attivita": "VUOTO",
+          "luogo": "F-STAZIONE",
+          "dalle": "08:50",
+          "alle": "09:00",
+          "verso": "L-RIMESSA-ALFA",
+          "km_vuoti": 1.0
+        },
+        {
+          "attivita": "FINE",
+          "luogo": "L-RIMESSA-ALFA",
+          "dalle": "09:00",
+          "alle": "09:10"
+        }
+      ]
+    },
+    {
+      "codice": "T-CHIAMATA-24",
+      "nome": "Linea del mattino",
+      "azienda": "ALFA",
+      "ruolo": "autista",
+      "calendario": "CAL-T-CHIAMATA-24",
+      "mezzo": {
+        "modo": "preciso",
+        "codice": "ALFA-05"
+      },
+      "inizio": "L-RIMESSA-ALFA",
+      "fine": "L-RIMESSA-ALFA",
+      "elementi": [
+        {
+          "attivita": "PRESA",
+          "luogo": "L-RIMESSA-ALFA",
+          "dalle": "06:35",
+          "alle": "06:45"
+        },
+        {
+          "attivita": "VUOTO",
+          "luogo": "L-RIMESSA-ALFA",
+          "dalle": "06:45",
+          "alle": "06:55",
+          "verso": "F-STAZIONE",
+          "km_vuoti": 1.0
+        },
+        {
+          "corsa": "C-ORA-07"
+        },
+        {
+          "corsa": "C-ORA-08"
+        },
+        {
+          "attivita": "VUOTO",
+          "luogo": "F-STAZIONE",
+          "dalle": "08:50",
+          "alle": "09:00",
+          "verso": "L-RIMESSA-ALFA",
+          "km_vuoti": 1.0
+        },
+        {
+          "attivita": "FINE",
+          "luogo": "L-RIMESSA-ALFA",
+          "dalle": "09:00",
+          "alle": "09:10"
+        }
+      ]
+    },
+    {
+      "codice": "T-CHIAMATA-25",
+      "nome": "Linea del mattino",
+      "azienda": "ALFA",
+      "ruolo": "autista",
+      "calendario": "CAL-T-CHIAMATA-25",
+      "mezzo": {
+        "modo": "preciso",
+        "codice": "ALFA-05"
+      },
+      "inizio": "L-RIMESSA-ALFA",
+      "fine": "L-RIMESSA-ALFA",
+      "elementi": [
+        {
+          "attivita": "PRESA",
+          "luogo": "L-RIMESSA-ALFA",
+          "dalle": "06:35",
+          "alle": "06:45"
+        },
+        {
+          "attivita": "VUOTO",
+          "luogo": "L-RIMESSA-ALFA",
+          "dalle": "06:45",
+          "alle": "06:55",
+          "verso": "F-STAZIONE",
+          "km_vuoti": 1.0
+        },
+        {
+          "corsa": "C-ORA-07"
+        },
+        {
+          "corsa": "C-ORA-08"
+        },
+        {
+          "attivita": "VUOTO",
+          "luogo": "F-STAZIONE",
+          "dalle": "08:50",
+          "alle": "09:00",
+          "verso": "L-RIMESSA-ALFA",
+          "km_vuoti": 1.0
+        },
+        {
+          "attivita": "FINE",
+          "luogo": "L-RIMESSA-ALFA",
+          "dalle": "09:00",
+          "alle": "09:10"
+        }
+      ]
+    },
+    {
+      "codice": "T-CHIAMATA-26",
+      "nome": "Linea del mattino",
+      "azienda": "ALFA",
+      "ruolo": "autista",
+      "calendario": "CAL-T-CHIAMATA-26",
+      "mezzo": {
+        "modo": "preciso",
+        "codice": "ALFA-05"
+      },
+      "inizio": "L-RIMESSA-ALFA",
+      "fine": "L-RIMESSA-ALFA",
+      "elementi": [
+        {
+          "attivita": "PRESA",
+          "luogo": "L-RIMESSA-ALFA",
+          "dalle": "06:35",
+          "alle": "06:45"
+        },
+        {
+          "attivita": "VUOTO",
+          "luogo": "L-RIMESSA-ALFA",
+          "dalle": "06:45",
+          "alle": "06:55",
+          "verso": "F-STAZIONE",
+          "km_vuoti": 1.0
+        },
+        {
+          "corsa": "C-ORA-07"
+        },
+        {
+          "corsa": "C-ORA-08"
+        },
+        {
+          "attivita": "VUOTO",
+          "luogo": "F-STAZIONE",
+          "dalle": "08:50",
+          "alle": "09:00",
+          "verso": "L-RIMESSA-ALFA",
+          "km_vuoti": 1.0
+        },
+        {
+          "attivita": "FINE",
+          "luogo": "L-RIMESSA-ALFA",
+          "dalle": "09:00",
+          "alle": "09:10"
+        }
+      ]
+    },
+    {
+      "codice": "T-CHIAMATA-27",
+      "nome": "Linea del mattino",
+      "azienda": "ALFA",
+      "ruolo": "autista",
+      "calendario": "CAL-T-CHIAMATA-27",
+      "mezzo": {
+        "modo": "preciso",
+        "codice": "ALFA-05"
+      },
+      "inizio": "L-RIMESSA-ALFA",
+      "fine": "L-RIMESSA-ALFA",
+      "elementi": [
+        {
+          "attivita": "PRESA",
+          "luogo": "L-RIMESSA-ALFA",
+          "dalle": "06:35",
+          "alle": "06:45"
+        },
+        {
+          "attivita": "VUOTO",
+          "luogo": "L-RIMESSA-ALFA",
+          "dalle": "06:45",
+          "alle": "06:55",
+          "verso": "F-STAZIONE",
+          "km_vuoti": 1.0
+        },
+        {
+          "corsa": "C-ORA-07"
+        },
+        {
+          "corsa": "C-ORA-08"
+        },
+        {
+          "attivita": "VUOTO",
+          "luogo": "F-STAZIONE",
+          "dalle": "08:50",
+          "alle": "09:00",
+          "verso": "L-RIMESSA-ALFA",
+          "km_vuoti": 1.0
+        },
+        {
+          "attivita": "FINE",
+          "luogo": "L-RIMESSA-ALFA",
+          "dalle": "09:00",
+          "alle": "09:10"
+        }
+      ]
+    },
+    {
+      "codice": "T-CONTRATTO-0",
+      "nome": "Riserva",
+      "azienda": "ALFA",
+      "ruolo": "autista",
+      "calendario": "CAL-T-CONTRATTO-0",
+      "mezzo": {
+        "modo": "nessuno"
+      },
+      "inizio": "L-RIMESSA-ALFA",
+      "fine": "L-RIMESSA-ALFA",
+      "elementi": [
+        {
+          "attivita": "RISERVA",
+          "luogo": "L-RIMESSA-ALFA",
+          "dalle": "08:00",
+          "alle": "09:00"
+        }
+      ]
+    },
+    {
+      "codice": "T-CONTRATTO-1",
+      "nome": "Riserva",
+      "azienda": "ALFA",
+      "ruolo": "autista",
+      "calendario": "CAL-T-CONTRATTO-1",
+      "mezzo": {
+        "modo": "nessuno"
+      },
+      "inizio": "L-RIMESSA-ALFA",
+      "fine": "L-RIMESSA-ALFA",
+      "elementi": [
+        {
+          "attivita": "RISERVA",
+          "luogo": "L-RIMESSA-ALFA",
+          "dalle": "08:00",
+          "alle": "09:00"
+        }
+      ]
+    },
+    {
+      "codice": "T-CONTRATTO-2",
+      "nome": "Riserva",
+      "azienda": "ALFA",
+      "ruolo": "autista",
+      "calendario": "CAL-T-CONTRATTO-2",
+      "mezzo": {
+        "modo": "nessuno"
+      },
+      "inizio": "L-RIMESSA-ALFA",
+      "fine": "L-RIMESSA-ALFA",
+      "elementi": [
+        {
+          "attivita": "RISERVA",
+          "luogo": "L-RIMESSA-ALFA",
+          "dalle": "08:00",
+          "alle": "09:00"
+        }
+      ]
+    },
+    {
+      "codice": "T-CONTRATTO-3",
+      "nome": "Riserva",
+      "azienda": "ALFA",
+      "ruolo": "autista",
+      "calendario": "CAL-T-CONTRATTO-3",
+      "mezzo": {
+        "modo": "nessuno"
+      },
+      "inizio": "L-RIMESSA-ALFA",
+      "fine": "L-RIMESSA-ALFA",
+      "elementi": [
+        {
+          "attivita": "RISERVA",
+          "luogo": "L-RIMESSA-ALFA",
+          "dalle": "08:00",
+          "alle": "09:00"
+        }
+      ]
+    },
+    {
+      "codice": "T-CONTRATTO-4",
+      "nome": "Riserva",
+      "azienda": "ALFA",
+      "ruolo": "autista",
+      "calendario": "CAL-T-CONTRATTO-4",
+      "mezzo": {
+        "modo": "nessuno"
+      },
+      "inizio": "L-RIMESSA-ALFA",
+      "fine": "L-RIMESSA-ALFA",
+      "elementi": [
+        {
+          "attivita": "RISERVA",
+          "luogo": "L-RIMESSA-ALFA",
+          "dalle": "08:00",
+          "alle": "09:00"
+        }
+      ]
+    },
+    {
+      "codice": "T-CONTRATTO-5",
+      "nome": "Riserva",
+      "azienda": "ALFA",
+      "ruolo": "autista",
+      "calendario": "CAL-T-CONTRATTO-5",
+      "mezzo": {
+        "modo": "nessuno"
+      },
+      "inizio": "L-RIMESSA-ALFA",
+      "fine": "L-RIMESSA-ALFA",
+      "elementi": [
+        {
+          "attivita": "RISERVA",
+          "luogo": "L-RIMESSA-ALFA",
+          "dalle": "08:00",
+          "alle": "09:00"
+        }
+      ]
+    },
+    {
+      "codice": "T-CONTRATTO-6",
+      "nome": "Riserva",
+      "azienda": "ALFA",
+      "ruolo": "autista",
+      "calendario": "CAL-T-CONTRATTO-6",
+      "mezzo": {
+        "modo": "nessuno"
+      },
+      "inizio": "L-RIMESSA-ALFA",
+      "fine": "L-RIMESSA-ALFA",
+      "elementi": [
+        {
+          "attivita": "RISERVA",
+          "luogo": "L-RIMESSA-ALFA",
+          "dalle": "08:00",
+          "alle": "09:00"
+        }
+      ]
+    },
+    {
+      "codice": "T-CONTRATTO-7",
+      "nome": "Riserva",
+      "azienda": "ALFA",
+      "ruolo": "autista",
+      "calendario": "CAL-T-CONTRATTO-7",
+      "mezzo": {
+        "modo": "nessuno"
+      },
+      "inizio": "L-RIMESSA-ALFA",
+      "fine": "L-RIMESSA-ALFA",
+      "elementi": [
+        {
+          "attivita": "RISERVA",
+          "luogo": "L-RIMESSA-ALFA",
+          "dalle": "08:00",
+          "alle": "09:00"
+        }
+      ]
+    },
+    {
+      "codice": "T-CONTRATTO-AMPIA",
+      "nome": "Riserva lunga",
+      "azienda": "ALFA",
+      "ruolo": "autista",
+      "calendario": "CAL-T-CONTRATTO-AMPIA",
+      "mezzo": {
+        "modo": "nessuno"
+      },
+      "inizio": "L-RIMESSA-ALFA",
+      "fine": "L-RIMESSA-ALFA",
+      "elementi": [
+        {
+          "attivita": "RISERVA",
+          "luogo": "L-RIMESSA-ALFA",
+          "dalle": "05:00",
+          "alle": "06:00"
+        },
+        {
+          "attivita": "RISERVA",
+          "luogo": "L-RIMESSA-ALFA",
+          "dalle": "18:30",
+          "alle": "19:30"
+        }
+      ]
+    },
+    {
+      "codice": "T-ORE",
+      "nome": "Linea oltre il contratto",
+      "azienda": "ALFA",
+      "ruolo": "autista",
+      "calendario": "CAL-T-ORE",
+      "mezzo": {
+        "modo": "preciso",
+        "codice": "ALFA-05"
+      },
+      "inizio": "L-RIMESSA-ALFA",
+      "fine": "L-RIMESSA-ALFA",
+      "elementi": [
+        {
+          "attivita": "PRESA",
+          "luogo": "L-RIMESSA-ALFA",
+          "dalle": "06:35",
+          "alle": "06:45"
+        },
+        {
+          "attivita": "VUOTO",
+          "luogo": "L-RIMESSA-ALFA",
+          "dalle": "06:45",
+          "alle": "06:55",
+          "verso": "F-STAZIONE",
+          "km_vuoti": 1.0
+        },
+        {
+          "corsa": "C-ORA-07"
+        },
+        {
+          "corsa": "C-ORA-08"
+        },
+        {
+          "corsa": "C-ORA-09"
+        },
+        {
+          "corsa": "C-ORA-10"
+        },
+        {
+          "corsa": "C-ORA-11"
+        },
+        {
+          "attivita": "VUOTO",
+          "luogo": "F-PRADELLO",
+          "dalle": "11:50",
+          "alle": "12:00",
+          "verso": "L-RIMESSA-ALFA",
+          "km_vuoti": 1.0
+        },
+        {
+          "attivita": "FINE",
+          "luogo": "L-RIMESSA-ALFA",
+          "dalle": "12:00",
+          "alle": "12:10"
+        }
+      ]
+    },
+    {
+      "codice": "T-MULTI",
+      "nome": "Secondo autista sulla linea di 52 km",
+      "azienda": "ALFA",
+      "ruolo": "secondo_autista",
+      "calendario": "CAL-T-MULTI",
+      "mezzo": {
+        "modo": "nessuno"
+      },
+      "inizio": "F-STAZIONE",
+      "fine": "F-STAZIONE",
+      "elementi": [
+        {
+          "corsa": "C-52KM"
+        },
+        {
+          "corsa": "C-52KM-R"
+        }
+      ]
+    },
+    {
+      "codice": "T-SCUOLA-LUNGA",
+      "nome": "Scuola tutta la mattina",
+      "azienda": "ALFA",
+      "ruolo": "autista",
+      "calendario": "CAL-T-SCUOLA-LUNGA",
+      "mezzo": {
+        "modo": "preciso",
+        "codice": "V-17"
+      },
+      "inizio": "L-RIMESSA-ALFA",
+      "fine": "L-RIMESSA-ALFA",
+      "elementi": [
+        {
+          "attivita": "PRESA",
+          "luogo": "L-RIMESSA-ALFA",
+          "dalle": "07:20",
+          "alle": "07:30"
+        },
+        {
+          "attivita": "VUOTO",
+          "luogo": "L-RIMESSA-ALFA",
+          "dalle": "07:30",
+          "alle": "07:45",
+          "verso": "F-STAZIONE",
+          "km_vuoti": 1.0
+        },
+        {
+          "corsa": "C-SCUOLA-LUNGA-1"
+        },
+        {
+          "corsa": "C-SCUOLA-LUNGA-2"
+        },
+        {
+          "corsa": "C-SCUOLA-LUNGA-3"
+        },
+        {
+          "corsa": "C-SCUOLA-LUNGA-4"
+        },
+        {
+          "corsa": "C-SCUOLA-LUNGA-5"
+        },
+        {
+          "corsa": "C-SCUOLA-LUNGA-6"
+        },
+        {
+          "attivita": "VUOTO",
+          "luogo": "F-STAZIONE",
+          "dalle": "12:35",
+          "alle": "12:45",
+          "verso": "L-RIMESSA-ALFA",
+          "km_vuoti": 1.0
+        },
+        {
+          "attivita": "FINE",
+          "luogo": "L-RIMESSA-ALFA",
+          "dalle": "12:45",
+          "alle": "12:55"
+        }
+      ]
+    },
+    {
+      "codice": "T-RIENTRO-BETA",
+      "nome": "Rientro troppo breve",
+      "azienda": "BETA",
+      "ruolo": "autista",
+      "calendario": "CAL-T-RIENTRO-BETA",
+      "mezzo": {
+        "modo": "preciso",
+        "codice": "BETA-02"
+      },
+      "inizio": "L-RIMESSA-BETA",
+      "fine": "L-RIMESSA-BETA",
+      "elementi": [
+        {
+          "attivita": "PRESA-SERVIZIO",
+          "luogo": "L-RIMESSA-BETA",
+          "dalle": "06:20",
+          "alle": "06:35"
+        },
+        {
+          "corsa": "C-B620-01"
+        },
+        {
+          "corsa": "C-B620-02"
+        },
+        {
+          "attivita": "RIENTRO",
+          "luogo": "F-SORGENTA",
+          "dalle": "07:50",
+          "alle": "08:00",
+          "verso": "L-RIMESSA-BETA",
+          "km_vuoti": 3.0
+        },
+        {
+          "attivita": "SOSTA",
+          "luogo": "L-RIMESSA-BETA",
+          "dalle": "08:00",
+          "alle": "08:30"
+        },
+        {
+          "attivita": "RIENTRO",
+          "luogo": "L-RIMESSA-BETA",
+          "dalle": "08:30",
+          "alle": "08:40",
+          "verso": "F-SORGENTA",
+          "km_vuoti": 3.0
+        },
+        {
+          "attivita": "SOSTA",
+          "luogo": "F-SORGENTA",
+          "dalle": "08:40",
+          "alle": "12:30"
+        },
+        {
+          "corsa": "C-B620-03"
+        },
+        {
+          "attivita": "RIENTRO",
+          "luogo": "F-SORGENTA",
+          "dalle": "13:00",
+          "alle": "13:10",
+          "verso": "L-RIMESSA-BETA",
+          "km_vuoti": 3.0
+        }
+      ]
+    }
+  ]
+}

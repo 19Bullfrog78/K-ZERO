@@ -148,7 +148,8 @@ std::string in_testo(const Resoconto& r, const Visibilita& visibilita, const acc
          ", " + quanti_opz(c.corse, "corsa", "corse", "non lette") + ", " + quanti_opz(c.mezzi, "mezzo", "mezzi", "non letti") +
          ", " + quanti_opz(c.persone, "persona", "persone", "non lette") + ", " + quanti_opz(c.turni, "turno", "turni", "non letti") +
          "; " +
-         quanti(static_cast<std::size_t>(r.errori), "errore", "errori") + ", " +
+         quanti(static_cast<std::size_t>(r.errori), "errore", "errori") +
+         (r.errori_del_piano > 0 ? " (" + std::to_string(r.errori_del_piano) + " del piano degli orari)" : std::string()) + ", " +
          quanti(static_cast<std::size_t>(r.avvisi), "avviso", "avvisi") + ".\n";
     return t;
 }
@@ -186,6 +187,7 @@ std::string in_json(const DefinizioneComando& comando, const Resoconto& r, const
     for (const ProblemaPresentato& p : r.problemi) {
         Json x = Json::object();
         x["livello"] = nome_livello(p.livello);
+        x["natura"] = p.piano ? "piano" : "dati";
         x["codice"] = p.codice;
         x["messaggio"] = p.messaggio;
         if (!p.posizione.file.empty()) x["posizione"] = posizione_json(p.posizione);
@@ -210,6 +212,7 @@ std::string in_json(const DefinizioneComando& comando, const Resoconto& r, const
     riepilogo["persone"] = numero(c.persone);
     riepilogo["turni"] = numero(c.turni);
     riepilogo["errori"] = r.errori;
+    riepilogo["errori_del_piano"] = r.errori_del_piano;
     riepilogo["avvisi"] = r.avvisi;
     j["riepilogo"] = riepilogo;
     const Lettura::ValoriRiservati tot = totali_riservati(r.lettura, &cf);

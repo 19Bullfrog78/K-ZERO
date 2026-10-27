@@ -387,7 +387,7 @@ Json in_json(const DefinizioneComando& comando, const Resoconto& r, const Parame
     pacchetto["livello"] = p.manifest.level == kzero::Level::Full ? "completo" : "solo_numeri";
     pacchetto["periodo"] = {{"dal", kzero::text_from_day(p.manifest.period.from)}, {"al", kzero::text_from_day(p.manifest.period.to)}};
     j["pacchetto"] = pacchetto;
-    j["controllo"] = {{"errori", r.errori}, {"avvisi", r.avvisi}};
+    j["controllo"] = {{"errori", r.errori}, {"errori_del_piano", r.errori_del_piano}, {"avvisi", r.avvisi}};
     if (cf.cassaforte) {
         Json x = Json::object();
         x["utente"] = cf.utente;
@@ -696,7 +696,9 @@ std::string in_testo(const Json& j) {
         feste += (feste.empty() ? "" : ", ") + f.at("nome").get<std::string>() + " (" + f.at("calendario").get<std::string>() +
                  (f.at("da_confermare").get<bool>() ? ", da confermare" : "") + ")";
     t += "Festivita': " + (feste.empty() ? std::string("nessuna") : feste) + ".\n";
-    t += "Controllo del pacchetto: " + quanti(j.at("controllo").at("errori").get<long long>(), "errore", "errori") + ", " +
+    const long long del_piano = j.at("controllo").at("errori_del_piano").get<long long>();
+    t += "Controllo del pacchetto: " + quanti(j.at("controllo").at("errori").get<long long>(), "errore", "errori") +
+         (del_piano > 0 ? " (" + std::to_string(del_piano) + " del piano degli orari, che non bloccano)" : std::string()) + ", " +
          quanti(j.at("controllo").at("avvisi").get<long long>(), "avviso", "avvisi") + " (dettagli con kzero controlla).\n";
     t += std::string("Dati personali: ") + (j.at("dati_personali_inclusi").get<bool>() ? "mostrati" : "sostituiti dal codice") +
          "; dati particolari: " + (j.at("dati_particolari_inclusi").get<bool>() ? "mostrati" : "riservati") + ".\n";
@@ -725,9 +727,11 @@ Risultato esegui_giornata(const DefinizioneComando& comando, const Parametri& pa
     accesso::LetturaPerComando lc = accesso::leggi_per_comando(cartella, parametri, comando.nome, nota);
     const Visibilita visibilita = lc.visibilita;
     const Resoconto r = controlla_lettura(std::move(lc.lettura), visibilita);
-    if (r.errori > 0)
+    // Solo gli errori nei dati bloccano: gli errori del piano (K-011, le regole sugli orari) no, perche' la giornata serve
+    // proprio a correggerli (DECISIONI.md).
+    if (r.errori_nei_dati() > 0)
         throw ErroreKZero(Errore::PacchettoConErrori,
-                          "Il pacchetto ha " + quanti(r.errori, "errore", "errori") +
+                          "Il pacchetto ha " + quanti(r.errori_nei_dati(), "errore", "errori") +
                               " nei dati: la giornata non si mostra, perche' sarebbe falsata. Correggere prima gli errori: "
                               "kzero controlla " + cartella + (lc.utente.empty() ? "" : " --utente " + lc.utente));
     const kzero::Package& p = r.lettura.pacchetto;

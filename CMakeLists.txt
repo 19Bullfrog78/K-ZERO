@@ -226,8 +226,11 @@ add_custom_command(
 # Nessuna stampa, nessuna riga di comando, nessuna libreria esterna (lo controlla una prova).
 add_library(kzero_nucleo STATIC
   src/nucleo/controlli.cpp
+  src/nucleo/controlli_orari.cpp
   src/nucleo/controlli_turni.cpp
   src/nucleo/dimostrazione.cpp
+  src/nucleo/orari.cpp
+  src/nucleo/orari_regole.cpp
   src/nucleo/pacchetto.cpp
   src/nucleo/ricerca.cpp
   src/nucleo/tempo.cpp
