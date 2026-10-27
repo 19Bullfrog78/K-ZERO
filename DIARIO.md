@@ -309,8 +309,12 @@
   trattato come certo 30; come assente 18; finestra prima del periodo contata come zero (nessuna verifica parziale) 15;
   valore della persona ignorato 1; rientro con il diretto a zero tra luoghi diversi 1; limite rigido su un'assegnazione del
   singolo giorno dato come errore 1. Tutti scoperti. Con i sanitizer 796 prove su 796, 30 minuti con 3 prove insieme
-  (le tre del "non verificato" sui 375 pacchetti ora sono le piu' lunghe). Tempi della prova di scala: in "Bug e limiti
-  noti".
+  (le tre del "non verificato" sui 375 pacchetti ora sono le piu' lunghe). Fuzzing in locale sul codice finale, i 32
+  bersagli 60 secondi ciascuno, 4 alla volta (ogni file deformato ora passa anche dal resoconto degli orari, quindi i
+  casi al minuto sono meno di prima): 19.754 file del pacchetto, 7.313 righe di comando, 1.100.884 date e orari, 33.025
+  cassaforti e 29.262 contenuti, 271.992 registri e 192.037 elenchi di voci, 166.562 password. Nessun guasto. Prove: 798
+  su 798 sul programma finale (prima del K-011 701); quelle cambiate e il perche' sono elencate nella proposta. Tempi
+  della prova di scala: in "Bug e limiti noti".
 
 ## Bug e limiti noti
 - I pesi del calcolo (ObjectiveWeights) hanno ancora valori provvisori nel codice, non usati: andranno nei dati con il
