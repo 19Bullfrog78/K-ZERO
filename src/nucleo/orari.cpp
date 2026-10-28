@@ -559,6 +559,7 @@ private:
                 }
             c.regimes.push_back(std::move(rd));
         }
+        like_extension(c);
         applicability_overrides(c);
         for (RegimeData& rd : c.regimes)
             for (int w = 0; w < kWorlds; ++w)
@@ -571,6 +572,57 @@ private:
                         n[static_cast<std::size_t>(d) + 1] = n[static_cast<std::size_t>(d)] + (yes ? 1 : 0);
                     }
                 }
+    }
+
+    // Un regime che prende le condizioni sulla corsa da un altro (come_regime, es. il D.Lgs. 234 dal Reg. 561) quando l'altro
+    // vale per tutta la settimana (estensione, nota INL 61/2021): nei giorni della settimana senza le corse che lo fanno
+    // valere, il regime vale da confermare (di base: che segua l'estensione non e' scritto, K-011 aggiunta 1) o con
+    // certezza se i dati lo dicono (estensione_come_regime "vale"), per tutte le sue famiglie. Le corse che lo fanno
+    // scattare sono quelle che fanno valere l'altro regime, con le condizioni sulla persona di questo.
+    void like_extension(PersonCtx& c) const {
+        for (RegimeData& rd : c.regimes) {
+            const Regime& r = *rd.regime;
+            const Regime& tc = *rd.trip_conditions;
+            if (&tc == &r || !tc.week_extension) continue;
+            const Certainty follow = r.like_extension_to_confirm ? Certainty::ToConfirm : Certainty::Certain;
+            std::vector<RuleFamily> families;
+            for (const WorkRule& w : r.rules)
+                if (std::find(families.begin(), families.end(), w.family) == families.end()) families.push_back(w.family);
+            std::sort(families.begin(), families.end());
+            for (Day m = monday_of(c.d0); m <= c.d1; m += 7) {
+                Certainty best = Certainty::No;
+                Day trigger = 0;
+                for (Day d = std::max(m, c.d0); d <= std::min(m + 6, c.d1); ++d) {
+                    const Certainty lv = rd.trigger_level[static_cast<std::size_t>(d - c.d0)];
+                    if (lv > best) {
+                        best = lv;
+                        trigger = d;
+                    }
+                }
+                if (best == Certainty::No) continue;
+                const Certainty level = min_c(best, follow);
+                for (Day d = std::max(m, c.d0); d <= std::min(m + 6, c.d1); ++d) {
+                    const auto di = static_cast<std::size_t>(d - c.d0);
+                    bool raised = false;
+                    for (Certainty& v : rd.fam[di])
+                        if (level > v) {
+                            v = level;
+                            raised = true;
+                        }
+                    if (!raised) continue;
+                    ApplyReason why;
+                    why.what = ApplyReason::What::Week;
+                    why.level = level;
+                    why.week_from = m;
+                    why.week_to = m + 6;
+                    why.trigger_day = trigger;
+                    why.families = families;
+                    why.like = &tc;
+                    why.follow = follow;
+                    rd.why[di].push_back(std::move(why));
+                }
+            }
+        }
     }
 
     void applicability_overrides(PersonCtx& c) const {
@@ -717,7 +769,7 @@ private:
                            (v.vehicle != nullptr) == (w.vehicle != nullptr) && v.route_level == w.route_level &&
                            v.employment_level == w.employment_level && v.agreement_level == w.agreement_level;
                 return v.trip == w.trip && v.shift == w.shift && v.other == w.other && v.week_from == w.week_from &&
-                       v.families == w.families && v.effect == w.effect;
+                       v.families == w.families && v.effect == w.effect && v.like == w.like && v.follow == w.follow;
             };
             auto it = std::find_if(out.begin(), out.end(), same);
             if (it == out.end()) {
@@ -847,6 +899,8 @@ private:
                             out.push_back("insieme_ad_altro_regime");
                         if (why.what == ApplyReason::What::RegimeToConfirm) out.push_back("regime_da_confermare");
                         if (why.what == ApplyReason::What::NoTrips) out.push_back("giornata_senza_corse");
+                        if (why.what == ApplyReason::What::Week && why.like && why.follow == Certainty::ToConfirm)
+                            out.push_back("estensione_come_regime");
                         if (why.level != Certainty::ToConfirm) return;
                         if (why.employment_level == Certainty::ToConfirm) out.push_back("rapporto");
                         if (why.agreement_level == Certainty::ToConfirm) out.push_back("contratto_collettivo");

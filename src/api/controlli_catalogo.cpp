@@ -951,6 +951,8 @@ const Motivo kMotivi[] = {
     {"contratto_collettivo", Classe::Personale, "va confermato se la legge vale per il contratto collettivo della persona"},
     {"dati_incerti", Classe::Comune, "i dati non bastano a dirlo con certezza"},
     {"eccezione_soste_capolinea", Classe::Comune, "puo' valere l'eccezione delle soste ai capolinea (da confermare)"},
+    {"estensione_come_regime", Classe::Comune,
+     "va confermato se la legge vale per tutta la settimana, come il regime da cui prende le condizioni sulla corsa"},
     {"giornate_prima_del_pacchetto", Classe::Comune, "non si sa quando sono state fatte le giornate prima del pacchetto"},
     {"insieme_ad_altro_regime", Classe::Comune, "vale insieme a un altro regime e va confermato quale prevale"},
     {"lettura_prudente", Classe::Comune, "viola solo la lettura prudente della regola (da confermare)"},

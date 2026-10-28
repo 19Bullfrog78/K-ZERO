@@ -500,6 +500,17 @@
             ]
           }
         },
+        "come_regime": {
+          "description": "Settimana: il regime da cui viene l'estensione (come_regime, K-011 aggiunta 1), null se l'estensione e' del regime stesso.",
+          "anyOf": [
+            {
+              "$ref": "#/definitions/codice"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
         "regime": {
           "anyOf": [
             {

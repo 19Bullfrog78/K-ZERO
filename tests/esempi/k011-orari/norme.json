@@ -345,9 +345,10 @@
             "documento": "D.Lgs. 19 novembre 2007, n. 234",
             "riferimenti": "normattiva.it, urn:nir:stato:decreto.legislativo:2007-11-19;234"
           },
-          "nota": "Vale dove vale il Reg. 561/2006 (art. 2), ai dipendenti e agli autonomi.",
+          "nota": "Vale dove vale il Reg. 561/2006 (art. 2), ai dipendenti e agli autonomi. Nelle settimane in cui il 561 vale per estensione (nota INL 61/2021), nei giorni senza le corse che lo fanno valere il D.Lgs. 234 vale da confermare: la legge non dice se segue l'estensione.",
           "si_applica": {
             "come_regime": "R-561",
+            "estensione_come_regime": "da_confermare",
             "ruoli": { "certi": ["autista", "secondo_autista"], "da_confermare": ["assistente"] },
             "rapporti": {
               "certi": [

@@ -256,8 +256,14 @@ private:
                     ff += (ff.empty() ? "" : ", ") + std::string(nome_famiglia(x));
                 }
                 j["famiglie"] = std::move(f);
-                t = livello + " da lunedi' " + data(w.week_from) + " a domenica " + data(w.week_to) + " per " + ff +
-                    " (estensione alla settimana, per una corsa del " + data(w.trigger_day) + ")";
+                // K-011 aggiunta 1: l'estensione dell'altro regime (come_regime), seguita con certezza o da confermare.
+                j["come_regime"] = w.like ? Json(w.like->code) : Json(nullptr);
+                t = livello + " da lunedi' " + data(w.week_from) + " a domenica " + data(w.week_to) + " per " + ff;
+                if (w.like)
+                    t += " (estensione alla settimana del regime " + w.like->code + ", per una corsa del " + data(w.trigger_day) +
+                         (w.follow == Certainty::ToConfirm ? ": va confermato se vale per tutta la settimana)" : ")");
+                else
+                    t += " (estensione alla settimana, per una corsa del " + data(w.trigger_day) + ")";
                 break;
             }
             case W::OverriddenBy: {

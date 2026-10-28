@@ -660,7 +660,7 @@ kzero_prova(ore_cartella_inesistente USCITA 1 FORMATO testo ERRORE K-ERR-012
             ARGOMENTI ore ${CMAKE_CURRENT_BINARY_DIR}/cartella-che-non-esiste --data 2026-10-22)
 # Gli errori del piano (le regole sugli orari) non bloccano kzero ore ne' kzero giornata: servono proprio a correggerli.
 kzero_prova(ore_errori_del_piano_non_bloccano USCITA 0 FORMATO testo
-            CONTIENE "Controllo del pacchetto: 15 errori (15 del piano degli orari, che non bloccano), 89 avvisi"
+            CONTIENE "Controllo del pacchetto: 15 errori (15 del piano degli orari, che non bloccano), 92 avvisi"
                      "Errore K-CTR-110: La persona P-L138 supera una regola sugli orari (dati personali: riservati), il 2026-11-05."
             ARGOMENTI ore ${ORE_K011} --dal 2026-11-05 --al 2026-11-06 --persona P-L138)
 kzero_prova(giornata_errori_del_piano_non_bloccano USCITA 0 FORMATO testo
@@ -670,7 +670,7 @@ kzero_prova(giornata_errori_del_piano_non_bloccano_json USCITA 0 FORMATO json SC
             ARGOMENTI giornata ${ORE_K011} --data 2026-11-05 --formato json)
 # Il pacchetto di prova degli orari (dati inventati): un problema per ogni tipo di regola e di controllo nuovo.
 kzero_prova(controlla_orari USCITA 1 FORMATO testo RESOCONTO
-            CONTIENE "15 errori (15 del piano degli orari), 89 avvisi."
+            CONTIENE "15 errori (15 del piano degli orari), 92 avvisi."
             PROBLEMI "K-CTR-102|corse.json|/corse/34" "K-CTR-104|norme.json|/norme/0/regimi/2/regole/2"
                      "K-CTR-105|aziende.json|/aziende/0/rientro" "K-CTR-108|turni.json|/turni/31"
                      "K-CTR-109|persone.json|/persone/19" "K-CTR-110|persone.json|/persone/13" "K-CTR-110|persone.json|/persone/20"
@@ -712,6 +712,22 @@ kzero_prova(ore_52_km_tutta_la_settimana USCITA 0 FORMATO testo
             CONTIENE "vale con certezza da lunedi' 2026-11-09 a domenica 2026-11-15 per guida, riposi (estensione alla settimana, per una corsa del 2026-11-11)"
                      "Errore K-CTR-113"
             ARGOMENTI ore ${ORE_K011} --dal 2026-11-09 --al 2026-11-15 --persona P-561-17)
+# K-011 aggiunta 1: il D.Lgs. 234 prende le condizioni sulla corsa dal Reg. 561 (come_regime). Nei giorni della settimana
+# in cui il 561 vale per estensione (la corsa di 52 km di mercoledi') e senza corse sopra i 50 km, il 234 vale da
+# confermare (che segua l'estensione non e' scritto: estensione_come_regime, di base "da_confermare"), con il motivo; una
+# sua violazione in quei giorni e' un avviso. Con "vale" nei dati diventa un errore.
+kzero_prova(ore_234_da_confermare_nei_giorni_estesi USCITA 0 FORMATO testo
+            CONTIENE "Regime R-234 per lavoro e notturno: non vale per nessuna corsa (per un dato particolare); vale da confermare da lunedi' 2026-11-09 a domenica 2026-11-15 per lavoro, notturno (estensione alla settimana del regime R-561, per una corsa del 2026-11-11: va confermato se vale per tutta la settimana)."
+            ARGOMENTI ore ${ORE_K011} --data 2026-11-09 --persona P-561-17 --includi-dati-personali)
+kzero_prova(ore_234_violazione_nei_giorni_estesi_avviso USCITA 0 FORMATO testo
+            CONTIENE "Avviso K-CTR-111: La persona P-561-17 (Mezzo Diciassette) potrebbe superare la regola R-234 234-PAUSE (D.Lgs. 19 novembre 2007, n. 234, art. 5): pause della giornata (in parti di almeno 15 minuti) 0 minuti, ma con 11 ore e 30 minuti di lavoro ne servono 45 minuti, il 2026-11-12. E' un avviso perche' va confermato se la legge vale per tutta la settimana, come il regime da cui prende le condizioni sulla corsa."
+            NON_CONTIENE "Errore K-CTR-110: La persona P-561-17 (Mezzo Diciassette) supera la regola R-234"
+            ARGOMENTI ore ${ORE_K011} --data 2026-11-12 --persona P-561-17 --includi-dati-personali)
+kzero_prova(ore_234_estensione_che_vale_errore USCITA 0 FORMATO testo BASE ${ORE_K011}
+            MODIFICA IMPOSTA norme.json /norme/0/regimi/2/si_applica/estensione_come_regime "\"vale\""
+            CONTIENE "Errore K-CTR-110: La persona P-561-17 (Mezzo Diciassette) supera la regola R-234 234-PAUSE (D.Lgs. 19 novembre 2007, n. 234, art. 5): pause della giornata (in parti di almeno 15 minuti) 0 minuti, ma con 11 ore e 30 minuti di lavoro ne servono 45 minuti, il 2026-11-12."
+                     "vale con certezza da lunedi' 2026-11-09 a domenica 2026-11-15 per lavoro, notturno (estensione alla settimana del regime R-561, per una corsa del 2026-11-11)."
+            ARGOMENTI ore @PACCHETTO@ --data 2026-11-12 --persona P-561-17 --includi-dati-personali)
 # K-011 aggiunta 1: il limite dei 50 km (Reg. 561/2006 art. 3 a, "fino a 50 km"): una linea di esattamente 50 km con il
 # mezzo da 17 posti e' esclusa, una di 50,1 km no.
 kzero_prova(ore_50_km_esatti_esclusi USCITA 0 FORMATO testo

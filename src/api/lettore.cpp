@@ -685,6 +685,7 @@ Regime regime(const JsonDati& o, const std::string& p, const Conversione& c) {
         if (const auto m = a.find("percorso"); m != a.end())
             r.route = RouteCondition{c.decimale(*m, "fino_a_km"), c.decimale(*m, "oltre_km"), c.vero(*m, "da_confermare")};
         r.like = c.ref_opz(a, "come_regime", p + "/si_applica");
+        if (const auto e = a.find("estensione_come_regime"); e != a.end()) r.like_extension_to_confirm = e->get<std::string>() != "vale";
     }
     const auto& escl = c.elenco(o, "esclusioni");
     for (std::size_t k = 0; k < escl.size(); ++k) {

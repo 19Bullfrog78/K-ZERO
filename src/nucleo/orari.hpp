@@ -115,6 +115,10 @@ struct ApplyReason {
     Certainty agreement_level = Certainty::Certain;    // contratto collettivo della persona (dato personale)
     Day week_from = 0, week_to = 0;
     Day trigger_day = 0;
+    // Week: l'estensione e' quella del regime da cui questo prende le condizioni sulla corsa (come_regime), che il regime
+    // segue con certezza o solo da confermare (estensione_come_regime; K-011 aggiunta 1).
+    const Regime* like = nullptr;
+    Certainty follow = Certainty::Certain;
     const Regime* other = nullptr;           // OverriddenBy
     std::vector<RuleFamily> families;        // OverriddenBy
     ExclusionEffect effect = ExclusionEffect::Exclude;

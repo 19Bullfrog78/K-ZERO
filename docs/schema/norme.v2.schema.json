@@ -1520,7 +1520,19 @@
             "come_regime": {
               "description": "Le condizioni sulla corsa e le esclusioni di un altro regime (es. il D.Lgs. 234/2007 vale dove vale il Reg. 561/2006).",
               "$ref": "#/definitions/codice"
+            },
+            "estensione_come_regime": {
+              "description": "Solo con come_regime, se l'altro regime vale per tutta la settimana (estensione): nei giorni della settimana senza le corse che lo fanno valere questo regime vale con certezza (\"vale\") oppure solo da confermare (\"da_confermare\", di base).",
+              "enum": [
+                "vale",
+                "da_confermare"
+              ]
             }
+          },
+          "dependencies": {
+            "estensione_come_regime": [
+              "come_regime"
+            ]
           }
         },
         "esclusioni": {

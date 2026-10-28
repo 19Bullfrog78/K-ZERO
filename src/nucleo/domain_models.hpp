@@ -521,6 +521,9 @@ struct Regime {
     std::optional<RouteCondition> route;
     std::vector<RegimeExclusion> exclusions;
     std::optional<Ref> like;   // come_regime: le condizioni sulla corsa e le esclusioni di un altro regime
+    // Con come_regime e l'estensione alla settimana dell'altro regime: nei giorni della settimana senza le corse che lo
+    // fanno valere, questo regime vale solo da confermare (di base: la legge non lo dice, K-011 aggiunta 1) o con certezza.
+    bool like_extension_to_confirm = true;
     // Servizi occasionali (gite, noleggi): per le interruzioni che valgono solo per loro.
     std::vector<ServiceKind> occasional;
     bool occasional_to_confirm = false;
