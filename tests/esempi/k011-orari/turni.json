@@ -1577,6 +1577,98 @@
           "km_vuoti": 3.0
         }
       ]
+    },
+    {
+      "codice": "T-50KM",
+      "nome": "Linea di 50 km esatti",
+      "azienda": "ALFA",
+      "ruolo": "autista",
+      "calendario": "CAL-T-50KM",
+      "mezzo": {
+        "modo": "preciso",
+        "codice": "V-17"
+      },
+      "inizio": "L-RIMESSA-ALFA",
+      "fine": "L-RIMESSA-ALFA",
+      "elementi": [
+        {
+          "attivita": "PRESA",
+          "luogo": "L-RIMESSA-ALFA",
+          "dalle": "03:30",
+          "alle": "03:45"
+        },
+        {
+          "attivita": "VUOTO",
+          "luogo": "L-RIMESSA-ALFA",
+          "dalle": "03:45",
+          "alle": "04:00",
+          "verso": "F-STAZIONE",
+          "km_vuoti": 1.0
+        },
+        {
+          "corsa": "C-50KM"
+        },
+        {
+          "attivita": "VUOTO",
+          "luogo": "F-MONTEBRINO",
+          "dalle": "05:10",
+          "alle": "05:40",
+          "verso": "L-RIMESSA-ALFA",
+          "km_vuoti": 1.0
+        },
+        {
+          "attivita": "FINE",
+          "luogo": "L-RIMESSA-ALFA",
+          "dalle": "05:40",
+          "alle": "05:50"
+        }
+      ]
+    },
+    {
+      "codice": "T-50KM1",
+      "nome": "Linea di 50,1 km",
+      "azienda": "ALFA",
+      "ruolo": "autista",
+      "calendario": "CAL-T-50KM1",
+      "mezzo": {
+        "modo": "preciso",
+        "codice": "V-17"
+      },
+      "inizio": "L-RIMESSA-ALFA",
+      "fine": "L-RIMESSA-ALFA",
+      "elementi": [
+        {
+          "attivita": "PRESA",
+          "luogo": "L-RIMESSA-ALFA",
+          "dalle": "03:30",
+          "alle": "03:45"
+        },
+        {
+          "attivita": "VUOTO",
+          "luogo": "L-RIMESSA-ALFA",
+          "dalle": "03:45",
+          "alle": "04:00",
+          "verso": "F-STAZIONE",
+          "km_vuoti": 1.0
+        },
+        {
+          "corsa": "C-50KM1"
+        },
+        {
+          "attivita": "VUOTO",
+          "luogo": "F-MONTEBRINO",
+          "dalle": "05:10",
+          "alle": "05:40",
+          "verso": "L-RIMESSA-ALFA",
+          "km_vuoti": 1.0
+        },
+        {
+          "attivita": "FINE",
+          "luogo": "L-RIMESSA-ALFA",
+          "dalle": "05:40",
+          "alle": "05:50"
+        }
+      ]
     }
   ]
 }

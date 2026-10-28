@@ -933,9 +933,10 @@ private:
 
     // --- Contratto della persona (livello 2) e scelte dell'azienda e della persona (livello 3) -----------------------------
 
-    // Lavoro di una giornata secondo il contratto: la misura dei regimi che valgono quel giorno (mondo certo: la piu' bassa
-    // tra quelli certi; mondo prudente: la piu' alta tra quelli certi e da confermare, e quella senza regime se nessuno e'
-    // certo). Senza regime: guida, altre mansioni e disponibilita' sul posto.
+    // Lavoro di una giornata secondo il contratto (e per le scelte sul lavoro): i conteggi possibili sono quelli dei regimi
+    // che valgono quel giorno, con certezza o da confermare, e, se nessun regime vale con certezza, anche quello senza regime
+    // (guida, altre mansioni e disponibilita' sul posto). Mondo certo: il piu' basso (un errore solo se tutti i conteggi
+    // possibili superano il limite, K-011 aggiunta 1); mondo prudente: il piu' alto.
     long long day_work(const PersonCtx& c, const PersonDay& pd, int world) const {
         const long long a = c.start_abs(pd), b = c.end_abs(pd);
         const auto ws = static_cast<std::size_t>(world);
@@ -947,18 +948,17 @@ private:
             if (lv == Certainty::No) continue;
             const Measure& m = c.measures[static_cast<std::size_t>(rd.measure)];
             const long long v = sum_in(c.segs, m.prefix[ws], m.weight[ws], a, b);
-            if (lv == Certainty::Certain) {
-                any_certain = true;
-                lo = lo ? std::min(*lo, v) : v;
-            }
+            any_certain = any_certain || lv == Certainty::Certain;
+            lo = lo ? std::min(*lo, v) : v;
             hi = hi ? std::max(*hi, v) : v;
         }
-        const Measure& base = c.measures.front();
-        const long long none = sum_in(c.segs, base.prefix[ws], base.weight[ws], a, b);
-        if (world == 0) return any_certain ? *lo : none;
-        long long v = hi.value_or(none);
-        if (!any_certain) v = std::max(v, none);
-        return v;
+        if (!any_certain) {
+            const Measure& base = c.measures.front();
+            const long long none = sum_in(c.segs, base.prefix[ws], base.weight[ws], a, b);
+            lo = lo ? std::min(*lo, none) : none;
+            hi = hi ? std::max(*hi, none) : none;
+        }
+        return world == 0 ? *lo : *hi;
     }
 
     struct Unit {

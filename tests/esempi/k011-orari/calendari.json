@@ -742,6 +742,36 @@
         "sabato",
         "domenica"
       ]
+    },
+    {
+      "codice": "CAL-T-50KM",
+      "nome": "Solo il 2026-11-16",
+      "dal": "2026-11-16",
+      "al": "2026-11-16",
+      "giorni": [
+        "lunedi",
+        "martedi",
+        "mercoledi",
+        "giovedi",
+        "venerdi",
+        "sabato",
+        "domenica"
+      ]
+    },
+    {
+      "codice": "CAL-T-50KM1",
+      "nome": "Solo il 2026-11-17",
+      "dal": "2026-11-17",
+      "al": "2026-11-17",
+      "giorni": [
+        "lunedi",
+        "martedi",
+        "mercoledi",
+        "giovedi",
+        "venerdi",
+        "sabato",
+        "domenica"
+      ]
     }
   ]
 }

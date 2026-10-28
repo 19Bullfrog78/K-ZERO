@@ -205,6 +205,18 @@
       "turno": "T-RIENTRO-BETA",
       "persona": "P-RIENTRO-BETA",
       "calendario": "CAL-T-RIENTRO-BETA"
+    },
+    {
+      "codice": "SF-T-50KM",
+      "turno": "T-50KM",
+      "persona": "P-50KM",
+      "calendario": "CAL-T-50KM"
+    },
+    {
+      "codice": "SF-T-50KM1",
+      "turno": "T-50KM1",
+      "persona": "P-50KM1",
+      "calendario": "CAL-T-50KM1"
     }
   ]
 }

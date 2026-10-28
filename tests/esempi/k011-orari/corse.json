@@ -2022,6 +2022,48 @@
           }
         }
       ]
+    },
+    {
+      "codice": "C-50KM",
+      "nome": "Linea di 50 km esatti",
+      "servizi": [
+        "S-LIN-B610"
+      ],
+      "calendario": "CAL-T-50KM",
+      "passaggi": [
+        {
+          "luogo": "F-STAZIONE",
+          "orario": "04:00"
+        },
+        {
+          "luogo": "F-MONTEBRINO",
+          "orario": "05:10",
+          "km": {
+            "pieni": 50.0
+          }
+        }
+      ]
+    },
+    {
+      "codice": "C-50KM1",
+      "nome": "Linea di 50,1 km",
+      "servizi": [
+        "S-LIN-B610"
+      ],
+      "calendario": "CAL-T-50KM1",
+      "passaggi": [
+        {
+          "luogo": "F-STAZIONE",
+          "orario": "04:00"
+        },
+        {
+          "luogo": "F-MONTEBRINO",
+          "orario": "05:10",
+          "km": {
+            "pieni": 50.1
+          }
+        }
+      ]
     }
   ]
 }

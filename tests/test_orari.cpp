@@ -837,3 +837,159 @@ TEST(Orari, stessi_dati_stessi_problemi) {
         EXPECT_EQ(x[i].where.pointer, y[i].where.pointer);
     }
 }
+
+// --- K-011 aggiunta 1: conteggi possibili, prove ai limiti ---------------------------------------------------------------
+
+namespace {
+DatedHours massime_al_giorno(double ore) {
+    DatedHours h;
+    h.max = HoursLimits{ore, std::nullopt, std::nullopt};
+    h.src = dove("persone.json", "/persone/0/ore/0");
+    return h;
+}
+Regime secondo_regime(std::vector<WorkRule> regole) {
+    Regime r;
+    r.code = "R-PROVA-2";
+    r.name = "Secondo regime di prova";
+    r.source.document = "prova";
+    r.rules = std::move(regole);
+    r.src = dove("norme.json", "/norme/0/regimi/1");
+    return r;
+}
+}  // namespace
+
+// Due regimi che valgono con certezza nello stesso giorno e contano il lavoro in modo diverso (es. la L. 138 con la
+// disponibilita' e il D.Lgs. 234 senza): per le ore massime del contratto, nella lettura certa il conteggio piu' basso
+// (errore solo se tutti i conteggi superano il limite), nella prudente il piu' alto.
+TEST(Orari, contratto_con_due_regimi_certi_il_conteggio_piu_basso) {
+    const auto prova = [](double massime) {
+        Prova p({conteggio(kGAD)});
+        per_codice(p.p.norms, "N-IT").regimes.push_back(secondo_regime({conteggio({TimeCategory::Driving, TimeCategory::OtherWork})}));
+        per_codice(p.p.persons, "P-A").hours = {massime_al_giorno(massime)};
+        p.giornata("2026-10-05", {el("G", "07:00", "08:00"), el("D", "08:00", "09:00"), el("G", "09:00", "10:00")});   // 3 ore e 2 ore
+        return p;
+    };
+    const Prova a = prova(2.5);   // 2 ore e 30: solo il conteggio con la disponibilita' (3 ore) supera
+    EXPECT_TRUE(a.problemi(Check::ContractHoursExceeded).empty()) << elenco(a.problemi(Check::ContractHoursExceeded));
+    const auto v = a.problemi(Check::ContractHoursToConfirm);
+    ASSERT_EQ(v.size(), 1u) << elenco(v);
+    EXPECT_EQ(misurato(v[0]), 180);
+    const Prova b = prova(1.5);   // 1 ora e 30: tutti e due i conteggi superano
+    const auto e = b.problemi(Check::ContractHoursExceeded);
+    ASSERT_EQ(e.size(), 1u) << elenco(e);
+    EXPECT_EQ(misurato(e[0]), 120);   // il piu' basso
+}
+
+// Nessun regime certo, un regime da confermare che conta meno del lavoro "senza regime": il conteggio certo e' il piu' basso
+// tra quelli possibili (anche quello del regime da confermare), quindi nessun errore, ma un avviso con il motivo. Caso
+// dell'arbitro sul demo: P-A con T-DIS (L. 138, Reg. 561 e D.Lgs. 234 da confermare), K-CTR-120 e non K-CTR-119.
+TEST(Orari, contratto_regime_da_confermare_nessun_errore_non_certo) {
+    const auto prova = [](double massime) {
+        Prova p({conteggio({TimeCategory::Driving})});
+        p.regime().employments = Applies<EmploymentKind>{true, {EmploymentKind::FullTime}, {EmploymentKind::Owner}};
+        per_codice(p.p.persons, "P-C").hours = {massime_al_giorno(massime)};   // P-C e' titolare: il regime e' da confermare
+        p.giornata("2026-10-05", {el("G", "07:00", "08:00"), el("D", "08:00", "09:00"), el("G", "09:00", "10:00")}, true, "P-C");
+        return p;
+    };
+    const Prova a = prova(2.5);   // regime 2 ore, senza regime 3 ore
+    EXPECT_TRUE(a.problemi(Check::ContractHoursExceeded).empty()) << elenco(a.problemi(Check::ContractHoursExceeded));
+    const auto v = a.problemi(Check::ContractHoursToConfirm);
+    ASSERT_EQ(v.size(), 1u) << elenco(v);
+    EXPECT_EQ(misurato(v[0]), 180);
+    EXPECT_TRUE(con_motivo(v[0], "rapporto")) << elenco(v);
+    const Prova b = prova(1.5);   // tutti i conteggi superano: errore
+    const auto e = b.problemi(Check::ContractHoursExceeded);
+    ASSERT_EQ(e.size(), 1u) << elenco(e);
+    EXPECT_EQ(misurato(e[0]), 120);
+}
+
+// Lo stesso per il limite rigido di una scelta dell'azienda sul lavoro (K-CTR-121): errore solo se e' certo.
+TEST(Orari, scelta_limite_sul_lavoro_errore_solo_se_certo) {
+    const auto prova = [](int minuti) {
+        Prova p({conteggio({TimeCategory::Driving})});
+        p.regime().employments = Applies<EmploymentKind>{true, {EmploymentKind::FullTime}, {EmploymentKind::Owner}};
+        alfa(p.p).choices = {scelta(minuti, ChoiceStrength::Limit)};
+        p.giornata("2026-10-05", {el("G", "07:00", "08:00"), el("D", "08:00", "09:00"), el("G", "09:00", "10:00")}, true, "P-C");
+        return p;
+    };
+    const Prova a = prova(150);
+    EXPECT_TRUE(a.problemi(Check::ChoiceLimitViolated).empty()) << elenco(a.problemi(Check::ChoiceLimitViolated));
+    ASSERT_EQ(a.problemi(Check::ChoiceNotRespected).size(), 1u) << elenco(a.problemi(Check::ChoiceNotRespected));
+    EXPECT_TRUE(con_motivo(a.problemi(Check::ChoiceNotRespected)[0], "rapporto"));
+    const Prova b = prova(90);
+    ASSERT_EQ(b.problemi(Check::ChoiceLimitViolated).size(), 1u) << elenco(b.problemi(Check::ChoiceLimitViolated));
+    EXPECT_EQ(misurato(b.problemi(Check::ChoiceLimitViolated)[0]), 120);
+}
+
+// Soste non scritte al limite (aziende.json, impostazioni.soste_non_scritte): fino a 30 minuti la prima categoria
+// (disponibilita'), 31 minuti quella "oltre" (interruzione).
+TEST(Orari, soste_non_scritte_di_30_e_di_31_minuti) {
+    const auto prova = [](const std::string& ripresa) {
+        Prova p({conteggio(kGAD)});
+        alfa(p.p).unwritten = UnwrittenStops{TimeCategory::Availability, 30, TimeCategory::Break, {}};
+        p.giornata("2026-10-05", {el("G", "07:00", "08:00"), el("G", ripresa, "10:00")});
+        const HoursReport r = p.resoconto("2026-10-05", "2026-10-05");
+        return r.persons.at(0).days.at(0).minutes;
+    };
+    const auto a = prova("08:30");
+    EXPECT_EQ(a[static_cast<std::size_t>(TimeCategory::Availability)], 30);
+    EXPECT_EQ(a[static_cast<std::size_t>(TimeCategory::Break)], 0);
+    const auto b = prova("08:31");
+    EXPECT_EQ(b[static_cast<std::size_t>(TimeCategory::Availability)], 0);
+    EXPECT_EQ(b[static_cast<std::size_t>(TimeCategory::Break)], 31);
+}
+
+// Due riposi settimanali ridotti di fila (Reg. 561/2006 art. 8 c. 6: in due settimane consecutive almeno un riposo regolare),
+// con i riposi tutti dentro la loro settimana: un riposo a cavallo di due settimane si potrebbe contare nell'altra (art. 8
+// c. 9) e il caso sparirebbe. Esempio dell'arbitro.
+TEST(Orari, due_riposi_settimanali_ridotti_di_fila) {
+    WorkRule w = settimanale_561();
+    w.certain.two_weeks_regular = 1;
+    w.certain.within_24h_periods = 6;
+    const auto prova = [&](bool seconda_ridotta) {
+        Prova p({w});
+        const std::vector<Elemento> pieno = {el("G", "08:00", "18:00")};
+        const auto con_regolare = [&](const std::string& lunedi) {   // da venerdi' 18:00 a domenica 15:00: 45 ore
+            p.giornate(lunedi, 5, pieno);
+            p.giornata(text_from_day(giorno(lunedi) + 6), {el("G", "15:00", "20:00")});
+        };
+        const auto con_ridotto = [&](const std::string& lunedi) {    // da sabato 06:00 a domenica 12:00: 30 ore
+            p.giornate(lunedi, 5, pieno);
+            p.giornata(text_from_day(giorno(lunedi) + 5), {el("G", "00:00", "06:00")});
+            p.giornata(text_from_day(giorno(lunedi) + 6), {el("G", "12:00", "20:00")});
+        };
+        con_regolare("2026-09-28");
+        con_ridotto("2026-10-05");
+        if (seconda_ridotta) con_ridotto("2026-10-12");
+        else con_regolare("2026-10-12");
+        con_regolare("2026-10-19");
+        con_regolare("2026-10-26");
+        return p.problemi(Check::LawWeeklyRestViolated);
+    };
+    const auto v = prova(true);
+    EXPECT_EQ(variante(v, 1), 1) << elenco(v);
+    EXPECT_EQ(v.size(), 1u) << elenco(v);
+    const auto r = prova(false);
+    EXPECT_TRUE(r.empty()) << elenco(r);
+}
+
+// Persona in prestito (K-011 aggiunta 1, punto 4): P-A di Alfa fa un turno di Beta. Valgono le scelte sugli orari
+// (scelte_orari) della sua azienda (Alfa), le soste non scritte e la chiave del rientro dell'azienda del turno (Beta).
+// E' il comportamento di oggi, scritto in docs/formato-dati.md e DECISIONI.md: Mauro decidera' se cambiarlo (modo consorzio).
+TEST(Orari, persona_in_prestito_scelte_della_sua_azienda) {
+    Prova p({conteggio(kGAD)});
+    alfa(p.p).choices = {scelta(480, ChoiceStrength::Limit)};
+    for (CompanySettings& s : p.p.company_settings) {
+        if (s.company.code != "BETA") continue;
+        s.choices = {scelta(300, ChoiceStrength::Limit)};
+        s.unwritten = UnwrittenStops{TimeCategory::Availability, std::nullopt, TimeCategory::Break, {}};
+        s.activities = alfa(p.p).activities;
+    }
+    p.giornata("2026-10-05", {el("G", "07:00", "11:00"), el("G", "11:30", "15:50")});   // 8 ore e 20 di guida, 30 minuti di sosta
+    p.p.shifts.back().company.code = "BETA";
+    const auto limite = p.problemi(Check::ChoiceLimitViolated);
+    ASSERT_EQ(limite.size(), 1u) << elenco(limite);   // il limite di Alfa (8 ore), non quello di Beta (5 ore)
+    EXPECT_EQ(parametro(limite[0], "limite")->number, 480);
+    // La sosta non scritta di 30 minuti segue Beta (disponibilita'), non Alfa (interruzione): 8 ore e 50 di lavoro.
+    EXPECT_EQ(misurato(limite[0]), 530);
+}

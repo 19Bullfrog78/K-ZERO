@@ -1021,6 +1021,88 @@
         "PEDANA",
         "LINEA-B610"
       ]
+    },
+    {
+      "codice": "P-50KM",
+      "azienda": "ALFA",
+      "ruoli": [
+        "autista"
+      ],
+      "nome": "Cinquanta Esatti",
+      "presa_servizio": "L-RIMESSA-ALFA",
+      "rapporto": {
+        "tipo": "dipendente_tempo_pieno"
+      },
+      "abilitazioni": [
+        {
+          "tipo": "B",
+          "scadenza": "2031-05-10"
+        },
+        {
+          "tipo": "D",
+          "scadenza": "2028-03-02",
+          "riferimento": "Patente n. VF0000001 (inventata)"
+        },
+        {
+          "tipo": "CQC-P",
+          "scadenza": "2028-03-02"
+        },
+        {
+          "tipo": "KB"
+        }
+      ],
+      "autorizzazioni": [
+        {
+          "committente": "CVA",
+          "riferimento": "Cartellino n. 12 (inventato)",
+          "scadenza": "2027-08-31"
+        }
+      ],
+      "competenze": [
+        "PEDANA",
+        "LINEA-B610"
+      ]
+    },
+    {
+      "codice": "P-50KM1",
+      "azienda": "ALFA",
+      "ruoli": [
+        "autista"
+      ],
+      "nome": "Cinquanta Virgola Uno",
+      "presa_servizio": "L-RIMESSA-ALFA",
+      "rapporto": {
+        "tipo": "dipendente_tempo_pieno"
+      },
+      "abilitazioni": [
+        {
+          "tipo": "B",
+          "scadenza": "2031-05-10"
+        },
+        {
+          "tipo": "D",
+          "scadenza": "2028-03-02",
+          "riferimento": "Patente n. VF0000001 (inventata)"
+        },
+        {
+          "tipo": "CQC-P",
+          "scadenza": "2028-03-02"
+        },
+        {
+          "tipo": "KB"
+        }
+      ],
+      "autorizzazioni": [
+        {
+          "committente": "CVA",
+          "riferimento": "Cartellino n. 12 (inventato)",
+          "scadenza": "2027-08-31"
+        }
+      ],
+      "competenze": [
+        "PEDANA",
+        "LINEA-B610"
+      ]
     }
   ]
 }

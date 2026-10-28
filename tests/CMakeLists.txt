@@ -712,9 +712,34 @@ kzero_prova(ore_52_km_tutta_la_settimana USCITA 0 FORMATO testo
             CONTIENE "vale con certezza da lunedi' 2026-11-09 a domenica 2026-11-15 per guida, riposi (estensione alla settimana, per una corsa del 2026-11-11)"
                      "Errore K-CTR-113"
             ARGOMENTI ore ${ORE_K011} --dal 2026-11-09 --al 2026-11-15 --persona P-561-17)
+# K-011 aggiunta 1: il limite dei 50 km (Reg. 561/2006 art. 3 a, "fino a 50 km"): una linea di esattamente 50 km con il
+# mezzo da 17 posti e' esclusa, una di 50,1 km no.
+kzero_prova(ore_50_km_esatti_esclusi USCITA 0 FORMATO testo
+            CONTIENE "Corse con il mezzo V-17 (18 persone): C-50KM (50 km)." "Non valgono: R-561."
+            NON_CONTIENE "Regime R-561"
+            ARGOMENTI ore ${ORE_K011} --data 2026-11-16 --persona P-50KM)
+kzero_prova(ore_50_virgola_1_km_561 USCITA 0 FORMATO testo
+            CONTIENE "Corse con il mezzo V-17 (18 persone): C-50KM1 (50,1 km)."
+                     "Regime R-561 per guida e riposi: vale con certezza per la corsa C-50KM1."
+            ARGOMENTI ore ${ORE_K011} --data 2026-11-17 --persona P-50KM1)
 kzero_prova(ore_senza_km USCITA 0 FORMATO testo
             CONTIENE "Corse con il mezzo V-17 (18 persone): C-SENZA-KM (km non noti)" "per i km del percorso"
             ARGOMENTI ore ${ORE_K011} --data 2026-11-19 --persona P-SENZA-KM)
+# K-011 aggiunta 1 (caso dell'arbitro): ore massime del contratto contate con certezza solo quando sono certe. P-A con al
+# massimo 2,1 ore al giorno; mercoledi' 14 ottobre fa solo T-DIS (C-DIS-1): L. 138, Reg. 561 e D.Lgs. 234 valgono tutti
+# da confermare, quindi i conteggi possibili sono 2 ore e 10 (senza regime e L. 138) e 2 ore e 5 (D.Lgs. 234): nella
+# lettura certa il piu' basso, sotto il limite. Un avviso con il motivo, non un errore. Con 2 ore tutti superano: errore.
+kzero_prova(ore_contratto_errore_solo_se_certo USCITA 0 FORMATO testo BASE ${KZERO_DEMO}
+            MODIFICA IMPOSTA persone.json /persone/0/ore/0/massime/giorno 2.1
+            CONTIENE "Avviso K-CTR-120: La persona P-A (Rossi Mario) potrebbe superare le ore massime del suo contratto: lavoro contato nella giornata 2 ore e 10 minuti, massimo 2 ore e 6 minuti"
+                     "va confermato se la legge vale per il tipo di servizio della corsa"
+                     "Lavoro: R-L138 lavoro effettivo 2 ore e 10 minuti; R-234 orario di lavoro 2 ore e 5 minuti; per il contratto 2 ore e 5 minuti"
+            NON_CONTIENE "K-CTR-119"
+            ARGOMENTI ore @PACCHETTO@ --data 2026-10-14 --persona P-A --includi-dati-personali --includi-dati-particolari)
+kzero_prova(ore_contratto_errore_se_tutti_i_conteggi_superano USCITA 0 FORMATO testo BASE ${KZERO_DEMO}
+            MODIFICA IMPOSTA persone.json /persone/0/ore/0/massime/giorno 2
+            CONTIENE "Errore K-CTR-119: La persona P-A (Rossi Mario) supera le ore massime del suo contratto: lavoro contato nella giornata 2 ore e 5 minuti, massimo 2 ore"
+            ARGOMENTI ore @PACCHETTO@ --data 2026-10-14 --persona P-A --includi-dati-personali --includi-dati-particolari)
 # Il titolare oltre le 8 ore della L. 138: la legge vale da confermare per il suo rapporto, quindi avvisi, mai errori.
 kzero_prova(ore_titolare USCITA 0 FORMATO testo CONTIENE "Avviso K-CTR-112" "Avviso K-CTR-114" "rapporto titolare"
             NON_CONTIENE "Errore K-CTR"
