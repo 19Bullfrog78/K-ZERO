@@ -660,17 +660,17 @@ kzero_prova(ore_cartella_inesistente USCITA 1 FORMATO testo ERRORE K-ERR-012
             ARGOMENTI ore ${CMAKE_CURRENT_BINARY_DIR}/cartella-che-non-esiste --data 2026-10-22)
 # Gli errori del piano (le regole sugli orari) non bloccano kzero ore ne' kzero giornata: servono proprio a correggerli.
 kzero_prova(ore_errori_del_piano_non_bloccano USCITA 0 FORMATO testo
-            CONTIENE "Controllo del pacchetto: 15 errori (15 del piano degli orari, che non bloccano), 92 avvisi"
+            CONTIENE "Controllo del pacchetto: 11 errori (11 del piano degli orari, che non bloccano), 96 avvisi"
                      "Errore K-CTR-110: La persona P-L138 supera una regola sugli orari (dati personali: riservati), il 2026-11-05."
             ARGOMENTI ore ${ORE_K011} --dal 2026-11-05 --al 2026-11-06 --persona P-L138)
 kzero_prova(giornata_errori_del_piano_non_bloccano USCITA 0 FORMATO testo
-            CONTIENE "15 errori (15 del piano degli orari, che non bloccano)" "T-L138-GIO"
+            CONTIENE "11 errori (11 del piano degli orari, che non bloccano)" "T-L138-GIO"
             ARGOMENTI giornata ${ORE_K011} --data 2026-11-05)
-kzero_prova(giornata_errori_del_piano_non_bloccano_json USCITA 0 FORMATO json SCHEMA giornata CONTIENE "\"errori_del_piano\": 15"
+kzero_prova(giornata_errori_del_piano_non_bloccano_json USCITA 0 FORMATO json SCHEMA giornata CONTIENE "\"errori_del_piano\": 11"
             ARGOMENTI giornata ${ORE_K011} --data 2026-11-05 --formato json)
 # Il pacchetto di prova degli orari (dati inventati): un problema per ogni tipo di regola e di controllo nuovo.
 kzero_prova(controlla_orari USCITA 1 FORMATO testo RESOCONTO
-            CONTIENE "15 errori (15 del piano degli orari), 92 avvisi."
+            CONTIENE "11 errori (11 del piano degli orari), 96 avvisi."
             PROBLEMI "K-CTR-102|corse.json|/corse/34" "K-CTR-104|norme.json|/norme/0/regimi/2/regole/2"
                      "K-CTR-105|aziende.json|/aziende/0/rientro" "K-CTR-108|turni.json|/turni/31"
                      "K-CTR-109|persone.json|/persone/19" "K-CTR-110|persone.json|/persone/13" "K-CTR-110|persone.json|/persone/20"
@@ -681,7 +681,7 @@ kzero_prova(controlla_orari USCITA 1 FORMATO testo RESOCONTO
             NON_CONTIENE ${DATI_PERSONALI_ORE} "Linea Lunga" "Esempi Pausa"
             ARGOMENTI controlla ${ORE_K011})
 kzero_prova(controlla_orari_json USCITA 1 FORMATO json SCHEMA controlla RESOCONTO
-            CONTIENE "\"errori_del_piano\": 15" "\"natura\": \"piano\"" "\"natura\": \"dati\""
+            CONTIENE "\"errori_del_piano\": 11" "\"natura\": \"piano\"" "\"natura\": \"dati\""
             ARGOMENTI controlla ${ORE_K011} --formato json)
 kzero_prova(controlla_orari_dati_personali USCITA 1 FORMATO testo RESOCONTO
             CONTIENE "La persona P-L138 (Linea Lunga) supera la regola R-L138 L138-GIORNO (L. 14 febbraio 1958, n. 138, artt. 2 e 3): lavoro effettivo della giornata 11 ore e 35 minuti, massimo 10 ore, il 2026-11-05."
@@ -708,10 +708,25 @@ kzero_prova(ore_52_km_mezzo_da_9_posti USCITA 0 FORMATO testo
             CONTIENE "Corse con il mezzo V-9 (10 persone): C-52KM (52 km), C-52KM-R (52 km)."
                      "Regime R-561 per guida e riposi: vale con certezza per tutte le corse."
             ARGOMENTI ore ${ORE_K011} --data 2026-11-25 --persona P-561-9)
+# K-011 aggiunta 1: la guida delle linee fino a 50 km e' altre mansioni per le regole di guida del 561 (art. 6 c. 5): gli
+# errori di guida di mercoledi' e giovedi' (prima "Errore K-CTR-113") sono avvisi da confermare; il riposo settimanale resta.
 kzero_prova(ore_52_km_tutta_la_settimana USCITA 0 FORMATO testo
             CONTIENE "vale con certezza da lunedi' 2026-11-09 a domenica 2026-11-15 per guida, riposi (estensione alla settimana, per una corsa del 2026-11-11)"
-                     "Errore K-CTR-113"
+                     "Errore K-CTR-117" "Avviso K-CTR-114"
+            NON_CONTIENE "Errore K-CTR-113"
             ARGOMENTI ore ${ORE_K011} --dal 2026-11-09 --al 2026-11-15 --persona P-561-17)
+# Mercoledi' 11: per le regole di guida del 561 contano solo le corse di 52 km e il trasferimento che le precede (2 ore e
+# 35), non le linee fino a 50 km; con la lettura prudente tutta la guida (10 ore e 15): avvisi con il motivo. Giovedi' 12,
+# solo linee fino a 50 km: 0 minuti nella lettura certa, 11 ore e 10 in quella prudente.
+kzero_prova(ore_guida_delle_corse_escluse_altre_mansioni USCITA 0 FORMATO testo
+            CONTIENE "Regime R-561 per guida e riposi: vale con certezza per le corse C-52KM, C-52KM-R; non vale per le corse C-ORA-07, C-ORA-08, C-ORA-09, C-ORA-10, C-ORA-11, C-ORA-12, C-ORA-13, C-ORA-14, C-ORA-15 (per un dato particolare); per le sue regole di guida conta 2 ore e 35 minuti di guida (la guida delle corse escluse conta come altre mansioni; con la lettura prudente 10 ore e 15 minuti)."
+                     "per le sue regole di guida conta 0 minuti di guida (la guida delle corse escluse conta come altre mansioni; con la lettura prudente 11 ore e 10 minuti)."
+                     "Avviso K-CTR-114: La persona P-561-17 (Mezzo Diciassette) potrebbe superare la regola R-561 561-GUIDA-GIORNO (Reg. (CE) n. 561/2006 (testo consolidato al 31/12/2024), art. 6 c. 1): guida tra due riposi giornalieri 11 ore e 10 minuti, oltre il massimo con l'estensione di 10 ore, il 2026-11-12. E' un avviso perche' conta come guida anche la guida delle corse che il regime esclude o forse esclude"
+            NON_CONTIENE "Errore K-CTR-113"
+            ARGOMENTI ore ${ORE_K011} --dal 2026-11-11 --al 2026-11-12 --persona P-561-17 --includi-dati-personali)
+kzero_prova(ore_guida_delle_corse_escluse_altre_mansioni_json USCITA 0 FORMATO json SCHEMA ore
+            CONTIENE "\"guida_per_le_regole_minuti\": {" "\"corse_escluse_come\": \"altre_mansioni\"" "\"lettura_certa\": 155"
+            ARGOMENTI ore ${ORE_K011} --data 2026-11-11 --persona P-561-17 --formato json)
 # K-011 aggiunta 1: il D.Lgs. 234 prende le condizioni sulla corsa dal Reg. 561 (come_regime). Nei giorni della settimana
 # in cui il 561 vale per estensione (la corsa di 52 km di mercoledi') e senza corse sopra i 50 km, il 234 vale da
 # confermare (che segua l'estensione non e' scritto: estensione_come_regime, di base "da_confermare"), con il motivo; una

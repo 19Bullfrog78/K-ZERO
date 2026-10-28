@@ -1576,6 +1576,35 @@
             }
           }
         },
+        "guida_delle_corse_escluse": {
+          "description": "Come contano, per le regole di guida e di interruzione del regime, i minuti di guida delle corse che il regime esclude o forse esclude (es. Reg. 561/2006 art. 6 c. 5: altre mansioni). Nella lettura certa 'conta_come', nella prudente 'prudente' (di base uguale); le corse da confermare nella lettura prudente sono sempre guida. Per il conteggio del lavoro restano lavoro. Senza questo campo la guida e' guida per tutte le regole.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "conta_come",
+            "fonte"
+          ],
+          "properties": {
+            "conta_come": {
+              "enum": [
+                "guida",
+                "altre_mansioni"
+              ]
+            },
+            "prudente": {
+              "enum": [
+                "guida",
+                "altre_mansioni"
+              ]
+            },
+            "fonte": {
+              "$ref": "#/definitions/fonte"
+            },
+            "nota": {
+              "$ref": "#/definitions/nota"
+            }
+          }
+        },
         "servizi_occasionali": {
           "description": "Tipi di servizio che sono servizi occasionali (gite, noleggi) per le regole che valgono solo per loro.",
           "type": "object",

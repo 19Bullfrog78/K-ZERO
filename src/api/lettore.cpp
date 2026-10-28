@@ -698,6 +698,15 @@ Regime regime(const JsonDati& o, const std::string& p, const Conversione& c) {
         e.src = c.src(indice(p + "/esclusioni", k));
         r.exclusions.push_back(e);
     }
+    if (const auto it = o.find("guida_delle_corse_escluse"); it != o.end()) {   // K-011 aggiunta 1
+        ExcludedDriving g;
+        g.certain = categoria_tempo(it->at("conta_come"));
+        g.prudent = it->contains("prudente") ? categoria_tempo(it->at("prudente")) : g.certain;
+        g.source = fonte_documento(it->at("fonte"));
+        g.note = c.testo(*it, "nota");
+        g.src = c.src(p + "/guida_delle_corse_escluse");
+        r.excluded_driving = g;
+    }
     if (const auto it = o.find("servizi_occasionali"); it != o.end()) {
         r.occasional = valori_di(kTipiServizio, *it, "tipi_servizio");
         r.occasional_to_confirm = c.vero(*it, "da_confermare");

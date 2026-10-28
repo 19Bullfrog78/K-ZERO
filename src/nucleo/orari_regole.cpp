@@ -46,7 +46,13 @@ struct Ctx {
         const Measure& m = measure();
         return sum_in(c.segs, m.prefix[ws()], m.weight[ws()], a, b);
     }
-    long long drive(long long a, long long b) const { return sum_in(c.segs, c.drive_prefix[ws()], c.drive_weight[ws()], a, b); }
+    // Guida per le regole di guida e di interruzione del regime: con la guida delle corse escluse nei dati del regime (own_drive),
+    // i pesi del regime; altrimenti tutta la guida.
+    long long drive(long long a, long long b) const {
+        if (rd.own_drive) return sum_in(c.segs, rd.drive_prefix[ws()], rd.drive_weight[ws()], a, b);
+        return sum_in(c.segs, c.drive_prefix[ws()], c.drive_weight[ws()], a, b);
+    }
+    bool drives(std::size_t i) const { return rd.own_drive ? rd.drive_weight[ws()][i] != 0 : cat(i) == TimeCategory::Driving; }
     TimeCategory cat(std::size_t i) const { return c.segs[i].cat[ws()]; }
 
     Breach make(Check certain, Check prudent, int variant, Day day, long long from, long long to) const {
@@ -243,7 +249,11 @@ std::vector<Piece> pieces(const Ctx& x, const std::vector<TimeCategory>& interru
         p.b = s.b;
         p.seg = static_cast<int>(i);
         const TimeCategory k = x.cat(i);
-        p.kind = k == TimeCategory::Driving ? Piece::Kind::Drive : interr(k) || k == TimeCategory::Break ? Piece::Kind::Interruption : Piece::Kind::Other;
+        // La guida che per il regime e' altre mansioni (corse escluse) non azzera e non aumenta il conto: un pezzo "altro".
+        p.kind = x.drives(i)                                    ? Piece::Kind::Drive
+                 : k == TimeCategory::Driving                   ? Piece::Kind::Other
+                 : interr(k) || k == TimeCategory::Break        ? Piece::Kind::Interruption
+                                                                : Piece::Kind::Other;
         push(p);
         cursor = std::max(cursor, s.b);
     }

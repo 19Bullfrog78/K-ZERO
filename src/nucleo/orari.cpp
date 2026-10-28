@@ -295,8 +295,10 @@ private:
 
     void build_segments(PersonCtx& c) const {
         long long cursor = c.h0;
+        c.item_seg.assign(c.plan->days.size(), {});
         for (std::size_t di = 0; di < c.plan->days.size(); ++di) {
             const PersonDay& pd = c.plan->days[di];
+            c.item_seg[di].assign(pd.items.size(), -1);
             long long prev_end = -1;
             const WorkItem* prev = nullptr;
             for (std::size_t ii = 0; ii < pd.items.size(); ++ii) {
@@ -348,6 +350,7 @@ private:
                         s.assumed = true;
                     }
                 }
+                c.item_seg[di][ii] = static_cast<int>(c.segs.size());
                 c.segs.push_back(s);
                 cursor = b;
                 prev_end = b;
@@ -452,6 +455,7 @@ private:
             rd.why.assign(static_cast<std::size_t>(c.days()), {});
             rd.day_level.assign(static_cast<std::size_t>(c.days()), Certainty::No);
             rd.trigger_level.assign(static_cast<std::size_t>(c.days()), Certainty::No);
+            rd.seg_level.assign(c.segs.size(), Certainty::Certain);
             const Certainty employment = level_of(r.employments, x.employment);
             const Certainty agreement = r.agreements.present ? (x.agreement_code.empty() ? Certainty::No : level_of(r.agreements, x.agreement_code))
                                                              : Certainty::Certain;
@@ -482,12 +486,16 @@ private:
                         reasons.push_back(std::move(why));
                     }
                 } else if (trips) {
-                    for (const WorkItem& it : pd.items) {
+                    const auto pdi = static_cast<std::size_t>(&pd - c.plan->days.data());
+                    for (std::size_t ii = 0; ii < pd.items.size(); ++ii) {
+                        const WorkItem& it = pd.items[ii];
                         if (!it.trip) continue;
                         ApplyReason why;
                         why.employment_level = employment;
                         why.agreement_level = agreement;
-                        const Certainty t = min_c(trip_level(r, *rd.trip_conditions, it, why), person_level);
+                        const Certainty tl = trip_level(r, *rd.trip_conditions, it, why);
+                        if (const int si = c.item_seg[pdi][ii]; si >= 0) rd.seg_level[static_cast<std::size_t>(si)] = tl;
+                        const Certainty t = min_c(tl, person_level);
                         why.level = t;
                         why.trigger_day = pd.day;
                         best = max_c(best, t);
@@ -741,6 +749,66 @@ private:
                 pre[k + 1] = pre[k] + dw[k] * (c.segs[k].b - c.segs[k].a);
             }
         }
+        // Guida delle corse escluse (K-011 aggiunta 1, es. Reg. 561/2006 art. 6 c. 5): per le regole di guida e di interruzione
+        // di un regime che lo dice nei dati, la guida delle corse che esclude conta, nella lettura certa, come la categoria dei
+        // dati (es. altre mansioni) e nella prudente come guida (le corse da confermare sempre). Le corse che il regime non
+        // esclude sono guida in ogni mondo.
+        for (RegimeData& rd : c.regimes) {
+            const std::optional<ExcludedDriving>& ed = rd.regime->excluded_driving;
+            if (!ed || !has_trip_conditions(*rd.trip_conditions)) continue;
+            rd.own_drive = true;
+            link_driving(c, rd);
+            for (int w = 0; w < kWorlds; ++w) {
+                const auto ws = static_cast<std::size_t>(w);
+                std::vector<int>& dw = rd.drive_weight[ws];
+                std::vector<long long>& pre = rd.drive_prefix[ws];
+                dw.assign(c.segs.size(), 0);
+                pre.assign(c.segs.size() + 1, 0);
+                for (std::size_t k = 0; k < c.segs.size(); ++k) {
+                    if (c.segs[k].cat[ws] == TimeCategory::Driving) {
+                        const Certainty lv = rd.seg_level[k];
+                        const TimeCategory as = lv == Certainty::Certain ? TimeCategory::Driving
+                                                : w == 0                 ? ed->certain
+                                                : lv == Certainty::ToConfirm ? TimeCategory::Driving
+                                                                             : ed->prudent;
+                        dw[k] = as == TimeCategory::Driving ? 1 : 0;
+                    }
+                    pre[k + 1] = pre[k] + dw[k] * (c.segs[k].b - c.segs[k].a);
+                }
+            }
+        }
+    }
+
+    // La guida senza passeggeri (es. un trasferimento a vuoto) e' legata alla corsa a cui serve, nello stesso turno: a
+    // quella dopo se il trasferimento arriva dove comincia; altrimenti a quella prima se parte da dove finisce. Se non si sa
+    // (nessuna delle due), da confermare: nella lettura certa conta come la guida esclusa, nella prudente come guida.
+    static void link_driving(const PersonCtx& c, RegimeData& rd) {
+        for (std::size_t di = 0; di < c.plan->days.size(); ++di) {
+            const PersonDay& pd = c.plan->days[di];
+            const auto level_of_item = [&](std::size_t j) {
+                const int si = c.item_seg[di][j];
+                return si >= 0 ? rd.seg_level[static_cast<std::size_t>(si)] : Certainty::ToConfirm;
+            };
+            for (std::size_t ii = 0; ii < pd.items.size(); ++ii) {
+                const WorkItem& it = pd.items[ii];
+                const int si = c.item_seg[di][ii];
+                if (it.trip || si < 0) continue;
+                const Seg& sg = c.segs[static_cast<std::size_t>(si)];
+                if (sg.cat[0] != TimeCategory::Driving && sg.cat[1] != TimeCategory::Driving) continue;
+                std::optional<std::size_t> next, prev;
+                for (std::size_t j = ii + 1; j < pd.items.size() && !next; ++j)
+                    if (pd.items[j].shift == it.shift && pd.items[j].trip) next = j;
+                for (std::size_t j = ii; j-- > 0 && !prev;)
+                    if (pd.items[j].shift == it.shift && pd.items[j].trip) prev = j;
+                const ShiftActivity& a = it.item->activity;
+                Certainty lv = Certainty::ToConfirm;
+                if (next && a.to_place && a.to_place->code == pd.items[*next].trip->passages[pd.items[*next].from].place.code)
+                    lv = level_of_item(*next);
+                else if (prev && a.place.code == pd.items[*prev].trip->passages[pd.items[*prev].to].place.code)
+                    lv = level_of_item(*prev);
+                rd.seg_level[static_cast<std::size_t>(si)] = lv;
+            }
+        }
     }
 
     // I motivi di un regime in un giorno per il resoconto: le corse con lo stesso esito e le stesse condizioni in un motivo
@@ -919,6 +987,16 @@ private:
                 }
             }
         }
+        // Guida delle corse escluse contata come guida solo nella lettura prudente (K-011 aggiunta 1).
+        if (b.regime && b.rule && (b.rule->type == RuleType::ContinuousDriving || b.rule->type == RuleType::MaxDriving))
+            for (const RegimeData& rd : c.regimes) {
+                if (rd.regime != b.regime || !rd.own_drive) continue;
+                for (std::size_t k = 0; k < c.segs.size(); ++k)
+                    if (c.segs[k].b > b.from && c.segs[k].a < b.to && rd.drive_weight[0][k] != rd.drive_weight[1][k]) {
+                        out.push_back("guida_esclusa");
+                        break;
+                    }
+            }
         for (const Seg& s : c.segs)
             if (s.assumed && s.b > b.from && s.a < b.to) {
                 out.push_back("categorie_presunte");
@@ -1377,6 +1455,10 @@ private:
                 ro.regime = rd.regime;
                 ro.family = rd.fam[di];
                 report_reasons(rd.why[di], ro.reasons, dh.trips);
+                if (rd.own_drive && ro.family[static_cast<std::size_t>(fam(RuleFamily::Driving))] != Certainty::No) {
+                    ro.drive_certain = sum_in(c.segs, rd.drive_prefix[0], rd.drive_weight[0], a, b);
+                    ro.drive_prudent = sum_in(c.segs, rd.drive_prefix[1], rd.drive_weight[1], a, b);
+                }
                 if (ro.applies() || !ro.reasons.empty()) dh.regimes.push_back(ro);
                 if (!ro.applies() || rd.measure < 0) continue;
                 const Measure& m = c.measures[static_cast<std::size_t>(rd.measure)];

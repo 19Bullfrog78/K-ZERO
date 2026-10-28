@@ -481,6 +481,18 @@ struct RegimeExclusion {
     Source src;
 };
 
+// Come contano, per le regole di guida e di interruzione del regime, i minuti di guida delle corse che il regime esclude
+// (o forse esclude: da confermare), es. Reg. 561/2006 art. 6 c. 5: "altre mansioni" (K-011 aggiunta 1). Nella lettura certa
+// la categoria "certain", nella prudente "prudent"; le corse da confermare nella prudente sono sempre guida. Per il
+// conteggio del lavoro restano lavoro come ogni altro minuto.
+struct ExcludedDriving {
+    TimeCategory certain = TimeCategory::OtherWork;
+    TimeCategory prudent = TimeCategory::Driving;
+    RuleSource source;
+    std::string note;
+    Source src;
+};
+
 enum class ExclusionEffect { Exclude, ToConfirm };   // l'altro regime non vale, oppure vale solo come "da confermare"
 
 struct RegimeOverride {
@@ -520,6 +532,7 @@ struct Regime {
     std::optional<VehicleCondition> vehicle;
     std::optional<RouteCondition> route;
     std::vector<RegimeExclusion> exclusions;
+    std::optional<ExcludedDriving> excluded_driving;   // guida delle corse escluse (es. art. 6 c. 5 del 561)
     std::optional<Ref> like;   // come_regime: le condizioni sulla corsa e le esclusioni di un altro regime
     // Con come_regime e l'estensione alla settimana dell'altro regime: nei giorni della settimana senza le corse che lo
     // fanno valere, questo regime vale solo da confermare (di base: la legge non lo dice, K-011 aggiunta 1) o con certezza.

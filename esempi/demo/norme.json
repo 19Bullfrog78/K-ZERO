@@ -245,6 +245,16 @@
               "nota": "Scolastico e disabili come servizi regolari specializzati: da confermare."
             }
           ],
+          "guida_delle_corse_escluse": {
+            "conta_come": "altre_mansioni",
+            "prudente": "guida",
+            "fonte": {
+              "documento": "Reg. (CE) n. 561/2006 (testo consolidato al 31/12/2024)",
+              "punto": "art. 6 c. 5",
+              "riferimenti": "guida TRACE II della Commissione (2023, non vincolante), par. 2.2.3.3 e 2.2.7.3; chiarimento n. 5 della Commissione ad ANAV (23/7/2007)"
+            },
+            "nota": "Nelle settimane in cui vale il 561 la guida delle corse escluse (es. linea fino a 50 km) si registra fra le altre mansioni: non conta nei limiti di guida e non e' mai interruzione ne' riposo. Da confermare (la nota INL 61/2021 parla di piena applicazione): nella lettura prudente conta come guida."
+          },
           "servizi_occasionali": { "tipi_servizio": ["altro"], "da_confermare": true },
           "estensione": {
             "ambito": "settimana",

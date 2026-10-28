@@ -301,6 +301,7 @@ private:
             j["tipo"] = kRiservato;
             j["famiglie"] = kRiservato;
             j["perche"] = kRiservato;
+            j["guida_per_le_regole_minuti"] = kRiservato;
             return j;
         }
         j["codice"] = ro.regime->code;
@@ -315,6 +316,13 @@ private:
             p.push_back(perche(w, codici));
         }
         j["perche"] = std::move(p);
+        // K-011 aggiunta 1: la guida che contano le regole di guida del regime (guida delle corse escluse nei suoi dati).
+        if (ro.drive_certain)
+            j["guida_per_le_regole_minuti"] = {{"lettura_certa", *ro.drive_certain},
+                                               {"lettura_prudente", *ro.drive_prudent},
+                                               {"corse_escluse_come", nome_categoria_tempo(ro.regime->excluded_driving->certain)}};
+        else
+            j["guida_per_le_regole_minuti"] = nullptr;
         return j;
     }
 
@@ -766,8 +774,20 @@ void giornata_testo(std::string& t, const Json& g) {
             std::string ff;
             for (std::size_t i = 0; i < fam.size(); ++i)
                 ff += (i == 0 ? "" : i + 1 == fam.size() ? " e " : ", ") + fam[i].first + (!uguali && fam[i].second ? " (da confermare)" : "");
+            std::string guida;
+            if (const Json& gr = r.at("guida_per_le_regole_minuti"); gr.is_object()) {
+                const long long certa = gr.at("lettura_certa").get<long long>(), prudente = gr.at("lettura_prudente").get<long long>();
+                const long long tutta = g.at("minuti").at("guida").get<long long>();
+                if (certa != tutta || prudente != tutta)
+                {
+                    std::string come = gr.at("corse_escluse_come").get<std::string>();
+                    std::replace(come.begin(), come.end(), '_', ' ');
+                    guida = "; per le sue regole di guida conta " + durata(certa) + " di guida (la guida delle corse escluse conta come " +
+                            come + (prudente != certa ? "; con la lettura prudente " + durata(prudente) : std::string()) + ")";
+                }
+            }
             t += "    Regime " + r.at("codice").get<std::string>() + " per " + ff + ": " + perche_testo(r.at("perche"), g.at("corse").size()) +
-                 ".\n";
+                 guida + ".\n";
         }
         if (!non_valgono.empty()) t += "    Non valgono: " + non_valgono + ".\n";
         if (riservati > 0)

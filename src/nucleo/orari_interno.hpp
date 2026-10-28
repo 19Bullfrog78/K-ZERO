@@ -80,6 +80,13 @@ struct RegimeData {
     const WorkRule* daily_rest = nullptr;           // riposo giornaliero "entro 24 ore dalla fine del riposo"
     const WorkRule* weekly_rest = nullptr;
     int measure = -1;                               // indice della misura del lavoro (PersonCtx::measures)
+    // Guida delle corse escluse (K-011 aggiunta 1, es. Reg. 561/2006 art. 6 c. 5). seg_level: per ogni pezzo, quanto vale il
+    // regime per la corsa del pezzo (per un pezzo di guida senza passeggeri, per la corsa a cui serve; Certain se non c'entra).
+    // Con own_drive le regole di guida e di interruzione del regime contano la guida con i loro pesi, mondo per mondo.
+    std::vector<Certainty> seg_level;
+    bool own_drive = false;
+    std::array<std::vector<int>, kWorlds> drive_weight;
+    std::array<std::vector<long long>, kWorlds> drive_prefix;
 };
 
 // Una misura del lavoro (conteggio di un regime, o quella senza regime) nei due mondi: peso di ogni pezzo in centesimi
@@ -102,6 +109,7 @@ struct PersonCtx {
     std::string base_municipality;     // comune della presa servizio
     std::vector<int> day_of_index;     // per giorno del periodo: indice della giornata, -1 se non c'e'
     std::vector<std::pair<std::size_t, std::size_t>> day_segs;   // per giornata: i suoi pezzi [primo, ultimo)
+    std::vector<std::vector<int>> item_seg;   // per giornata e per elemento: l'indice del suo pezzo, -1 se non c'e' 
     std::vector<RegimeData> regimes;
     std::vector<Measure> measures;     // la prima e' quella senza regime
     std::array<std::vector<int>, kWorlds> drive_weight;         // 1 per i pezzi di guida

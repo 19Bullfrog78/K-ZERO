@@ -546,7 +546,8 @@
             "nome",
             "tipo",
             "famiglie",
-            "perche"
+            "perche",
+            "guida_per_le_regole_minuti"
           ],
           "properties": {
             "codice": {
@@ -570,6 +571,37 @@
               "items": {
                 "$ref": "#/definitions/perche"
               }
+            },
+            "guida_per_le_regole_minuti": {
+              "description": "K-011 aggiunta 1: con la guida delle corse escluse nei dati del regime (es. Reg. 561/2006 art. 6 c. 5), la guida della giornata che contano le sue regole di guida e di interruzione, nelle due letture, e come conta la guida delle corse escluse nella lettura certa; null senza quel dato o se il regime non vale per la guida quel giorno.",
+              "anyOf": [
+                {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "lettura_certa",
+                    "lettura_prudente",
+                    "corse_escluse_come"
+                  ],
+                  "properties": {
+                    "lettura_certa": {
+                      "$ref": "#/definitions/minuti"
+                    },
+                    "lettura_prudente": {
+                      "$ref": "#/definitions/minuti"
+                    },
+                    "corse_escluse_come": {
+                      "enum": [
+                        "guida",
+                        "altre_mansioni"
+                      ]
+                    }
+                  }
+                },
+                {
+                  "type": "null"
+                }
+              ]
             }
           }
         },
@@ -582,7 +614,8 @@
             "nome",
             "tipo",
             "famiglie",
-            "perche"
+            "perche",
+            "guida_per_le_regole_minuti"
           ],
           "properties": {
             "codice": {
@@ -598,6 +631,9 @@
               "const": "riservato"
             },
             "perche": {
+              "const": "riservato"
+            },
+            "guida_per_le_regole_minuti": {
               "const": "riservato"
             }
           }

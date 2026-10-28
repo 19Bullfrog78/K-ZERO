@@ -143,6 +143,9 @@ struct RegimeOnDay {
     const Regime* regime = nullptr;
     std::array<Certainty, 5> family{};   // per famiglia (RuleFamily)
     std::vector<ApplyReason> reasons;
+    // Con la guida delle corse escluse nei dati del regime (K-011 aggiunta 1): la guida della giornata che contano le sue
+    // regole di guida, nelle letture certa e prudente (minuti); senza, nessun valore.
+    std::optional<long long> drive_certain, drive_prudent;
     bool applies() const {
         for (Certainty c : family)
             if (c != Certainty::No) return true;

@@ -965,6 +965,9 @@ const Motivo kMotivi[] = {
     {"regola_da_confermare", Classe::Comune, "la regola non ha una lettura certa (da confermare)"},
     {"ruolo", Classe::Comune, "va confermato se la legge vale per il ruolo nel turno"},
     {"giornata_senza_corse", Classe::Comune, "in una giornata senza corse non si sa quale legge vale"},
+    {"guida_esclusa", Classe::Comune,
+     "conta come guida anche la guida delle corse che il regime esclude o forse esclude, che nella lettura certa conta come "
+     "dicono i dati del regime (es. altre mansioni): va confermato"},
     {"servizi_occasionali", Classe::Particolare, "va confermato se la corsa e' un servizio occasionale"},
     {"straordinario_ricorrente", Classe::Comune, "va confermato cosa dice la legge dello straordinario in un turno ricorrente"},
     {"tipo_di_servizio", Classe::Particolare, "va confermato se la legge vale per il tipo di servizio della corsa"},

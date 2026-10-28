@@ -26,12 +26,16 @@ Source dove(const std::string& file, const std::string& puntatore) { return Sour
 struct Elemento {
     std::string tipo, luogo, dalle, alle;
     std::string corsa;
+    std::string verso;   // trasferimento: il luogo dove arriva
 };
 
 Elemento el(const std::string& tipo, const std::string& dalle, const std::string& alle, const std::string& luogo = "L-RIMESSA-ALFA") {
-    return {tipo, luogo, dalle, alle, ""};
+    return {tipo, luogo, dalle, alle, "", ""};
 }
-Elemento corsa(const std::string& codice) { return {"", "", "", "", codice}; }
+Elemento corsa(const std::string& codice) { return {"", "", "", "", codice, ""}; }
+Elemento trasferimento(const std::string& da, const std::string& dalle, const std::string& alle, const std::string& verso) {
+    return {"G", da, dalle, alle, "", verso};
+}
 
 WorkRule regola(RuleType tipo, RuleFamily famiglia, RulePeriod periodo = RulePeriod::Workday) {
     static int n = 0;
@@ -137,6 +141,7 @@ public:
                 it.activity.place = Ref{elementi[k].luogo, {}};
                 it.activity.start = ora(elementi[k].dalle);
                 it.activity.end = ora(elementi[k].alle);
+                if (!elementi[k].verso.empty()) it.activity.to_place = Ref{elementi[k].verso, {}};
             }
             it.src = dove("turni.json", pnt + "/elementi/" + std::to_string(k));
             s.items.push_back(it);
@@ -992,4 +997,94 @@ TEST(Orari, persona_in_prestito_scelte_della_sua_azienda) {
     EXPECT_EQ(parametro(limite[0], "limite")->number, 480);
     // La sosta non scritta di 30 minuti segue Beta (disponibilita'), non Alfa (interruzione): 8 ore e 50 di lavoro.
     EXPECT_EQ(misurato(limite[0]), 530);
+}
+
+// --- K-011 aggiunta 1: guida delle corse escluse (Reg. 561/2006 art. 6 c. 5) --------------------------------------------
+
+namespace {
+// Un regime come il 561: esclude le linee fino a 50 km, e la guida delle corse escluse conta come altre mansioni nella
+// lettura certa e come guida nella prudente. Le corse: linea di 60 km (non esclusa) e di 10 km (esclusa).
+Prova con_corse_escluse() {
+    Prova p({guida_continua_561()});
+    RegimeExclusion e;
+    e.kinds = {ServiceKind::Line};
+    e.route_up_to_km = 50.0;
+    p.regime().exclusions = {e};
+    ExcludedDriving g;
+    g.certain = TimeCategory::OtherWork;
+    g.prudent = TimeCategory::Driving;
+    g.source.document = "regola di prova";
+    p.regime().excluded_driving = g;
+    const auto tratta = [&](const std::string& codice, const std::string& da, const std::string& dalle, const std::string& a,
+                            const std::string& alle, double km) {
+        Trip t;
+        t.code = codice;
+        t.services = {Ref{"S-LIN-B610", {}}};
+        t.calendar = Ref{"CAL-SEMPRE", {}};
+        t.passages.resize(2);
+        t.passages[0].place = Ref{da, {}};
+        t.passages[0].time = ora(dalle);
+        t.passages[1].place = Ref{a, {}};
+        t.passages[1].time = ora(alle);
+        t.passages[1].loaded_km = km;
+        t.src = dove("corse.json", "/corse/" + std::to_string(p.p.trips.size()));
+        p.p.trips.push_back(t);
+    };
+    tratta("C-LUNGA-1", "F-LAGOBELLO", "06:00", "F-PRADELLO", "08:00", 60.0);    // 2 ore, non esclusa
+    tratta("C-CORTA", "F-PRADELLO", "08:00", "F-LAGOBELLO", "09:00", 10.0);      // 1 ora, esclusa
+    tratta("C-LUNGA-2", "F-LAGOBELLO", "09:00", "F-PRADELLO", "11:30", 60.0);    // 2 ore e 30, non esclusa
+    tratta("C-LUNGA-3", "F-LAGOBELLO", "09:00", "F-PRADELLO", "11:31", 60.0);    // 2 ore e 31, non esclusa
+    tratta("C-LUNGA-4", "F-LAGOBELLO", "06:00", "F-PRADELLO", "10:01", 60.0);    // 4 ore e 1 minuto, non esclusa
+    tratta("C-LUNGA-5", "F-LAGOBELLO", "09:30", "F-PRADELLO", "14:00", 60.0);    // 4 ore e 30, non esclusa
+    return p;
+}
+}  // namespace
+
+// Una corsa esclusa tra due tratti di guida non esclusa: nella lettura certa e' altre mansioni, quindi non aumenta la guida di
+// fila (2 ore + 2 ore e 30 = 4 ore e 30, al limite: nessun errore) e non la azzera (2 ore + 2 ore e 31 = un minuto oltre:
+// errore). Nella lettura prudente e' guida: un avviso con il motivo.
+TEST(Orari, corsa_esclusa_tra_due_tratti_di_guida) {
+    Prova a = con_corse_escluse();
+    a.giornata("2026-10-05", {corsa("C-LUNGA-1"), corsa("C-CORTA"), corsa("C-LUNGA-2")});
+    EXPECT_TRUE(a.problemi(Check::LawDrivingViolated).empty()) << elenco(a.problemi(Check::LawDrivingViolated));
+    const auto v = a.problemi(Check::LawDrivingToConfirm);
+    ASSERT_EQ(v.size(), 1u) << elenco(v);
+    EXPECT_EQ(misurato(v[0]), 330);
+    EXPECT_TRUE(con_motivo(v[0], "guida_esclusa")) << elenco(v);
+    Prova b = con_corse_escluse();
+    b.giornata("2026-10-05", {corsa("C-LUNGA-1"), corsa("C-CORTA"), corsa("C-LUNGA-3")});
+    const auto e = b.problemi(Check::LawDrivingViolated);
+    ASSERT_EQ(e.size(), 1u) << elenco(e);
+    EXPECT_EQ(misurato(e[0]), 271);
+}
+
+// La guida senza passeggeri e' legata alla corsa a cui serve: il trasferimento che arriva dove comincia una corsa non esclusa
+// e' guida (30 minuti + 4 ore e 1 minuto: errore); quello che parte da dove finisce una corsa esclusa e' altre mansioni come
+// la corsa; uno che non si sa a cosa serve, nella lettura certa altre mansioni e nella prudente guida.
+TEST(Orari, trasferimenti_legati_alla_corsa_a_cui_servono) {
+    Prova a = con_corse_escluse();
+    a.giornata("2026-10-05", {trasferimento("L-RIMESSA-ALFA", "05:30", "06:00", "F-LAGOBELLO"), corsa("C-LUNGA-4")});
+    const auto e = a.problemi(Check::LawDrivingViolated);
+    ASSERT_EQ(e.size(), 1u) << elenco(e);
+    EXPECT_EQ(misurato(e[0]), 271);
+    // Con la guida delle corse escluse altre mansioni anche nella lettura prudente: il trasferimento che parte da dove finisce
+    // la corsa esclusa e' legato a lei (altre mansioni), quindi solo le 4 ore e 30 della corsa dopo: nessun problema.
+    const auto solo_altre_mansioni = [] {
+        Prova p = con_corse_escluse();
+        p.regime().excluded_driving->prudent = TimeCategory::OtherWork;
+        return p;
+    };
+    Prova b = solo_altre_mansioni();
+    b.giornata("2026-10-05", {corsa("C-CORTA"), trasferimento("F-LAGOBELLO", "09:00", "09:30", "L-RIMESSA-ALFA"), corsa("C-LUNGA-5")});
+    EXPECT_TRUE(b.problemi(Check::LawDrivingViolated).empty()) << elenco(b.problemi(Check::LawDrivingViolated));
+    EXPECT_TRUE(b.problemi(Check::LawDrivingToConfirm).empty()) << elenco(b.problemi(Check::LawDrivingToConfirm));
+    // Un trasferimento che non va dove comincia la corsa dopo e non parte da dove finisce quella prima: non si sa a cosa serve,
+    // da confermare (nella lettura certa altre mansioni, nella prudente guida): un avviso.
+    Prova c = solo_altre_mansioni();
+    c.giornata("2026-10-05", {corsa("C-CORTA"), trasferimento("L-RIMESSA-ALFA", "09:00", "09:30", "L-RIMESSA-ALFA"), corsa("C-LUNGA-5")});
+    EXPECT_TRUE(c.problemi(Check::LawDrivingViolated).empty()) << elenco(c.problemi(Check::LawDrivingViolated));
+    const auto v = c.problemi(Check::LawDrivingToConfirm);
+    ASSERT_EQ(v.size(), 1u) << elenco(v);
+    EXPECT_EQ(misurato(v[0]), 300);
+    EXPECT_TRUE(con_motivo(v[0], "guida_esclusa")) << elenco(v);
 }
