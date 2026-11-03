@@ -1352,6 +1352,13 @@ TEST(Orari, forzatura_e_dichiarazione_che_non_servono) {
         g.forcing = giustificazione("/aziende/0/modo_corse/servizi/0/forzatura");
         alfa(b.p.p).trip_modes = modi({}, {g});
         EXPECT_EQ(varianti(b.p.problemi(Check::ModeForcedUseless)), std::vector<int>{1});   // sul servizio, vale ma non cambia
+        // Dove la legge e' solo da confermare (servizio solo per disabili) la forzatura non cambia niente: serve la dichiarazione.
+        Prova561 c;
+        c.lunga("C-DIS-F", {"S-DIS"}, 30.0);
+        ModeEntry h = per_servizio("S-DIS", TripModeKind::Out);
+        h.forcing = giustificazione("/aziende/0/modo_corse/servizi/0/forzatura");
+        alfa(c.p.p).trip_modes = modi({}, {h});
+        EXPECT_EQ(varianti(c.p.problemi(Check::ModeForcedUseless)), std::vector<int>{1});
     }
     {   // Dichiarazione sul servizio solo disabili (serve), sullo scolastico (gia' escluso: 1), su una corsa che non c'e' (2).
         Prova561 a;
