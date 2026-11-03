@@ -217,6 +217,24 @@
       "turno": "T-50KM1",
       "persona": "P-50KM1",
       "calendario": "CAL-T-50KM1"
+    },
+    {
+      "codice": "SF-T-DIS-LUNGA",
+      "turno": "T-DIS-LUNGA",
+      "persona": "P-DISABILI",
+      "calendario": "CAL-T-DIS-LUNGA"
+    },
+    {
+      "codice": "SF-T-DICH-LUNGA",
+      "turno": "T-DICH-LUNGA",
+      "persona": "P-DICHIARA",
+      "calendario": "CAL-T-DICH-LUNGA"
+    },
+    {
+      "codice": "SF-T-FORZATA",
+      "turno": "T-FORZATA",
+      "persona": "P-FORZATA",
+      "calendario": "CAL-T-FORZATA"
     }
   ]
 }

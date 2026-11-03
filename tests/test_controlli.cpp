@@ -819,5 +819,9 @@ TEST(Controlli, catalogo_coperto) {
     EXPECT_EQ(api::definizione_controllo(Check::LawWorkViolated).codice, "K-CTR-110");
     EXPECT_EQ(api::definizione_controllo(Check::ReturnNotJudged).codice, "K-CTR-125");
     EXPECT_EQ(api::definizione_controllo(Check::WorkRuleIncoherent).codice, "K-CTR-126");
-    EXPECT_EQ(api::catalogo_controlli().size(), 126u);
+    // K-011 aggiunta 1: modo delle corse (OUT o tachigrafo).
+    EXPECT_EQ(api::definizione_controllo(Check::ChosenRegimeLimit).codice, "K-CTR-127");
+    EXPECT_EQ(api::definizione_controllo(Check::ModeForced).codice, "K-CTR-129");
+    EXPECT_EQ(api::definizione_controllo(Check::ModeMixed).codice, "K-CTR-133");
+    EXPECT_EQ(api::catalogo_controlli().size(), 133u);
 }

@@ -1559,6 +1559,20 @@
                   ]
                 }
               },
+              "insieme_a": {
+                "description": "K-011 aggiunta 1: la voce vale per i suoi tipi solo se la corsa ha anche uno di questi tipi (es. i disabili sulla stessa corsa dello scolastico: chi sale in piu' non cambia il tipo di servizio).",
+                "type": "array",
+                "minItems": 1,
+                "uniqueItems": true,
+                "items": {
+                  "enum": [
+                    "linea",
+                    "scolastico",
+                    "disabili",
+                    "altro"
+                  ]
+                }
+              },
               "percorso_fino_a_km": {
                 "type": "number",
                 "minimum": 0,

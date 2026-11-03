@@ -7,6 +7,7 @@
 #include <string>
 
 #include "lettore.hpp"
+#include "orari.hpp"
 #include "pacchetto.hpp"
 #include "riservatezza.hpp"
 #include "schemi_dati.hpp"
@@ -35,6 +36,11 @@ public:
     // Valore di una classe nota: visibile, oppure sostituito dal codice (personale) o da "riservato".
     Json filtra(Classe c, Json valore, const std::string& codice) const;
 
+    // Il modo di una corsa per l'azienda del turno (K-011 aggiunta 1): out o tachigrafo, da dove viene la scelta, la
+    // forzatura o la dichiarazione; null senza scelta. Una scelta per tipo di servizio rivela il tipo (dato particolare); il
+    // motivo e chi l'ha scritta sono dati personali.
+    Json modo_corsa(const kzero::TripMode& m) const;
+
     // Una posizione nei file del pacchetto, filtrata come quelle dei problemi (riservatezza.hpp).
     PosizioneMostrata posizione(const kzero::Source& s) const { return mostra_posizione(s, lettura_, visibilita_); }
 
@@ -46,6 +52,9 @@ private:
 };
 
 // --- Etichette dei valori del modello, come nei file dei dati ----------------------------------------------------
+// Il modo di una corsa (Vista::modo_corsa) in italiano: "OUT, scelta per il servizio (regime R-561)", con la forzatura o la
+// dichiarazione (chi, quando, perche', gia' filtrati).
+std::string testo_modo_corsa(const Json& m);
 const char* nome_tipo_luogo(kzero::PlaceType t);
 const char* nome_categoria(kzero::ServiceType t);
 const char* nome_tipo_servizio(kzero::ServiceKind k);

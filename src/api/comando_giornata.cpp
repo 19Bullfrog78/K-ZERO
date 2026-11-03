@@ -14,6 +14,7 @@
 #include "errori.hpp"
 #include "esecutori.hpp"
 #include "turni.hpp"
+#include "orari.hpp"
 #include "vista.hpp"
 
 namespace kzero::api {
@@ -70,8 +71,8 @@ const char* modo_mezzo(kzero::VehicleSource s) {
 
 class Giornata {
 public:
-    Giornata(const kzero::Planner& piano, const Vista& vista)
-        : piano_(piano), idx_(piano.index()), vista_(vista) {}
+    Giornata(const kzero::Planner& piano, const Vista& vista, kzero::Day giorno)
+        : piano_(piano), idx_(piano.index()), vista_(vista), giorno_(giorno) {}
 
     // Dove e' scritta un'assegnazione, filtrata come le posizioni dei problemi (riservatezza.hpp): di base non entra mai
     // in un dato personale o particolare; null se non si puo' mostrare.
@@ -238,6 +239,8 @@ public:
                 for (const auto& g : sv->groups) non_noti = non_noti || g.counts == kzero::CountKind::Unknown;
         }
         j["servizi"] = servizi;
+        // K-011 aggiunta 1: il modo della corsa per l'azienda del turno (OUT o tachigrafo, forzatura, dichiarazione).
+        j["modo"] = vista_.modo_corsa(kzero::trip_mode(t, idx_.settings(s.company.code), idx_, giorno_));
         j["calendario"] = calendario(t.calendar.code);
         // Chi fornisce l'assistente a bordo: il turno, se lo dice; altrimenti il contratto, se a bordo c'e' l'assistente.
         bool a_bordo = it.item->trip.escort.has_value();
@@ -350,6 +353,7 @@ private:
     const kzero::Planner& piano_;
     const kzero::Index& idx_;
     const Vista& vista_;
+    kzero::Day giorno_;
 };
 
 // Dettaglio di una persona (assenze) da mostrare solo con i dati personali.
@@ -374,8 +378,8 @@ Json in_json(const DefinizioneComando& comando, const Resoconto& r, const Parame
     const kzero::Package& p = r.lettura.pacchetto;
     const kzero::Planner piano(p);
     const kzero::Index& idx = piano.index();
-    const Giornata g(piano, vista);
     const kzero::Day d = *par.data;
+    const Giornata g(piano, vista, d);
 
     Json j = documento(comando.schema);
     j["dati_inventati"] = p.manifest.invented;
@@ -569,6 +573,7 @@ void elemento_testo(std::string& t, const Json& e) {
     }
     const Json& cal = e.at("calendario");
     t += "                servizi " + servizi + "\n";
+    if (!e.at("modo").is_null()) t += "                modo " + testo_modo_corsa(e.at("modo")) + "\n";
     t += "                calendario " + calendario_testo(cal) + ", " + testo(cal.at("giorni_nel_periodo")) + " giorni nel periodo; " +
          km_testo(e.at("km_pieni"), e.at("km_vuoti"));
     if (!e.at("assistente").is_null()) t += "; assistente fornito da" + std::string(e.at("assistente") == "azienda" ? "ll'azienda" : "l committente");

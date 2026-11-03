@@ -533,6 +533,21 @@
         "testo": {
           "type": "string",
           "minLength": 1
+        },
+        "modo": {
+          "description": "Corse (K-011 aggiunta 1): forzatura dell'azienda (OUT), dichiarazione, oppure il tachigrafo per scelta; null altrimenti.",
+          "anyOf": [
+            {
+              "enum": [
+                "forzatura",
+                "dichiarazione",
+                "tachigrafo_per_scelta"
+              ]
+            },
+            {
+              "type": "null"
+            }
+          ]
         }
       }
     },
@@ -547,7 +562,8 @@
             "tipo",
             "famiglie",
             "perche",
-            "guida_per_le_regole_minuti"
+            "guida_per_le_regole_minuti",
+            "per_scelta"
           ],
           "properties": {
             "codice": {
@@ -602,6 +618,10 @@
                   "type": "null"
                 }
               ]
+            },
+            "per_scelta": {
+              "description": "K-011 aggiunta 1: il regime seguito per scelta dell'azienda (tachigrafo), non la legge.",
+              "type": "boolean"
             }
           }
         },
@@ -615,7 +635,8 @@
             "tipo",
             "famiglie",
             "perche",
-            "guida_per_le_regole_minuti"
+            "guida_per_le_regole_minuti",
+            "per_scelta"
           ],
           "properties": {
             "codice": {
@@ -635,6 +656,10 @@
             },
             "guida_per_le_regole_minuti": {
               "const": "riservato"
+            },
+            "per_scelta": {
+              "description": "K-011 aggiunta 1: il regime seguito per scelta dell'azienda (tachigrafo), non la legge.",
+              "type": "boolean"
             }
           }
         }
@@ -923,7 +948,8 @@
                   "mezzo",
                   "persone_trasportabili",
                   "percorso_km",
-                  "percorso_noto"
+                  "percorso_noto",
+                  "modo"
                 ],
                 "properties": {
                   "codice": {
@@ -991,6 +1017,9 @@
                   },
                   "percorso_noto": {
                     "type": "boolean"
+                  },
+                  "modo": {
+                    "$ref": "#/definitions/modo_corsa"
                   }
                 }
               }
@@ -2245,6 +2274,108 @@
           }
         }
       }
+    },
+    "modo_corsa": {
+      "description": "K-011 aggiunta 1: il modo della corsa per l'azienda del turno (out o tachigrafo), da dove viene la scelta (il tipo di servizio e' un dato particolare: 'riservato'), la forza del tachigrafo, la forzatura o la dichiarazione (motivo e chi sono dati personali); null senza una scelta.",
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "modo",
+            "da",
+            "regime",
+            "forza",
+            "forzatura",
+            "dichiarazione"
+          ],
+          "properties": {
+            "modo": {
+              "enum": [
+                "out",
+                "tachigrafo"
+              ]
+            },
+            "da": {
+              "enum": [
+                "corsa",
+                "servizio",
+                "tipo_di_servizio",
+                "impostazione",
+                "riservato"
+              ]
+            },
+            "regime": {
+              "type": "string",
+              "minLength": 1
+            },
+            "forza": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "preferenza",
+                    "limite"
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "forzatura": {
+              "$ref": "#/definitions/giustificazione_modo"
+            },
+            "dichiarazione": {
+              "$ref": "#/definitions/giustificazione_modo"
+            }
+          }
+        }
+      ]
+    },
+    "giustificazione_modo": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "motivo",
+            "chi",
+            "quando",
+            "fino_al"
+          ],
+          "properties": {
+            "motivo": {
+              "type": "string",
+              "minLength": 1
+            },
+            "chi": {
+              "type": "string",
+              "minLength": 1
+            },
+            "quando": {
+              "type": "string",
+              "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+            },
+            "fino_al": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        }
+      ]
     }
   }
 }

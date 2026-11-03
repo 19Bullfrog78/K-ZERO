@@ -29,6 +29,54 @@ Json Vista::filtra(Classe c, Json valore, const std::string& codice) const {
     return c == Classe::Personale ? Json(codice) : Json(kRiservato);
 }
 
+Json Vista::modo_corsa(const kzero::TripMode& m) const {
+    if (!m.any) return Json(nullptr);
+    using F = kzero::TripMode::From;
+    const Classe c = m.by_kinds || m.mixed_kinds ? Classe::Particolare : Classe::Comune;
+    Json j = Json::object();
+    // Il modo si vede (e' l'esito, come "vale" o "non vale" di un regime); da dove viene, se e' il tipo di servizio, no.
+    j["modo"] = m.mode == kzero::TripModeKind::Out ? "out" : "tachigrafo";
+    j["da"] = filtra(c, m.from == F::Trip ? "corsa" : m.from == F::Service ? "servizio" : m.from == F::Kind ? "tipo_di_servizio" : "impostazione", "");
+    j["regime"] = m.modes ? Json(m.modes->regime.code) : Json(nullptr);
+    j["forza"] = m.mode == kzero::TripModeKind::Tachograph ? Json(m.strength == kzero::ChoiceStrength::Limit ? "limite" : "preferenza") : Json(nullptr);
+    const auto giustificazione = [&](const kzero::ModeEntry* e, bool forzatura) -> Json {
+        if (!e) return Json(nullptr);
+        const kzero::ModeJustification& g = forzatura ? *e->forcing : *e->declaration;
+        Json x = Json::object();
+        x["motivo"] = filtra(Classe::Personale, g.reason, kRiservato);
+        x["chi"] = filtra(Classe::Personale, g.who, kRiservato);
+        x["quando"] = kzero::text_from_day(g.when);
+        x["fino_al"] = g.until ? Json(kzero::text_from_day(*g.until)) : Json(nullptr);
+        return x;
+    };
+    j["forzatura"] = giustificazione(m.forcing, true);
+    j["dichiarazione"] = giustificazione(m.declaration, false);
+    return j;
+}
+
+std::string testo_modo_corsa(const Json& m) {
+    const auto txt = [](const Json& v) { return v.is_string() ? v.get<std::string>() : v.dump(); };
+    const std::string da = txt(m.at("da"));
+    std::string x = m.at("modo") == "out" ? std::string("OUT") : std::string("tachigrafo");
+    if (m.at("forza").is_string()) x += " come " + m.at("forza").get<std::string>();
+    x += da == "corsa"              ? ", scelta per la corsa"
+         : da == "servizio"         ? ", scelta per il servizio"
+         : da == "tipo_di_servizio" ? ", scelta per il tipo di servizio"
+         : da == "impostazione"     ? ", per l'impostazione dell'azienda sulle scelte diverse"
+                                    : ", per un dato particolare";
+    const auto giustificazione = [&](const char* campo, const char* nome) {
+        const Json& g = m.at(campo);
+        if (g.is_null()) return;
+        // Il motivo e' un testo libero: tra virgolette, perche' puo' finire con il suo punto.
+        const std::string motivo = g.at("motivo") == kRiservato ? txt(g.at("motivo")) : "\"" + txt(g.at("motivo")) + "\"";
+        x += std::string(", ") + nome + " (motivo: " + motivo + "; scritta da " + txt(g.at("chi")) + " il " +
+             txt(g.at("quando")) + (g.at("fino_al").is_null() ? std::string() : "; vale fino al " + txt(g.at("fino_al"))) + ")";
+    };
+    giustificazione("forzatura", "forzatura dell'azienda");
+    giustificazione("dichiarazione", "dichiarazione dell'azienda");
+    return x + " (regime " + txt(m.at("regime")) + ")";
+}
+
 const char* nome_tipo_luogo(kzero::PlaceType t) {
     switch (t) {
         case kzero::PlaceType::Stop: return "fermata";

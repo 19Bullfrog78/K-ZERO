@@ -86,6 +86,24 @@ private:
 
 enum class Certainty { No, ToConfirm, Certain };
 
+// Il modo di una corsa per l'azienda del turno (K-011 aggiunta 1): out o tachigrafo, da dove viene la scelta (la corsa, i
+// servizi, i tipi di servizio, oppure l'impostazione dell'azienda per le scelte diverse), la forzatura o la dichiarazione
+// che valgono quel giorno.
+struct TripMode {
+    bool any = false;                       // c'e' una scelta
+    TripModeKind mode = TripModeKind::Out;
+    enum class From { Trip, Service, Kind, Mixed } from = From::Kind;
+    const TripModes* modes = nullptr;
+    const ModeEntry* entry = nullptr;       // la voce che decide (nullptr con Mixed)
+    ChoiceStrength strength = ChoiceStrength::Preference;
+    const ModeEntry* forcing = nullptr;     // voce con la forzatura che vale quel giorno
+    const ModeEntry* declaration = nullptr; // voce con la dichiarazione
+    bool mixed = false;                     // scelte diverse tra i servizi o i tipi, con il tachigrafo da una parte sola
+    bool mixed_kinds = false;               // ... tra i tipi di servizio (rivela i tipi della corsa: dato particolare)
+    bool by_kinds = false;                  // la scelta viene dai tipi di servizio (rivela il tipo: dato particolare)
+};
+TripMode trip_mode(const Trip& t, const CompanySettings* s, const Index& idx, Day d);
+
 // Perche' un regime vale (o vale solo da confermare, o non vale) in un giorno per la persona. Dati strutturati: l'API li
 // scrive seguendo le classi dei dati (il tipo di servizio e' un dato particolare, il rapporto e il contratto personali).
 struct ApplyReason {
@@ -119,6 +137,10 @@ struct ApplyReason {
     // segue con certezza o solo da confermare (estensione_come_regime; K-011 aggiunta 1).
     const Regime* like = nullptr;
     Certainty follow = Certainty::Certain;
+    // Trip: il modo della corsa per l'azienda (K-011 aggiunta 1): la scelta (out o tachigrafo), la forzatura, la dichiarazione,
+    // e se nel calcolo "per scelta" la corsa vale per il tachigrafo.
+    TripMode mode;
+    bool forced = false, declared = false, chosen = false;
     const Regime* other = nullptr;           // OverriddenBy
     std::vector<RuleFamily> families;        // OverriddenBy
     ExclusionEffect effect = ExclusionEffect::Exclude;
@@ -137,6 +159,7 @@ struct TripOnDay {
     int persons = 0;                         // persone trasportabili, compreso il conducente
     bool km_known = false;
     double km = 0.0;
+    TripMode mode;   // il modo della corsa per l'azienda del turno (K-011 aggiunta 1)
 };
 
 struct RegimeOnDay {
@@ -146,6 +169,7 @@ struct RegimeOnDay {
     // Con la guida delle corse escluse nei dati del regime (K-011 aggiunta 1): la guida della giornata che contano le sue
     // regole di guida, nelle letture certa e prudente (minuti); senza, nessun valore.
     std::optional<long long> drive_certain, drive_prudent;
+    bool chosen = false;   // il regime per scelta dell'azienda (tachigrafo), non la legge
     bool applies() const {
         for (Certainty c : family)
             if (c != Certainty::No) return true;
@@ -292,5 +316,7 @@ void judge_return(ReturnJudgment& r);
 
 // Lunedi' della settimana di un giorno.
 Day monday_of(Day d);
+
+
 
 }  // namespace kzero

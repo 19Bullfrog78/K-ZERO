@@ -2064,6 +2064,279 @@
           }
         }
       ]
+    },
+    {
+      "codice": "C-DIS-LUNGA-1",
+      "nome": "Disabili, giro 1",
+      "servizi": [
+        "S-DIS"
+      ],
+      "calendario": "CAL-T-DIS-LUNGA",
+      "passaggi": [
+        {
+          "luogo": "F-STAZIONE",
+          "orario": "07:50"
+        },
+        {
+          "luogo": "F-PRADELLO",
+          "orario": "08:35",
+          "km": {
+            "pieni": 10.0
+          }
+        }
+      ]
+    },
+    {
+      "codice": "C-DIS-LUNGA-2",
+      "nome": "Disabili, giro 2",
+      "servizi": [
+        "S-DIS"
+      ],
+      "calendario": "CAL-T-DIS-LUNGA",
+      "passaggi": [
+        {
+          "luogo": "F-PRADELLO",
+          "orario": "08:38"
+        },
+        {
+          "luogo": "F-STAZIONE",
+          "orario": "09:23",
+          "km": {
+            "pieni": 10.0
+          }
+        }
+      ]
+    },
+    {
+      "codice": "C-DIS-LUNGA-3",
+      "nome": "Disabili, giro 3",
+      "servizi": [
+        "S-DIS"
+      ],
+      "calendario": "CAL-T-DIS-LUNGA",
+      "passaggi": [
+        {
+          "luogo": "F-STAZIONE",
+          "orario": "09:26"
+        },
+        {
+          "luogo": "F-PRADELLO",
+          "orario": "10:11",
+          "km": {
+            "pieni": 10.0
+          }
+        }
+      ]
+    },
+    {
+      "codice": "C-DIS-LUNGA-4",
+      "nome": "Disabili, giro 4",
+      "servizi": [
+        "S-DIS"
+      ],
+      "calendario": "CAL-T-DIS-LUNGA",
+      "passaggi": [
+        {
+          "luogo": "F-PRADELLO",
+          "orario": "10:14"
+        },
+        {
+          "luogo": "F-STAZIONE",
+          "orario": "10:59",
+          "km": {
+            "pieni": 10.0
+          }
+        }
+      ]
+    },
+    {
+      "codice": "C-DIS-LUNGA-5",
+      "nome": "Disabili, giro 5",
+      "servizi": [
+        "S-DIS"
+      ],
+      "calendario": "CAL-T-DIS-LUNGA",
+      "passaggi": [
+        {
+          "luogo": "F-STAZIONE",
+          "orario": "11:02"
+        },
+        {
+          "luogo": "F-PRADELLO",
+          "orario": "11:47",
+          "km": {
+            "pieni": 10.0
+          }
+        }
+      ]
+    },
+    {
+      "codice": "C-DIS-LUNGA-6",
+      "nome": "Disabili, giro 6",
+      "servizi": [
+        "S-DIS"
+      ],
+      "calendario": "CAL-T-DIS-LUNGA",
+      "passaggi": [
+        {
+          "luogo": "F-PRADELLO",
+          "orario": "11:50"
+        },
+        {
+          "luogo": "F-STAZIONE",
+          "orario": "12:35",
+          "km": {
+            "pieni": 10.0
+          }
+        }
+      ]
+    },
+    {
+      "codice": "C-DICH-LUNGA-1",
+      "nome": "Disabili, giro 1",
+      "servizi": [
+        "S-DIS-GIO"
+      ],
+      "calendario": "CAL-T-DICH-LUNGA",
+      "passaggi": [
+        {
+          "luogo": "F-STAZIONE",
+          "orario": "07:50"
+        },
+        {
+          "luogo": "F-PRADELLO",
+          "orario": "08:35",
+          "km": {
+            "pieni": 10.0
+          }
+        }
+      ]
+    },
+    {
+      "codice": "C-DICH-LUNGA-2",
+      "nome": "Disabili, giro 2",
+      "servizi": [
+        "S-DIS-GIO"
+      ],
+      "calendario": "CAL-T-DICH-LUNGA",
+      "passaggi": [
+        {
+          "luogo": "F-PRADELLO",
+          "orario": "08:38"
+        },
+        {
+          "luogo": "F-STAZIONE",
+          "orario": "09:23",
+          "km": {
+            "pieni": 10.0
+          }
+        }
+      ]
+    },
+    {
+      "codice": "C-DICH-LUNGA-3",
+      "nome": "Disabili, giro 3",
+      "servizi": [
+        "S-DIS-GIO"
+      ],
+      "calendario": "CAL-T-DICH-LUNGA",
+      "passaggi": [
+        {
+          "luogo": "F-STAZIONE",
+          "orario": "09:26"
+        },
+        {
+          "luogo": "F-PRADELLO",
+          "orario": "10:11",
+          "km": {
+            "pieni": 10.0
+          }
+        }
+      ]
+    },
+    {
+      "codice": "C-DICH-LUNGA-4",
+      "nome": "Disabili, giro 4",
+      "servizi": [
+        "S-DIS-GIO"
+      ],
+      "calendario": "CAL-T-DICH-LUNGA",
+      "passaggi": [
+        {
+          "luogo": "F-PRADELLO",
+          "orario": "10:14"
+        },
+        {
+          "luogo": "F-STAZIONE",
+          "orario": "10:59",
+          "km": {
+            "pieni": 10.0
+          }
+        }
+      ]
+    },
+    {
+      "codice": "C-DICH-LUNGA-5",
+      "nome": "Disabili, giro 5",
+      "servizi": [
+        "S-DIS-GIO"
+      ],
+      "calendario": "CAL-T-DICH-LUNGA",
+      "passaggi": [
+        {
+          "luogo": "F-STAZIONE",
+          "orario": "11:02"
+        },
+        {
+          "luogo": "F-PRADELLO",
+          "orario": "11:47",
+          "km": {
+            "pieni": 10.0
+          }
+        }
+      ]
+    },
+    {
+      "codice": "C-DICH-LUNGA-6",
+      "nome": "Disabili, giro 6",
+      "servizi": [
+        "S-DIS-GIO"
+      ],
+      "calendario": "CAL-T-DICH-LUNGA",
+      "passaggi": [
+        {
+          "luogo": "F-PRADELLO",
+          "orario": "11:50"
+        },
+        {
+          "luogo": "F-STAZIONE",
+          "orario": "12:35",
+          "km": {
+            "pieni": 10.0
+          }
+        }
+      ]
+    },
+    {
+      "codice": "C-FORZATA",
+      "nome": "Linea lunga, OUT forzato dall'azienda",
+      "servizi": [
+        "S-LIN-B610"
+      ],
+      "calendario": "CAL-T-FORZATA",
+      "passaggi": [
+        {
+          "luogo": "F-STAZIONE",
+          "orario": "06:00"
+        },
+        {
+          "luogo": "F-MONTEBRINO",
+          "orario": "10:20",
+          "km": {
+            "pieni": 55.0
+          }
+        }
+      ]
     }
   ]
 }

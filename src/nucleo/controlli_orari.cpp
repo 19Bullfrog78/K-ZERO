@@ -239,7 +239,38 @@ private:
                 if (!found)
                     add(Check::UnknownReference, need.rule.src, {text_param("codice", need.rule.code), elements_param("elementi", Element::WorkRule)});
             }
+            if (s.trip_modes) trip_modes(s, *s.trip_modes, n);
         }
+    }
+
+    // Modo delle corse (K-011 aggiunta 1): i codici scritti, e una nota sempre visibile per ogni forzatura e ogni dichiarazione
+    // (chi, quando, perche': il motivo e chi sono dati personali).
+    void trip_modes(const CompanySettings& s, const TripModes& m, const Norms* n) {
+        // Senza norme (K-CTR-052) il regime non si controlla, come gli usi dei mezzi.
+        const bool regime_found = !n || std::any_of(n->regimes.begin(), n->regimes.end(), [&](const Regime& r) { return r.code == m.regime.code; });
+        if (!regime_found)
+            add(Check::UnknownReference, m.regime.src, {text_param("codice", m.regime.code), elements_param("elementi", Element::Regime)});
+        for (const ModeEntry& e : m.by_service)
+            if (e.service && !idx_.service(e.service->code))
+                add(Check::UnknownReference, e.service->src, {text_param("codice", e.service->code), elements_param("elementi", Element::Service)});
+        for (const ModeEntry& e : m.by_trip)
+            if (e.trip && !idx_.trip(e.trip->code))
+                add(Check::UnknownReference, e.trip->src, {text_param("codice", e.trip->code), elements_param("elementi", Element::Trip)});
+        for (const std::vector<ModeEntry>* v : {&m.by_service, &m.by_trip})
+            for (const ModeEntry& e : *v) {
+                const auto params = [&](const ModeJustification& j) {
+                    std::vector<Param> x = {ref_param("azienda", Element::Company, s.company.code),
+                                            e.trip ? ref_param("corsa", Element::Trip, e.trip->code)
+                                                   : ref_param("servizio", Element::Service, e.service ? e.service->code : Code()),
+                                            text_param("regime", m.regime.code), orari::personal(text_param("motivo", j.reason), "riservato"),
+                                            orari::personal(text_param("chi", j.who), "riservato"), date_param("quando", j.when)};
+                    if (j.until) x.push_back(date_param("fino_al", *j.until));
+                    return x;
+                };
+                // Varianti: per la corsa 0, per il servizio 1; con la data fino a cui vale +2.
+                if (e.forcing) add(Check::ModeForced, e.forcing->src, params(*e.forcing), (e.trip ? 0 : 1) + (e.forcing->until ? 2 : 0));
+                if (e.declaration) add(Check::ModeDeclared, e.declaration->src, params(*e.declaration), e.trip ? 0 : 1);
+            }
     }
 
     void persons() {

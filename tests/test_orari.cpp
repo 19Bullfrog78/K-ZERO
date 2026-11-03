@@ -1088,3 +1088,221 @@ TEST(Orari, trasferimenti_legati_alla_corsa_a_cui_servono) {
     EXPECT_EQ(misurato(v[0]), 300);
     EXPECT_TRUE(con_motivo(v[0], "guida_esclusa")) << elenco(v);
 }
+
+// --- K-011 aggiunta 1: OUT o tachigrafo (Mauro, 28/10) -------------------------------------------------------------------
+
+namespace {
+ModeEntry voce(TripModeKind modo) {
+    ModeEntry e;
+    e.mode = modo;
+    e.src = dove("aziende.json", "/aziende/0/modo_corse/per_tipo_servizio/0");
+    return e;
+}
+ModeEntry per_tipo(ServiceKind k, TripModeKind modo) {
+    ModeEntry e = voce(modo);
+    e.kind = k;
+    return e;
+}
+ModeEntry per_servizio(const std::string& s, TripModeKind modo) {
+    ModeEntry e = voce(modo);
+    e.service = Ref{s, {}};
+    e.src = dove("aziende.json", "/aziende/0/modo_corse/servizi/0");
+    return e;
+}
+ModeEntry per_corsa(const std::string& c, TripModeKind modo) {
+    ModeEntry e = voce(modo);
+    e.trip = Ref{c, {}};
+    e.src = dove("aziende.json", "/aziende/0/modo_corse/corse/0");
+    return e;
+}
+ModeJustification giustificazione(const std::string& pnt) {
+    ModeJustification j;
+    j.reason = "motivo di prova";
+    j.who = "ufficio di prova";
+    j.when = giorno("2026-10-28");
+    j.src = dove("aziende.json", pnt);
+    return j;
+}
+TripModes modi(std::vector<ModeEntry> tipi, std::vector<ModeEntry> servizi = {}, std::vector<ModeEntry> corse = {}) {
+    TripModes m;
+    m.regime = Ref{"R-PROVA", {}};
+    m.by_kind = std::move(tipi);
+    m.by_service = std::move(servizi);
+    m.by_trip = std::move(corse);
+    m.src = dove("aziende.json", "/aziende/0/modo_corse");
+    return m;
+}
+
+// Un regime come il 561: per i mezzi oltre 9 persone, esclude la linea fino a 50 km e lo scolastico fino a 50 km (certi), i
+// disabili insieme allo scolastico (certi) e i disabili da soli (da confermare); la guida delle corse escluse e' altre
+// mansioni nella lettura certa. Le corse si scrivono con i loro servizi e i km.
+struct Prova561 {
+    Prova p;
+    explicit Prova561(std::vector<WorkRule> regole = {guida_continua_561()}) : p(std::move(regole)) {
+        Regime& r = p.regime();
+        r.vehicle = VehicleCondition{9, false};
+        const auto escl = [](std::vector<ServiceKind> k, std::vector<ServiceKind> insieme, bool dc) {
+            RegimeExclusion e;
+            e.kinds = std::move(k);
+            e.together_with = std::move(insieme);
+            e.route_up_to_km = 50.0;
+            e.to_confirm = dc;
+            return e;
+        };
+        r.exclusions = {escl({ServiceKind::Line}, {}, false), escl({ServiceKind::School}, {}, false),
+                        escl({ServiceKind::Disability}, {ServiceKind::School}, false), escl({ServiceKind::Disability}, {}, true)};
+        ExcludedDriving g;
+        g.source.document = "regola di prova";
+        r.excluded_driving = g;
+    }
+    void corsa_(const std::string& codice, std::vector<std::string> servizi, const std::string& dalle, const std::string& alle, double km) {
+        Trip t;
+        t.code = codice;
+        for (const std::string& s : servizi) t.services.push_back(Ref{s, {}});
+        t.calendar = Ref{"CAL-SEMPRE", {}};
+        t.passages.resize(2);
+        t.passages[0].place = Ref{"F-LAGOBELLO", {}};
+        t.passages[0].time = ora(dalle);
+        t.passages[1].place = Ref{"F-PRADELLO", {}};
+        t.passages[1].time = ora(alle);
+        t.passages[1].loaded_km = km;
+        t.src = dove("corse.json", "/corse/" + std::to_string(p.p.trips.size()));
+        p.p.trips.push_back(t);
+    }
+    // Una giornata con una corsa di 4 ore e 31 minuti (oltre le 4 ore e 30 di guida di fila).
+    void lunga(const std::string& codice, std::vector<std::string> servizi, double km, bool ricorrente = true) {
+        corsa_(codice, std::move(servizi), "06:00", "10:31", km);
+        p.giornata("2026-10-05", {corsa(codice)}, ricorrente);
+    }
+};
+}  // namespace
+
+// Vince la scelta piu' precisa: la corsa, poi il servizio, poi il tipo di servizio (come per chi fa il turno).
+TEST(Orari, modo_della_corsa_vince_la_scelta_piu_precisa) {
+    Prova561 a;
+    a.corsa_("C-M", {"S-LIN-B610"}, "06:00", "07:00", 10.0);
+    const Trip& t = a.p.p.trips.back();
+    const Index idx(a.p.p);
+    CompanySettings s;
+    s.trip_modes = modi({per_tipo(ServiceKind::Line, TripModeKind::Out)});
+    EXPECT_EQ(trip_mode(t, &s, idx, giorno("2026-10-05")).mode, TripModeKind::Out);
+    EXPECT_EQ(trip_mode(t, &s, idx, giorno("2026-10-05")).from, TripMode::From::Kind);
+    s.trip_modes = modi({per_tipo(ServiceKind::Line, TripModeKind::Out)}, {per_servizio("S-LIN-B610", TripModeKind::Tachograph)});
+    EXPECT_EQ(trip_mode(t, &s, idx, giorno("2026-10-05")).mode, TripModeKind::Tachograph);
+    EXPECT_EQ(trip_mode(t, &s, idx, giorno("2026-10-05")).from, TripMode::From::Service);
+    s.trip_modes = modi({per_tipo(ServiceKind::Line, TripModeKind::Out)}, {per_servizio("S-LIN-B610", TripModeKind::Tachograph)},
+                        {per_corsa("C-M", TripModeKind::Out)});
+    EXPECT_EQ(trip_mode(t, &s, idx, giorno("2026-10-05")).mode, TripModeKind::Out);
+    EXPECT_EQ(trip_mode(t, &s, idx, giorno("2026-10-05")).from, TripMode::From::Trip);
+    s.trip_modes = modi({});
+    EXPECT_FALSE(trip_mode(t, &s, idx, giorno("2026-10-05")).any);   // senza scelta decide la legge
+}
+
+// Corsa dell'infanzia con un bambino disabile in piu' (asilo + disabili): con le scelte uguali (out) e' out; con scelte
+// diverse decide l'impostazione dell'azienda (di base la piu' prudente, il tachigrafo), con un avviso.
+TEST(Orari, asilo_piu_disabili_scelte_uguali_e_diverse) {
+    Prova561 a;
+    alfa(a.p.p).trip_modes = modi({per_tipo(ServiceKind::School, TripModeKind::Out), per_tipo(ServiceKind::Disability, TripModeKind::Out)});
+    a.lunga("C-MISTA", {"S-ASILO", "S-DIS"}, 30.0);
+    const Index ia(a.p.p);
+    EXPECT_EQ(trip_mode(a.p.p.trips.back(), &alfa(a.p.p), ia, giorno("2026-10-05")).mode, TripModeKind::Out);
+    EXPECT_TRUE(a.p.problemi(Check::ModeMixed).empty());
+    EXPECT_TRUE(a.p.problemi(Check::LawDrivingViolated).empty());       // scolastico + disabili fino a 50 km: escluso con certezza
+    EXPECT_TRUE(a.p.problemi(Check::LawDrivingToConfirm).empty()) << elenco(a.p.problemi(Check::LawDrivingToConfirm));
+    Prova561 b;
+    alfa(b.p.p).trip_modes = modi({per_tipo(ServiceKind::School, TripModeKind::Out), per_tipo(ServiceKind::Disability, TripModeKind::Tachograph)});
+    b.lunga("C-MISTA", {"S-ASILO", "S-DIS"}, 30.0);
+    const Index ib(b.p.p);
+    const TripMode m = trip_mode(b.p.p.trips.back(), &alfa(b.p.p), ib, giorno("2026-10-05"));
+    EXPECT_EQ(m.mode, TripModeKind::Tachograph);
+    EXPECT_TRUE(m.mixed);
+    const auto v = b.p.problemi(Check::ModeMixed);
+    ASSERT_EQ(v.size(), 1u) << elenco(v);
+    EXPECT_EQ(v[0].variant, 0);
+    EXPECT_EQ(b.p.problemi(Check::ChosenRegimeNotRespected).size(), 1u) << elenco(b.p.tutti());   // il 561 per scelta
+    alfa(b.p.p).trip_modes->mixed = MixedModes::Out;   // l'impostazione dell'azienda: out
+    EXPECT_EQ(b.p.problemi(Check::ModeMixed).at(0).variant, 1);
+    EXPECT_TRUE(b.p.problemi(Check::ChosenRegimeNotRespected).empty());
+}
+
+// Scolastico e scolastico + disabili fino a 50 km esclusi con certezza (consulente, 28/10); solo disabili da confermare.
+TEST(Orari, scolastico_escluso_solo_disabili_da_confermare) {
+    for (const auto& [servizi, da_confermare] :
+         std::vector<std::pair<std::vector<std::string>, bool>>{{{"S-ASILO"}, false}, {{"S-ASILO", "S-DIS"}, false}, {{"S-DIS"}, true}}) {
+        Prova561 a;
+        a.lunga("C-X", servizi, 30.0);
+        EXPECT_TRUE(a.p.problemi(Check::LawDrivingViolated).empty()) << servizi.size();
+        EXPECT_EQ(a.p.problemi(Check::LawDrivingToConfirm).size(), da_confermare ? 1u : 0u) << elenco(a.p.problemi(Check::LawDrivingToConfirm));
+    }
+}
+
+// Dichiarazione dell'azienda su un servizio solo per disabili: escluso con certezza, una nota, nessun avviso da confermare;
+// senza la dichiarazione gli avvisi restano.
+TEST(Orari, dichiarazione_su_un_servizio_solo_disabili) {
+    Prova561 a;
+    a.lunga("C-DIS-X", {"S-DIS"}, 30.0);
+    EXPECT_EQ(a.p.problemi(Check::LawDrivingToConfirm).size(), 1u);
+    ModeEntry d = per_servizio("S-DIS", TripModeKind::Out);
+    d.declaration = giustificazione("/aziende/0/modo_corse/servizi/0/dichiarazione");
+    alfa(a.p.p).trip_modes = modi({}, {d});
+    EXPECT_TRUE(a.p.problemi(Check::LawDrivingToConfirm).empty()) << elenco(a.p.problemi(Check::LawDrivingToConfirm));
+    const auto n = a.p.problemi(Check::ModeDeclared);
+    ASSERT_EQ(n.size(), 1u);
+    EXPECT_EQ(parametro(n[0], "motivo")->sensitivity, Param::Sensitivity::Personal);
+    EXPECT_EQ(n[0].where.pointer, "/aziende/0/modo_corse/servizi/0/dichiarazione");
+}
+
+// "out" dove la legge, con i dati scritti, vuole il 561 (una linea di 60 km): senza forzatura la legge vince (un avviso, e
+// la violazione del 561 resta un errore); con la forzatura il programma pianifica out (nessun errore del 561), ma la
+// forzatura resta visibile e il rischio dice le violazioni del 561 come avvisi.
+TEST(Orari, out_dove_la_legge_vuole_il_561_senza_e_con_forzatura) {
+    Prova561 a;
+    alfa(a.p.p).trip_modes = modi({per_tipo(ServiceKind::Line, TripModeKind::Out)});
+    a.lunga("C-60", {"S-LIN-B610"}, 60.0);
+    EXPECT_EQ(a.p.problemi(Check::ModeOutNotValid).size(), 1u) << elenco(a.p.tutti());
+    EXPECT_EQ(a.p.problemi(Check::LawDrivingViolated).size(), 1u);
+    ModeEntry f = per_corsa("C-60", TripModeKind::Out);
+    f.forcing = giustificazione("/aziende/0/modo_corse/corse/0/forzatura");
+    alfa(a.p.p).trip_modes->by_trip = {f};
+    EXPECT_TRUE(a.p.problemi(Check::ModeOutNotValid).empty()) << elenco(a.p.problemi(Check::ModeOutNotValid));
+    EXPECT_TRUE(a.p.problemi(Check::LawDrivingViolated).empty()) << elenco(a.p.problemi(Check::LawDrivingViolated));
+    const auto rischio = a.p.problemi(Check::LawDrivingToConfirm);
+    ASSERT_EQ(rischio.size(), 1u) << elenco(rischio);
+    EXPECT_TRUE(con_motivo(rischio[0], "forzatura_dell_azienda")) << elenco(rischio);
+    ASSERT_EQ(a.p.problemi(Check::ModeForced).size(), 1u);
+    const auto r = a.p.problemi(Check::ModeForcedRisk);
+    ASSERT_EQ(r.size(), 1u);
+    EXPECT_EQ(parametro(r[0], "violazioni")->number, 1);
+    EXPECT_EQ(r[0].variant, 2);   // sulla corsa, una violazione
+    // Una forzatura scaduta (fino al giorno prima) non vale piu': la legge vince di nuovo.
+    alfa(a.p.p).trip_modes->by_trip[0].forcing->until = giorno("2026-10-04");
+    EXPECT_EQ(a.p.problemi(Check::LawDrivingViolated).size(), 1u);
+}
+
+// Il tachigrafo su una linea fino a 50 km (che la legge esclude): le regole del 561 si controllano come scelta dell'azienda.
+// Preferenza: avviso; limite su un turno ricorrente: errore; limite su un'assegnazione del singolo giorno: avviso. La guida
+// della linea e' guida.
+TEST(Orari, tachigrafo_su_una_linea_fino_a_50_km) {
+    const auto prova = [](ChoiceStrength forza, bool ricorrente) {
+        Prova561 a;
+        ModeEntry t = per_tipo(ServiceKind::Line, TripModeKind::Tachograph);
+        t.strength = forza;
+        alfa(a.p.p).trip_modes = modi({t});
+        a.lunga("C-10", {"S-LIN-B610"}, 10.0, ricorrente);
+        EXPECT_TRUE(a.p.problemi(Check::LawDrivingViolated).empty());
+        EXPECT_TRUE(a.p.problemi(Check::LawDrivingToConfirm).empty()) << elenco(a.p.problemi(Check::LawDrivingToConfirm));
+        return std::make_pair(a.p.problemi(Check::ChosenRegimeLimit), a.p.problemi(Check::ChosenRegimeNotRespected));
+    };
+    const auto pref = prova(ChoiceStrength::Preference, true);
+    EXPECT_TRUE(pref.first.empty());
+    ASSERT_EQ(pref.second.size(), 1u);
+    EXPECT_EQ(pref.second[0].variant, 13);   // guida di fila (variante 0 della guida)
+    EXPECT_TRUE(con_motivo(pref.second[0], "preferenza"));
+    const auto lim = prova(ChoiceStrength::Limit, true);
+    ASSERT_EQ(lim.first.size(), 1u);
+    EXPECT_TRUE(lim.second.empty());
+    const auto giorno_singolo = prova(ChoiceStrength::Limit, false);
+    EXPECT_TRUE(giorno_singolo.first.empty());
+    ASSERT_EQ(giorno_singolo.second.size(), 1u);
+    EXPECT_TRUE(con_motivo(giorno_singolo.second[0], "assegnazione_del_giorno"));
+}

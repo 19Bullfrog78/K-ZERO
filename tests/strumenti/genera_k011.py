@@ -73,6 +73,17 @@ co['corse'] += [
     corsa('C-50KM', 'S-LIN-B610', 'CAL-T-50KM', 'F-STAZIONE', '04:00', 'F-MONTEBRINO', '05:10', 50.0, "Linea di 50 km esatti"),
     corsa('C-50KM1', 'S-LIN-B610', 'CAL-T-50KM1', 'F-STAZIONE', '04:00', 'F-MONTEBRINO', '05:10', 50.1, "Linea di 50,1 km"),
 ]
+# K-011 aggiunta 1, OUT o tachigrafo. Servizi solo per disabili fino a 50 km con il mezzo da 17 posti: il 561 resta da
+# confermare (S-DIS: avvisi); per S-DIS-GIO Alfa dichiara il servizio escluso (una nota, nessun avviso da confermare).
+for sigla, servizio in [('DIS', 'S-DIS'), ('DICH', 'S-DIS-GIO')]:
+    for k in range(6):
+        t0 = 7 * 60 + 50 + 48 * k
+        da, a = ('F-STAZIONE', 'F-PRADELLO') if k % 2 == 0 else ('F-PRADELLO', 'F-STAZIONE')
+        co['corse'].append(corsa(f'C-{sigla}-LUNGA-{k + 1}', servizio, f'CAL-T-{sigla}-LUNGA', da, f'{t0 // 60:02d}:{t0 % 60:02d}', a,
+                                 f'{(t0 + 45) // 60:02d}:{(t0 + 45) % 60:02d}', 10.0, f"Disabili, giro {k + 1}"))
+# Forzatura: una linea di 55 km con i km scritti, che per Alfa e' di 48 km (il percorso vero): OUT forzato.
+co['corse'].append(corsa('C-FORZATA', 'S-LIN-B610', 'CAL-T-FORZATA', 'F-STAZIONE', '06:00', 'F-MONTEBRINO', '10:20', 55.0,
+                         "Linea lunga, OUT forzato dall'azienda"))
 save('corse', co)
 
 ca = load('calendari')
@@ -192,6 +203,17 @@ turno('T-50KM', "Linea di 50 km esatti", 'P-50KM', '2026-11-16',
 turno('T-50KM1', "Linea di 50,1 km", 'P-50KM1', '2026-11-17',
       apertura('03:30', '03:45', 'F-STAZIONE', '04:00') + [c('C-50KM1')] + chiusura('F-MONTEBRINO', '05:10', '05:40'), mezzo='V-17')
 
+# K-011 aggiunta 1: le giornate dei servizi solo per disabili (con e senza la dichiarazione) e della forzatura.
+for sigla, persona_, mezzo_ in [('DIS', 'P-DISABILI', 'V-17'), ('DICH', 'P-DICHIARA', 'V-9')]:
+    turno(f'T-{sigla}-LUNGA', "Disabili tutta la mattina", persona_, '2026-11-26',
+          apertura('07:20', '07:30', 'F-STAZIONE', '07:45') + [c(f'C-{sigla}-LUNGA-{k + 1}') for k in range(6)] +
+          chiusura('F-STAZIONE', '12:35', '12:45'), mezzo=mezzo_)
+# 15 minuti di trasferimento e 4 ore e 20 di linea: 4 ore e 35 di guida di fila, oltre le 4 ore e 30 del 561 ma dentro le 5
+# ore della L. 138 (che resta sopra e vale con certezza).
+turno('T-FORZATA', "Linea lunga in OUT forzato", 'P-FORZATA', '2026-11-24',
+      apertura('05:30', '05:45', 'F-STAZIONE', '06:00') + [c('C-FORZATA'), att('FINE', 'F-MONTEBRINO', '10:20', '10:30')], mezzo='V-17',
+      fine='F-MONTEBRINO')
+
 save('calendari', ca)
 save('turni', tu)
 save('servizi_fissi', sf)
@@ -228,5 +250,21 @@ pe['persone'] += [
     persona('P-GUIDA', "Guida Lunga", 'dipendente_tempo_pieno'),
     persona('P-50KM', "Cinquanta Esatti", 'dipendente_tempo_pieno'),
     persona('P-50KM1', "Cinquanta Virgola Uno", 'dipendente_tempo_pieno'),
+    persona('P-DISABILI', "Disabili Lunga", 'dipendente_tempo_pieno'),
+    persona('P-DICHIARA', "Dichiarazione Prova", 'dipendente_tempo_pieno'),
+    persona('P-FORZATA', "Forzatura Prova", 'dipendente_tempo_pieno'),
 ]
 save('persone', pe)
+
+# K-011 aggiunta 1: la dichiarazione e la forzatura di Alfa (motivo e chi sono dati personali, inventati).
+az = load('aziende')
+alfa = [x for x in az['aziende'] if x['azienda'] == 'ALFA'][0]
+alfa['modo_corse']['servizi'] = [
+    {"servizio": "S-DIS-GIO", "modo": "out",
+     "dichiarazione": {"motivo": "Il centro diurno del giovedi' e' per l'azienda un servizio scolastico speciale (prova inventata).",
+                       "chi": "Ufficio turni Alfa", "quando": "2026-10-28"}}]
+alfa['modo_corse']['corse'] = [
+    {"corsa": "C-FORZATA", "modo": "out",
+     "forzatura": {"motivo": "Il percorso vero e' di 48 km: i km scritti contano un tratto che la linea non fa piu' (prova inventata).",
+                   "chi": "Ufficio turni Alfa", "quando": "2026-10-28", "fino_al": "2027-06-30"}}]
+save('aziende', az)

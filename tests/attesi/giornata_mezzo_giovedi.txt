@@ -16,6 +16,7 @@ T-PRIMO "Primo"  07:15-17:15 (10 ore)  azienda ALFA, autista
                 (fermo 7 minuti)
    07:52-08:15  corsa C-LIN-533 "Linea B610, corsa delle 07:52"
                 servizi S-LIN-B610 (tipo riservato, contratto CT-LIN, committente TPV)
+                modo OUT, per un dato particolare (regime R-561)
                 calendario CAL-FERIALI "Giorni feriali (da lunedi' a sabato, festivi esclusi)", 305 giorni nel periodo; km a pieno 15,1, a vuoto 0
       07:52  F-STAZIONE  Valfonda, Stazione FVV  a bordo non noto
       07:56  F-VALFONDA-PIAZZA  Valfonda, Piazza Grande  km a pieno 1,2  a bordo non noto
@@ -24,6 +25,7 @@ T-PRIMO "Primo"  07:15-17:15 (10 ore)  azienda ALFA, autista
    08:15-08:25  Attesa con il mezzo (ATTESA), a F-PRADELLO (Pradello, Piazza)
    08:25-08:56  corsa C-LIN-537 "Linea B610, corsa delle 08:25"
                 servizi S-LIN-B610 (tipo riservato, contratto CT-LIN, committente TPV)
+                modo OUT, per un dato particolare (regime R-561)
                 calendario CAL-FERIALI "Giorni feriali (da lunedi' a sabato, festivi esclusi)", 305 giorni nel periodo; km a pieno 15,1, a vuoto 0
       08:25  F-PRADELLO  Pradello, Piazza  a bordo non noto
       08:32  F-CASTELROVO-ALTO  Castelrovo, Alto  km a pieno 5,1  a bordo non noto
@@ -38,6 +40,7 @@ T-PRIMO "Primo"  07:15-17:15 (10 ore)  azienda ALFA, autista
                 (fermo 8 minuti)
    11:58-12:47  corsa C-RM-1 "Ritorno mezzogiorno superiori e medie"
                 servizi S-SUP-RM (tipo riservato, contratto CT-LIN, committente TPV); S-SCU-RM (tipo riservato, contratto CT-SCU, committente CVA)
+                modo OUT, per un dato particolare (regime R-561)
                 calendario CAL-SCUOLA-LV "Giorni di scuola escluso il sabato", 175 giorni nel periodo; km a pieno 17,9, a vuoto 6,4
       11:58  L-SUP  Valfonda, Istituto superiore  salgono 5  a bordo 5
       12:05  L-MEDIE  Valfonda, Scuola media  salgono 11  km a pieno 0,6  a bordo 16
@@ -51,6 +54,7 @@ T-PRIMO "Primo"  07:15-17:15 (10 ore)  azienda ALFA, autista
                 (fermo 5 minuti)
    13:30-13:53  corsa C-LIN-545 "Linea B610, corsa delle 13:30"
                 servizi S-LIN-B610 (tipo riservato, contratto CT-LIN, committente TPV)
+                modo OUT, per un dato particolare (regime R-561)
                 calendario CAL-FERIALI "Giorni feriali (da lunedi' a sabato, festivi esclusi)", 305 giorni nel periodo; km a pieno 15,1, a vuoto 0
       13:30  F-STAZIONE  Valfonda, Stazione FVV  a bordo non noto
       13:34  F-VALFONDA-PIAZZA  Valfonda, Piazza Grande  km a pieno 1,2  a bordo non noto
@@ -65,6 +69,7 @@ T-PRIMO "Primo"  07:15-17:15 (10 ore)  azienda ALFA, autista
                 (fermo 5 minuti)
    16:40-17:04  corsa C-LIN-549 "Linea B610, corsa delle 16:40 (cambio dell'autista a Valfonda, Piazza)", solo un pezzo (cambio dell'autista)
                 servizi S-LIN-B610 (tipo riservato, contratto CT-LIN, committente TPV)
+                modo OUT, per un dato particolare (regime R-561)
                 calendario CAL-FERIALI "Giorni feriali (da lunedi' a sabato, festivi esclusi)", 305 giorni nel periodo; km a pieno 13,9, a vuoto 0
       16:40  F-PRADELLO  Pradello, Piazza  a bordo non noto
       16:47  F-CASTELROVO-ALTO  Castelrovo, Alto  km a pieno 5,1  a bordo non noto
@@ -83,6 +88,7 @@ T-SECONDO "Secondo"  16:50-20:30 (3 ore e 40 minuti)  azienda ALFA, autista
                 (fermo 4 minuti)
    17:04-17:11  corsa C-LIN-549 "Linea B610, corsa delle 16:40 (cambio dell'autista a Valfonda, Piazza)", solo un pezzo (cambio dell'autista)
                 servizi S-LIN-B610 (tipo riservato, contratto CT-LIN, committente TPV)
+                modo OUT, per un dato particolare (regime R-561)
                 calendario CAL-FERIALI "Giorni feriali (da lunedi' a sabato, festivi esclusi)", 305 giorni nel periodo; km a pieno 1,2, a vuoto 0
       17:04  F-VALFONDA-PIAZZA  Valfonda, Piazza Grande  a bordo non noto
       17:11  F-STAZIONE  Valfonda, Stazione FVV  km a pieno 1,2  a bordo non noto
@@ -96,6 +102,7 @@ T-SECONDO "Secondo"  16:50-20:30 (3 ore e 40 minuti)  azienda ALFA, autista
                 (fermo 5 minuti)
    19:45-20:08  corsa C-LIN-553 "Linea B610, corsa delle 19:45"
                 servizi S-LIN-B610 (tipo riservato, contratto CT-LIN, committente TPV)
+                modo OUT, per un dato particolare (regime R-561)
                 calendario CAL-FERIALI "Giorni feriali (da lunedi' a sabato, festivi esclusi)", 305 giorni nel periodo; km a pieno 15,1, a vuoto 0
       19:45  F-STAZIONE  Valfonda, Stazione FVV  a bordo non noto
       19:49  F-VALFONDA-PIAZZA  Valfonda, Piazza Grande  km a pieno 1,2  a bordo non noto
@@ -118,6 +125,7 @@ T-NOTTE "Notte"  23:00-24:30 (1 ora e 30 minuti)  azienda ALFA, autista
                 (fermo 5 minuti)
    23:40-24:12  corsa C-LIN-560 "Linea B610, corsa della sera (finisce dopo mezzanotte)"
                 servizi S-LIN-B610 (tipo riservato, contratto CT-LIN, committente TPV)
+                modo OUT, per un dato particolare (regime R-561)
                 calendario CAL-FERIALI "Giorni feriali (da lunedi' a sabato, festivi esclusi)", 305 giorni nel periodo; km a pieno 15,1, a vuoto 0
       23:40  F-PRADELLO  Pradello, Piazza  a bordo non noto
       23:48  F-CASTELROVO-ALTO  Castelrovo, Alto  km a pieno 5,1  a bordo non noto

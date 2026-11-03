@@ -331,6 +331,109 @@ void aggiungi_orari(std::vector<DefinizioneControllo>& c) {
             c.push_back(*d);
         }
     }
+    // --- Modo delle corse: OUT o tachigrafo (K-011 aggiunta 1) ---
+    {
+        // Le regole del regime seguito per scelta dell'azienda (tachigrafo): le varianti sono quelle delle regole di legge,
+        // per famiglia: lavoro 0-12, guida 13-19, riposo giornaliero 20-24, riposo settimanale 25-29.
+        std::vector<Pezzo> pezzi;
+        for (const std::vector<Pezzo>* v : {&kLavoro, &kGuida, &kRiposoGiornaliero, &kRiposoSettimanale}) pezzi.insert(pezzi.end(), v->begin(), v->end());
+        const std::string scelta = ", che l'azienda segue per scelta con il tachigrafo";
+        DefinizioneControllo e(Check::ChosenRegimeLimit, "K-CTR-127", E, PE, "Regola seguita per scelta (tachigrafo) superata: limite rigido",
+                               componi("La persona {persona} non rispetta la regola {regola} ({fonte})" + scelta + " (limite rigido): ", pezzi, ""), {},
+                               componi_personali("La persona {persona} non rispetta una regola sugli orari" + scelta +
+                                                     " (limite rigido; dati personali: riservati)",
+                                                 pezzi, ""));
+        DefinizioneControllo a(Check::ChosenRegimeNotRespected, "K-CTR-128", A, PE, "Regola seguita per scelta (tachigrafo) non rispettata",
+                               componi("La persona {persona} non rispetta la regola {regola} ({fonte})" + scelta + ": ", pezzi, motivi), {},
+                               componi_personali("La persona {persona} non rispetta una regola sugli orari" + scelta + " (dati personali: riservati)",
+                                                 pezzi, motivi));
+        for (DefinizioneControllo* d : {&e, &a}) {
+            d->piano = true;
+            d->personali_se_nascosti = true;
+            c.push_back(*d);
+        }
+    }
+    {
+        const std::string dopo = " Il programma pianifica come ha scelto l'azienda, ma non vuol dire \"regolare\": nella lettura prudente vale "
+                                 "la legge come la calcolano i dati, e le violazioni che ne nascono sono avvisi con il motivo della forzatura.";
+        const std::string chi = " Motivo: \"{motivo}\"; scritta da {chi} il {quando}";
+        const std::string chi_r = " Il motivo e chi l'ha scritta sono dati personali (riservati); scritta il {quando}";
+        std::vector<std::string> m;
+        std::map<int, std::string> r;
+        for (int fino = 0; fino < 2; ++fino)
+            for (const char* dove : {"la corsa {corsa}", "il servizio {servizio}"}) {
+                const std::string testa = std::string("Forzatura dell'azienda {azienda}: ") + dove +
+                                          " si fa OUT anche dove, con i dati scritti, vale il regime {regime}.";
+                const std::string fine = fino ? ". Vale fino al {fino_al}." : ".";
+                r[static_cast<int>(m.size())] = testa + chi_r + fine + dopo;
+                m.push_back(testa + chi + fine + dopo);
+            }
+        DefinizioneControllo d(Check::ModeForced, "K-CTR-129", A, PE, "Forzatura dell'azienda: OUT dove la legge vuole il regime", m, {}, r);
+        d.personali_se_nascosti = true;
+        c.push_back(d);
+    }
+    {
+        // Varianti: sulla corsa (0, 2) o sul servizio (1, 3); con piu' violazioni (0, 1) o una sola (2, 3).
+        std::vector<std::string> m;
+        for (const char* quante : {"ci sarebbero {violazioni} violazioni", "ci sarebbe una violazione"})
+            for (const char* dove : {"sulla corsa {corsa}", "sul servizio {servizio}"})
+                m.push_back(std::string("Rischio della forzatura dell'azienda {azienda} ") + dove +
+                            ": se la forzatura e' sbagliata, con il regime {regime} " + quante + " ({regole}; persone: {persone}), {giorni}.");
+        // Quali regole varrebbero e per quante persone dipende anche dal loro rapporto (es. il D.Lgs. 234): dato personale.
+        std::map<int, std::string> r;
+        for (int v = 0; v < 4; ++v)
+            r[v] = std::string("Rischio della forzatura dell'azienda {azienda} ") + (v % 2 == 0 ? "sulla corsa {corsa}" : "sul servizio {servizio}") +
+                   ": se la forzatura e' sbagliata, con il regime {regime} ci sarebbero violazioni della legge (quali e per chi: dati "
+                   "personali, riservati), {giorni}.";
+        DefinizioneControllo d(Check::ModeForcedRisk, "K-CTR-130", A, PE, "Rischio di una forzatura dell'azienda", m, {}, r);
+        d.piano = true;
+        c.push_back(d);
+    }
+    {
+        const std::string dopo = " Da qui il programma lo tratta come escluso con certezza, senza ripetere gli avvisi da confermare su ogni corsa.";
+        DefinizioneControllo d(Check::ModeDeclared, "K-CTR-131", A, PE, "Dichiarazione dell'azienda: escluso dal regime",
+                               {"Dichiarazione dell'azienda {azienda}: la corsa {corsa} e' esclusa dal regime {regime} dove l'esclusione e' da "
+                                "confermare. Motivo: \"{motivo}\"; scritta da {chi} il {quando}." + dopo,
+                                "Dichiarazione dell'azienda {azienda}: il servizio {servizio} e' escluso dal regime {regime} dove l'esclusione e' "
+                                "da confermare. Motivo: \"{motivo}\"; scritta da {chi} il {quando}." + dopo},
+                               {},
+                               {{0, "Dichiarazione dell'azienda {azienda}: la corsa {corsa} e' esclusa dal regime {regime} dove l'esclusione "
+                                    "e' da confermare. Il motivo e chi l'ha scritta sono dati personali (riservati); scritta il {quando}." + dopo},
+                                {1, "Dichiarazione dell'azienda {azienda}: il servizio {servizio} e' escluso dal regime {regime} dove "
+                                    "l'esclusione e' da confermare. Il motivo e chi l'ha scritta sono dati personali (riservati); scritta il "
+                                    "{quando}." + dopo}});
+        d.personali_se_nascosti = true;
+        c.push_back(d);
+    }
+    {
+        const std::string vince = " non vale: con i dati scritti vale il regime {regime} (il mezzo, i km del percorso o il tipo di servizio), "
+                                  "quindi vale la legge, {giorni}. Per pianificare comunque OUT serve una forzatura cosciente sulla corsa o "
+                                  "sul servizio.";
+        DefinizioneControllo d(Check::ModeOutNotValid, "K-CTR-132", A, N, "OUT dove la legge vuole il regime: vale la legge",
+                               {"La scelta OUT dell'azienda {azienda} per il tipo di servizio della corsa {corsa}" + vince,
+                                "La scelta OUT dell'azienda {azienda} per il servizio {servizio} sulla corsa {corsa}" + vince,
+                                "La scelta OUT dell'azienda {azienda} per la corsa {corsa}" + vince,
+                                "Il modo OUT della corsa {corsa} (servizi con scelte diverse, impostazione dell'azienda {azienda})" + vince},
+                               {{0, Classe::Particolare}});
+        d.piano = true;
+        c.push_back(d);
+    }
+    {
+        const std::string dopo = ", {giorni}. Conviene scrivere la scelta per la corsa.";
+        DefinizioneControllo d(
+            Check::ModeMixed, "K-CTR-133", A, N, "Corsa con servizi con scelte diverse (OUT e tachigrafo)",
+            {"La corsa {corsa} ha servizi di tipi diversi con scelte diverse dell'azienda {azienda} (OUT e tachigrafo): decide "
+             "l'impostazione dell'azienda per le scelte diverse, quindi tachigrafo (regime {regime})" + dopo,
+             "La corsa {corsa} ha servizi di tipi diversi con scelte diverse dell'azienda {azienda} (OUT e tachigrafo): decide "
+             "l'impostazione dell'azienda per le scelte diverse, quindi OUT (regime {regime})" + dopo,
+             "La corsa {corsa} ha servizi con scelte diverse dell'azienda {azienda} (OUT e tachigrafo): decide l'impostazione "
+             "dell'azienda per le scelte diverse, quindi tachigrafo (regime {regime})" + dopo,
+             "La corsa {corsa} ha servizi con scelte diverse dell'azienda {azienda} (OUT e tachigrafo): decide l'impostazione "
+             "dell'azienda per le scelte diverse, quindi OUT (regime {regime})" + dopo},
+            {{0, Classe::Particolare}, {1, Classe::Particolare}});
+        d.piano = true;
+        c.push_back(d);
+    }
     c.push_back({Check::WorkRuleIncoherent, "K-CTR-126", E, N, "Regola sugli orari scritta in modo incoerente",
                  {"Il regime {regime} ha piu' di un conteggio del lavoro (tipo conteggio_lavoro): ne serve uno solo.",
                   "Il regime {regime} ha regole sul lavoro ma nessun conteggio del lavoro (tipo conteggio_lavoro): non si sa cosa conta "
@@ -861,6 +964,12 @@ const std::vector<DefinizioneControllo>& catalogo_controlli() {
             {Check::ReturnNotJustifiedLimit, PQ},
             {Check::ReturnNotJustified, PQ},
             {Check::ReturnNotJudged, PQ},
+            // Modo delle corse (K-011 aggiunta 1): la scelta per tipo di servizio (dato particolare) e quale legge vale.
+            {Check::ChosenRegimeLimit, PQ},
+            {Check::ChosenRegimeNotRespected, PQ},
+            {Check::ModeForcedRisk, PQ},
+            {Check::ModeOutNotValid, PQ},
+            {Check::ModeMixed, PQ},
         };
         for (DefinizioneControllo& d : c) {
             const auto it = richiede.find(d.controllo);
@@ -964,6 +1073,8 @@ const Motivo kMotivi[] = {
     {"regime_da_confermare", Classe::Comune, "il regime e' da confermare nei dati"},
     {"regola_da_confermare", Classe::Comune, "la regola non ha una lettura certa (da confermare)"},
     {"ruolo", Classe::Comune, "va confermato se la legge vale per il ruolo nel turno"},
+    {"forzatura_dell_azienda", Classe::Comune,
+     "la corsa e' OUT per una forzatura dell'azienda: se la forzatura e' sbagliata, con i dati scritti vale la legge"},
     {"giornata_senza_corse", Classe::Comune, "in una giornata senza corse non si sa quale legge vale"},
     {"guida_esclusa", Classe::Comune,
      "conta come guida anche la guida delle corse che il regime esclude o forse esclude, che nella lettura certa conta come "

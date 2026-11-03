@@ -691,6 +691,7 @@ Regime regime(const JsonDati& o, const std::string& p, const Conversione& c) {
     for (std::size_t k = 0; k < escl.size(); ++k) {
         RegimeExclusion e;
         e.kinds = valori_di(kTipiServizio, escl[k], "tipi_servizio");
+        e.together_with = valori_di(kTipiServizio, escl[k], "insieme_a");   // K-011 aggiunta 1
         e.route_up_to_km = c.decimale(escl[k], "percorso_fino_a_km");
         e.to_confirm = c.vero(escl[k], "da_confermare");
         if (escl[k].contains("fonte")) e.source = fonte_documento(escl[k].at("fonte"));
@@ -751,6 +752,49 @@ std::vector<WorkChoice> scelte_orari(const JsonDati& o, const std::string& p, co
         out.push_back(w);
     }
     return out;
+}
+
+// Modo delle corse (K-011 aggiunta 1): OUT o tachigrafo per tipo di servizio, per servizio e per corsa, con la forzatura e la
+// dichiarazione.
+TripModes modo_corse(const JsonDati& o, const std::string& p, const Conversione& c) {
+    TripModes m;
+    m.regime = c.ref(o, "regime", p);
+    if (o.contains("tipi_diversi"))
+        m.mixed = valore_di<MixedModes>({{"piu_prudente", MixedModes::MostPrudent}, {"out", MixedModes::Out}, {"tachigrafo", MixedModes::Tachograph}},
+                                        o.at("tipi_diversi").get<std::string>());
+    if (o.contains("forza")) m.strength = forza(o.at("forza"));
+    m.note = c.testo(o, "nota");
+    m.src = c.src(p);
+    const auto giustificazione = [&](const JsonDati& g, const std::string& pg) {
+        ModeJustification j;
+        j.reason = g.at("motivo").get<std::string>();
+        j.who = g.at("chi").get<std::string>();
+        j.when = c.data(g.at("quando"));
+        j.until = c.data_opz(g, "fino_al");
+        j.src = c.src(pg);
+        return j;
+    };
+    const auto voci = [&](const char* campo, std::vector<ModeEntry>& out) {
+        const auto& e = c.elenco(o, campo);
+        for (std::size_t k = 0; k < e.size(); ++k) {
+            const std::string pe = indice(p + "/" + campo, k);
+            ModeEntry x;
+            x.mode = e[k].at("modo").get<std::string>() == "tachigrafo" ? TripModeKind::Tachograph : TripModeKind::Out;
+            if (e[k].contains("tipo_servizio")) x.kind = valore_di(kTipiServizio, e[k].at("tipo_servizio").get<std::string>());
+            x.service = c.ref_opz(e[k], "servizio", pe);
+            x.trip = c.ref_opz(e[k], "corsa", pe);
+            if (e[k].contains("forza")) x.strength = forza(e[k].at("forza"));
+            if (e[k].contains("forzatura")) x.forcing = giustificazione(e[k].at("forzatura"), pe + "/forzatura");
+            if (e[k].contains("dichiarazione")) x.declaration = giustificazione(e[k].at("dichiarazione"), pe + "/dichiarazione");
+            x.note = c.testo(e[k], "nota");
+            x.src = c.src(pe);
+            out.push_back(x);
+        }
+    };
+    voci("per_tipo_servizio", m.by_kind);
+    voci("servizi", m.by_service);
+    voci("corse", m.by_trip);
+    return m;
 }
 
 ReturnKey rientro(const JsonDati& o, Source src) {
@@ -854,6 +898,7 @@ void aziende(const JsonDati& d, Package& pk) {
         x.days_margin = c.intero(imp, "margine_giornate_massime");
         x.choices = scelte_orari(a, p, c);
         if (a.contains("rientro")) x.return_key = rientro(a.at("rientro"), c.src(p + "/rientro"));
+        if (a.contains("modo_corse")) x.trip_modes = modo_corse(a.at("modo_corse"), p + "/modo_corse", c);
         const auto& spec = c.elenco(a, "speciali_esigenze");
         for (std::size_t k = 0; k < spec.size(); ++k) {
             const std::string ps = indice(p + "/speciali_esigenze", k);

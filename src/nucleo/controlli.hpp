@@ -102,6 +102,14 @@ enum class Check {
     ReturnNotJustified,           // rientro non giustificato: avviso
     ReturnNotJudged,              // rientro non giudicato: servono le distanze o i km
     WorkRuleIncoherent,           // regola sugli orari scritta in modo incoerente (dato)
+    // Modo delle corse: OUT o tachigrafo (K-011 aggiunta 1).
+    ChosenRegimeLimit,            // regola del regime seguito per scelta (tachigrafo), limite rigido su un turno ricorrente
+    ChosenRegimeNotRespected,     // ... preferenza, assegnazione del singolo giorno, o solo con la lettura prudente
+    ModeForced,                   // forzatura dell'azienda: OUT dove la legge, con i dati scritti, vuole il regime (sempre visibile)
+    ModeForcedRisk,               // rischio della forzatura: le violazioni della legge come la calcolano i dati
+    ModeDeclared,                 // dichiarazione dell'azienda: servizio o corsa esclusi dove la legge e' da confermare
+    ModeOutNotValid,              // OUT dove la legge vuole il regime, senza forzatura: vale la legge
+    ModeMixed,                    // corsa con servizi di tipi (o servizi) con scelte diverse: decide l'impostazione
     // Contenuto: errori.
     DuplicateCode,
     UnknownReference,

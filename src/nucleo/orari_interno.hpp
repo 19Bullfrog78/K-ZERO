@@ -64,6 +64,7 @@ struct Breach {
     const WorkRule* rule = nullptr;
     const Regime* regime = nullptr;
     bool work_measure = false;                      // senza regime: misura il lavoro contato dai regimi (contratto, lavoro massimo)
+    bool chosen = false;                            // del regime per scelta dell'azienda (tachigrafo, K-011 aggiunta 1)
 };
 
 // Un regime per la persona: in quali giorni vale, per famiglia, e con quale certezza.
@@ -84,6 +85,10 @@ struct RegimeData {
     // regime per la corsa del pezzo (per un pezzo di guida senza passeggeri, per la corsa a cui serve; Certain se non c'entra).
     // Con own_drive le regole di guida e di interruzione del regime contano la guida con i loro pesi, mondo per mondo.
     std::vector<Certainty> seg_level;
+    // Il regime "per scelta" dell'azienda (tachigrafo, K-011 aggiunta 1): vale anche sulle corse che la legge esclude; per
+    // giorno la forza della scelta (0 nessuna, 1 preferenza, 2 limite). Le sue violazioni non sono la legge.
+    bool chosen = false;
+    std::vector<char> chosen_strength;
     bool own_drive = false;
     std::array<std::vector<int>, kWorlds> drive_weight;
     std::array<std::vector<long long>, kWorlds> drive_prefix;

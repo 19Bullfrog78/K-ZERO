@@ -772,6 +772,51 @@
         "sabato",
         "domenica"
       ]
+    },
+    {
+      "codice": "CAL-T-DIS-LUNGA",
+      "nome": "Solo il 2026-11-26",
+      "dal": "2026-11-26",
+      "al": "2026-11-26",
+      "giorni": [
+        "lunedi",
+        "martedi",
+        "mercoledi",
+        "giovedi",
+        "venerdi",
+        "sabato",
+        "domenica"
+      ]
+    },
+    {
+      "codice": "CAL-T-DICH-LUNGA",
+      "nome": "Solo il 2026-11-26",
+      "dal": "2026-11-26",
+      "al": "2026-11-26",
+      "giorni": [
+        "lunedi",
+        "martedi",
+        "mercoledi",
+        "giovedi",
+        "venerdi",
+        "sabato",
+        "domenica"
+      ]
+    },
+    {
+      "codice": "CAL-T-FORZATA",
+      "nome": "Solo il 2026-11-24",
+      "dal": "2026-11-24",
+      "al": "2026-11-24",
+      "giorni": [
+        "lunedi",
+        "martedi",
+        "mercoledi",
+        "giovedi",
+        "venerdi",
+        "sabato",
+        "domenica"
+      ]
     }
   ]
 }

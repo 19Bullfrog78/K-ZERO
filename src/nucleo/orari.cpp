@@ -32,6 +32,80 @@ RouteKm route_km(const Trip& t) {
     return r;
 }
 
+TripMode trip_mode(const Trip& t, const CompanySettings* s, const Index& idx, Day d) {
+    TripMode m;
+    if (!s || !s->trip_modes) return m;
+    const TripModes& tm = *s->trip_modes;
+    m.modes = &tm;
+    const auto strength = [&](const ModeEntry& e) { return e.strength.value_or(tm.strength); };
+    const auto justify = [&](const ModeEntry& e) {
+        if (e.mode != TripModeKind::Out) return;
+        if (e.forcing && (!e.forcing->until || d <= *e.forcing->until) && !m.forcing) m.forcing = &e;
+        if (e.declaration && !m.declaration) m.declaration = &e;
+    };
+    // 1. La corsa.
+    for (const ModeEntry& e : tm.by_trip)
+        if (e.trip && e.trip->code == t.code) {
+            m.any = true;
+            m.mode = e.mode;
+            m.from = TripMode::From::Trip;
+            m.entry = &e;
+            m.strength = strength(e);
+            justify(e);
+            return m;
+        }
+    // Le scelte di piu' servizi o di piu' tipi della stessa corsa (nullptr: quel tipo non ha una scelta, decide la legge). Tutte
+    // uguali: quella. Diverse, con il tachigrafo da una parte sola: decide l'impostazione dell'azienda (di base la piu'
+    // prudente, il tachigrafo), con un avviso. Out e nessuna scelta non cambiano niente tra loro (decide la legge): out.
+    const auto decide = [&](const std::vector<const ModeEntry*>& v, TripMode::From from) {
+        const ModeEntry* first = nullptr;
+        bool tacho = false, other = false, same = true;
+        for (const ModeEntry* x : v) {
+            if (x && !first) first = x;
+            (x && x->mode == TripModeKind::Tachograph ? tacho : other) = true;
+        }
+        if (!first) return;   // nessuna scelta: decide la legge
+        for (const ModeEntry* x : v) same = same && x && x->mode == first->mode;
+        m.any = true;
+        m.from = same ? from : TripMode::From::Mixed;
+        m.entry = same ? first : nullptr;
+        m.mixed = tacho && other;
+        m.mixed_kinds = m.mixed && from == TripMode::From::Kind;
+        m.by_kinds = from == TripMode::From::Kind;
+        m.mode = !tacho ? TripModeKind::Out : !other || tm.mixed != MixedModes::Out ? TripModeKind::Tachograph : TripModeKind::Out;
+        for (const ModeEntry* x : v) {
+            if (!x || x->mode != m.mode) continue;
+            if (m.mode == TripModeKind::Tachograph && strength(*x) == ChoiceStrength::Limit) m.strength = ChoiceStrength::Limit;
+            justify(*x);
+        }
+    };
+    // 2. I servizi della corsa: le voci dei servizi vincono su quelle dei tipi (contano solo i servizi con una voce).
+    std::vector<const ModeEntry*> by_service;
+    for (const Ref& sr : t.services)
+        for (const ModeEntry& e : tm.by_service)
+            if (e.service && e.service->code == sr.code) {
+                by_service.push_back(&e);
+                break;
+            }
+    if (!by_service.empty()) {
+        decide(by_service, TripMode::From::Service);
+        return m;
+    }
+    // 3. I tipi di servizio della corsa.
+    std::set<ServiceKind> kinds;
+    for (const Ref& sr : t.services)
+        if (const Service* sv = idx.service(sr.code)) kinds.insert(sv->kind);
+    std::vector<const ModeEntry*> by_kind;
+    for (ServiceKind k : kinds) {
+        const ModeEntry* found = nullptr;
+        for (const ModeEntry& e : tm.by_kind)
+            if (e.kind && *e.kind == k) found = &e;
+        by_kind.push_back(found);
+    }
+    decide(by_kind, TripMode::From::Kind);
+    return m;
+}
+
 void judge_return(ReturnJudgment& r) {
     using O = ReturnJudgment::Outcome;
     using W = ReturnJudgment::Why;
@@ -263,6 +337,7 @@ public:
         for (const PersonPlan& pp : plans.persons) person(pp);
         partial_problems();
         clock_problems();
+        mode_problems();
     }
 
     // Cambio dell'ora: un turno che lo attraversa si controlla a mano (le durate sono differenze tra orari scritti). Vale per
@@ -359,8 +434,41 @@ private:
         }
     }
 
+    // Il regime sulla corsa con il modo dell'azienda (K-011 aggiunta 1, Mauro 28/10). La dichiarazione rende certe le esclusioni
+    // da confermare; la forzatura toglie la corsa nella lettura certa (nella prudente resta la legge come la calcolano i dati:
+    // le violazioni sono avvisi con il motivo); "out" dove la legge vuole il regime non vale (la legge vince, un avviso); il
+    // tachigrafo, nel calcolo "per scelta" (chosen), fa valere il regime anche dove la legge lo esclude o e' da confermare.
+    Certainty trip_level(const Regime& r, const Regime& tc, const WorkItem& it, Day day, ApplyReason& why, bool chosen,
+                         bool* has_chosen) const {
+        const TripMode m = trip_mode(*it.trip, settings_of(it.shift), idx_, day);
+        const bool ours = m.any && m.modes->regime.code == tc.code;
+        const bool declared = ours && m.mode == TripModeKind::Out && m.declaration;
+        const Certainty law = law_level(r, tc, it, why, declared);
+        if (!ours) return law;
+        why.mode = m;
+        why.declared = declared;
+        if (&r == &tc && !chosen) {
+            // Un solo avviso per corsa e giorno, dal regime che ha le condizioni (non da chi le prende con come_regime).
+            if (m.mode == TripModeKind::Out && !m.forcing && law == Certainty::Certain) out_not_valid_[{m.modes, m.entry, it.trip}].insert(day);
+            if (m.mixed) mixed_[{m.modes, it.trip}].insert(day);
+        }
+        if (m.mode == TripModeKind::Out && m.forcing && law != Certainty::No) {
+            why.forced = true;
+            return Certainty::ToConfirm;
+        }
+        if (m.mode == TripModeKind::Tachograph && law != Certainty::Certain) {
+            if (has_chosen) *has_chosen = true;
+            if (chosen) {
+                why.chosen = true;
+                return Certainty::Certain;
+            }
+        }
+        return law;
+    }
+
     // Quanto vale per la persona il regime sulla corsa di un elemento: ruolo, tipo di servizio, mezzo, percorso, esclusioni.
-    Certainty trip_level(const Regime& r, const Regime& tc, const WorkItem& it, ApplyReason& why) const {
+    // declared: l'azienda ha dichiarato la corsa esclusa (le esclusioni da confermare valgono come certe).
+    Certainty law_level(const Regime& r, const Regime& tc, const WorkItem& it, ApplyReason& why, bool declared) const {
         why.what = ApplyReason::What::Trip;
         why.trip = it.trip;
         why.shift = it.shift;
@@ -389,7 +497,11 @@ private:
                 Certainty best = Certainty::No;
                 for (const RegimeExclusion& e : tc.exclusions) {
                     if (std::find(e.kinds.begin(), e.kinds.end(), k) == e.kinds.end()) continue;
-                    Certainty lv = e.to_confirm ? Certainty::ToConfirm : Certainty::Certain;
+                    // insieme_a: la voce vale solo se la corsa ha anche uno di quei tipi (es. disabili con lo scolastico).
+                    if (!e.together_with.empty() && std::none_of(e.together_with.begin(), e.together_with.end(),
+                                                                 [&](ServiceKind w) { return kinds.count(w) > 0; }))
+                        continue;
+                    Certainty lv = e.to_confirm && !declared ? Certainty::ToConfirm : Certainty::Certain;
                     if (e.route_up_to_km) {
                         if (km.km > *e.route_up_to_km + 1e-9) lv = Certainty::No;   // i km noti superano gia' il limite
                         else if (!km.known && !km_as_known) lv = min_c(lv, Certainty::ToConfirm);
@@ -436,139 +548,156 @@ private:
         return min_c(min_c(why.role_level, min_c(inc, by_all)), min_c(why.vehicle_level, why.route_level));
     }
 
-    void applicability(PersonCtx& c) const {
-        if (!c.norms) return;
+    // I giorni e le famiglie in cui un regime vale per la persona, con i motivi; chosen = il calcolo "per scelta" (tachigrafo).
+    RegimeData regime_data(const PersonCtx& c, const Regime& r, bool chosen, bool* has_chosen) const {
+        RegimeData rd;
+        rd.regime = &r;
+        rd.trip_conditions = &r;
+        if (r.like)
+            for (const Regime& o : c.norms->regimes)
+                if (o.code == r.like->code && !o.like) rd.trip_conditions = &o;
+        for (const WorkRule& w : r.rules) {
+            if (w.type == RuleType::WorkCount && !rd.count) rd.count = &w;
+            if (w.type == RuleType::DailyRest && w.measure == RestMeasure::From24hEndRest && !rd.daily_rest) rd.daily_rest = &w;
+            if (w.type == RuleType::WeeklyRest && !rd.weekly_rest) rd.weekly_rest = &w;
+        }
+        rd.fam.assign(static_cast<std::size_t>(c.days()), {});
+        rd.why.assign(static_cast<std::size_t>(c.days()), {});
+        rd.day_level.assign(static_cast<std::size_t>(c.days()), Certainty::No);
+        rd.trigger_level.assign(static_cast<std::size_t>(c.days()), Certainty::No);
+        rd.seg_level.assign(c.segs.size(), Certainty::Certain);
+        rd.chosen = chosen;
+        if (chosen) rd.chosen_strength.assign(static_cast<std::size_t>(c.days()), 0);
         const Person& x = *c.person;
-        for (const Regime& r : c.norms->regimes) {
-            RegimeData rd;
-            rd.regime = &r;
-            rd.trip_conditions = &r;
-            if (r.like)
-                for (const Regime& o : c.norms->regimes)
-                    if (o.code == r.like->code && !o.like) rd.trip_conditions = &o;
-            for (const WorkRule& w : r.rules) {
-                if (w.type == RuleType::WorkCount && !rd.count) rd.count = &w;
-                if (w.type == RuleType::DailyRest && w.measure == RestMeasure::From24hEndRest && !rd.daily_rest) rd.daily_rest = &w;
-                if (w.type == RuleType::WeeklyRest && !rd.weekly_rest) rd.weekly_rest = &w;
-            }
-            rd.fam.assign(static_cast<std::size_t>(c.days()), {});
-            rd.why.assign(static_cast<std::size_t>(c.days()), {});
-            rd.day_level.assign(static_cast<std::size_t>(c.days()), Certainty::No);
-            rd.trigger_level.assign(static_cast<std::size_t>(c.days()), Certainty::No);
-            rd.seg_level.assign(c.segs.size(), Certainty::Certain);
-            const Certainty employment = level_of(r.employments, x.employment);
-            const Certainty agreement = r.agreements.present ? (x.agreement_code.empty() ? Certainty::No : level_of(r.agreements, x.agreement_code))
-                                                             : Certainty::Certain;
-            const Certainty person_level = min_c(employment, agreement);
-            const bool trips = has_trip_conditions(*rd.trip_conditions);
-            for (const PersonDay& pd : c.plan->days) {
-                if (!c.in_period(pd.day)) continue;
-                if ((r.valid_from && pd.day < *r.valid_from) || (r.valid_to && pd.day > *r.valid_to)) continue;
-                const auto di = static_cast<std::size_t>(pd.day - c.d0);
-                Certainty best = Certainty::No;
-                std::vector<ApplyReason> reasons;
-                reasons.reserve(pd.items.size() + 1);
-                const bool day_with_trips = std::any_of(pd.items.begin(), pd.items.end(), [](const WorkItem& it) { return it.trip != nullptr; });
-                if (trips && !day_with_trips) {
-                    // Una giornata senza corse (es. riserva o reperibilita'): le condizioni sulla corsa non si possono
-                    // valutare. Se la persona e il ruolo vanno bene, il regime vale da confermare: mai "nessuna legge", mai certo.
-                    for (const Shift* s : pd.shifts) {
-                        ApplyReason why;
-                        why.what = ApplyReason::What::NoTrips;
-                        why.shift = s;
-                        why.role = s->role;
-                        why.role_level = level_of(r.roles, s->role);
-                        why.employment_level = employment;
-                        why.agreement_level = agreement;
-                        why.level = min_c(min_c(why.role_level, person_level), Certainty::ToConfirm);
-                        why.trigger_day = pd.day;
-                        best = max_c(best, why.level);
-                        reasons.push_back(std::move(why));
-                    }
-                } else if (trips) {
-                    const auto pdi = static_cast<std::size_t>(&pd - c.plan->days.data());
-                    for (std::size_t ii = 0; ii < pd.items.size(); ++ii) {
-                        const WorkItem& it = pd.items[ii];
-                        if (!it.trip) continue;
-                        ApplyReason why;
-                        why.employment_level = employment;
-                        why.agreement_level = agreement;
-                        const Certainty tl = trip_level(r, *rd.trip_conditions, it, why);
-                        if (const int si = c.item_seg[pdi][ii]; si >= 0) rd.seg_level[static_cast<std::size_t>(si)] = tl;
-                        const Certainty t = min_c(tl, person_level);
-                        why.level = t;
-                        why.trigger_day = pd.day;
-                        best = max_c(best, t);
-                        reasons.push_back(std::move(why));
-                    }
-                } else {
-                    for (const Shift* s : pd.shifts) {
-                        ApplyReason why;
-                        why.what = ApplyReason::What::Shift;
-                        why.shift = s;
-                        why.role = s->role;
-                        why.role_level = level_of(r.roles, s->role);
-                        why.employment_level = employment;
-                        why.agreement_level = agreement;
-                        why.level = min_c(why.role_level, person_level);
-                        why.trigger_day = pd.day;
-                        best = max_c(best, why.level);
-                        reasons.push_back(std::move(why));
-                    }
-                }
-                if (r.to_confirm && best == Certainty::Certain) {
-                    best = Certainty::ToConfirm;
+        const Certainty employment = level_of(r.employments, x.employment);
+        const Certainty agreement = r.agreements.present ? (x.agreement_code.empty() ? Certainty::No : level_of(r.agreements, x.agreement_code))
+                                                         : Certainty::Certain;
+        const Certainty person_level = min_c(employment, agreement);
+        const bool trips = has_trip_conditions(*rd.trip_conditions);
+        for (const PersonDay& pd : c.plan->days) {
+            if (!c.in_period(pd.day)) continue;
+            if ((r.valid_from && pd.day < *r.valid_from) || (r.valid_to && pd.day > *r.valid_to)) continue;
+            const auto di = static_cast<std::size_t>(pd.day - c.d0);
+            Certainty best = Certainty::No;
+            std::vector<ApplyReason> reasons;
+            reasons.reserve(pd.items.size() + 1);
+            const bool day_with_trips = std::any_of(pd.items.begin(), pd.items.end(), [](const WorkItem& it) { return it.trip != nullptr; });
+            if (trips && !day_with_trips) {
+                // Una giornata senza corse (es. riserva o reperibilita'): le condizioni sulla corsa non si possono
+                // valutare. Se la persona e il ruolo vanno bene, il regime vale da confermare: mai "nessuna legge", mai certo.
+                for (const Shift* s : pd.shifts) {
                     ApplyReason why;
-                    why.what = ApplyReason::What::RegimeToConfirm;
-                    why.level = Certainty::ToConfirm;
+                    why.what = ApplyReason::What::NoTrips;
+                    why.shift = s;
+                    why.role = s->role;
+                    why.role_level = level_of(r.roles, s->role);
+                    why.employment_level = employment;
+                    why.agreement_level = agreement;
+                    why.level = min_c(min_c(why.role_level, person_level), Certainty::ToConfirm);
+                    why.trigger_day = pd.day;
+                    best = max_c(best, why.level);
                     reasons.push_back(std::move(why));
                 }
-                rd.day_level[di] = best;
-                // Una giornata senza corse non fa scattare l'estensione alla settimana: la fa scattare solo una corsa (o, per
-                // un regime senza condizioni sulla corsa, il turno).
-                rd.trigger_level[di] = trips && !day_with_trips ? Certainty::No : best;
-                rd.fam[di].fill(best);
-                rd.why[di] = std::move(reasons);
+            } else if (trips) {
+                const auto pdi = static_cast<std::size_t>(&pd - c.plan->days.data());
+                for (std::size_t ii = 0; ii < pd.items.size(); ++ii) {
+                    const WorkItem& it = pd.items[ii];
+                    if (!it.trip) continue;
+                    ApplyReason why;
+                    why.employment_level = employment;
+                    why.agreement_level = agreement;
+                    const Certainty tl = trip_level(r, *rd.trip_conditions, it, pd.day, why, chosen, has_chosen);
+                    if (chosen && why.chosen)
+                        rd.chosen_strength[di] = std::max<char>(rd.chosen_strength[di], why.mode.strength == ChoiceStrength::Limit ? 2 : 1);
+                    if (const int si = c.item_seg[pdi][ii]; si >= 0) rd.seg_level[static_cast<std::size_t>(si)] = tl;
+                    const Certainty t = min_c(tl, person_level);
+                    why.level = t;
+                    why.trigger_day = pd.day;
+                    best = max_c(best, t);
+                    reasons.push_back(std::move(why));
+                }
+            } else {
+                for (const Shift* s : pd.shifts) {
+                    ApplyReason why;
+                    why.what = ApplyReason::What::Shift;
+                    why.shift = s;
+                    why.role = s->role;
+                    why.role_level = level_of(r.roles, s->role);
+                    why.employment_level = employment;
+                    why.agreement_level = agreement;
+                    why.level = min_c(why.role_level, person_level);
+                    why.trigger_day = pd.day;
+                    best = max_c(best, why.level);
+                    reasons.push_back(std::move(why));
+                }
             }
-            // Estensione: una corsa che fa scattare il regime vale per tutta la settimana, per le famiglie indicate.
-            if (r.week_extension)
-                for (Day m = monday_of(c.d0); m <= c.d1; m += 7) {
-                    Certainty best = Certainty::No;
-                    Day trigger = 0;
-                    for (Day d = std::max(m, c.d0); d <= std::min(m + 6, c.d1); ++d) {
-                        const Certainty lv = rd.trigger_level[static_cast<std::size_t>(d - c.d0)];
-                        if (lv > best) {
-                            best = lv;
-                            trigger = d;
-                        }
-                    }
-                    if (best == Certainty::No) continue;
-                    for (Day d = std::max(m, c.d0); d <= std::min(m + 6, c.d1); ++d) {
-                        const auto di = static_cast<std::size_t>(d - c.d0);
-                        bool raised = false;
-                        for (RuleFamily f : r.extension_families) {
-                            Certainty& v = rd.fam[di][static_cast<std::size_t>(fam(f))];
-                            if (best > v) {
-                                v = best;
-                                raised = true;
-                            }
-                        }
-                        if (raised) {
-                            ApplyReason why;
-                            why.what = ApplyReason::What::Week;
-                            why.level = best;
-                            why.week_from = m;
-                            why.week_to = m + 6;
-                            why.trigger_day = trigger;
-                            why.families = r.extension_families;
-                            rd.why[di].push_back(std::move(why));
-                        }
+            if (r.to_confirm && best == Certainty::Certain) {
+                best = Certainty::ToConfirm;
+                ApplyReason why;
+                why.what = ApplyReason::What::RegimeToConfirm;
+                why.level = Certainty::ToConfirm;
+                reasons.push_back(std::move(why));
+            }
+            rd.day_level[di] = best;
+            // Una giornata senza corse non fa scattare l'estensione alla settimana: la fa scattare solo una corsa (o, per
+            // un regime senza condizioni sulla corsa, il turno).
+            rd.trigger_level[di] = trips && !day_with_trips ? Certainty::No : best;
+            rd.fam[di].fill(best);
+            rd.why[di] = std::move(reasons);
+        }
+        // Estensione: una corsa che fa scattare il regime vale per tutta la settimana, per le famiglie indicate.
+        if (r.week_extension)
+            for (Day m = monday_of(c.d0); m <= c.d1; m += 7) {
+                Certainty best = Certainty::No;
+                Day trigger = 0;
+                for (Day d = std::max(m, c.d0); d <= std::min(m + 6, c.d1); ++d) {
+                    const Certainty lv = rd.trigger_level[static_cast<std::size_t>(d - c.d0)];
+                    if (lv > best) {
+                        best = lv;
+                        trigger = d;
                     }
                 }
-            c.regimes.push_back(std::move(rd));
+                if (best == Certainty::No) continue;
+                for (Day d = std::max(m, c.d0); d <= std::min(m + 6, c.d1); ++d) {
+                    const auto di = static_cast<std::size_t>(d - c.d0);
+                    bool raised = false;
+                    for (RuleFamily f : r.extension_families) {
+                        Certainty& v = rd.fam[di][static_cast<std::size_t>(fam(f))];
+                        if (best > v) {
+                            v = best;
+                            raised = true;
+                        }
+                    }
+                    if (raised) {
+                        ApplyReason why;
+                        why.what = ApplyReason::What::Week;
+                        why.level = best;
+                        why.week_from = m;
+                        why.week_to = m + 6;
+                        why.trigger_day = trigger;
+                        why.families = r.extension_families;
+                        rd.why[di].push_back(std::move(why));
+                    }
+                }
+            }
+        return rd;
+    }
+
+    void applicability(PersonCtx& c) const {
+        if (!c.norms) return;
+        for (const Regime& r : c.norms->regimes) {
+            bool has_chosen = false;
+            c.regimes.push_back(regime_data(c, r, false, &has_chosen));
+            // Il tachigrafo dell'azienda su corse che la legge esclude (o forse esclude): il regime anche "per scelta",
+            // calcolato a parte (le sue violazioni sono scelte dell'azienda, non la legge).
+            if (has_chosen) {
+                c.regimes.push_back(regime_data(c, r, true, nullptr));
+                c.regimes.back().measure = -2;   // la misura e' quella del regime di legge (measures)
+            }
         }
         like_extension(c);
         applicability_overrides(c);
+        chosen_weeks(c);
         for (RegimeData& rd : c.regimes)
             for (int w = 0; w < kWorlds; ++w)
                 for (int f = 0; f < 5; ++f) {
@@ -633,15 +762,34 @@ private:
         }
     }
 
+    // Il regime per scelta (tachigrafo): nelle settimane in cui vale (anche per estensione) la forza e' quella piu' forte dei
+    // giorni con le corse scelte.
+    static void chosen_weeks(PersonCtx& c) {
+        for (RegimeData& rd : c.regimes) {
+            if (!rd.chosen) continue;
+            for (Day m = monday_of(c.d0); m <= c.d1; m += 7) {
+                char top = 0;
+                for (Day d = std::max(m, c.d0); d <= std::min(m + 6, c.d1); ++d) top = std::max(top, rd.chosen_strength[static_cast<std::size_t>(d - c.d0)]);
+                if (top == 0) continue;
+                for (Day d = std::max(m, c.d0); d <= std::min(m + 6, c.d1); ++d) {
+                    char& v = rd.chosen_strength[static_cast<std::size_t>(d - c.d0)];
+                    if (v == 0) v = top;
+                }
+            }
+        }
+    }
+
     void applicability_overrides(PersonCtx& c) const {
         // Esclusioni tra regimi: nei giorni (o nelle settimane, con l'estensione) in cui un regime vale con certezza, un altro
-        // non vale per alcune famiglie, oppure vale solo da confermare.
+        // non vale per alcune famiglie, oppure vale solo da confermare. Un regime per scelta dell'azienda (tachigrafo) non
+        // esclude la legge: la L. 138 resta sopra (K-011 aggiunta 1).
         for (const RegimeData& rd : c.regimes) {
+            if (rd.chosen) continue;
             const Regime& r = *rd.regime;
             for (const RegimeOverride& o : r.overrides) {
                 RegimeData* target = nullptr;
                 for (RegimeData& t : c.regimes)
-                    if (t.regime->code == o.regime.code && &t != &rd) target = &t;
+                    if (t.regime->code == o.regime.code && &t != &rd && !t.chosen) target = &t;
                 if (!target) continue;
                 for (Day d = c.d0; d <= c.d1; ++d) {
                     bool in_scope = false;
@@ -733,11 +881,17 @@ private:
             return m;
         };
         c.measures.push_back(make(nullptr, nullptr));
-        for (RegimeData& rd : c.regimes)
+        for (std::size_t k = 0; k < c.regimes.size(); ++k) {
+            RegimeData& rd = c.regimes[k];
+            if (rd.chosen) {   // la misura del regime di legge (che lo precede)
+                rd.measure = k > 0 && c.regimes[k - 1].regime == rd.regime ? c.regimes[k - 1].measure : -1;
+                continue;
+            }
             if (rd.count) {
                 rd.measure = static_cast<int>(c.measures.size());
                 c.measures.push_back(make(rd.regime, rd.count));
             }
+        }
         for (int w = 0; w < kWorlds; ++w) {
             const auto ws = static_cast<std::size_t>(w);
             std::vector<int>& dw = c.drive_weight[ws];
@@ -880,6 +1034,9 @@ private:
         const CompanySettings* settings = idx_.settings(pp.person->company.code);
         std::vector<Breach> found[kWorlds];
         std::vector<Breach> notices[kWorlds];
+        // Il regime per scelta dell'azienda (tachigrafo, K-011 aggiunta 1): a parte, non e' la legge.
+        std::vector<Breach> chosen_found[kWorlds];
+        std::vector<Breach> chosen_notices[kWorlds];
         std::vector<Breach> near;
         for (const RegimeData& rd : c.regimes)
             for (const WorkRule& w : rd.regime->rules) {
@@ -896,13 +1053,16 @@ private:
                         for (Breach& b : o.breaches) {
                             b.rule = &w;
                             b.regime = rd.regime;
-                            found[world].push_back(std::move(b));
+                            b.chosen = rd.chosen;
+                            (rd.chosen ? chosen_found : found)[world].push_back(std::move(b));
                         }
                         for (Breach& b : o.notices) {
                             b.rule = &w;
                             b.regime = rd.regime;
-                            notices[world].push_back(std::move(b));
+                            b.chosen = rd.chosen;
+                            (rd.chosen ? chosen_notices : notices)[world].push_back(std::move(b));
                         }
+                        if (rd.chosen) continue;   // le verifiche parziali e i limiti vicini: quelli della legge
                         if (world == 1)
                             for (Breach& b : o.near) {
                                 b.rule = &w;
@@ -917,7 +1077,16 @@ private:
             }
         contract(c, found);
         choices(c, settings, found);
-        // Le violazioni che restano con le letture certe (mondo 2; dove non si e' valutato, uguale al prudente).
+        emit(c, found, notices, middle_keys(c, found, notices));
+        emit_chosen(c, chosen_found, chosen_notices, middle_keys(c, chosen_found, chosen_notices), found, notices);
+        for (Breach& b : near) emit_near(c, b);
+        returns_and_more(c);
+        if (rep_) report(c);
+        partial_days_.clear();
+    }
+
+    // Le violazioni che restano con le letture certe (mondo 2; dove non si e' valutato, uguale al prudente).
+    static std::set<std::string> middle_keys(const PersonCtx& c, const std::vector<Breach>* found, const std::vector<Breach>* notices) {
         std::set<std::string> middle;
         for (const Breach& b : found[kMiddle]) middle.insert(b.key);
         for (const Breach& b : notices[kMiddle]) middle.insert(b.key);
@@ -927,17 +1096,13 @@ private:
             const bool readings = (b.rule && b.rule->prudent) || has_prudent_readings(c, b.regime);
             if (!readings) middle.insert(b.key);
         }
-        emit(c, found, notices, middle);
-        for (Breach& b : near) emit_near(c, b);
-        returns_and_more(c);
-        if (rep_) report(c);
-        partial_days_.clear();
+        return middle;
     }
 
     // Il regime (o, senza regime, uno dei regimi che contano il lavoro) ha letture prudenti del conteggio o dei riposi.
     static bool has_prudent_readings(const PersonCtx& c, const Regime* regime) {
         for (const RegimeData& rd : c.regimes) {
-            if (regime ? rd.regime != regime : rd.measure < 0) continue;
+            if (rd.chosen || (regime ? rd.regime != regime : rd.measure < 0)) continue;
             if ((rd.count && rd.count->prudent) || (rd.daily_rest && rd.daily_rest->prudent) || (rd.weekly_rest && rd.weekly_rest->prudent))
                 return true;
         }
@@ -946,7 +1111,8 @@ private:
 
     // Motivi di un avviso "da confermare": cosa e' incerto nell'unita' (giorni da from a to). by_readings = la violazione
     // sparisce con le letture certe (mondo 2): viene da una lettura prudente.
-    std::vector<std::string> reasons(const PersonCtx& c, const Breach& b, bool by_readings) const {
+    std::vector<std::string> reasons(const PersonCtx& c, const Breach& b, bool by_readings,
+                                     std::set<const ModeEntry*>* forcings = nullptr) const {
         std::vector<std::string> out = b.extra_reasons;
         if (b.regime && b.regime->to_confirm) out.push_back("regime_da_confermare");
         if (b.rule && b.rule->to_confirm) out.push_back("regola_da_confermare");
@@ -958,11 +1124,16 @@ private:
         if (b.regime || b.work_measure) {
             const RuleFamily f = b.rule ? b.rule->family : RuleFamily::Work;
             for (const RegimeData& rd : c.regimes) {
-                if (b.regime ? rd.regime != b.regime : rd.measure < 0) continue;
+                if (rd.chosen != b.chosen || (b.regime ? rd.regime != b.regime : rd.measure < 0)) continue;
                 for (Day d = std::max(d_from, c.d0); d <= std::min(d_to, c.d1); ++d) {
                     const auto di = static_cast<std::size_t>(d - c.d0);
                     if (rd.fam[di][static_cast<std::size_t>(fam(f))] != Certainty::ToConfirm) continue;
-                    const auto explain = [&out](const ApplyReason& why) {
+                    const auto explain = [&out, forcings](const ApplyReason& why) {
+                        // La forzatura dell'azienda: nella lettura prudente vale la legge come la calcolano i dati.
+                        if (why.what == ApplyReason::What::Trip && why.forced) {
+                            out.push_back("forzatura_dell_azienda");
+                            if (forcings && why.mode.forcing) forcings->insert(why.mode.forcing);
+                        }
                         if (why.what == ApplyReason::What::OverriddenBy && why.effect == ExclusionEffect::ToConfirm)
                             out.push_back("insieme_ad_altro_regime");
                         if (why.what == ApplyReason::What::RegimeToConfirm) out.push_back("regime_da_confermare");
@@ -1003,6 +1174,8 @@ private:
                 break;
             }
         if (out.empty()) out.push_back("dati_incerti");   // non dovrebbe succedere: un avviso dice sempre perche'
+        std::sort(out.begin(), out.end());
+        out.erase(std::unique(out.begin(), out.end()), out.end());
         return out;
     }
 
@@ -1013,8 +1186,13 @@ private:
         for (const Breach& b : found[0]) add(c, b, b.certain_check, {});
         std::set<std::string> prudent_keys;
         for (const Breach& b : found[1])
-            if (!certain_keys.count(b.key) && prudent_keys.insert(b.key).second)
-                add(c, b, b.prudent_check, reasons(c, b, !middle.count(b.key)));
+            if (!certain_keys.count(b.key) && prudent_keys.insert(b.key).second) {
+                std::set<const ModeEntry*> forcings;
+                add(c, b, b.prudent_check, reasons(c, b, !middle.count(b.key), &forcings));
+                // Il rischio di una forzatura: la violazione che ci sarebbe se la forzatura fosse sbagliata.
+                for (const ModeEntry* e : forcings)
+                    if (b.regime && b.rule) forcing_risk_[e].push_back({b.regime, b.rule, b.day, c.person->code});
+            }
         // Avvisi (straordinario, riposo cumulato): solo dove non c'e' gia' una violazione della stessa unita'.
         std::set<std::string> done;
         for (int w = 0; w < 2; ++w)   // il mondo 2 non da' problemi
@@ -1022,6 +1200,59 @@ private:
                 if (prudent_keys.count(b.key) || certain_keys.count(b.key) || !done.insert("avviso|" + b.key).second) continue;
                 add(c, b, b.certain_check, w == 0 ? b.extra_reasons : reasons(c, b, !middle.count(b.key)));
             }
+    }
+
+    // Le violazioni del regime seguito per scelta dell'azienda (tachigrafo, K-011 aggiunta 1), dove la legge non le dice
+    // gia': con la lettura certa un errore se la scelta e' un limite rigido su un turno ricorrente, altrimenti un avviso;
+    // solo con la prudente un avviso con i motivi. Codici K-CTR-127 e K-CTR-128: la variante e' quella della regola,
+    // spostata per famiglia (lavoro 0, guida 13, riposo giornaliero 20, riposo settimanale 25).
+    void emit_chosen(const PersonCtx& c, std::vector<Breach>* found, std::vector<Breach>* notices, const std::set<std::string>& middle,
+                     const std::vector<Breach>* law_found, const std::vector<Breach>* law_notices) {
+        std::set<std::string> law;
+        for (int w = 0; w < kWorlds; ++w) {
+            for (const Breach& b : law_found[w]) law.insert(b.key);
+            for (const Breach& b : law_notices[w]) law.insert(b.key);
+        }
+        const auto offset = [](Check k) {
+            switch (k) {
+                case Check::LawDrivingViolated:
+                case Check::LawDrivingToConfirm: return 13;
+                case Check::LawDailyRestViolated:
+                case Check::LawDailyRestToConfirm: return 20;
+                case Check::LawWeeklyRestViolated:
+                case Check::LawWeeklyRestToConfirm: return 25;
+                default: return 0;
+            }
+        };
+        const auto strength = [&](const Breach& b) {
+            char top = 0;
+            for (const RegimeData& rd : c.regimes) {
+                if (!rd.chosen || rd.regime != b.regime) continue;
+                const Day a = std::max(day_of(b.from), c.d0), z = std::min(day_of(std::max(b.from, b.to - 1)), c.d1);
+                for (Day d = a; d <= z; ++d) top = std::max(top, rd.chosen_strength[static_cast<std::size_t>(d - c.d0)]);
+            }
+            return top == 2 ? ChoiceStrength::Limit : ChoiceStrength::Preference;
+        };
+        std::set<std::string> done;
+        const auto one = [&](Breach b, int world) {
+            if (b.certain_check == Check::LawOvertime || law.count(b.key) || !done.insert(b.key).second) return;
+            const ChoiceStrength f = strength(b);
+            const bool error = world == 0 && f == ChoiceStrength::Limit && !b.day_assignment;
+            std::vector<std::string> motives;
+            if (!error) {
+                motives = world == 0 ? b.extra_reasons : reasons(c, b, !middle.count(b.key));
+                motives.push_back(f == ChoiceStrength::Preference ? "preferenza" : "assegnazione_del_giorno");
+                if (world != 0) motives.erase(std::remove(motives.begin(), motives.end(), "dati_incerti"), motives.end());
+                std::sort(motives.begin(), motives.end());
+                motives.erase(std::unique(motives.begin(), motives.end()), motives.end());
+            }
+            b.variant += offset(b.certain_check);
+            add(c, b, error ? Check::ChosenRegimeLimit : Check::ChosenRegimeNotRespected, motives);
+        };
+        for (int w = 0; w < 2; ++w) {   // il mondo 2 non da' problemi
+            for (const Breach& b : found[w]) one(b, w);
+            for (const Breach& b : notices[w]) one(b, 1);
+        }
     }
 
     // Quale legge vale per la persona e' un dato personale quando il regime dipende dal suo rapporto o dal suo contratto
@@ -1075,7 +1306,7 @@ private:
         std::optional<long long> lo, hi;
         bool any_certain = false;
         for (const RegimeData& rd : c.regimes) {
-            if (rd.measure < 0 || !c.in_period(pd.day)) continue;
+            if (rd.chosen || rd.measure < 0 || !c.in_period(pd.day)) continue;
             const Certainty lv = rd.fam[static_cast<std::size_t>(pd.day - c.d0)][static_cast<std::size_t>(fam(RuleFamily::Work))];
             if (lv == Certainty::No) continue;
             const Measure& m = c.measures[static_cast<std::size_t>(rd.measure)];
@@ -1271,14 +1502,14 @@ private:
             // Nessuna legge sugli orari nei dati per la persona quel giorno.
             bool any = false;
             for (const RegimeData& rd : c.regimes)
-                if (is_hours_law(*rd.regime))
+                if (is_hours_law(*rd.regime) && !rd.chosen)
                     for (Certainty lv : rd.fam[di]) any = any || lv != Certainty::No;
             if (!any) no_law.push_back(pd.day);
             // Casi non trattati: piu' autisti sulla stessa corsa (multipresenza) dove vale un regime che lo dice.
             for (const WorkItem& it : pd.items) {
                 if (!it.trip || it.role != ShiftRole::SecondDriver) continue;
                 for (const RegimeData& rd : c.regimes) {
-                    if (rd.day_level[di] == Certainty::No) continue;
+                    if (rd.chosen || rd.day_level[di] == Certainty::No) continue;
                     for (const UntreatedCaseEntry& u : rd.regime->untreated)
                         if (u.kind == UntreatedCase::MultiManning)
                         {
@@ -1421,6 +1652,78 @@ private:
         }
     }
 
+    // --- Modo delle corse: OUT o tachigrafo (K-011 aggiunta 1) ------------------------------------------------------------
+
+    const CompanySettings* owner_of(const TripModes* m) const {
+        for (const CompanySettings& s : p_.company_settings)
+            if (s.trip_modes && &*s.trip_modes == m) return &s;
+        return nullptr;
+    }
+
+    static Param days_of(const std::set<Day>& d) {
+        Param x;
+        x.name = "giorni";
+        x.kind = Param::Kind::Days;
+        x.days.assign(d.begin(), d.end());
+        return x;
+    }
+
+    void mode_problems() {
+        // "out" dove la legge, con i dati scritti, vuole il regime e senza forzatura: vale la legge. Varianti: la scelta del
+        // tipo di servizio (0: rivela il tipo, dato particolare), del servizio (1), della corsa (2), dell'impostazione per le
+        // scelte diverse (3).
+        for (const auto& [k, days] : out_not_valid_) {
+            const TripModes* modes = std::get<0>(k);
+            const ModeEntry* entry = std::get<1>(k);
+            const Trip* trip = std::get<2>(k);
+            const CompanySettings* s = owner_of(modes);
+            const int variant = !entry ? 3 : entry->trip ? 2 : entry->service ? 1 : 0;
+            std::vector<Param> params = {ref_param("azienda", Element::Company, s ? s->company.code : Code()),
+                                         ref_param("corsa", Element::Trip, trip->code), text_param("regime", modes->regime.code),
+                                         days_of(days)};
+            if (entry && entry->service) params.push_back(ref_param("servizio", Element::Service, entry->service->code));
+            out_.push_back(Problem{Check::ModeOutNotValid, variant, entry ? entry->src : modes->src, std::move(params)});
+        }
+        // Corsa con scelte diverse tra i servizi o i tipi di servizio, con il tachigrafo da una parte sola.
+        for (const auto& [k, days] : mixed_) {
+            const CompanySettings* s = owner_of(k.first);
+            const TripMode tm = trip_mode(*k.second, s, idx_, *days.begin());
+            const int variant = (tm.mode == TripModeKind::Tachograph ? 0 : 1) + (tm.mixed_kinds ? 0 : 2);
+            out_.push_back(Problem{Check::ModeMixed, variant, k.first->src,
+                                   {ref_param("azienda", Element::Company, s ? s->company.code : Code()),
+                                    ref_param("corsa", Element::Trip, k.second->code), text_param("regime", k.first->regime.code),
+                                    days_of(days)}});
+        }
+        // Il rischio di ogni forzatura: le violazioni della legge come la calcolano i dati (nella lettura prudente).
+        for (const CompanySettings& s : p_.company_settings) {
+            if (!s.trip_modes) continue;
+            for (const std::vector<ModeEntry>* v : {&s.trip_modes->by_service, &s.trip_modes->by_trip})
+                for (const ModeEntry& e : *v) {
+                    const auto it = forcing_risk_.find(&e);
+                    if (!e.forcing || it == forcing_risk_.end()) continue;
+                    std::set<std::tuple<std::string, Day, Code>> uniq;
+                    std::set<std::string> rules;
+                    std::set<Code> persons;
+                    std::set<Day> days;
+                    for (const Risk& r : it->second) {
+                        uniq.insert({r.regime->code + " " + r.rule->code, r.day, r.person});
+                        rules.insert(r.regime->code + " " + r.rule->code);
+                        persons.insert(r.person);
+                        days.insert(r.day);
+                    }
+                    std::string list;
+                    for (const std::string& x : rules) list += (list.empty() ? "" : ", ") + x;
+                    out_.push_back(Problem{Check::ModeForcedRisk, (e.trip ? 0 : 1) + (uniq.size() == 1 ? 2 : 0), e.forcing->src,
+                                           {ref_param("azienda", Element::Company, s.company.code),
+                                            e.trip ? ref_param("corsa", Element::Trip, e.trip->code)
+                                                   : ref_param("servizio", Element::Service, e.service->code),
+                                            text_param("regime", s.trip_modes->regime.code),
+                                            number_param("violazioni", static_cast<long long>(uniq.size())), text_param("regole", list),
+                                            number_param("persone", static_cast<long long>(persons.size())), days_of(days)}});
+                }
+        }
+    }
+
     void clock_problems() {
         for (const auto& [s, d] : clock_)
             out_.push_back(Problem{Check::ClockChangeCrossed, 0, s->src, {ref_param("turno", Element::Shift, s->code), days_param("giorni", d)}});
@@ -1454,13 +1757,20 @@ private:
                 RegimeOnDay ro;
                 ro.regime = rd.regime;
                 ro.family = rd.fam[di];
+                ro.chosen = rd.chosen;
                 report_reasons(rd.why[di], ro.reasons, dh.trips);
                 if (rd.own_drive && ro.family[static_cast<std::size_t>(fam(RuleFamily::Driving))] != Certainty::No) {
                     ro.drive_certain = sum_in(c.segs, rd.drive_prefix[0], rd.drive_weight[0], a, b);
                     ro.drive_prudent = sum_in(c.segs, rd.drive_prefix[1], rd.drive_weight[1], a, b);
                 }
-                if (ro.applies() || !ro.reasons.empty()) dh.regimes.push_back(ro);
-                if (!ro.applies() || rd.measure < 0) continue;
+                bool show = ro.applies() || !ro.reasons.empty();
+                if (rd.chosen) {   // il regime per scelta: solo dove aggiunge qualcosa alla legge
+                    for (const RegimeData& law : c.regimes)
+                        if (!law.chosen && law.regime == rd.regime && law.fam[di] == rd.fam[di]) show = false;
+                    show = show && ro.applies();
+                }
+                if (show) dh.regimes.push_back(ro);
+                if (!ro.applies() || rd.measure < 0 || rd.chosen) continue;
                 const Measure& m = c.measures[static_cast<std::size_t>(rd.measure)];
                 WorkMeasure wm;
                 wm.regime = rd.regime;
@@ -1502,7 +1812,7 @@ private:
                 dh.work.push_back(wm);
             }
             bool any_law = false;
-            for (const RegimeOnDay& ro : dh.regimes) any_law = any_law || (ro.applies() && is_hours_law(*ro.regime));
+            for (const RegimeOnDay& ro : dh.regimes) any_law = any_law || (ro.applies() && !ro.chosen && is_hours_law(*ro.regime));
             dh.no_law = !any_law;
             // Riposo prima della giornata.
             for (const Free& f : free0)
@@ -1516,6 +1826,7 @@ private:
                     });
                 }
             day_returns(c, pd, &dh.returns);
+            for (TripOnDay& t : dh.trips) t.mode = trip_mode(*t.trip, settings_of(t.shift), idx_, pd.day);
             for (const Shift* s : pd.shifts) dh.clock_change = dh.clock_change || clock_.count({s, pd.day});
             for (const auto& [w, ds] : partial_days_)
                 if (ds.count(pd.day))
@@ -1536,7 +1847,7 @@ private:
             const long long a = abs_min(m, 0), b = abs_min(m + 7, 0);
             wh.driving = sum_in(c.segs, c.drive_prefix[0], c.drive_weight[0], a, b);
             for (const RegimeData& rd : c.regimes) {
-                if (rd.measure < 0 || !applies_any(rd, c, RuleFamily::Work, m, m + 6, 1)) continue;
+                if (rd.chosen || rd.measure < 0 || !applies_any(rd, c, RuleFamily::Work, m, m + 6, 1)) continue;
                 const Measure& ms = c.measures[static_cast<std::size_t>(rd.measure)];
                 WorkMeasure wm;
                 wm.regime = rd.regime;
@@ -1576,6 +1887,17 @@ private:
     std::map<const WorkRule*, std::vector<std::pair<Code, Day>>> partial_;
     std::map<const WorkRule*, std::set<Day>> partial_days_;   // della persona in corso (resoconto)
     std::set<std::pair<const Shift*, Day>> clock_;
+    // Modo delle corse (K-011 aggiunta 1): "out" che non vale (la legge vuole il regime) e corse con scelte diverse, per
+    // corsa e giorno; i rischi delle forzature (le violazioni della legge come la calcolano i dati).
+    mutable std::map<std::tuple<const TripModes*, const ModeEntry*, const Trip*>, std::set<Day>> out_not_valid_;
+    mutable std::map<std::pair<const TripModes*, const Trip*>, std::set<Day>> mixed_;
+    struct Risk {
+        const Regime* regime;
+        const WorkRule* rule;
+        Day day;
+        Code person;
+    };
+    std::map<const ModeEntry*, std::vector<Risk>> forcing_risk_;
 };
 
 }  // namespace

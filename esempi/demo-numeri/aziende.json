@@ -41,7 +41,16 @@
       "scelte_orari": [
         { "tipo": "ampiezza_massima", "massimo_minuti": 660, "forza": "preferenza", "nota": "Giornate non piu' lunghe di 11 ore, se si puo'." }
       ],
-      "rientro": { "fermo_minimo_minuti": 30, "fattore_guida": 2, "forza": "preferenza" }
+      "rientro": { "fermo_minimo_minuti": 30, "fattore_guida": 2, "forza": "preferenza" },
+      "modo_corse": {
+        "regime": "R-561",
+        "per_tipo_servizio": [
+          { "tipo_servizio": "linea", "modo": "out" },
+          { "tipo_servizio": "scolastico", "modo": "out" },
+          { "tipo_servizio": "altro", "modo": "tachigrafo", "nota": "Gite: niente OUT, solo la carta del tachigrafo." }
+        ],
+        "nota": "Linee e scolastico con le regole nazionali dove la legge lo permette; le gite con il tachigrafo."
+      }
     },
     {
       "azienda": "BETA",
@@ -64,6 +73,12 @@
         { "tipo": "riposo_giornaliero", "minimo_minuti": 660, "forza": "preferenza" }
       ],
       "rientro": { "fermo_minimo_minuti": 45, "fattore_guida": 1.5, "km_vuoti_massimi": 15, "forza": "limite" },
+      "modo_corse": {
+        "regime": "R-561",
+        "forza": "preferenza",
+        "per_tipo_servizio": [ { "tipo_servizio": "linea", "modo": "tachigrafo" } ],
+        "nota": "Trasporti Beta registra anche le linee con il tachigrafo: per scelta segue il Reg. 561 (come preferenza)."
+      },
       "nota": "Trasporti Beta vuole i mezzi sempre in rimessa la notte."
     }
   ]

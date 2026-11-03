@@ -205,8 +205,13 @@ private:
                 d["mezzo"] = nome_certezza(w.vehicle_level);
                 d["percorso"] = nome_certezza(w.route_level);
                 j["condizioni"] = std::move(d);
-                t = (corse.size() == 1 ? "corsa " : "corse ") + codici + ": " + livello;
+                // K-011 aggiunta 1: il modo dell'azienda (forzatura, dichiarazione, tachigrafo per scelta).
+                j["modo"] = w.forced ? Json("forzatura") : w.declared ? Json("dichiarazione") : w.chosen ? Json("tachigrafo_per_scelta") : Json(nullptr);
+                t = (corse.size() == 1 ? "corsa " : "corse ") + codici + ": " +
+                    (w.chosen ? std::string("vale per scelta dell'azienda (tachigrafo)") : livello);
                 std::vector<std::string> dc;
+                if (w.forced) dc.push_back("la forzatura dell'azienda (OUT): nella lettura prudente vale la legge come la calcolano i dati");
+                if (w.declared && w.level == Certainty::No) dc.push_back("la dichiarazione dell'azienda");
                 if (w.level == Certainty::ToConfirm) {
                     if (w.role_level == Certainty::ToConfirm) dc.push_back("il ruolo");
                     if (w.employment_level == Certainty::ToConfirm) dc.push_back(personali() ? "il rapporto" : "un dato personale");
@@ -302,11 +307,13 @@ private:
             j["famiglie"] = kRiservato;
             j["perche"] = kRiservato;
             j["guida_per_le_regole_minuti"] = kRiservato;
+            j["per_scelta"] = ro.chosen;
             return j;
         }
         j["codice"] = ro.regime->code;
         j["nome"] = ro.regime->name;
         j["tipo"] = ro.regime->kind == kzero::RegimeKind::Law ? "legge" : "contratto_collettivo";
+        j["per_scelta"] = ro.chosen;   // K-011 aggiunta 1: il regime seguito per scelta dell'azienda (tachigrafo), non la legge
         j["famiglie"] = famiglie(*ro.regime, ro.family);
         // Il nucleo ha gia' raggruppato le corse con lo stesso esito e tolto i motivi ripetuti (HoursReport).
         Json p = Json::array();
@@ -420,10 +427,20 @@ private:
         return j;
     }
 
-    Json problemi(const kzero::Person& x) const {
+    Json problemi(const kzero::Person& x, const kzero::PersonHours& ph) const {
+        // Le corse e i servizi della persona nei giorni mostrati: i problemi del modo delle corse che li toccano (K-011 aggiunta
+        // 1: la forzatura, il suo rischio, la dichiarazione, "out" che non vale, le scelte diverse) sono anche suoi.
+        std::set<std::string> corse, servizi;
+        for (const kzero::DayHours& dh : ph.days)
+            for (const kzero::TripOnDay& t : dh.trips) {
+                corse.insert(t.trip->code);
+                for (const kzero::Ref& sv : t.trip->services) servizi.insert(sv.code);
+            }
         Json v = Json::array();
         for (const ProblemaPresentato& p : r_.problemi) {
-            if (p.persona != x.code) continue;
+            const bool del_modo = p.persona.empty() && ((!p.corsa.empty() && corse.count(p.corsa)) ||
+                                                        (p.corsa.empty() && !p.servizio.empty() && servizi.count(p.servizio)));
+            if (p.persona != x.code && !del_modo) continue;
             const bool dentro = p.tutti_i_giorni.empty() || std::any_of(p.tutti_i_giorni.begin(), p.tutti_i_giorni.end(), [&](kzero::Day d) {
                                     return d >= rep_.from && d <= rep_.to;
                                 });
@@ -455,6 +472,7 @@ private:
             j["persone_trasportabili"] = w.vehicle ? Json(w.persons) : Json(nullptr);
             j["percorso_km"] = arrotonda(w.km, 3);
             j["percorso_noto"] = w.km_known;
+            j["modo"] = vista_.modo_corsa(w.mode);   // K-011 aggiunta 1: out o tachigrafo, forzatura, dichiarazione
             v.push_back(std::move(j));
         }
         return v;
@@ -580,7 +598,7 @@ public:
         t["minuti"] = categorie(ph.total_minutes);
         t["lavoro_contratto_minuti"] = verificabile_ ? personale(minuti(ph.total_work_x100)) : Json(nullptr);
         j["totali"] = std::move(t);
-        j["problemi"] = verificabile_ ? problemi(x) : Json(nullptr);
+        j["problemi"] = verificabile_ ? problemi(x, ph) : Json(nullptr);
         return j;
     }
 
@@ -661,6 +679,26 @@ std::string riga_minuti(const Json& m) {
 }
 
 // Le corse del giorno, raggruppate per mezzo: "con il mezzo V-1 (20 persone): C-1 (servizio scolastico, 23,6 km), C-2 (...)".
+// Il modo delle corse (K-011 aggiunta 1): le corse con lo stesso modo insieme (testo_modo_corsa, vista.hpp).
+std::string modo_testo(const Json& corse) {
+    std::vector<std::pair<std::string, std::vector<std::string>>> gruppi;
+    for (const auto& c : corse) {
+        if (c.at("modo").is_null()) continue;
+        const std::string x = testo_modo_corsa(c.at("modo"));
+        auto it = std::find_if(gruppi.begin(), gruppi.end(), [&](const auto& g) { return g.first == x; });
+        if (it == gruppi.end()) gruppi.push_back({x, {c.at("codice").get<std::string>()}});
+        else if (std::find(it->second.begin(), it->second.end(), c.at("codice").get<std::string>()) == it->second.end())
+            it->second.push_back(c.at("codice").get<std::string>());
+    }
+    std::string t;
+    for (const auto& [modo, elenco] : gruppi) {
+        std::string codici;
+        for (std::size_t i = 0; i < elenco.size(); ++i) codici += (i ? ", " : "") + elenco[i];
+        t += (t.empty() ? "" : "; ") + codici + ": " + modo;
+    }
+    return t;
+}
+
 std::string corse_testo(const Json& corse) {
     std::vector<std::pair<std::string, std::vector<std::string>>> gruppi;
     for (const auto& c : corse) {
@@ -706,7 +744,8 @@ std::string perche_testo(const Json& perche, std::size_t corse_del_giorno) {
         }
         std::string per;
         for (const auto& y : x.at("per")) per += (per.empty() ? "" : ", ") + y.get<std::string>();
-        const std::string livello = x.at("livello").get<std::string>();
+        // K-011 aggiunta 1: una corsa che vale per scelta dell'azienda (tachigrafo) ha il suo livello.
+        const std::string livello = x.at("modo") == "tachigrafo_per_scelta" ? std::string("per_scelta") : x.at("livello").get<std::string>();
         auto it = std::find_if(gruppi.begin(), gruppi.end(), [&](const Gruppo& g) { return g.livello == livello && g.per == per; });
         if (it == gruppi.end()) it = gruppi.insert(gruppi.end(), Gruppo{livello, per, {}});
         for (const auto& c : x.at("corse"))
@@ -718,7 +757,10 @@ std::string perche_testo(const Json& perche, std::size_t corse_del_giorno) {
         for (std::size_t i = 0; i < g.corse.size(); ++i) corse += (i ? ", " : "") + g.corse[i];
         const bool tutte = gruppi.size() == 1 && g.corse.size() == corse_del_giorno && corse_del_giorno > 1;
         t += (t.empty() ? "" : "; ") +
-             std::string(g.livello == "certo" ? "vale con certezza" : g.livello == "da_confermare" ? "vale da confermare" : "non vale") +
+             std::string(g.livello == "certo"           ? "vale con certezza"
+                         : g.livello == "da_confermare" ? "vale da confermare"
+                         : g.livello == "per_scelta"    ? "vale per scelta dell'azienda (tachigrafo)"
+                                                        : "non vale") +
              (tutte ? std::string(g.livello == "no" ? " per nessuna corsa" : " per tutte le corse")
                     : (g.corse.size() == 1 ? " per la corsa " : " per le corse ") + corse) +
              (g.per.empty() ? "" : " (per " + g.per + ")");
@@ -752,12 +794,15 @@ void giornata_testo(std::string& t, const Json& g) {
         t += "    Leggi, lavoro e rientri: non verificati (servono insieme i dati personali e quelli particolari).\n";
     } else {
         if (!g.at("corse").empty()) t += "    Corse " + corse_testo(g.at("corse")) + ".\n";
+        if (const std::string m = modo_testo(g.at("corse")); !m.empty()) t += "    Modo delle corse: " + m + ".\n";
         if (g.at("nessuna_legge") == true)
             t += "    Nessuna legge sugli orari nei dati per questo caso: gli orari di questo giorno non si giudicano (non vuol dire "
                  "\"regolare\").\n";
         long long riservati = 0;
         std::string non_valgono;
+        bool per_scelta = false;  // un regime che vale per scelta dell'azienda: allora gli altri "non valgono per legge"
         for (const auto& r : g.at("regimi")) {
+            if (r.at("codice") != kRiservato && r.at("per_scelta") == true) per_scelta = true;
             if (r.at("codice") == kRiservato) {
                 ++riservati;
                 continue;
@@ -786,10 +831,10 @@ void giornata_testo(std::string& t, const Json& g) {
                             come + (prudente != certa ? "; con la lettura prudente " + durata(prudente) : std::string()) + ")";
                 }
             }
-            t += "    Regime " + r.at("codice").get<std::string>() + " per " + ff + ": " + perche_testo(r.at("perche"), g.at("corse").size()) +
-                 guida + ".\n";
+            t += "    Regime " + r.at("codice").get<std::string>() + (r.at("per_scelta") == true ? " per scelta dell'azienda (tachigrafo, non per legge)" : "") +
+                 " per " + ff + ": " + perche_testo(r.at("perche"), g.at("corse").size()) + guida + ".\n";
         }
-        if (!non_valgono.empty()) t += "    Non valgono: " + non_valgono + ".\n";
+        if (!non_valgono.empty()) t += std::string(per_scelta ? "    Non valgono per legge: " : "    Non valgono: ") + non_valgono + ".\n";
         if (riservati > 0)
             t += "    " + std::string(riservati == 1 ? "Un regime riservato: dipende" : std::to_string(riservati) + " regimi riservati: dipendono") +
                  " dal rapporto o dal contratto collettivo della persona (--includi-dati-personali).\n";

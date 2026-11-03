@@ -860,7 +860,8 @@
         "servizi",
         "calendario",
         "assistente",
-        "passaggi"
+        "passaggi",
+        "modo"
       ],
       "properties": {
         "tipo": {
@@ -969,6 +970,9 @@
           "items": {
             "$ref": "#/definitions/passaggio"
           }
+        },
+        "modo": {
+          "$ref": "#/definitions/modo_corsa"
         }
       }
     },
@@ -1254,6 +1258,108 @@
           }
         }
       }
+    },
+    "modo_corsa": {
+      "description": "K-011 aggiunta 1: il modo della corsa per l'azienda del turno (out o tachigrafo), da dove viene la scelta (il tipo di servizio e' un dato particolare: 'riservato'), la forza del tachigrafo, la forzatura o la dichiarazione (motivo e chi sono dati personali); null senza una scelta.",
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "modo",
+            "da",
+            "regime",
+            "forza",
+            "forzatura",
+            "dichiarazione"
+          ],
+          "properties": {
+            "modo": {
+              "enum": [
+                "out",
+                "tachigrafo"
+              ]
+            },
+            "da": {
+              "enum": [
+                "corsa",
+                "servizio",
+                "tipo_di_servizio",
+                "impostazione",
+                "riservato"
+              ]
+            },
+            "regime": {
+              "type": "string",
+              "minLength": 1
+            },
+            "forza": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "preferenza",
+                    "limite"
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "forzatura": {
+              "$ref": "#/definitions/giustificazione_modo"
+            },
+            "dichiarazione": {
+              "$ref": "#/definitions/giustificazione_modo"
+            }
+          }
+        }
+      ]
+    },
+    "giustificazione_modo": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "motivo",
+            "chi",
+            "quando",
+            "fino_al"
+          ],
+          "properties": {
+            "motivo": {
+              "type": "string",
+              "minLength": 1
+            },
+            "chi": {
+              "type": "string",
+              "minLength": 1
+            },
+            "quando": {
+              "type": "string",
+              "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+            },
+            "fino_al": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        }
+      ]
     }
   }
 }

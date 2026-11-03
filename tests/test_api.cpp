@@ -840,6 +840,16 @@ void foglie(const JsonDati& radice, const JsonDati& nodo, const std::string& per
 
 }  // namespace
 
+// K-011 aggiunta 1: nelle forzature e nelle dichiarazioni dell'azienda (modo delle corse) il motivo scritto a mano e chi l'ha
+// scritta sono dati personali.
+static bool modo_corse_personale(const std::string& p) {
+    for (const char* dove : {"servizi", "corse"})
+        for (const char* cosa : {"forzatura", "dichiarazione"})
+            for (const char* campo : {"motivo", "chi"})
+                if (p == std::string("aziende/aziende/*/modo_corse/") + dove + "/*/" + cosa + "/" + campo) return true;
+    return false;
+}
+
 // Ogni campo dei file di dati ha la sua classe; i dati personali stanno solo nei luoghi privati e nei passeggeri;
 // i dati particolari sono proprio quelli elencati qui (cambiarli vuol dire cambiare anche docs/formato-dati.md).
 TEST(Api, classi_marcate_negli_schemi) {
@@ -867,7 +877,7 @@ TEST(Api, classi_marcate_negli_schemi) {
         EXPECT_TRUE(p.rfind("luoghi/luoghi_privati/", 0) == 0 || p.find("/passeggeri/*/") != std::string::npos ||
                     p.rfind("persone/persone/", 0) == 0 || p.rfind("assenze/assenze/", 0) == 0 ||
                     p == "rotazioni/rotazioni/*/nota" || p == "servizi_fissi/servizi_fissi/*/nota" ||
-                    p == "assegnazioni/assegnazioni/*/nota")
+                    p == "assegnazioni/assegnazioni/*/nota" || modo_corse_personale(p))
             << p;
     for (const char* nota : {"rotazioni/rotazioni/*/nota", "servizi_fissi/servizi_fissi/*/nota", "assegnazioni/assegnazioni/*/nota"})
         EXPECT_TRUE(personali.count(nota)) << nota;
@@ -881,6 +891,9 @@ TEST(Api, classi_marcate_negli_schemi) {
         EXPECT_TRUE(personali.count(std::string("assenze/assenze/*/") + campo)) << campo;
     for (const std::string& c : comuni_delle_persone) EXPECT_FALSE(personali.count(c)) << c;
     EXPECT_FALSE(personali.count("persone/persone/*/prestiti/*/accordo"));
+    for (const char* x : {"aziende/aziende/*/modo_corse/servizi/*/forzatura/motivo", "aziende/aziende/*/modo_corse/corse/*/dichiarazione/chi"})
+        EXPECT_TRUE(personali.count(x)) << x;
+    EXPECT_FALSE(personali.count("aziende/aziende/*/modo_corse/corse/*/forzatura/quando"));
     const std::set<std::string> attesi = {
         "servizi/servizi/*/competenze_richieste/*",   // versione 2: una competenza puo' far capire chi viaggia
         "servizi/servizi/*/tipo",

@@ -474,6 +474,9 @@ struct RouteCondition {
 // Corse escluse da un regime (es. servizi regolari di linea con percorso fino a 50 km, Reg. 561/2006 art. 3 a).
 struct RegimeExclusion {
     std::vector<ServiceKind> kinds;
+    // insieme_a (K-011 aggiunta 1): la voce vale per i suoi tipi solo se la corsa ha anche uno di questi tipi (es. i disabili
+    // sulla stessa corsa dello scolastico: "chi sale in piu' non cambia il tipo di servizio"). Vuoto: sempre.
+    std::vector<ServiceKind> together_with;
     std::optional<double> route_up_to_km;
     bool to_confirm = false;
     RuleSource source;
@@ -1456,6 +1459,45 @@ struct ListEntry {
     Source src;
 };
 
+// --- Modo delle corse: OUT o tachigrafo (K-011 aggiunta 1, Mauro 28/10) ---------------------------------------------
+// L'azienda sceglie, per tipo di servizio, per servizio o per corsa, se una corsa si fa "out" (con le regole nazionali, dove
+// la legge lo permette) oppure "tachigrafo" (seguendo le regole del regime che la legge esclude, es. il Reg. 561/2006, anche
+// dove la legge non lo chiede). Il programma non impone un modo: la legge resta sopra e il programma dice cosa si rischia.
+enum class TripModeKind { Out, Tachograph };
+// Corsa con servizi di tipi (o servizi) con scelte diverse: decide l'azienda; di base la scelta piu' prudente (tachigrafo).
+enum class MixedModes { MostPrudent, Out, Tachograph };
+
+// Chi ha scritto una forzatura o una dichiarazione, quando e perche'. Il motivo (scritto a mano) e chi sono dati personali.
+struct ModeJustification {
+    std::string reason;
+    std::string who;
+    Day when = 0;
+    std::optional<Day> until;   // forzatura: vale fino a questo giorno (incluso), facoltativo
+    Source src;
+};
+
+struct ModeEntry {
+    TripModeKind mode = TripModeKind::Out;
+    std::optional<ServiceKind> kind;   // per tipo di servizio
+    std::optional<Ref> service;        // per servizio
+    std::optional<Ref> trip;           // per corsa
+    std::optional<ChoiceStrength> strength;   // tachigrafo: preferenza (avviso) o limite (errore su un turno ricorrente)
+    // Solo con "out" su un servizio o una corsa: forzatura (dove la legge, con i dati scritti, vuole il regime) oppure
+    // dichiarazione (dove l'esclusione e' da confermare: da li' esclusa con certezza).
+    std::optional<ModeJustification> forcing, declaration;
+    std::string note;
+    Source src;
+};
+
+struct TripModes {
+    Ref regime;                          // il regime che il tachigrafo segue (es. R-561); vale anche per chi lo segue (come_regime)
+    std::vector<ModeEntry> by_kind, by_service, by_trip;
+    MixedModes mixed = MixedModes::MostPrudent;
+    ChoiceStrength strength = ChoiceStrength::Preference;   // forza di base del tachigrafo
+    std::string note;
+    Source src;
+};
+
 struct CompanySettings {
     Ref company;
     std::optional<Ref> norms;   // norme del paese che valgono per l'azienda
@@ -1469,6 +1511,7 @@ struct CompanySettings {
     std::optional<ReturnKey> return_key;       // chiave della pausa fuori dal posto (rientro)
     std::vector<SpecialNeed> special_needs;
     std::optional<int> days_margin;            // avviso quando mancano tante giornate al limite (giornate_massime)
+    std::optional<TripModes> trip_modes;       // OUT o tachigrafo (K-011 aggiunta 1)
     std::string note;
     Source src;
 

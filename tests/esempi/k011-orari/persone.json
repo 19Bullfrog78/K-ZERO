@@ -1103,6 +1103,129 @@
         "PEDANA",
         "LINEA-B610"
       ]
+    },
+    {
+      "codice": "P-DISABILI",
+      "azienda": "ALFA",
+      "ruoli": [
+        "autista"
+      ],
+      "nome": "Disabili Lunga",
+      "presa_servizio": "L-RIMESSA-ALFA",
+      "rapporto": {
+        "tipo": "dipendente_tempo_pieno"
+      },
+      "abilitazioni": [
+        {
+          "tipo": "B",
+          "scadenza": "2031-05-10"
+        },
+        {
+          "tipo": "D",
+          "scadenza": "2028-03-02",
+          "riferimento": "Patente n. VF0000001 (inventata)"
+        },
+        {
+          "tipo": "CQC-P",
+          "scadenza": "2028-03-02"
+        },
+        {
+          "tipo": "KB"
+        }
+      ],
+      "autorizzazioni": [
+        {
+          "committente": "CVA",
+          "riferimento": "Cartellino n. 12 (inventato)",
+          "scadenza": "2027-08-31"
+        }
+      ],
+      "competenze": [
+        "PEDANA",
+        "LINEA-B610"
+      ]
+    },
+    {
+      "codice": "P-DICHIARA",
+      "azienda": "ALFA",
+      "ruoli": [
+        "autista"
+      ],
+      "nome": "Dichiarazione Prova",
+      "presa_servizio": "L-RIMESSA-ALFA",
+      "rapporto": {
+        "tipo": "dipendente_tempo_pieno"
+      },
+      "abilitazioni": [
+        {
+          "tipo": "B",
+          "scadenza": "2031-05-10"
+        },
+        {
+          "tipo": "D",
+          "scadenza": "2028-03-02",
+          "riferimento": "Patente n. VF0000001 (inventata)"
+        },
+        {
+          "tipo": "CQC-P",
+          "scadenza": "2028-03-02"
+        },
+        {
+          "tipo": "KB"
+        }
+      ],
+      "autorizzazioni": [
+        {
+          "committente": "CVA",
+          "riferimento": "Cartellino n. 12 (inventato)",
+          "scadenza": "2027-08-31"
+        }
+      ],
+      "competenze": [
+        "PEDANA",
+        "LINEA-B610"
+      ]
+    },
+    {
+      "codice": "P-FORZATA",
+      "azienda": "ALFA",
+      "ruoli": [
+        "autista"
+      ],
+      "nome": "Forzatura Prova",
+      "presa_servizio": "L-RIMESSA-ALFA",
+      "rapporto": {
+        "tipo": "dipendente_tempo_pieno"
+      },
+      "abilitazioni": [
+        {
+          "tipo": "B",
+          "scadenza": "2031-05-10"
+        },
+        {
+          "tipo": "D",
+          "scadenza": "2028-03-02",
+          "riferimento": "Patente n. VF0000001 (inventata)"
+        },
+        {
+          "tipo": "CQC-P",
+          "scadenza": "2028-03-02"
+        },
+        {
+          "tipo": "KB"
+        }
+      ],
+      "autorizzazioni": [
+        {
+          "committente": "CVA",
+          "riferimento": "Cartellino n. 12 (inventato)",
+          "scadenza": "2027-08-31"
+        }
+      ],
+      "competenze": [
+        "PEDANA",
+        "LINEA-B610"
+      ]
     }
   ]
 }

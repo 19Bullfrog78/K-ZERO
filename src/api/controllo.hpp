@@ -25,6 +25,9 @@ struct ProblemaPresentato {
     kzero::Source completa;   // la posizione vera: serve solo a un ordine stabile tra problemi che si mostrano uguali
     std::string persona;      // la persona di cui parla il problema, se c'e' (kzero ore: i problemi di ogni persona)
     std::vector<kzero::Day> tutti_i_giorni;
+    // K-011 aggiunta 1: la corsa e il servizio di cui parla un problema del modo delle corse, solo per quei controlli (kzero
+    // ore: le forzature, le dichiarazioni e le scelte che toccano le corse della persona).
+    std::string corsa, servizio;
 };
 
 struct Resoconto {

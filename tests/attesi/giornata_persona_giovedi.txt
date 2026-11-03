@@ -36,6 +36,7 @@ T-SECONDO "Secondo"  16:50-20:30 (3 ore e 40 minuti)  azienda ALFA, autista
                 (fermo 4 minuti)
    17:04-17:11  corsa C-LIN-549 "Linea B610, corsa delle 16:40 (cambio dell'autista a Valfonda, Piazza)", solo un pezzo (cambio dell'autista)
                 servizi S-LIN-B610 (tipo riservato, contratto CT-LIN, committente TPV)
+                modo OUT, per un dato particolare (regime R-561)
                 calendario CAL-FERIALI "Giorni feriali (da lunedi' a sabato, festivi esclusi)", 305 giorni nel periodo; km a pieno 1,2, a vuoto 0
       17:04  F-VALFONDA-PIAZZA  Valfonda, Piazza Grande  a bordo non noto
       17:11  F-STAZIONE  Valfonda, Stazione FVV  km a pieno 1,2  a bordo non noto
@@ -49,6 +50,7 @@ T-SECONDO "Secondo"  16:50-20:30 (3 ore e 40 minuti)  azienda ALFA, autista
                 (fermo 5 minuti)
    19:45-20:08  corsa C-LIN-553 "Linea B610, corsa delle 19:45"
                 servizi S-LIN-B610 (tipo riservato, contratto CT-LIN, committente TPV)
+                modo OUT, per un dato particolare (regime R-561)
                 calendario CAL-FERIALI "Giorni feriali (da lunedi' a sabato, festivi esclusi)", 305 giorni nel periodo; km a pieno 15,1, a vuoto 0
       19:45  F-STAZIONE  Valfonda, Stazione FVV  a bordo non noto
       19:49  F-VALFONDA-PIAZZA  Valfonda, Piazza Grande  km a pieno 1,2  a bordo non noto

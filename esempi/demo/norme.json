@@ -234,7 +234,28 @@
               "nota": "Servizi regolari di linea con percorso fino a 50 km."
             },
             {
-              "tipi_servizio": ["scolastico", "disabili"],
+              "tipi_servizio": ["scolastico"],
+              "percorso_fino_a_km": 50,
+              "fonte": {
+                "documento": "Reg. (CE) n. 561/2006 (testo consolidato al 31/12/2024)",
+                "punto": "art. 3 lett. a e art. 4 lett. n",
+                "riferimenti": "Reg. (UE) 2024/1258; Reg. (CE) n. 1073/2009, art. 2 (servizi regolari specializzati)"
+              },
+              "nota": "Servizi scolastici fino a 50 km come servizi regolari specializzati: confermato dal consulente del lavoro il 28/10/2026."
+            },
+            {
+              "tipi_servizio": ["disabili"],
+              "insieme_a": ["scolastico"],
+              "percorso_fino_a_km": 50,
+              "fonte": {
+                "documento": "Reg. (CE) n. 561/2006 (testo consolidato al 31/12/2024)",
+                "punto": "art. 3 lett. a e art. 4 lett. n",
+                "riferimenti": "Reg. (UE) 2024/1258; Reg. (CE) n. 1073/2009, art. 2 (servizi regolari specializzati)"
+              },
+              "nota": "I disabili sulla stessa corsa di un servizio scolastico (es. asilo + disabili): chi sale in piu' non cambia il tipo di servizio. Confermato dal consulente del lavoro il 28/10/2026."
+            },
+            {
+              "tipi_servizio": ["disabili"],
               "percorso_fino_a_km": 50,
               "da_confermare": true,
               "fonte": {
@@ -242,7 +263,7 @@
                 "punto": "art. 4 lett. n",
                 "riferimenti": "Reg. (UE) 2024/1258"
               },
-              "nota": "Scolastico e disabili come servizi regolari specializzati: da confermare."
+              "nota": "Servizi solo per disabili come servizi regolari specializzati: da confermare."
             }
           ],
           "guida_delle_corse_escluse": {
