@@ -823,5 +823,8 @@ TEST(Controlli, catalogo_coperto) {
     EXPECT_EQ(api::definizione_controllo(Check::ChosenRegimeLimit).codice, "K-CTR-127");
     EXPECT_EQ(api::definizione_controllo(Check::ModeForced).codice, "K-CTR-129");
     EXPECT_EQ(api::definizione_controllo(Check::ModeMixed).codice, "K-CTR-133");
-    EXPECT_EQ(api::catalogo_controlli().size(), 133u);
+    // K-011 aggiunta 2: forzatura e dichiarazione che non servono.
+    EXPECT_EQ(api::definizione_controllo(Check::ModeForcedUseless).codice, "K-CTR-134");
+    EXPECT_EQ(api::definizione_controllo(Check::ModeDeclaredUseless).codice, "K-CTR-135");
+    EXPECT_EQ(api::catalogo_controlli().size(), 135u);
 }

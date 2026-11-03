@@ -466,6 +466,19 @@ private:
             // Un solo avviso per corsa e giorno, dal regime che ha le condizioni (non da chi le prende con come_regime).
             if (m.mode == TripModeKind::Out && !m.forcing && law == Certainty::Certain) out_not_valid_[{m.modes, m.entry, it.trip}].insert(day);
             if (m.mixed) mixed_[{m.modes, it.trip}].insert(day);
+            // K-011 aggiunta 2: se la forzatura e la dichiarazione cambiano qualcosa (1: valgono quel giorno, 2: cambiano il
+            // risultato). La forzatura cambia solo dove la legge, con i dati scritti, vuole il regime con certezza (se e' da
+            // confermare resta da confermare); la dichiarazione dove senza di lei la legge direbbe un'altra cosa.
+            if (m.mode == TripModeKind::Out && m.forcing) {
+                char& u = forcing_use_[m.forcing];
+                u = std::max<char>(u, law == Certainty::Certain ? 2 : 1);
+            }
+            if (declared) {
+                ApplyReason senza = why;
+                const Certainty l0 = law_level(r, tc, it, senza, false);
+                char& u = declaration_use_[m.declaration];
+                u = std::max<char>(u, l0 != law ? 2 : 1);
+            }
         }
         if (m.mode == TripModeKind::Out && m.forcing && law != Certainty::No) {
             why.forced = true;
@@ -1740,6 +1753,28 @@ private:
                                             number_param("persone", static_cast<long long>(persons.size())), days_of(days)}});
                 }
         }
+        // K-011 aggiunta 2: le forzature e le dichiarazioni che non cambiano niente nel periodo del pacchetto. Varianti: sulla
+        // corsa (0, 2) o sul servizio (1, 3); vale in qualche giorno ma non cambia il risultato (0, 1) oppure nessun giorno
+        // con una persona sulla corsa (2, 3: la corsa non c'e', non la fa nessuno, oppure la forzatura e' gia' finita).
+        for (const CompanySettings& s : p_.company_settings) {
+            if (!s.trip_modes) continue;
+            for (const std::vector<ModeEntry>* v : {&s.trip_modes->by_service, &s.trip_modes->by_trip})
+                for (const ModeEntry& e : *v)
+                    for (const bool forzatura : {true, false}) {
+                        const ModeJustification* g = forzatura ? (e.forcing ? &*e.forcing : nullptr) : (e.declaration ? &*e.declaration : nullptr);
+                        if (!g) continue;
+                        const auto& uso = forzatura ? forcing_use_ : declaration_use_;
+                        const auto it = uso.find(&e);
+                        const char u = it == uso.end() ? 0 : it->second;
+                        if (u == 2) continue;
+                        out_.push_back(Problem{forzatura ? Check::ModeForcedUseless : Check::ModeDeclaredUseless,
+                                               (e.trip ? 0 : 1) + (u == 0 ? 2 : 0), g->src,
+                                               {ref_param("azienda", Element::Company, s.company.code),
+                                                e.trip ? ref_param("corsa", Element::Trip, e.trip->code)
+                                                       : ref_param("servizio", Element::Service, e.service->code),
+                                                text_param("regime", s.trip_modes->regime.code)}});
+                    }
+        }
     }
 
     void clock_problems() {
@@ -1909,6 +1944,9 @@ private:
     // corsa e giorno; i rischi delle forzature (le violazioni della legge come la calcolano i dati).
     mutable std::map<std::tuple<const TripModes*, const ModeEntry*, const Trip*>, std::set<Day>> out_not_valid_;
     mutable std::map<std::pair<const TripModes*, const Trip*>, std::set<Day>> mixed_;
+    // K-011 aggiunta 2: per ogni voce con la forzatura o la dichiarazione, se vale in qualche giorno (1) e se cambia il
+    // risultato (2); se non cambia niente nel periodo del pacchetto, un avviso.
+    mutable std::map<const ModeEntry*, char> forcing_use_, declaration_use_;
     struct Risk {
         const Regime* regime;
         const WorkRule* rule;

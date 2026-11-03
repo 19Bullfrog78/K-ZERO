@@ -83,7 +83,8 @@ Resoconto controlla_lettura(Lettura lettura, const Visibilita& visibilita, const
         // K-011 aggiunta 1: i problemi del modo delle corse non parlano di una persona ma di una corsa o di un servizio.
         const bool del_modo = p.check == kzero::Check::ModeForced || p.check == kzero::Check::ModeForcedRisk ||
                               p.check == kzero::Check::ModeDeclared || p.check == kzero::Check::ModeOutNotValid ||
-                              p.check == kzero::Check::ModeMixed;
+                              p.check == kzero::Check::ModeMixed || p.check == kzero::Check::ModeForcedUseless ||
+                              p.check == kzero::Check::ModeDeclaredUseless;
         for (const kzero::Param& x : p.params) {
             if (x.kind == kzero::Param::Kind::Days) {
                 giorni = periodi_di_giorni(x.days);

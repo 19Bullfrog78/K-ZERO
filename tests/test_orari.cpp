@@ -1294,6 +1294,49 @@ TEST(Orari, out_dove_la_legge_vuole_il_561_senza_e_con_forzatura) {
     EXPECT_EQ(a.p.problemi(Check::LawDrivingViolated).size(), 1u);
 }
 
+// K-011 aggiunta 2: forzature e dichiarazioni che non cambiano niente nel periodo (K-CTR-134 e 135). La forzatura serve solo
+// dove con i dati scritti la legge vuole il regime con certezza; la dichiarazione solo dove l'esclusione e' da confermare.
+TEST(Orari, forzatura_e_dichiarazione_che_non_servono) {
+    const auto varianti = [](const std::vector<Problem>& v) {
+        std::vector<int> out;
+        for (const Problem& p : v) out.push_back(p.variant);
+        std::sort(out.begin(), out.end());
+        return out;
+    };
+    {   // Forzatura sulla corsa: 60 km (serve), 10 km (non serve: variante 0), scaduta prima del giorno (nessun giorno: 2).
+        Prova561 a;
+        a.lunga("C-60", {"S-LIN-B610"}, 60.0);
+        ModeEntry f = per_corsa("C-60", TripModeKind::Out);
+        f.forcing = giustificazione("/aziende/0/modo_corse/corse/0/forzatura");
+        alfa(a.p.p).trip_modes = modi({}, {}, {f});
+        EXPECT_TRUE(a.p.problemi(Check::ModeForcedUseless).empty()) << elenco(a.p.problemi(Check::ModeForcedUseless));
+        alfa(a.p.p).trip_modes->by_trip[0].forcing->until = giorno("2026-10-04");
+        EXPECT_EQ(varianti(a.p.problemi(Check::ModeForcedUseless)), std::vector<int>{2});
+        Prova561 b;
+        b.lunga("C-10", {"S-LIN-B610"}, 10.0);
+        ModeEntry g = per_servizio("S-LIN-B610", TripModeKind::Out);
+        g.forcing = giustificazione("/aziende/0/modo_corse/servizi/0/forzatura");
+        alfa(b.p.p).trip_modes = modi({}, {g});
+        EXPECT_EQ(varianti(b.p.problemi(Check::ModeForcedUseless)), std::vector<int>{1});   // sul servizio, vale ma non cambia
+    }
+    {   // Dichiarazione sul servizio solo disabili (serve), sullo scolastico (gia' escluso: 1), su una corsa che non c'e' (2).
+        Prova561 a;
+        a.lunga("C-DIS-X", {"S-DIS"}, 30.0);
+        ModeEntry d = per_servizio("S-DIS", TripModeKind::Out);
+        d.declaration = giustificazione("/aziende/0/modo_corse/servizi/0/dichiarazione");
+        ModeEntry n = per_corsa("C-NESSUNA", TripModeKind::Out);
+        n.declaration = giustificazione("/aziende/0/modo_corse/corse/0/dichiarazione");
+        alfa(a.p.p).trip_modes = modi({}, {d}, {n});
+        EXPECT_EQ(varianti(a.p.problemi(Check::ModeDeclaredUseless)), std::vector<int>{2});
+        Prova561 b;
+        b.lunga("C-ASILO-X", {"S-ASILO"}, 30.0);
+        ModeEntry e = per_servizio("S-ASILO", TripModeKind::Out);
+        e.declaration = giustificazione("/aziende/0/modo_corse/servizi/0/dichiarazione");
+        alfa(b.p.p).trip_modes = modi({}, {e});
+        EXPECT_EQ(varianti(b.p.problemi(Check::ModeDeclaredUseless)), std::vector<int>{1});
+    }
+}
+
 // Il tachigrafo su una linea fino a 50 km (che la legge esclude): le regole del 561 si controllano come scelta dell'azienda.
 // Preferenza: avviso; limite su un turno ricorrente: errore; limite su un'assegnazione del singolo giorno: avviso. La guida
 // della linea e' guida.

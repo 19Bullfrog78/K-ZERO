@@ -110,6 +110,8 @@ enum class Check {
     ModeDeclared,                 // dichiarazione dell'azienda: servizio o corsa esclusi dove la legge e' da confermare
     ModeOutNotValid,              // OUT dove la legge vuole il regime, senza forzatura: vale la legge
     ModeMixed,                    // corsa con servizi di tipi (o servizi) con scelte diverse: decide l'impostazione
+    ModeForcedUseless,            // forzatura che non cambia niente nel periodo del pacchetto (K-011 aggiunta 2)
+    ModeDeclaredUseless,          // dichiarazione che non cambia niente nel periodo del pacchetto (K-011 aggiunta 2)
     // Contenuto: errori.
     DuplicateCode,
     UnknownReference,

@@ -374,8 +374,10 @@ void aggiungi_orari(std::vector<DefinizioneControllo>& c) {
         }
     }
     {
-        const std::string dopo = " Il programma pianifica come ha scelto l'azienda, ma non vuol dire \"regolare\": nella lettura prudente vale "
-                                 "la legge come la calcolano i dati, e le violazioni che ne nascono sono avvisi con il motivo della forzatura.";
+        // K-011 aggiunta 2: testi veri in ogni caso, anche dove la legge non vuole il regime (allora c'e' anche K-CTR-134).
+        const std::string dopo = " Se con i dati scritti vale il regime, il programma pianifica comunque OUT, come ha scelto l'azienda, ma "
+                                 "non vuol dire \"regolare\": nella lettura prudente vale la legge come la calcolano i dati, e le violazioni che "
+                                 "ne nascono sono avvisi con il motivo della forzatura.";
         const std::string chi = " Motivo: \"{motivo}\"; scritta da {chi} il {quando}";
         const std::string chi_r = " Il motivo e chi l'ha scritta sono dati personali (riservati); scritta il {quando}";
         std::vector<std::string> m;
@@ -383,7 +385,7 @@ void aggiungi_orari(std::vector<DefinizioneControllo>& c) {
         for (int fino = 0; fino < 2; ++fino)
             for (const char* dove : {"la corsa {corsa}", "il servizio {servizio}"}) {
                 const std::string testa = std::string("Forzatura dell'azienda {azienda}: ") + dove +
-                                          " si fa OUT anche dove, con i dati scritti, vale il regime {regime}.";
+                                          " si fa OUT per scelta cosciente dell'azienda, qualunque cosa dicano i dati scritti sul regime {regime}.";
                 const std::string fine = fino ? ". Vale fino al {fino_al}." : ".";
                 r[static_cast<int>(m.size())] = testa + chi_r + fine + dopo;
                 m.push_back(testa + chi + fine + dopo);
@@ -410,20 +412,21 @@ void aggiungi_orari(std::vector<DefinizioneControllo>& c) {
         c.push_back(d);
     }
     {
-        const std::string dopo = " Da qui il programma lo tratta come escluso con certezza, senza ripetere gli avvisi da confermare su ogni corsa.";
+        // K-011 aggiunta 2: testi veri in ogni caso, anche dove l'esclusione non e' da confermare (allora c'e' anche K-CTR-135).
+        const std::string dopo = " Se l'esclusione e' da confermare, il programma la tratta come certa, senza ripetere gli avvisi da confermare su "
+                                 "ogni corsa.";
         // K-011 aggiunta 2: la dichiarazione e' un dato particolare (c'e' solo dove l'esclusione e' da confermare, quindi dice
         // il tipo di servizio): di base si conta soltanto; motivo e chi solo con tutti e due i permessi.
         DefinizioneControllo d(Check::ModeDeclared, "K-CTR-131", A, Classe::Particolare, "Dichiarazione dell'azienda: escluso dal regime",
-                               {"Dichiarazione dell'azienda {azienda}: la corsa {corsa} e' esclusa dal regime {regime} dove l'esclusione e' da "
-                                "confermare. Motivo: \"{motivo}\"; scritta da {chi} il {quando}." + dopo,
-                                "Dichiarazione dell'azienda {azienda}: il servizio {servizio} e' escluso dal regime {regime} dove l'esclusione e' "
-                                "da confermare. Motivo: \"{motivo}\"; scritta da {chi} il {quando}." + dopo},
+                               {"Dichiarazione dell'azienda {azienda}: la corsa {corsa} e' dichiarata esclusa dal regime {regime}. Motivo: "
+                                "\"{motivo}\"; scritta da {chi} il {quando}." + dopo,
+                                "Dichiarazione dell'azienda {azienda}: il servizio {servizio} e' dichiarato escluso dal regime {regime}. Motivo: "
+                                "\"{motivo}\"; scritta da {chi} il {quando}." + dopo},
                                {},
-                               {{0, "Dichiarazione dell'azienda {azienda}: la corsa {corsa} e' esclusa dal regime {regime} dove l'esclusione "
-                                    "e' da confermare. Il motivo e chi l'ha scritta sono dati personali (riservati); scritta il {quando}." + dopo},
-                                {1, "Dichiarazione dell'azienda {azienda}: il servizio {servizio} e' escluso dal regime {regime} dove "
-                                    "l'esclusione e' da confermare. Il motivo e chi l'ha scritta sono dati personali (riservati); scritta il "
-                                    "{quando}." + dopo}});
+                               {{0, "Dichiarazione dell'azienda {azienda}: la corsa {corsa} e' dichiarata esclusa dal regime {regime}. Il motivo "
+                                    "e chi l'ha scritta sono dati personali (riservati); scritta il {quando}." + dopo},
+                                {1, "Dichiarazione dell'azienda {azienda}: il servizio {servizio} e' dichiarato escluso dal regime {regime}. Il "
+                                    "motivo e chi l'ha scritta sono dati personali (riservati); scritta il {quando}." + dopo}});
         d.personali_se_nascosti = true;
         c.push_back(d);
     }
@@ -454,6 +457,38 @@ void aggiungi_orari(std::vector<DefinizioneControllo>& c) {
              "La corsa {corsa} ha servizi con scelte diverse dell'azienda {azienda} (OUT e tachigrafo): decide l'impostazione "
              "dell'azienda per le scelte diverse, quindi OUT (regime {regime})" + dopo},
             {{0, Classe::Particolare}, {1, Classe::Particolare}});
+        d.piano = true;
+        c.push_back(d);
+    }
+    {
+        // K-011 aggiunta 2: il programma dice all'azienda quando una forzatura o una dichiarazione non cambia niente.
+        // Varianti: sulla corsa (0, 2) o sul servizio (1, 3); vale in qualche giorno senza cambiare niente (0, 1) oppure nessun
+        // giorno con una persona (2, 3).
+        const std::string nessun = ": non c'e' nessun giorno del periodo in cui valga per una corsa fatta da una persona (la corsa non c'e', "
+                                   "non la fa nessuno, oppure la forzatura e' gia' finita).";
+        DefinizioneControllo f(Check::ModeForcedUseless, "K-CTR-134", A, N, "Forzatura che non serve",
+                               {"La forzatura dell'azienda {azienda} sulla corsa {corsa} non cambia niente nel periodo del pacchetto: dove vale, con "
+                                "i dati scritti il regime {regime} non vale con certezza (se e' da confermare, serve la dichiarazione, non la "
+                                "forzatura).",
+                                "La forzatura dell'azienda {azienda} sul servizio {servizio} non cambia niente nel periodo del pacchetto: dove vale, "
+                                "con i dati scritti il regime {regime} non vale con certezza (se e' da confermare, serve la dichiarazione, non la "
+                                "forzatura).",
+                                "La forzatura dell'azienda {azienda} sulla corsa {corsa} (regime {regime}) non cambia niente nel periodo del "
+                                "pacchetto" + nessun,
+                                "La forzatura dell'azienda {azienda} sul servizio {servizio} (regime {regime}) non cambia niente nel periodo del "
+                                "pacchetto" + nessun});
+        f.piano = true;
+        c.push_back(f);
+        // La dichiarazione e' un dato particolare: anche il suo avviso.
+        DefinizioneControllo d(Check::ModeDeclaredUseless, "K-CTR-135", A, Classe::Particolare, "Dichiarazione che non serve",
+                               {"La dichiarazione dell'azienda {azienda} sulla corsa {corsa} non cambia niente nel periodo del pacchetto: dove "
+                                "vale, l'esclusione dal regime {regime} non e' da confermare.",
+                                "La dichiarazione dell'azienda {azienda} sul servizio {servizio} non cambia niente nel periodo del pacchetto: "
+                                "dove vale, l'esclusione dal regime {regime} non e' da confermare.",
+                                "La dichiarazione dell'azienda {azienda} sulla corsa {corsa} (regime {regime}) non cambia niente nel periodo del "
+                                "pacchetto: non c'e' nessun giorno del periodo in cui valga per una corsa fatta da una persona.",
+                                "La dichiarazione dell'azienda {azienda} sul servizio {servizio} (regime {regime}) non cambia niente nel periodo "
+                                "del pacchetto: non c'e' nessun giorno del periodo in cui valga per una corsa fatta da una persona."});
         d.piano = true;
         c.push_back(d);
     }
@@ -993,6 +1028,8 @@ const std::vector<DefinizioneControllo>& catalogo_controlli() {
             {Check::ModeForcedRisk, PQ},
             {Check::ModeOutNotValid, PQ},
             {Check::ModeMixed, PQ},
+            {Check::ModeForcedUseless, PQ},     // K-011 aggiunta 2: dal calcolo degli orari
+            {Check::ModeDeclaredUseless, PQ},
         };
         for (DefinizioneControllo& d : c) {
             const auto it = richiede.find(d.controllo);

@@ -660,7 +660,7 @@ kzero_prova(ore_cartella_inesistente USCITA 1 FORMATO testo ERRORE K-ERR-012
             ARGOMENTI ore ${CMAKE_CURRENT_BINARY_DIR}/cartella-che-non-esiste --data 2026-10-22)
 # Gli errori del piano (le regole sugli orari) non bloccano kzero ore ne' kzero giornata: servono proprio a correggerli.
 kzero_prova(ore_errori_del_piano_non_bloccano USCITA 0 FORMATO testo
-            CONTIENE "Controllo del pacchetto: 11 errori (11 del piano degli orari, che non bloccano), 105 avvisi"
+            CONTIENE "Controllo del pacchetto: 11 errori (11 del piano degli orari, che non bloccano), 107 avvisi"
                      "Errore K-CTR-110: La persona P-L138 supera una regola sugli orari (dati personali: riservati), il 2026-11-05."
             ARGOMENTI ore ${ORE_K011} --dal 2026-11-05 --al 2026-11-06 --persona P-L138)
 kzero_prova(giornata_errori_del_piano_non_bloccano USCITA 0 FORMATO testo
@@ -670,7 +670,7 @@ kzero_prova(giornata_errori_del_piano_non_bloccano_json USCITA 0 FORMATO json SC
             ARGOMENTI giornata ${ORE_K011} --data 2026-11-05 --formato json)
 # Il pacchetto di prova degli orari (dati inventati): un problema per ogni tipo di regola e di controllo nuovo.
 kzero_prova(controlla_orari USCITA 1 FORMATO testo RESOCONTO
-            CONTIENE "11 errori (11 del piano degli orari), 105 avvisi."
+            CONTIENE "11 errori (11 del piano degli orari), 107 avvisi."
             PROBLEMI "K-CTR-102|corse.json|/corse/34" "K-CTR-104|norme.json|/norme/0/regimi/2/regole/2"
                      "K-CTR-105|aziende.json|/aziende/0/rientro" "K-CTR-108|turni.json|/turni/31"
                      "K-CTR-109|persone.json|/persone/19" "K-CTR-110|persone.json|/persone/13" "K-CTR-110|persone.json|/persone/20"
@@ -682,6 +682,7 @@ kzero_prova(controlla_orari USCITA 1 FORMATO testo RESOCONTO
                      "K-CTR-129|aziende.json|/aziende/0/modo_corse/corse/0/forzatura"
                      "K-CTR-130|aziende.json|/aziende/0/modo_corse/corse/0/forzatura"
                      "K-CTR-129|aziende.json|/aziende/0/modo_corse/servizi/1/forzatura"
+                     "K-CTR-134|aziende.json|/aziende/0/modo_corse/servizi/1/forzatura"
             NON_CONTIENE ${DATI_PERSONALI_ORE} "Linea Lunga" "Esempi Pausa"
             ARGOMENTI controlla ${ORE_K011})
 kzero_prova(controlla_orari_json USCITA 1 FORMATO json SCHEMA controlla RESOCONTO
@@ -788,7 +789,7 @@ kzero_prova(ore_forzatura_con_avviso_e_rischio USCITA 0 FORMATO testo
             CONTIENE "Modo delle corse: C-FORZATA: OUT, scelta per la corsa, forzatura dell'azienda (motivo: \"Il percorso vero e' di 48 km"
                      "scritta da Ufficio turni Alfa il 2026-10-28; vale fino al 2027-06-30) (regime R-561)."
                      "Regime R-561 per guida e riposi: vale da confermare per la corsa C-FORZATA (per la forzatura dell'azienda (OUT): nella lettura prudente vale la legge come la calcolano i dati)"
-                     "Avviso K-CTR-129: Forzatura dell'azienda ALFA (Autoservizi Alfa): la corsa C-FORZATA (Linea lunga, OUT forzato dall'azienda) si fa OUT anche dove, con i dati scritti, vale il regime R-561."
+                     "Avviso K-CTR-129: Forzatura dell'azienda ALFA (Autoservizi Alfa): la corsa C-FORZATA (Linea lunga, OUT forzato dall'azienda) si fa OUT per scelta cosciente dell'azienda, qualunque cosa dicano i dati scritti sul regime R-561."
                      "Avviso K-CTR-130: Rischio della forzatura dell'azienda ALFA (Autoservizi Alfa) sulla corsa C-FORZATA (Linea lunga, OUT forzato dall'azienda): se la forzatura e' sbagliata, con il regime R-561 ci sarebbe una violazione (R-561 561-GUIDA-CONTINUA; persone: 1), il 2026-11-24."
                      "Avviso K-CTR-114: La persona P-FORZATA (Forzatura Prova) potrebbe superare la regola R-561 561-GUIDA-CONTINUA"
                      "E' un avviso perche' la corsa e' OUT per una forzatura dell'azienda"
@@ -808,9 +809,36 @@ kzero_prova(giornata_forzatura_visibile USCITA 0 FORMATO testo
             CONTIENE "modo OUT, scelta per la corsa, forzatura dell'azienda (motivo: riservato; scritta da riservato il 2026-10-28; vale fino al 2027-06-30) (regime R-561)"
             ARGOMENTI giornata ${ORE_K011} --data 2026-11-24 --persona P-FORZATA)
 kzero_prova(controlla_forzatura_visibile USCITA 1 FORMATO testo RESOCONTO
-            CONTIENE "Avviso K-CTR-129 (aziende.json, /aziende/0/modo_corse/corse/0/forzatura): Forzatura dell'azienda ALFA (Autoservizi Alfa): la corsa C-FORZATA (Linea lunga, OUT forzato dall'azienda) si fa OUT anche dove, con i dati scritti, vale il regime R-561. Motivo: \"Il percorso vero e' di 48 km"
+            CONTIENE "Avviso K-CTR-129 (aziende.json, /aziende/0/modo_corse/corse/0/forzatura): Forzatura dell'azienda ALFA (Autoservizi Alfa): la corsa C-FORZATA (Linea lunga, OUT forzato dall'azienda) si fa OUT per scelta cosciente dell'azienda, qualunque cosa dicano i dati scritti sul regime R-561. Motivo: \"Il percorso vero e' di 48 km"
                      "\"; scritta da Ufficio turni Alfa il 2026-10-28. Vale fino al 2027-06-30."
             ARGOMENTI controlla ${ORE_K011} --includi-dati-personali)
+# K-011 aggiunta 2: testi veri e avvisi "non serve". Caso dell'arbitro: una forzatura su C-ORA-06 (linea di 15,1 km, gia'
+# esclusa dalla legge): K-CTR-129 non dice piu' che la legge vuole il regime, e K-CTR-134 dice che la forzatura non serve.
+kzero_prova(controlla_forzatura_che_non_serve USCITA 1 FORMATO testo RESOCONTO BASE ${ORE_K011}
+            MODIFICA IMPOSTA aziende.json /aziende/0/modo_corse/corse/2
+                     "{\"corsa\": \"C-ORA-06\", \"modo\": \"out\", \"forzatura\": {\"motivo\": \"Prova\", \"chi\": \"Prova\", \"quando\": \"2026-10-28\"}}"
+            CONTIENE "Avviso K-CTR-129 (aziende.json, /aziende/0/modo_corse/corse/2/forzatura): Forzatura dell'azienda ALFA (Autoservizi Alfa): la corsa C-ORA-06 (Linea delle 06) si fa OUT per scelta cosciente dell'azienda, qualunque cosa dicano i dati scritti sul regime R-561."
+                     "Se con i dati scritti vale il regime, il programma pianifica comunque OUT"
+                     "Avviso K-CTR-134 (aziende.json, /aziende/0/modo_corse/corse/2/forzatura): La forzatura dell'azienda ALFA (Autoservizi Alfa) sulla corsa C-ORA-06 (Linea delle 06) non cambia niente nel periodo del pacchetto: dove vale, con i dati scritti il regime R-561 non vale con certezza"
+            NON_CONTIENE "si fa OUT anche dove"
+            ARGOMENTI controlla @PACCHETTO@)
+# Nel pacchetto di prova: la forzatura sul servizio S-LIN-PROVA e la dichiarazione sulla corsa C-NONSERVE-2 (linee corte) non
+# servono; la forzatura su C-FORZATA (55 km) e la dichiarazione su S-DIS-GIO (solo disabili) servono. La dichiarazione e' un
+# dato particolare: K-CTR-135 di base si conta soltanto.
+kzero_prova(controlla_non_serve_con_dati_particolari USCITA 1 FORMATO testo RESOCONTO
+            CONTIENE "Avviso K-CTR-134 (aziende.json, /aziende/0/modo_corse/servizi/1/forzatura): La forzatura dell'azienda ALFA (Autoservizi Alfa) sul servizio S-LIN-PROVA"
+                     "Avviso K-CTR-135 (aziende.json, /aziende/0/modo_corse/corse/1/dichiarazione): La dichiarazione dell'azienda ALFA (Autoservizi Alfa) sulla corsa C-NONSERVE-2 (Linea, ritorno) non cambia niente nel periodo del pacchetto: dove vale, l'esclusione dal regime R-561 non e' da confermare."
+                     "e' dichiarata esclusa dal regime R-561." "Se l'esclusione e' da confermare, il programma la tratta come certa"
+            NON_CONTIENE "K-CTR-134 (aziende.json, /aziende/0/modo_corse/corse/0/forzatura)" "K-CTR-135 (aziende.json, /aziende/0/modo_corse/servizi/0/dichiarazione)"
+            ARGOMENTI controlla ${ORE_K011} --includi-dati-particolari)
+kzero_prova(controlla_non_serve_di_base USCITA 1 FORMATO testo RESOCONTO
+            CONTIENE "Avviso K-CTR-134 (aziende.json, /aziende/0/modo_corse/servizi/1/forzatura)"
+            NON_CONTIENE "K-CTR-135" "C-NONSERVE-2 (Linea, ritorno) e' dichiarata"
+            ARGOMENTI controlla ${ORE_K011})
+kzero_prova(ore_forzatura_che_non_serve USCITA 0 FORMATO testo
+            CONTIENE "Modo delle corse: C-NONSERVE-1: OUT, scelta per il servizio, forzatura dell'azienda"
+                     "Avviso K-CTR-134: La forzatura dell'azienda ALFA (Autoservizi Alfa) sul servizio S-LIN-PROVA"
+            ARGOMENTI ore ${ORE_K011} --data 2026-11-23 --persona P-NONSERVE)
 # La dichiarazione di Alfa sul servizio S-DIS-GIO (solo disabili, dove l'esclusione dal 561 e' da confermare): da li' il
 # servizio e' escluso con certezza, con una sola nota (K-CTR-131) invece degli avvisi da confermare su ogni corsa.
 # K-011 aggiunta 2: la dichiarazione e' un dato particolare (c'e' solo dove l'esclusione e' da confermare: dice il tipo di
@@ -1477,7 +1505,7 @@ function(kzero_k011_chiuso nome utente password)
 endfunction()
 kzero_k011_chiuso(k011_chiuso_tit_controlla TIT "${PW_K011_TIT}" USCITA 1 FORMATO testo RESOCONTO
                   CONTIENE "Cassaforte aperta dall'utente TIT (dati personali e particolari)"
-                           "11 errori (11 del piano degli orari), 105 avvisi."
+                           "11 errori (11 del piano degli orari), 107 avvisi."
                   ARGOMENTI controlla @PACCHETTO@ --utente TIT --password-da-ingresso --includi-dati-personali --includi-dati-particolari)
 kzero_k011_chiuso(k011_chiuso_tit_giornata TIT "${PW_K011_TIT}" USCITA 0 FORMATO testo
                   CONTIENE "dichiarazione dell'azienda (motivo: \"Il centro diurno del giovedi' e' per l'azienda un servizio scolastico speciale"
