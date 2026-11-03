@@ -379,7 +379,15 @@
   ore_tachigrafo_per_scelta_beta e ore_dichiarazione_con_una_nota (ora con --includi-dati-particolari),
   ore_forzatura_motivo_riservato, testi di K-CTR-129 in due prove, controlla_orari (K-CTR-131 non piu' di base; 129,
   134 in piu'), 103 -> 107 avvisi, catalogo 133 -> 135, Api.classi_marcate_negli_schemi,
-  Orari.tachigrafo_su_una_linea_fino_a_50_km (variante 13 -> 43). Prove: 867 su 867 (prima dell'aggiunta 2: 834).
+  Orari.tachigrafo_su_una_linea_fino_a_50_km (variante 13 -> 43). Prove: 867 su 867 (prima dell'aggiunta 2: 834); con
+  i sanitizer 865 su 865. Fuzzing in locale sul codice finale, i 32 bersagli 60 secondi ciascuno: 24.341 file del
+  pacchetto, 16.172 righe di comando, 2.342.133 date e orari, 75.956 cassaforti e 47.036 contenuti, 578.101 registri e
+  415.867 elenchi di voci, 313.458 password; nessun guasto. Sabotaggi sul codice finale (prove rosse): motivo letto di
+  nuovo con at 5; dichiarazione comune 2; personale dentro un particolare non legato 5; dichiarazione nominata senza i
+  dati particolari 2; forzatura nascosta a chi ha solo i particolari 2; corsa senza riga del modo quando manca la
+  scelta del tipo 4; regime per scelta non riservato 3; K-CTR-127/128 senza varianti particolari 1; K-CTR-132 scelte
+  diverse tra tipi comune 1; K-CTR-129 con il testo di prima 3; avvisi "non serve" mai scritti 8; forzatura da
+  confermare presa per utile 1; forza del tachigrafo non estesa alla settimana 1. Tutti scoperti.
 
 ## Bug e limiti noti
 - I pesi del calcolo (ObjectiveWeights) hanno ancora valori provvisori nel codice, non usati: andranno nei dati con il
