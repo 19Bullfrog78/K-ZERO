@@ -1591,6 +1591,7 @@ set_tests_properties(sicurezza.elenco_dei_componenti PROPERTIES LABELS sicurezza
 add_library(kzero_bersagli_fuzz STATIC fuzz/bersagli.cpp)
 target_link_libraries(kzero_bersagli_fuzz PUBLIC kzero_api)
 target_compile_options(kzero_bersagli_fuzz PRIVATE ${KZERO_WARNINGS})
+target_compile_definitions(kzero_bersagli_fuzz PRIVATE KZERO_SORGENTI="${PROJECT_SOURCE_DIR}")   # semi della cassaforte
 add_executable(rigioca_fuzz fuzz/rigioca_fuzz.cpp)
 target_link_libraries(rigioca_fuzz PRIVATE kzero_bersagli_fuzz)
 target_compile_options(rigioca_fuzz PRIVATE ${KZERO_WARNINGS})

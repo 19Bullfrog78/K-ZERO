@@ -199,19 +199,21 @@ cripto::Segreto normalizzata(const std::string& t) {
     return password::normalizza(cripto::Segreto(reinterpret_cast<const unsigned char*>(t.data()), t.size()), p);
 }
 
-// La cassaforte del demo, preparata una volta: tre utenti (tutti i permessi, i soli personali, i soli particolari) e un
-// cambio delle chiavi (un quarto utente tolto), cosi' ci sono buste e storie.
+// La cassaforte preparata una volta: tre utenti (tutti i permessi, i soli personali, i soli particolari) e un cambio delle
+// chiavi (un quarto utente tolto), cosi' ci sono buste e storie. Dal K-011 aggiunta 2 i dati sono quelli del pacchetto di
+// prova degli orari (il demo con in piu' la forzatura e la dichiarazione dell'azienda, con motivo e chi tra i legati): i semi
+// coprono ogni sezione, anche i legati che non vengono dai luoghi sensibili.
 struct Preparata {
     std::string file;
     std::string registro;
     std::string sezione_personali, sezione_particolari, sezione_legati, testo_registro;
-    std::map<std::string, JsonDati> normali;   // i file normali del demo
+    std::map<std::string, JsonDati> normali;   // i file normali del pacchetto
 };
 
 const Preparata& preparata() {
     static const Preparata p = [] {
         Preparata x;
-        const Lettura l = leggi_pacchetto(PacchettoIncorporato("esempi/demo"));
+        const Lettura l = leggi_pacchetto(CartellaSuDisco(std::string(KZERO_SORGENTI) + "/tests/esempi/k011-orari"));
         chiusura::Separazione s = chiusura::separa(l);
         x.normali = s.normali;
         x.sezione_personali = cassaforte::formato::testo_sezione(s.contenuto.personali);

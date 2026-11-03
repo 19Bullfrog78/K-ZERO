@@ -390,7 +390,7 @@ void aggiungi_orari(std::vector<DefinizioneControllo>& c) {
                 r[static_cast<int>(m.size())] = testa + chi_r + fine + dopo;
                 m.push_back(testa + chi + fine + dopo);
             }
-        DefinizioneControllo d(Check::ModeForced, "K-CTR-129", A, PE, "Forzatura dell'azienda: OUT dove la legge vuole il regime", m, {}, r);
+        DefinizioneControllo d(Check::ModeForced, "K-CTR-129", A, PE, "Forzatura dell'azienda: OUT per scelta cosciente", m, {}, r);
         d.personali_se_nascosti = true;
         c.push_back(d);
     }

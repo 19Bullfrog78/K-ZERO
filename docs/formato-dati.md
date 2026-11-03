@@ -295,15 +295,32 @@ precisa (corsa, poi servizio, poi tipo). Senza scelta decide la legge.
 - **Dichiarazione** (`dichiarazione`, solo con `out`, per un servizio o una corsa): dove l'esclusione e' da confermare
   (es. un servizio solo per disabili che per l'azienda e' un servizio scolastico speciale), l'azienda lo dichiara
   escluso; da li' l'esclusione e' certa, con una sola nota (K-CTR-131) invece degli avvisi da confermare su ogni corsa.
+  Se nel periodo del pacchetto non cambia niente (l'esclusione non e' da confermare, o nessun giorno con una persona), un
+  avviso: K-CTR-135 (K-011 aggiunta 2).
 - **Forzatura cosciente** (`forzatura`, solo con `out`, per un servizio o una corsa): dove con i dati scritti vale il
   regime (es. i km scritti sono sbagliati), l'azienda sceglie comunque OUT. Il programma pianifica come ha scelto
   l'azienda (nella lettura certa il regime non vale), ma la forzatura si vede sempre (`kzero controlla` K-CTR-129, il
   modo della corsa in `kzero giornata` e `kzero ore`) e il rischio e' un avviso: le violazioni che ci sarebbero con la
   legge come la calcolano i dati sono avvisi con il motivo "forzatura dell'azienda" e K-CTR-130 le riassume per corsa o
-  servizio.
+  servizio. Se nel periodo del pacchetto non cambia niente (con i dati scritti il regime non vale con certezza, o nessun
+  giorno con una persona), un avviso: K-CTR-134 (K-011 aggiunta 2).
 Dichiarazione e forzatura hanno `motivo` e `chi` (dati personali), `quando` e, per la forzatura, `fino_al` (facoltativo:
-dopo quel giorno non vale piu'). La scelta per tipo di servizio, vista su una corsa, rivela il tipo: nel modo della
-corsa "da dove viene" e' un dato particolare.
+dopo quel giorno non vale piu').
+
+**Riservatezza del modo delle corse** (K-011 aggiunta 2, decisioni dell'arbitro):
+- la **forzatura** e' un dato comune, sempre visibile; motivo e chi sono personali;
+- la **dichiarazione** e' un **dato particolare** (c'e' solo dove l'esclusione e' da confermare, quindi dice il tipo di
+  servizio), nella cassaforte; motivo e chi, personali dentro un dato particolare, stanno tra i **legati** (servono tutti e
+  due i permessi). Senza i dati particolari la riga del modo non la nomina (JSON `"dichiarazione": "riservato"` su ogni
+  corsa) e K-CTR-131 si conta soltanto;
+- tutto quello che dipende dalle **scelte per tipo di servizio** (che ci siano, che manchino, cosa dicono) e' un dato
+  particolare: senza i dati particolari ogni corsa senza una scelta propria o del suo servizio ha la stessa riga, "modo:
+  per un dato particolare" (JSON `"riservato"`), se l'azienda ha almeno una scelta per tipo; con i dati particolari si vede
+  tutto, anche "nessuna scelta, decide la legge";
+- i **regimi seguiti per scelta** (tachigrafo) di una persona che lavora per un'azienda con una scelta del tachigrafo per
+  tipo di servizio (la sua o quella di un suo turno): senza i dati particolari sono riservati tutti (riga del regime, guida
+  contata, tipo del riposo, K-CTR-127 e 128 solo contati), con una riga fissa per la persona, sempre: "Regimi seguiti per
+  scelta dell'azienda: riservati".
 
 **Chiave della pausa fuori dal posto (rientro)** (decisa da Mauro il 20/10). Rientro = tra due corse della giornata la
 persona (con o senza il mezzo) va in una rimessa (`rimesse.json`) o nel suo luogo di presa servizio, resta li' e torna;
@@ -388,7 +405,8 @@ di tempo: avviso K-CTR-101), [docs/schema/aziende.v1.schema.json](schema/aziende
 | `aziende[].impostazioni.margine_giornate_massime` | no | comune | Versione 2: avviso quando mancano tante giornate al limite delle giornate massime (es. lavoro a chiamata, K-CTR-109) |
 | `aziende[].scelte_orari[]` | no | comune | Versione 2: scelte dell'azienda sugli orari (`tipo`, `periodo`, `massimo_minuti`, `minimo_minuti` o `massimo_giorni`, `forza`, `nota`), vedi sopra |
 | `aziende[].modo_corse` | no | comune | Versione 2 (K-011 aggiunta 1): OUT o tachigrafo (sopra, "Modo delle corse"): `regime`, `forza`, `tipi_diversi`, `per_tipo_servizio[]` (`tipo_servizio`, `modo`, `forza`, `nota`), `servizi[]` (`servizio`, ...) e `corse[]` (`corsa`, ...) con `modo` (`out`, `tachigrafo`), `forza`, `forzatura` o `dichiarazione` (solo con `out`), `nota`; `nota` |
-| `modo_corse.*.forzatura`, `.dichiarazione` | no | personale (`motivo`, `chi`), comune (`quando`, `fino_al`) | Chi l'ha scritta, quando e perche'; `fino_al` solo per la forzatura |
+| `modo_corse.*.forzatura` | no | personale (`motivo`, `chi`), comune (`quando`, `fino_al`) | Chi l'ha scritta, quando e perche'; `fino_al` facoltativo |
+| `modo_corse.*.dichiarazione` | no | particolare (K-011 aggiunta 2); `motivo` e `chi` personali dentro un dato particolare (legati: tutti e due i permessi) | Chi l'ha scritta, quando e perche' |
 | `aziende[].rientro` | no | comune | Versione 2: chiave del rientro: `fermo_minimo_minuti`, `fattore_guida`, `km_vuoti_massimi` (facoltativo), `forza` |
 | `aziende[].speciali_esigenze[]` | no | comune | Versione 2: speciali esigenze dell'azienda per una regola di legge (`regola`, `riferimento`, `nota`), es. per lo straordinario non saltuario della L. 138 |
 | `aziende[].tipi_assenza[]` | no | comune | Tipi di assenza delle persone (es. ferie, permesso, formazione): `codice`, `nome`, `nota`. Mai la causa |
