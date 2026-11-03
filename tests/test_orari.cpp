@@ -1294,6 +1294,40 @@ TEST(Orari, out_dove_la_legge_vuole_il_561_senza_e_con_forzatura) {
     EXPECT_EQ(a.p.problemi(Check::LawDrivingViolated).size(), 1u);
 }
 
+// K-011 aggiunta 2 (sabotaggio dell'arbitro non scoperto, chosen_weeks): il tachigrafo porta la sua forza su tutta la
+// settimana in cui il regime per scelta vale per estensione, anche nei giorni senza corse con il tachigrafo. Lunedi' una linea
+// con il tachigrafo; martedi' sera e mercoledi' (mattina e mezzogiorno) solo scolastico (nessuna scelta: la legge lo
+// esclude): nelle 24 ore dalla fine del riposo di martedi' nessun riposo di 11 ore (9 di notte, 7 dopo mezzogiorno). Limite rigido su un turno ricorrente: errore K-CTR-127; preferenza: avviso
+// K-CTR-128.
+TEST(Orari, tachigrafo_limite_nella_settimana_estesa) {
+    const auto prova = [](ChoiceStrength forza) {
+        Prova561 a({riposo_561(false)});
+        Regime& r = a.p.regime();
+        r.week_extension = true;
+        r.extension_families = {RuleFamily::Driving, RuleFamily::Rest};
+        ModeEntry t = per_servizio("S-LIN-B610", TripModeKind::Tachograph);
+        t.strength = forza;
+        alfa(a.p.p).trip_modes = modi({}, {t});
+        a.corsa_("C-TACHIGRAFO", {"S-LIN-B610"}, "08:00", "09:00", 10.0);
+        a.corsa_("C-SCUOLA-SERA", {"S-ASILO"}, "20:00", "21:00", 10.0);
+        a.corsa_("C-SCUOLA-MATTINA", {"S-ASILO"}, "06:00", "07:00", 10.0);
+        a.corsa_("C-SCUOLA-MEZZOGIORNO", {"S-ASILO"}, "12:00", "13:00", 10.0);
+        a.p.giornata("2026-10-05", {corsa("C-TACHIGRAFO")});
+        a.p.giornata("2026-10-06", {corsa("C-SCUOLA-SERA")});
+        a.p.giornata("2026-10-07", {corsa("C-SCUOLA-MATTINA"), corsa("C-SCUOLA-MEZZOGIORNO")});
+        EXPECT_TRUE(a.p.problemi(Check::LawDailyRestViolated).empty()) << elenco(a.p.problemi(Check::LawDailyRestViolated));
+        return std::make_pair(a.p.problemi(Check::ChosenRegimeLimit), a.p.problemi(Check::ChosenRegimeNotRespected));
+    };
+    const auto limite = prova(ChoiceStrength::Limit);
+    ASSERT_EQ(limite.first.size(), 1u) << elenco(limite.first) << elenco(limite.second);
+    EXPECT_TRUE(limite.second.empty()) << elenco(limite.second);
+    EXPECT_GE(limite.first[0].variant, 20);   // riposo giornaliero (varianti 20-24)
+    const auto preferenza = prova(ChoiceStrength::Preference);
+    EXPECT_TRUE(preferenza.first.empty()) << elenco(preferenza.first);
+    ASSERT_EQ(preferenza.second.size(), 1u) << elenco(preferenza.second);
+    EXPECT_TRUE(con_motivo(preferenza.second[0], "preferenza"));
+}
+
 // K-011 aggiunta 2: forzature e dichiarazioni che non cambiano niente nel periodo (K-CTR-134 e 135). La forzatura serve solo
 // dove con i dati scritti la legge vuole il regime con certezza; la dichiarazione solo dove l'esclusione e' da confermare.
 TEST(Orari, forzatura_e_dichiarazione_che_non_servono) {
