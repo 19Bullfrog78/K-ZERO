@@ -17,7 +17,10 @@
 //   piu' che c'era qualcosa); quando si apre la cassaforte si ricrea;
 // - i dati personali di un passeggero o di una casa legati a un luogo sensibile (riservatezza.hpp) valgono come dati
 //   particolari e vanno in una sezione loro, i "legati", che si decifra solo con tutti e due i permessi (aggiunta 1 del
-//   K-010): un permesso solo non da' mai identita' e salute insieme.
+//   K-010): un permesso solo non da' mai identita' e salute insieme;
+// - per la stessa ragione un campo personale dentro un dato particolare (es. motivo e chi della dichiarazione del modo
+//   delle corse, K-011 aggiunta 2) va tra i legati: regola ricavata dagli schemi, vale per ogni campo. Un elemento marcato
+//   intero (sopra) non puo' contenere campi di un'altra classe riservata (una prova lo controlla sugli schemi).
 // Ogni valore resta legato al suo elemento con il codice stabile dell'elemento, mai con la posizione in un elenco: un
 // elemento con "codice" (obbligatorio nel suo schema) si riconosce dal codice; un elemento senza codice (es. una
 // fermata dentro un gruppo) dal suo contenuto comune (l'impronta BLAKE2b dei suoi dati comuni) e, tra elementi uguali,

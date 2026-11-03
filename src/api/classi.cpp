@@ -188,7 +188,9 @@ void separa_in(const Contesto& ctx, JsonDati& valore, const Nodo& n, bool promos
             if (!v.is_object() && !v.is_array()) continue;
             const std::size_t prima = voci.size();
             const bool vuoto_prima = v.empty();
-            separa_in(ctx, v, f, promosso, voci, profondita + 1);
+            // K-011 aggiunta 2: un campo personale dentro un dato particolare (es. motivo e chi di una dichiarazione) vale come
+            // particolare e sta tra i legati: un permesso solo non lo da' mai insieme al dato particolare che lo contiene.
+            separa_in(ctx, v, f, promosso || f.classe == Classe::Particolare, voci, profondita + 1);
             for (std::size_t i = prima; i < voci.size(); ++i) voci[i].percorso.insert(voci[i].percorso.begin(), k);
             // Un oggetto rimasto vuoto perche' i suoi campi sono andati nella cassaforte non resta nel file normale.
             if (v.is_object() && v.empty() && !vuoto_prima) valore.erase(k);
@@ -216,7 +218,7 @@ void separa_in(const Contesto& ctx, JsonDati& valore, const Nodo& n, bool promos
     for (std::size_t i = 0; i < valore.size(); ++i) {
         JsonDati& x = valore[i];
         if (!x.is_object() && !x.is_array()) continue;
-        bool p = promosso;
+        bool p = promosso || e.classe == Classe::Particolare;   // come sopra: dentro un elemento particolare
         if (e.trasportato && ctx.legame && x.is_object() && x.contains("codice") && x.at("codice").is_string())
             p = p || ctx.legame->legato(e.trasportato->get<std::string>(), x.at("codice").get<std::string>());
         separa_in(ctx, x, e, p, per_elemento[i], profondita + 1);

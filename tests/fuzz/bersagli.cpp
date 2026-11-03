@@ -21,6 +21,7 @@
 #include "comandi.hpp"
 #include "controllo.hpp"
 #include "errori.hpp"
+#include "orari.hpp"
 #include "formato_dati.hpp"
 #include "lettore.hpp"
 #include "parametri.hpp"
@@ -106,6 +107,19 @@ void prova_file_del_pacchetto(const std::string& file, const std::uint8_t* dati,
         }
         json_valido(testo_json(elenco), "controllo di " + file);
     }
+    // K-011: il resoconto degli orari (kzero ore) di una settimana, con tutti i dati: si costruisce senza guasti e conta solo
+    // giorni dentro la settimana chiesta.
+    if (lettura.forma_valida()) {
+        kzero::HoursRequest richiesta;
+        richiesta.report = true;
+        richiesta.from = lettura.pacchetto.manifest.period.from;
+        richiesta.to = richiesta.from + 6;
+        kzero::HoursReport orari;
+        (void)controlla_lettura(lettura, Visibilita{true, true}, &richiesta, &orari);
+        for (const kzero::PersonHours& ph : orari.persons)
+            for (const kzero::DayHours& dh : ph.days)
+                if (!dh.pd || dh.pd->day < richiesta.from || dh.pd->day > richiesta.to) guasto("orari: un giorno fuori dal periodo chiesto");
+    }
 }
 
 void prova_parametri(const std::uint8_t* dati, std::size_t n) {
@@ -185,19 +199,21 @@ cripto::Segreto normalizzata(const std::string& t) {
     return password::normalizza(cripto::Segreto(reinterpret_cast<const unsigned char*>(t.data()), t.size()), p);
 }
 
-// La cassaforte del demo, preparata una volta: tre utenti (tutti i permessi, i soli personali, i soli particolari) e un
-// cambio delle chiavi (un quarto utente tolto), cosi' ci sono buste e storie.
+// La cassaforte preparata una volta: tre utenti (tutti i permessi, i soli personali, i soli particolari) e un cambio delle
+// chiavi (un quarto utente tolto), cosi' ci sono buste e storie. Dal K-011 aggiunta 2 i dati sono quelli del pacchetto di
+// prova degli orari (il demo con in piu' la forzatura e la dichiarazione dell'azienda, con motivo e chi tra i legati): i semi
+// coprono ogni sezione, anche i legati che non vengono dai luoghi sensibili.
 struct Preparata {
     std::string file;
     std::string registro;
     std::string sezione_personali, sezione_particolari, sezione_legati, testo_registro;
-    std::map<std::string, JsonDati> normali;   // i file normali del demo
+    std::map<std::string, JsonDati> normali;   // i file normali del pacchetto
 };
 
 const Preparata& preparata() {
     static const Preparata p = [] {
         Preparata x;
-        const Lettura l = leggi_pacchetto(PacchettoIncorporato("esempi/demo"));
+        const Lettura l = leggi_pacchetto(CartellaSuDisco(std::string(KZERO_SORGENTI) + "/tests/esempi/k011-orari"));
         chiusura::Separazione s = chiusura::separa(l);
         x.normali = s.normali;
         x.sezione_personali = cassaforte::formato::testo_sezione(s.contenuto.personali);

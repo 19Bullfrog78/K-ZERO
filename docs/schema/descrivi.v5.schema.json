@@ -1,0 +1,452 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "kzero - descrivi, versione 5",
+  "description": "Uscita di 'kzero descrivi --formato json': comandi con argomenti e parametri, schemi (delle uscite e dei file di dati), file di un pacchetto dati, codici di uscita, di errore e dei controlli. E' generata dalle stesse tabelle che il programma usa per leggere la riga di comando e per controllare i pacchetti. Versione 3 (K-008): parametri di tipo 'valore' (con la forma: data o codice), parametri obbligatori e parametri che non si possono usare insieme. Sostituisce la versione 2, che non e' piu' prodotta. Versione 4 (K-010): forma 'percorso' (una cartella, es. --scrivi) e parametri di scelta obbligatori (es. --permessi). Sostituisce la versione 3, che non e' piu' prodotta. Versione 5 (K-011): 'natura' di ogni controllo (dati o piano). Sostituisce la versione 4, che non e' piu' prodotta.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "schema_versione",
+    "programma",
+    "uso",
+    "comandi",
+    "schemi",
+    "formato_dati",
+    "codici_uscita",
+    "errori",
+    "controlli"
+  ],
+  "properties": {
+    "schema": {
+      "const": "descrivi"
+    },
+    "schema_versione": {
+      "const": 5
+    },
+    "programma": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "nome",
+        "versione",
+        "descrizione"
+      ],
+      "properties": {
+        "nome": {
+          "const": "kzero"
+        },
+        "versione": {
+          "type": "string",
+          "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+        },
+        "descrizione": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "uso": {
+      "description": "Forma della riga di comando: il comando e' sempre il primo argomento.",
+      "type": "string",
+      "minLength": 1
+    },
+    "comandi": {
+      "description": "Tutti i comandi, in ordine alfabetico.",
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "$ref": "#/definitions/comando"
+      }
+    },
+    "schemi": {
+      "description": "Tutti gli schemi di docs/schema, in ordine di nome e versione: uscite JSON (errore compreso, anche quelle non piu' prodotte) e file di dati.",
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "nome",
+          "versione",
+          "file",
+          "tipo",
+          "in_uso"
+        ],
+        "properties": {
+          "nome": {
+            "$ref": "#/definitions/nome_schema"
+          },
+          "versione": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "file": {
+            "description": "Percorso del file dello schema, dalla cartella principale del repository.",
+            "type": "string",
+            "pattern": "^docs/schema/[a-z][a-z_]*\\.v[0-9]+\\.schema\\.json$"
+          },
+          "tipo": {
+            "description": "uscita = uscita JSON di un comando; dati = file di un pacchetto dati.",
+            "enum": [
+              "uscita",
+              "dati"
+            ]
+          },
+          "in_uso": {
+            "description": "false per le versioni non piu' prodotte (tenute per chi le usa ancora).",
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "formato_dati": {
+      "description": "File di un pacchetto dati, nell'ordine del formato (spiegati in docs/formato-dati.md).",
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "file",
+          "schema",
+          "versioni",
+          "obbligatorio",
+          "contenuto"
+        ],
+        "properties": {
+          "file": {
+            "type": "string",
+            "pattern": "^[a-z][a-z_]*\\.json$"
+          },
+          "schema": {
+            "$ref": "#/definitions/nome_schema"
+          },
+          "versioni": {
+            "description": "Versioni dello schema che il programma sa leggere.",
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          "obbligatorio": {
+            "type": "boolean"
+          },
+          "contenuto": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "codici_uscita": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "codice",
+          "significato"
+        ],
+        "properties": {
+          "codice": {
+            "type": "integer",
+            "enum": [
+              0,
+              1,
+              2,
+              3
+            ]
+          },
+          "significato": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "errori": {
+      "description": "Catalogo completo dei codici di errore, in ordine di codice (spiegati in docs/errori.md).",
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "codice",
+          "codice_uscita",
+          "descrizione"
+        ],
+        "properties": {
+          "codice": {
+            "type": "string",
+            "pattern": "^K-ERR-[0-9]{3}$"
+          },
+          "codice_uscita": {
+            "type": "integer",
+            "enum": [
+              1,
+              2,
+              3
+            ]
+          },
+          "descrizione": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "controlli": {
+      "description": "Catalogo completo dei controlli sui pacchetti dati, in ordine di codice (spiegati in docs/controlli.md).",
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "codice",
+          "livello",
+          "natura",
+          "descrizione"
+        ],
+        "properties": {
+          "codice": {
+            "type": "string",
+            "pattern": "^K-CTR-[0-9]{3}$"
+          },
+          "livello": {
+            "enum": [
+              "errore",
+              "avviso"
+            ]
+          },
+          "natura": {
+            "description": "Orari di lavoro (K-011): 'piano' = una violazione delle regole sugli orari nel piano dei turni (gli errori del piano non bloccano kzero giornata e kzero ore); 'dati' = un problema dei dati.",
+            "enum": [
+              "dati",
+              "piano"
+            ]
+          },
+          "descrizione": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "nome_schema": {
+      "type": "string",
+      "pattern": "^[a-z][a-z_]*$"
+    },
+    "comando": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "nome",
+        "descrizione",
+        "argomenti",
+        "parametri",
+        "schema"
+      ],
+      "properties": {
+        "nome": {
+          "type": "string",
+          "pattern": "^[a-z][a-z-]*$"
+        },
+        "descrizione": {
+          "type": "string",
+          "minLength": 1
+        },
+        "argomenti": {
+          "description": "Argomenti senza nome, scritti dopo il comando e in quest'ordine (es. la cartella del pacchetto).",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "nome",
+              "descrizione"
+            ],
+            "properties": {
+              "nome": {
+                "type": "string",
+                "pattern": "^[a-z][a-z-]*$"
+              },
+              "descrizione": {
+                "type": "string",
+                "minLength": 1
+              }
+            }
+          }
+        },
+        "parametri": {
+          "description": "Parametri del comando, in ordine alfabetico, --formato compreso.",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/parametro"
+          }
+        },
+        "schema": {
+          "description": "Schema dell'uscita JSON del comando.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "nome",
+            "versione"
+          ],
+          "properties": {
+            "nome": {
+              "$ref": "#/definitions/nome_schema"
+            },
+            "versione": {
+              "type": "integer",
+              "minimum": 1
+            }
+          }
+        }
+      }
+    },
+    "parametro": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "nome",
+        "tipo",
+        "obbligatorio",
+        "incompatibile_con",
+        "descrizione"
+      ],
+      "properties": {
+        "nome": {
+          "type": "string",
+          "pattern": "^--[a-z][a-z-]*$"
+        },
+        "tipo": {
+          "description": "interruttore = senza valore (presente o assente); scelta = un valore fra quelli di 'valori'; valore = un valore libero della forma indicata in 'forma'.",
+          "enum": [
+            "interruttore",
+            "scelta",
+            "valore"
+          ]
+        },
+        "valori": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "predefinito": {
+          "description": "Valore usato quando il parametro non e' scritto; una scelta obbligatoria non ne ha.",
+          "type": "string",
+          "minLength": 1
+        },
+        "forma": {
+          "description": "Solo per il tipo 'valore': data = AAAA-MM-GG; codice = codice K-Zero (lettere senza accenti, cifre, '-', '_' e '.'); percorso = una cartella.",
+          "enum": [
+            "data",
+            "codice",
+            "percorso"
+          ]
+        },
+        "obbligatorio": {
+          "description": "true = il parametro va sempre scritto.",
+          "type": "boolean"
+        },
+        "incompatibile_con": {
+          "description": "Parametri che non si possono scrivere insieme a questo.",
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "type": "string",
+            "pattern": "^--[a-z][a-z-]*$"
+          }
+        },
+        "descrizione": {
+          "type": "string",
+          "minLength": 1
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "tipo": {
+                "const": "scelta"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "valori"
+            ],
+            "if": {
+              "properties": {
+                "obbligatorio": {
+                  "const": false
+                }
+              }
+            },
+            "then": {
+              "required": [
+                "predefinito"
+              ]
+            },
+            "else": {
+              "not": {
+                "required": [
+                  "predefinito"
+                ]
+              }
+            }
+          },
+          "else": {
+            "not": {
+              "anyOf": [
+                {
+                  "required": [
+                    "valori"
+                  ]
+                },
+                {
+                  "required": [
+                    "predefinito"
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "tipo": {
+                "const": "valore"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "forma"
+            ]
+          },
+          "else": {
+            "not": {
+              "required": [
+                "forma"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  }
+}

@@ -290,7 +290,7 @@ TEST(Accesso, InterruzioneDellaChiusura) {
     }
     const Lettura originale = leggi_pacchetto(CartellaSuDisco(lavoro / "chiaro"));
     EXPECT_TRUE(originale.forma_valida());
-    EXPECT_EQ(originale.riservati.at("persone.json").personali, 161u);
+    EXPECT_EQ(originale.riservati.at("persone.json").personali, 169u);   // dal K-011 anche le scelte, i rientri e le giornate a chiamata
     chiudi();
     EXPECT_EQ(registro_di(lavoro / "chiuso").voci.size(), 1u);
 }

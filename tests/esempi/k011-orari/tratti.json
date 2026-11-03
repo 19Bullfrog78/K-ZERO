@@ -1,0 +1,14 @@
+{
+  "schema": "tratti",
+  "schema_versione": 1,
+  "tratti": [
+    {
+      "codice": "T-SOTTOPASSO-MONTEBRINO",
+      "nome": "Sottopasso ferroviario di Montebrino",
+      "da": "F-CASTELROVO",
+      "a": "F-MONTEBRINO",
+      "entrambi_i_sensi": true,
+      "limiti": { "altezza_massima_m": 3.2, "divieti": [{ "categoria": "M3", "motivo": "cartello" }] }
+    }
+  ]
+}

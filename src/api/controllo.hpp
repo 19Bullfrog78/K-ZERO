@@ -13,6 +13,7 @@ namespace kzero::api {
 
 struct ProblemaPresentato {
     Livello livello = Livello::Errore;
+    bool piano = false;       // problema del piano (K-011), non dei dati
     std::string codice;       // K-CTR-nnn
     std::string messaggio;    // gia' filtrato secondo le classi dei dati
     // Posizione da mostrare, gia' filtrata (riservatezza.hpp): file vuoto = nessuna posizione da mostrare.
@@ -22,6 +23,11 @@ struct ProblemaPresentato {
     // Problemi dei turni uguali in molti giorni: i giorni, raggruppati in periodi di giorni consecutivi (dal, al).
     std::vector<std::pair<kzero::Day, kzero::Day>> giorni;
     kzero::Source completa;   // la posizione vera: serve solo a un ordine stabile tra problemi che si mostrano uguali
+    std::string persona;      // la persona di cui parla il problema, se c'e' (kzero ore: i problemi di ogni persona)
+    std::vector<kzero::Day> tutti_i_giorni;
+    // K-011 aggiunta 1: la corsa e il servizio di cui parla un problema del modo delle corse, solo per quei controlli (kzero
+    // ore: le forzature, le dichiarazioni e le scelte che toccano le corse della persona).
+    std::string corsa, servizio;
 };
 
 struct Resoconto {
@@ -31,6 +37,10 @@ struct Resoconto {
     std::vector<ProblemaPresentato> problemi;
     int errori = 0;   // tutti, anche quelli riservati
     int avvisi = 0;
+    // Errori del piano (K-011: le violazioni delle regole sugli orari), compresi in errori: non bloccano kzero giornata e
+    // kzero ore (catalogo, DefinizioneControllo::piano).
+    int errori_del_piano = 0;
+    int errori_nei_dati() const { return errori - errori_del_piano; }
     // Problemi che rivelano un dato particolare (salute) e che, senza --includi-dati-particolari, non si elencano uno
     // per uno: solo quanti sono (in errori e avvisi sono gia' contati).
     int errori_riservati = 0;
@@ -50,7 +60,9 @@ struct Resoconto {
 
 Resoconto controlla_pacchetto(const Sorgente& sorgente, const Visibilita& visibilita);
 
-// Lo stesso controllo su un pacchetto gia' letto (leggi_pacchetto o leggi_file).
-Resoconto controlla_lettura(Lettura lettura, const Visibilita& visibilita);
+// Lo stesso controllo su un pacchetto gia' letto (leggi_pacchetto o leggi_file). Con richiesta e resoconto degli orari
+// (kzero ore, K-011) li riempie nella stessa passata.
+Resoconto controlla_lettura(Lettura lettura, const Visibilita& visibilita, const kzero::HoursRequest* richiesta = nullptr,
+                            kzero::HoursReport* orari = nullptr);
 
 }  // namespace kzero::api

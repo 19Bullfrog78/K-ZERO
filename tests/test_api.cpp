@@ -192,7 +192,8 @@ TEST(Api, catalogo_controlli) {
         EXPECT_FALSE(c.messaggi.empty()) << c.codice;
         for (const auto& m : c.messaggi) {
             EXPECT_FALSE(m.empty()) << c.codice;
-            EXPECT_TRUE(std::regex_match(m, std::regex(R"(([^{}]|\{[a-z_]+\})*)"))) << c.codice << ": " << m;
+            // {nome} oppure {nome:forma} (K-011: i giorni come inizi di settimane, mesi o periodi).
+            EXPECT_TRUE(std::regex_match(m, std::regex(R"(([^{}]|\{[a-z_]+(:[a-z_]+)?\})*)"))) << c.codice << ": " << m;
             EXPECT_EQ(m.back(), '.') << c.codice << ": " << m;
         }
         EXPECT_NO_THROW(definizione_controllo(c.controllo));
@@ -746,7 +747,9 @@ TEST(Api, messaggi_senza_due_punti) {
                     kzero::Problem p{d.controllo, static_cast<int>(variante), kzero::Source{}, {}};
                     for (const std::string& modello : modelli)
                         for (std::size_t i = modello.find('{'); i != std::string::npos; i = modello.find('{', i + 1)) {
-                            kzero::Param x = kzero::text_param(modello.substr(i + 1, modello.find('}', i) - i - 1), "valore.");
+                            std::string nome = modello.substr(i + 1, modello.find('}', i) - i - 1);
+                            nome = nome.substr(0, nome.find(':'));   // {giorni:settimane} (K-011)
+                            kzero::Param x = kzero::text_param(nome, "valore.");
                             x.sensitivity = sensibilita;
                             x.hidden = "nascosto.";
                             p.params.push_back(x);
@@ -837,6 +840,16 @@ void foglie(const JsonDati& radice, const JsonDati& nodo, const std::string& per
 
 }  // namespace
 
+// K-011 aggiunta 1: nelle forzature e nelle dichiarazioni dell'azienda (modo delle corse) il motivo scritto a mano e chi l'ha
+// scritta sono dati personali.
+static bool modo_corse_personale(const std::string& p) {
+    for (const char* dove : {"servizi", "corse"})
+        for (const char* cosa : {"forzatura", "dichiarazione"})
+            for (const char* campo : {"motivo", "chi"})
+                if (p == std::string("aziende/aziende/*/modo_corse/") + dove + "/*/" + cosa + "/" + campo) return true;
+    return false;
+}
+
 // Ogni campo dei file di dati ha la sua classe; i dati personali stanno solo nei luoghi privati e nei passeggeri;
 // i dati particolari sono proprio quelli elencati qui (cambiarli vuol dire cambiare anche docs/formato-dati.md).
 TEST(Api, classi_marcate_negli_schemi) {
@@ -864,7 +877,7 @@ TEST(Api, classi_marcate_negli_schemi) {
         EXPECT_TRUE(p.rfind("luoghi/luoghi_privati/", 0) == 0 || p.find("/passeggeri/*/") != std::string::npos ||
                     p.rfind("persone/persone/", 0) == 0 || p.rfind("assenze/assenze/", 0) == 0 ||
                     p == "rotazioni/rotazioni/*/nota" || p == "servizi_fissi/servizi_fissi/*/nota" ||
-                    p == "assegnazioni/assegnazioni/*/nota")
+                    p == "assegnazioni/assegnazioni/*/nota" || modo_corse_personale(p))
             << p;
     for (const char* nota : {"rotazioni/rotazioni/*/nota", "servizi_fissi/servizi_fissi/*/nota", "assegnazioni/assegnazioni/*/nota"})
         EXPECT_TRUE(personali.count(nota)) << nota;
@@ -878,6 +891,9 @@ TEST(Api, classi_marcate_negli_schemi) {
         EXPECT_TRUE(personali.count(std::string("assenze/assenze/*/") + campo)) << campo;
     for (const std::string& c : comuni_delle_persone) EXPECT_FALSE(personali.count(c)) << c;
     EXPECT_FALSE(personali.count("persone/persone/*/prestiti/*/accordo"));
+    for (const char* x : {"aziende/aziende/*/modo_corse/servizi/*/forzatura/motivo", "aziende/aziende/*/modo_corse/corse/*/dichiarazione/chi"})
+        EXPECT_TRUE(personali.count(x)) << x;
+    EXPECT_FALSE(personali.count("aziende/aziende/*/modo_corse/corse/*/forzatura/quando"));
     const std::set<std::string> attesi = {
         "servizi/servizi/*/competenze_richieste/*",   // versione 2: una competenza puo' far capire chi viaggia
         "servizi/servizi/*/tipo",
@@ -893,6 +909,12 @@ TEST(Api, classi_marcate_negli_schemi) {
         "servizi/servizi/*/domanda/gruppi/*/passeggeri/*/esigenze/assistente",
         "servizi/servizi/*/domanda/gruppi/*/passeggeri/*/esigenze/altro",
         "turni/turni/*/competenze_richieste/*",   // come per i servizi: una competenza puo' far capire chi viaggia
+        // K-011 aggiunta 2: la dichiarazione del modo delle corse (c'e' solo dove l'esclusione e' da confermare: dice il tipo
+        // di servizio); motivo e chi, personali, stanno dentro (legati).
+        "aziende/aziende/*/modo_corse/servizi/*/dichiarazione/quando",
+        "aziende/aziende/*/modo_corse/servizi/*/dichiarazione/fino_al",
+        "aziende/aziende/*/modo_corse/corse/*/dichiarazione/quando",
+        "aziende/aziende/*/modo_corse/corse/*/dichiarazione/fino_al",
     };
     EXPECT_EQ(particolari, attesi);
 }

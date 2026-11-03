@@ -78,14 +78,6 @@ TEST(Dimostrazione, totali_e_pause) {
     EXPECT_NEAR(loaded_km(giornata[0]), 29.9, 1e-9);
     EXPECT_NEAR(empty_km(giornata[0]), 12.8, 1e-9);
     EXPECT_EQ(idle_minutes(giornata[0]), 263);
-    Person autista;
-    autista.home = Home{"", "", per_codice(p.places, "L-RIMESSA-ALFA").coord};
-    const auto luogo = [&piano](const Code& c) { return piano.index().place(c); };
-    const auto br = check_home_breaks(giornata[0], autista, HomeBreakRule{60, 5.0, std::nullopt}, luogo);
-    ASSERT_TRUE(br.has_value());
-    EXPECT_EQ(br->near_home, 1);
-    EXPECT_EQ(br->far_from_home, 0);
-    EXPECT_FALSE(check_home_breaks(giornata[0], autista, std::nullopt, luogo).has_value());   // senza regola non giudica
 }
 
 // Posti, carrozzine, costi e assistente, con i valori del pacchetto demo.

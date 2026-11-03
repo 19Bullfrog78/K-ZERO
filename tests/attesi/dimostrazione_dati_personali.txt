@@ -1,7 +1,7 @@
 === PACCHETTO ===
 DEMO-2026  Pacchetto dimostrativo K-Zero  (dati inventati)
 Periodo 2026-09-01 - 2027-08-31, livello completo, fuso orario Europe/Rome, valuta EUR
-Controllo: nessun errore, 8 avvisi (dettagli con kzero controlla)
+Controllo: nessun errore, 31 avvisi (dettagli con kzero controlla)
 Dati personali: mostrati; dati particolari: riservati.
 
 === AZIENDE E MEZZI ===

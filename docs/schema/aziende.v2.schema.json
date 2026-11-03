@@ -1,0 +1,693 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "K-Zero - file di dati aziende.json, versione 2",
+  "description": "Elenchi e impostazioni di ogni azienda del pacchetto (file aziende.json): l'organizzazione la sceglie l'azienda. Tipi di attivita' dei turni, tipi di assenza, tipi di fermo dei mezzi, competenze, norme del paese e impostazioni (ricovero vicino a casa, abbinamento autista-mezzo). In un consorzio ogni azienda ha le sue. Le impostazioni del manifesto restano scelte di chi pianifica, valide per tutto il pacchetto. Versione 2 (K-011): categoria di tempo di ogni tipo di attivita', come contano le soste non scritte, le scelte dell'azienda sugli orari (preferenza o limite rigido), la chiave della pausa fuori dal posto (rientro), le speciali esigenze.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "schema_versione",
+    "aziende"
+  ],
+  "properties": {
+    "schema": {
+      "const": "aziende",
+      "x-kzero-classe": "comune"
+    },
+    "schema_versione": {
+      "const": 2,
+      "x-kzero-classe": "comune"
+    },
+    "aziende": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "azienda",
+          "impostazioni"
+        ],
+        "properties": {
+          "azienda": {
+            "description": "Codice dell'azienda (dal manifesto).",
+            "$ref": "#/definitions/codice",
+            "x-kzero-classe": "comune"
+          },
+          "norme": {
+            "description": "Norme del paese che valgono per l'azienda (norme.json).",
+            "$ref": "#/definitions/codice",
+            "x-kzero-classe": "comune"
+          },
+          "impostazioni": {
+            "description": "Scelte dell'azienda sulla sua organizzazione. Sono solo dati: il costo delle scelte lo mostrera' il calcolo.",
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "ricovero_vicino_a_casa",
+              "abbinamento_autista_mezzo",
+              "soste_non_scritte"
+            ],
+            "properties": {
+              "ricovero_vicino_a_casa": {
+                "description": "Il mezzo puo' dormire in un ricovero vicino a casa dell'autista: preferito, ammesso, mai (= sempre in rimessa).",
+                "enum": [
+                  "preferito",
+                  "ammesso",
+                  "mai"
+                ]
+              },
+              "abbinamento_autista_mezzo": {
+                "description": "nessuno; preferito; fisso = ogni autista ha il suo mezzo (il mezzo abituale) e guida solo quello.",
+                "enum": [
+                  "nessuno",
+                  "preferito",
+                  "fisso"
+                ]
+              },
+              "soste_non_scritte": {
+                "description": "Versione 2: categoria dei minuti non scritti tra due elementi della giornata; con oltre_minuti, le soste piu' lunghe hanno categoria_oltre.",
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "categoria"
+                ],
+                "properties": {
+                  "categoria": {
+                    "$ref": "#/definitions/categoria"
+                  },
+                  "oltre_minuti": {
+                    "$ref": "#/definitions/minuti"
+                  },
+                  "categoria_oltre": {
+                    "$ref": "#/definitions/categoria"
+                  }
+                },
+                "dependencies": {
+                  "oltre_minuti": [
+                    "categoria_oltre"
+                  ],
+                  "categoria_oltre": [
+                    "oltre_minuti"
+                  ]
+                }
+              },
+              "margine_giornate_massime": {
+                "description": "Versione 2: avviso quando mancano tante giornate al limite delle giornate massime (es. rapporto a chiamata).",
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 10000
+              }
+            },
+            "x-kzero-classe": "comune"
+          },
+          "attivita": {
+            "description": "Tipi di attivita' senza passeggeri dei turni (es. presa servizio con il controllo del mezzo, pulizia, rifornimento, ricarica, attesa, pausa, trasferimento a vuoto, riserva, reperibilita', spostamento senza il mezzo), con i nomi dell'azienda.",
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "codice",
+                "nome",
+                "usa_il_mezzo",
+                "tempo"
+              ],
+              "properties": {
+                "codice": {
+                  "$ref": "#/definitions/codice"
+                },
+                "nome": {
+                  "$ref": "#/definitions/testo"
+                },
+                "usa_il_mezzo": {
+                  "description": "true = l'attivita' impegna il mezzo del turno (es. pulizia, rifornimento, trasferimento a vuoto); false = no (es. spostamento della persona senza il mezzo, ufficio).",
+                  "type": "boolean"
+                },
+                "nota": {
+                  "$ref": "#/definitions/nota"
+                },
+                "tempo": {
+                  "description": "Versione 2: categoria di tempo dell'attivita'.",
+                  "$ref": "#/definitions/categoria"
+                }
+              }
+            },
+            "x-kzero-classe": "comune"
+          },
+          "tipi_assenza": {
+            "description": "Tipi di assenza (es. ferie, permesso, formazione). Mai la causa.",
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "codice",
+                "nome"
+              ],
+              "properties": {
+                "codice": {
+                  "$ref": "#/definitions/codice"
+                },
+                "nome": {
+                  "$ref": "#/definitions/testo"
+                },
+                "nota": {
+                  "$ref": "#/definitions/nota"
+                }
+              }
+            },
+            "x-kzero-classe": "comune"
+          },
+          "tipi_fermo": {
+            "description": "Tipi di fermo dei mezzi (es. revisione, manutenzione).",
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "codice",
+                "nome"
+              ],
+              "properties": {
+                "codice": {
+                  "$ref": "#/definitions/codice"
+                },
+                "nome": {
+                  "$ref": "#/definitions/testo"
+                },
+                "nota": {
+                  "$ref": "#/definitions/nota"
+                }
+              }
+            },
+            "x-kzero-classe": "comune"
+          },
+          "competenze": {
+            "description": "Competenze che un turno o un servizio puo' richiedere (es. conosce la linea X, formato per la pedana).",
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "codice",
+                "nome"
+              ],
+              "properties": {
+                "codice": {
+                  "$ref": "#/definitions/codice"
+                },
+                "nome": {
+                  "$ref": "#/definitions/testo"
+                },
+                "nota": {
+                  "$ref": "#/definitions/nota"
+                }
+              }
+            },
+            "x-kzero-classe": "comune"
+          },
+          "nota": {
+            "$ref": "#/definitions/nota",
+            "x-kzero-classe": "comune"
+          },
+          "scelte_orari": {
+            "description": "Versione 2: scelte dell'azienda sugli orari (facoltative), preferenza o limite rigido. La legge resta sempre sopra.",
+            "type": "array",
+            "maxItems": 100,
+            "items": {
+              "$ref": "#/definitions/scelta"
+            },
+            "x-kzero-classe": "comune"
+          },
+          "rientro": {
+            "$ref": "#/definitions/rientro",
+            "x-kzero-classe": "comune"
+          },
+          "speciali_esigenze": {
+            "description": "Versione 2: speciali esigenze dell'azienda per una regola di legge (es. lo straordinario), con il riferimento.",
+            "type": "array",
+            "maxItems": 100,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "regola",
+                "riferimento"
+              ],
+              "properties": {
+                "regola": {
+                  "$ref": "#/definitions/codice"
+                },
+                "riferimento": {
+                  "$ref": "#/definitions/testo"
+                },
+                "nota": {
+                  "$ref": "#/definitions/nota"
+                }
+              }
+            },
+            "x-kzero-classe": "comune"
+          },
+          "modo_corse": {
+            "$ref": "#/definitions/modo_corse",
+            "x-kzero-classe": "comune"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "codice": {
+      "description": "Codice K-Zero: scelto da chi scrive i dati, unico per tipo di elemento. Lettere senza accenti, cifre, '-', '_' e '.'; inizia con una lettera o una cifra; al massimo 64 caratteri.",
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+    },
+    "testo": {
+      "description": "Testo di una riga, non vuoto (al massimo 300 caratteri).",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 300,
+      "pattern": "\\S"
+    },
+    "nota": {
+      "description": "Testo libero, non vuoto (al massimo 2000 caratteri).",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2000,
+      "pattern": "\\S"
+    },
+    "minuti": {
+      "description": "Minuti (al massimo 100000).",
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100000
+    },
+    "categoria": {
+      "description": "Categoria di tempo: guida, altre_mansioni, disponibilita, reperibilita, interruzione.",
+      "enum": [
+        "guida",
+        "altre_mansioni",
+        "disponibilita",
+        "reperibilita",
+        "interruzione"
+      ]
+    },
+    "forza": {
+      "description": "preferenza (avviso) oppure limite (rigido: errore su un turno ricorrente, avviso su un'assegnazione del singolo giorno).",
+      "enum": [
+        "preferenza",
+        "limite"
+      ]
+    },
+    "scelta": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tipo",
+        "forza"
+      ],
+      "properties": {
+        "tipo": {
+          "enum": [
+            "lavoro_massimo",
+            "guida_massima",
+            "ampiezza_massima",
+            "riposo_giornaliero",
+            "giorni_consecutivi"
+          ]
+        },
+        "periodo": {
+          "description": "lavoro_massimo: giornata, settimana o mese; guida_massima: giornata o settimana.",
+          "enum": [
+            "giornata",
+            "settimana",
+            "mese"
+          ]
+        },
+        "massimo_minuti": {
+          "$ref": "#/definitions/minuti"
+        },
+        "minimo_minuti": {
+          "$ref": "#/definitions/minuti"
+        },
+        "massimo_giorni": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 366
+        },
+        "forza": {
+          "$ref": "#/definitions/forza"
+        },
+        "nota": {
+          "$ref": "#/definitions/nota"
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "tipo": {
+                "const": "lavoro_massimo"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "periodo",
+              "massimo_minuti"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "tipo": {
+                "const": "guida_massima"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "periodo",
+              "massimo_minuti"
+            ],
+            "properties": {
+              "periodo": {
+                "enum": [
+                  "giornata",
+                  "settimana"
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "tipo": {
+                "const": "ampiezza_massima"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "massimo_minuti"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "tipo": {
+                "const": "riposo_giornaliero"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "minimo_minuti"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "tipo": {
+                "const": "giorni_consecutivi"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "massimo_giorni"
+            ]
+          }
+        }
+      ]
+    },
+    "rientro": {
+      "description": "Chiave della pausa fuori dal posto (rientro in rimessa o in un ricovero): fermo minimo, fattore della guida a vuoto in piu', km a vuoto in piu' al massimo (facoltativo), forza.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "fermo_minimo_minuti",
+        "fattore_guida",
+        "forza"
+      ],
+      "properties": {
+        "fermo_minimo_minuti": {
+          "$ref": "#/definitions/minuti"
+        },
+        "fattore_guida": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "km_vuoti_massimi": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 10000
+        },
+        "forza": {
+          "$ref": "#/definitions/forza"
+        }
+      }
+    },
+    "data": {
+      "description": "Data AAAA-MM-GG che esiste nel calendario (es. 2026-09-14; il 29 febbraio solo negli anni bisestili).",
+      "type": "string",
+      "pattern": "^([0-9]{4}-((0[13578]|1[02])-(0[1-9]|[12][0-9]|3[01])|(0[469]|11)-(0[1-9]|[12][0-9]|30)|02-(0[1-9]|1[0-9]|2[0-8]))|([0-9]{2}(0[48]|[2468][048]|[13579][26])|([02468][048]|[13579][26])00)-02-29)$"
+    },
+    "giustificazione_modo": {
+      "description": "Chi ha scritto la scelta, quando e perche' (K-011 aggiunta 1). Il motivo (scritto a mano) e chi sono dati personali.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "motivo",
+        "chi",
+        "quando"
+      ],
+      "properties": {
+        "motivo": {
+          "$ref": "#/definitions/nota",
+          "x-kzero-classe": "personale"
+        },
+        "chi": {
+          "$ref": "#/definitions/testo",
+          "x-kzero-classe": "personale"
+        },
+        "quando": {
+          "$ref": "#/definitions/data"
+        },
+        "fino_al": {
+          "description": "Solo per la forzatura: vale fino a questo giorno (incluso).",
+          "$ref": "#/definitions/data"
+        }
+      }
+    },
+    "modo_corse": {
+      "description": "K-011 aggiunta 1 (Mauro, 28/10): modo delle corse dell'azienda. 'out' = regole nazionali, dove la legge lo permette; 'tachigrafo' = si seguono le regole del regime (es. il Reg. 561/2006, e chi lo segue con come_regime) anche dove la legge lo esclude, come scelta dell'azienda con la sua forza. Vince la scelta piu' precisa: corsa, poi servizio, poi tipo di servizio. Senza scelta decide la legge. La legge resta sempre sopra: 'out' dove la legge vuole il regime non vale (un avviso), salvo una forzatura cosciente dell'azienda, sempre visibile.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "regime"
+      ],
+      "properties": {
+        "regime": {
+          "description": "Il regime che segue il tachigrafo (nelle norme dell'azienda).",
+          "$ref": "#/definitions/codice"
+        },
+        "forza": {
+          "description": "Forza di base del tachigrafo (di base preferenza).",
+          "$ref": "#/definitions/forza"
+        },
+        "tipi_diversi": {
+          "description": "Corsa con servizi di tipi (o servizi) con scelte diverse: piu_prudente (di base: tachigrafo se uno lo chiede), out oppure tachigrafo. Un avviso suggerisce di scrivere la scelta per la corsa.",
+          "enum": [
+            "piu_prudente",
+            "out",
+            "tachigrafo"
+          ]
+        },
+        "per_tipo_servizio": {
+          "type": "array",
+          "maxItems": 10,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "tipo_servizio",
+              "modo"
+            ],
+            "x-kzero-chiave": [
+              "tipo_servizio"
+            ],
+            "properties": {
+              "tipo_servizio": {
+                "enum": [
+                  "linea",
+                  "scolastico",
+                  "disabili",
+                  "altro"
+                ]
+              },
+              "modo": {
+                "enum": [
+                  "out",
+                  "tachigrafo"
+                ]
+              },
+              "forza": {
+                "$ref": "#/definitions/forza"
+              },
+              "nota": {
+                "$ref": "#/definitions/nota"
+              }
+            }
+          }
+        },
+        "servizi": {
+          "type": "array",
+          "maxItems": 10000,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "servizio",
+              "modo"
+            ],
+            "x-kzero-chiave": [
+              "servizio"
+            ],
+            "properties": {
+              "servizio": {
+                "$ref": "#/definitions/codice"
+              },
+              "modo": {
+                "enum": [
+                  "out",
+                  "tachigrafo"
+                ]
+              },
+              "forza": {
+                "$ref": "#/definitions/forza"
+              },
+              "forzatura": {
+                "description": "Solo con 'out': forzatura cosciente dove la legge, con i dati scritti, vuole il regime (es. il percorso vero e' sotto i 50 km). Il programma pianifica come ha scelto l'azienda, ma la forzatura resta sempre visibile e le violazioni della legge come la calcolano i dati sono avvisi.",
+                "$ref": "#/definitions/giustificazione_modo"
+              },
+              "dichiarazione": {
+                "description": "Solo con 'out': dove l'esclusione e' da confermare (es. un servizio solo per disabili che per l'azienda e' un servizio scolastico speciale), l'azienda lo dichiara escluso: da li' escluso con certezza, con una nota. K-011 aggiunta 2: dato particolare (che ci sia dice il tipo di servizio); motivo e chi, personali dentro un dato particolare, si vedono solo con tutti e due i permessi (nella cassaforte: legati).",
+                "$ref": "#/definitions/giustificazione_modo",
+                "x-kzero-classe": "particolare"
+              },
+              "nota": {
+                "$ref": "#/definitions/nota"
+              }
+            },
+            "not": {
+              "anyOf": [
+                {
+                  "required": [
+                    "forzatura",
+                    "dichiarazione"
+                  ]
+                },
+                {
+                  "properties": {
+                    "modo": {
+                      "const": "tachigrafo"
+                    }
+                  },
+                  "anyOf": [
+                    {
+                      "required": [
+                        "forzatura"
+                      ]
+                    },
+                    {
+                      "required": [
+                        "dichiarazione"
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        "corse": {
+          "type": "array",
+          "maxItems": 100000,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "corsa",
+              "modo"
+            ],
+            "x-kzero-chiave": [
+              "corsa"
+            ],
+            "properties": {
+              "corsa": {
+                "$ref": "#/definitions/codice"
+              },
+              "modo": {
+                "enum": [
+                  "out",
+                  "tachigrafo"
+                ]
+              },
+              "forza": {
+                "$ref": "#/definitions/forza"
+              },
+              "forzatura": {
+                "$ref": "#/definitions/giustificazione_modo"
+              },
+              "dichiarazione": {
+                "$ref": "#/definitions/giustificazione_modo",
+                "x-kzero-classe": "particolare"
+              },
+              "nota": {
+                "$ref": "#/definitions/nota"
+              }
+            },
+            "not": {
+              "anyOf": [
+                {
+                  "required": [
+                    "forzatura",
+                    "dichiarazione"
+                  ]
+                },
+                {
+                  "properties": {
+                    "modo": {
+                      "const": "tachigrafo"
+                    }
+                  },
+                  "anyOf": [
+                    {
+                      "required": [
+                        "forzatura"
+                      ]
+                    },
+                    {
+                      "required": [
+                        "dichiarazione"
+                      ]
+                    }
+                  ]
+                }
+              ]
+            }
+          }
+        },
+        "nota": {
+          "$ref": "#/definitions/nota"
+        }
+      }
+    }
+  }
+}

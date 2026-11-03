@@ -1,0 +1,22 @@
+{
+  "schema": "rimesse",
+  "schema_versione": 1,
+  "rimesse": [
+    { "codice": "RIM-ALFA", "luogo": "L-RIMESSA-ALFA", "azienda": "ALFA", "ricarica": true, "posti_mezzi": 6 },
+    {
+      "codice": "RIM-BETA",
+      "luogo": "L-RIMESSA-BETA",
+      "azienda": "BETA",
+      "ricarica": false,
+      "posti_mezzi": 2
+    },
+    {
+      "codice": "RIC-ALFA-04",
+      "luogo": "PR-01",
+      "azienda": "ALFA",
+      "ricarica": true,
+      "posti_mezzi": 1,
+      "nota": "L'auto elettrica dorme presso la casa dell'autista, con la sua presa di ricarica."
+    }
+  ]
+}

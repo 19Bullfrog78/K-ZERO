@@ -9,6 +9,7 @@
 #include <stdexcept>
 #include <string_view>
 #include <tuple>
+#include <type_traits>
 
 #if defined(__unix__) || defined(__APPLE__)
 #define KZERO_LETTURA_POSIX 1
@@ -515,6 +516,299 @@ std::vector<Ref> riferimenti(const JsonDati& o, const char* k, const std::string
     return v;
 }
 
+// --- Orari di lavoro (K-011) -------------------------------------------------------------------------
+
+TimeCategory categoria_tempo(const JsonDati& v) {
+    return valore_di<TimeCategory>({{"guida", TimeCategory::Driving}, {"altre_mansioni", TimeCategory::OtherWork},
+                                    {"disponibilita", TimeCategory::Availability}, {"reperibilita", TimeCategory::OnCall},
+                                    {"interruzione", TimeCategory::Break}},
+                                   v.get<std::string>());
+}
+
+std::vector<TimeCategory> categorie_tempo(const JsonDati& o, const char* k) {
+    std::vector<TimeCategory> v;
+    for (const auto& x : Conversione::elenco(o, k)) v.push_back(categoria_tempo(x));
+    return v;
+}
+
+const std::vector<std::pair<const char*, RuleFamily>> kFamiglie = {
+    {"guida", RuleFamily::Driving}, {"riposi", RuleFamily::Rest}, {"lavoro", RuleFamily::Work}, {"notturno", RuleFamily::Night},
+    {"giornate", RuleFamily::Days}};
+const std::vector<std::pair<const char*, RuleType>> kTipiRegola = {
+    {"conteggio_lavoro", RuleType::WorkCount},          {"lavoro_massimo", RuleType::MaxWork},
+    {"guida_continua", RuleType::ContinuousDriving},    {"guida_massima", RuleType::MaxDriving},
+    {"lavoro_continuo", RuleType::ContinuousWork},      {"riposo_giornaliero", RuleType::DailyRest},
+    {"riposo_settimanale", RuleType::WeeklyRest},       {"lavoro_notturno", RuleType::NightWork},
+    {"giornate_massime", RuleType::MaxDays},            {"ampiezza_massima", RuleType::MaxSpan},
+    {"giorni_consecutivi", RuleType::ConsecutiveDays}};
+const std::vector<std::pair<const char*, RulePeriod>> kPeriodi = {
+    {"giornata", RulePeriod::Workday}, {"24_ore", RulePeriod::Day24},          {"settimana", RulePeriod::Week},
+    {"due_settimane", RulePeriod::TwoWeeks}, {"mese", RulePeriod::Month}, {"tra_due_riposi", RulePeriod::BetweenRests}};
+const std::vector<std::pair<const char*, EmploymentKind>> kRapporti = {
+    {"titolare", EmploymentKind::Owner}, {"collaboratore_familiare", EmploymentKind::FamilyHelper}, {"socio", EmploymentKind::Partner},
+    {"dipendente_tempo_pieno", EmploymentKind::FullTime}, {"dipendente_part_time", EmploymentKind::PartTime},
+    {"a_chiamata", EmploymentKind::OnCall}, {"tempo_determinato", EmploymentKind::FixedTerm}, {"stagionale", EmploymentKind::Seasonal},
+    {"autonomo", EmploymentKind::SelfEmployed}, {"volontario", EmploymentKind::Volunteer}, {"altro", EmploymentKind::Other}};
+const std::vector<std::pair<const char*, ShiftRole>> kRuoliTurno = {
+    {"autista", ShiftRole::Driver}, {"secondo_autista", ShiftRole::SecondDriver}, {"assistente", ShiftRole::Escort}};
+
+// Una condizione del regime con i valori certi e quelli da confermare; tabella = l'elenco fisso dei valori (nullptr: testi).
+template <class T>
+Applies<T> condizione_regime(const JsonDati& o, const char* k, const std::vector<std::pair<const char*, T>>* tabella) {
+    Applies<T> a;
+    const auto it = o.find(k);
+    if (it == o.end()) return a;
+    a.present = true;
+    for (const auto& [campo, out] : {std::pair<const char*, std::vector<T>*>{"certi", &a.certain}, {"da_confermare", &a.to_confirm}})
+        for (const auto& v : Conversione::elenco(*it, campo)) {
+            if constexpr (std::is_same_v<T, std::string>) out->push_back(v.template get<std::string>());
+            else out->push_back(valore_di(*tabella, v.template get<std::string>()));
+        }
+    return a;
+}
+
+// I parametri di una lettura di una regola. Il campo "categorie" vale per il conteggio, "interrompono" per la guida continua.
+RuleParams parametri_regola(const JsonDati& o, RuleType tipo) {
+    using C = Conversione;
+    RuleParams r;
+    r.measure_name = C::testo(o, "nome_misura");
+    r.categories = categorie_tempo(o, tipo == RuleType::ContinuousDriving ? "interrompono" : "categorie");
+    r.stops_up_to = C::intero(o, "soste_fino_a_minuti");
+    const auto quota = [&](const char* k) -> std::optional<IdleShare> {
+        if (!o.contains(k)) return std::nullopt;
+        return IdleShare{categorie_tempo(o.at(k), "categorie"), o.at(k).at("percento").get<int>()};
+    };
+    r.idle_away = quota("inoperoso_fuori_residenza");
+    r.idle_home = quota("inoperoso_in_residenza");
+    r.max_minutes = C::intero(o, "massimo_minuti");
+    r.normal_minutes = C::intero(o, "normale_minuti");
+    if (const auto it = o.find("media"); it != o.end()) {
+        r.average_weeks = C::intero(*it, "settimane");
+        r.average_months = C::intero(*it, "mesi");
+        r.average_days = C::intero(*it, "giorni");
+    }
+    if (const auto it = o.find("estensione"); it != o.end()) {
+        r.extension_max = it->at("massimo_minuti").get<int>();
+        r.extension_times = it->at("volte_a_settimana").get<int>();
+    }
+    for (const auto& z : C::elenco(o, "azzera_con")) {
+        BreakPattern b;
+        for (const auto& m : z.at("parti_minuti")) b.parts.push_back(m.get<int>());
+        b.occasional_only = C::vero(z, "solo_servizi_occasionali");
+        r.resets.push_back(b);
+    }
+    if (const auto it = o.find("interruzioni_brevi_contate"); it != o.end()) {
+        r.short_counted_up_to = it->at("fino_a_minuti").get<int>();
+        r.short_counted_count = it->at("quante").get<int>();
+    }
+    r.terminus_stops_over = C::intero(o, "eccezione_soste_capolinea_oltre_minuti");
+    r.fraction_min = C::intero(o, "frazione_minima_minuti");
+    for (const auto& z : C::elenco(o, "pause")) r.pauses.push_back({z.at("lavoro_oltre_minuti").get<int>(), z.at("pausa_minuti").get<int>()});
+    r.min_minutes = C::intero(o, "minimo_minuti");
+    if (const auto it = o.find("frazionato"); it != o.end())
+        for (const auto& m : it->at("parti_minuti")) r.split.push_back(m.get<int>());
+    if (const auto it = o.find("ridotto"); it != o.end()) {
+        r.reduced_min = it->at("minimo_minuti").get<int>();
+        r.reduced_times = C::intero(*it, "volte");
+    }
+    if (const auto it = o.find("media_riposo"); it != o.end()) {
+        r.rest_average_min = it->at("minimo_minuti").get<int>();
+        r.rest_average_days = it->at("giorni").get<int>();
+        r.rest_average_exclude_from = C::intero(*it, "esclusi_riposi_di_almeno_minuti");
+        for (const auto& z : C::elenco(*it, "salvo_interruzioni")) r.rest_average_except.push_back({z.at("minuti").get<int>(), z.at("quante").get<int>()});
+    }
+    if (const auto it = o.find("reperibilita_interrompe"); it != o.end()) r.on_call_interrupts = it->get<bool>();
+    r.two_weeks_regular = C::intero(o, "regolari_in_due_settimane");
+    r.within_24h_periods = C::intero(o, "entro_periodi_di_24_ore");
+    r.cumulation_weeks = C::intero(o, "cumulo_settimane");
+    if (const auto it = o.find("compensazione"); it != o.end()) {
+        r.compensation_weeks = it->at("entro_settimane").get<int>();
+        r.compensation_attached = it->at("attaccata_a_riposo_minuti").get<int>();
+    }
+    if (const auto it = o.find("fascia"); it != o.end()) {
+        r.band_from = C::orario(it->at("dalle"));
+        r.band_to = C::orario(it->at("alle"));
+    }
+    r.max_days = C::intero(o, tipo == RuleType::ConsecutiveDays ? "massimo_giorni" : "massimo_giornate");
+    r.years = C::intero(o, "anni");
+    return r;
+}
+
+WorkRule regola_orari(const JsonDati& o, const std::string& p, const Conversione& c) {
+    WorkRule w;
+    w.code = o.at("codice").get<std::string>();
+    w.type = valore_di(kTipiRegola, o.at("tipo").get<std::string>());
+    w.family = valore_di(kFamiglie, o.at("famiglia").get<std::string>());
+    if (o.contains("periodo")) w.period = valore_di(kPeriodi, o.at("periodo").get<std::string>());
+    if (o.contains("misura"))
+        w.measure = valore_di<RestMeasure>({{"24_ore_dall_inizio_della_giornata", RestMeasure::From24hStart},
+                                            {"24_ore_dalla_fine_del_riposo", RestMeasure::From24hEndRest},
+                                            {"tra_due_giornate", RestMeasure::BetweenWorkdays}},
+                                           o.at("misura").get<std::string>());
+    w.certain = parametri_regola(o, w.type);
+    // La lettura prudente: gli stessi campi della regola, con quelli scritti in "prudente" al loro posto.
+    if (const auto it = o.find("prudente"); it != o.end()) {
+        JsonDati unita = o;
+        unita.erase("prudente");
+        for (const auto& [k, v] : it->items())
+            if (k != "nota") unita[k] = v;
+        w.prudent = parametri_regola(unita, w.type);
+        w.prudent_note = c.testo(*it, "nota");
+    }
+    if (const auto it = o.find("straordinario"); it != o.end())
+        w.overtime = Overtime{it->at("denuncia").get<std::string>(), it->at("ricorrente").get<std::string>(), c.vero(*it, "ricorrente_da_confermare")};
+    w.source = fonte_documento(o.at("fonte"));
+    w.to_confirm = c.vero(o, "da_confermare");
+    w.note = c.testo(o, "nota");
+    w.src = c.src(p);
+    return w;
+}
+
+Regime regime(const JsonDati& o, const std::string& p, const Conversione& c) {
+    Regime r;
+    r.code = o.at("codice").get<std::string>();
+    r.name = o.at("nome").get<std::string>();
+    r.kind = o.at("tipo").get<std::string>() == "legge" ? RegimeKind::Law : RegimeKind::CollectiveAgreement;
+    r.source = fonte_documento(o.at("fonte"));
+    r.valid_from = c.data_opz(o, "valido_dal");
+    r.valid_to = c.data_opz(o, "valido_al");
+    r.to_confirm = c.vero(o, "da_confermare");
+    r.note = c.testo(o, "nota");
+    if (const auto it = o.find("si_applica"); it != o.end()) {
+        const JsonDati& a = *it;
+        r.roles = condizione_regime(a, "ruoli", &kRuoliTurno);
+        r.employments = condizione_regime(a, "rapporti", &kRapporti);
+        r.agreements = condizione_regime<std::string>(a, "contratti_collettivi", nullptr);
+        r.service_kinds = condizione_regime(a, "tipi_servizio", &kTipiServizio);
+        if (const auto m = a.find("mezzi"); m != a.end())
+            r.vehicle = VehicleCondition{m->at("persone_trasportabili_oltre").get<int>(), c.vero(*m, "da_confermare")};
+        if (const auto m = a.find("percorso"); m != a.end())
+            r.route = RouteCondition{c.decimale(*m, "fino_a_km"), c.decimale(*m, "oltre_km"), c.vero(*m, "da_confermare")};
+        r.like = c.ref_opz(a, "come_regime", p + "/si_applica");
+        if (const auto e = a.find("estensione_come_regime"); e != a.end()) r.like_extension_to_confirm = e->get<std::string>() != "vale";
+    }
+    const auto& escl = c.elenco(o, "esclusioni");
+    for (std::size_t k = 0; k < escl.size(); ++k) {
+        RegimeExclusion e;
+        e.kinds = valori_di(kTipiServizio, escl[k], "tipi_servizio");
+        e.together_with = valori_di(kTipiServizio, escl[k], "insieme_a");   // K-011 aggiunta 1
+        e.route_up_to_km = c.decimale(escl[k], "percorso_fino_a_km");
+        e.to_confirm = c.vero(escl[k], "da_confermare");
+        if (escl[k].contains("fonte")) e.source = fonte_documento(escl[k].at("fonte"));
+        e.note = c.testo(escl[k], "nota");
+        e.src = c.src(indice(p + "/esclusioni", k));
+        r.exclusions.push_back(e);
+    }
+    if (const auto it = o.find("guida_delle_corse_escluse"); it != o.end()) {   // K-011 aggiunta 1
+        ExcludedDriving g;
+        g.certain = categoria_tempo(it->at("conta_come"));
+        g.prudent = it->contains("prudente") ? categoria_tempo(it->at("prudente")) : g.certain;
+        g.source = fonte_documento(it->at("fonte"));
+        g.note = c.testo(*it, "nota");
+        g.src = c.src(p + "/guida_delle_corse_escluse");
+        r.excluded_driving = g;
+    }
+    if (const auto it = o.find("servizi_occasionali"); it != o.end()) {
+        r.occasional = valori_di(kTipiServizio, *it, "tipi_servizio");
+        r.occasional_to_confirm = c.vero(*it, "da_confermare");
+    }
+    if (const auto it = o.find("estensione"); it != o.end()) {
+        r.week_extension = true;
+        r.extension_families = valori_di(kFamiglie, *it, "famiglie");
+    }
+    const auto& esc = c.elenco(o, "esclude");
+    for (std::size_t k = 0; k < esc.size(); ++k) {
+        const std::string pe = indice(p + "/esclude", k);
+        r.overrides.push_back({c.ref(esc[k], "regime", pe), valori_di(kFamiglie, esc[k], "famiglie"),
+                               esc[k].at("effetto").get<std::string>() == "esclude" ? ExclusionEffect::Exclude : ExclusionEffect::ToConfirm,
+                               c.src(pe)});
+    }
+    const auto& casi = c.elenco(o, "casi_non_trattati");
+    for (std::size_t k = 0; k < casi.size(); ++k)
+        r.untreated.push_back({UntreatedCase::MultiManning, fonte_documento(casi[k].at("fonte")), c.testo(casi[k], "nota"),
+                               c.src(indice(p + "/casi_non_trattati", k))});
+    const auto& regole = c.elenco(o, "regole");
+    for (std::size_t k = 0; k < regole.size(); ++k) r.rules.push_back(regola_orari(regole[k], indice(p + "/regole", k), c));
+    r.src = c.src(p);
+    return r;
+}
+
+ChoiceStrength forza(const JsonDati& v) { return v.get<std::string>() == "limite" ? ChoiceStrength::Limit : ChoiceStrength::Preference; }
+
+std::vector<WorkChoice> scelte_orari(const JsonDati& o, const std::string& p, const Conversione& c) {
+    std::vector<WorkChoice> out;
+    const auto& e = c.elenco(o, "scelte_orari");
+    for (std::size_t k = 0; k < e.size(); ++k) {
+        WorkChoice w;
+        w.type = valore_di(kTipiRegola, e[k].at("tipo").get<std::string>());
+        if (e[k].contains("periodo")) w.period = valore_di(kPeriodi, e[k].at("periodo").get<std::string>());
+        w.value = c.intero(e[k], w.type == RuleType::DailyRest         ? "minimo_minuti"
+                                 : w.type == RuleType::ConsecutiveDays ? "massimo_giorni"
+                                                                       : "massimo_minuti")
+                      .value_or(0);
+        w.strength = forza(e[k].at("forza"));
+        w.note = c.testo(e[k], "nota");
+        w.src = c.src(indice(p + "/scelte_orari", k));
+        out.push_back(w);
+    }
+    return out;
+}
+
+// Modo delle corse (K-011 aggiunta 1): OUT o tachigrafo per tipo di servizio, per servizio e per corsa, con la forzatura e la
+// dichiarazione.
+TripModes modo_corse(const JsonDati& o, const std::string& p, const Conversione& c) {
+    TripModes m;
+    m.regime = c.ref(o, "regime", p);
+    if (o.contains("tipi_diversi"))
+        m.mixed = valore_di<MixedModes>({{"piu_prudente", MixedModes::MostPrudent}, {"out", MixedModes::Out}, {"tachigrafo", MixedModes::Tachograph}},
+                                        o.at("tipi_diversi").get<std::string>());
+    if (o.contains("forza")) m.strength = forza(o.at("forza"));
+    m.note = c.testo(o, "nota");
+    m.src = c.src(p);
+    // Motivo e chi sono dati personali (nella dichiarazione, dato particolare, anche legati): chi non li riceve dalla
+    // cassaforte li ha mancanti, e si mostrano come "riservato" (K-011 aggiunta 2).
+    const auto giustificazione = [&](const JsonDati& g, const std::string& pg) {
+        ModeJustification j;
+        j.reason = c.testo(g, "motivo");
+        j.who = c.testo(g, "chi");
+        j.when = c.data(g.at("quando"));
+        j.until = c.data_opz(g, "fino_al");
+        j.src = c.src(pg);
+        return j;
+    };
+    const auto voci = [&](const char* campo, std::vector<ModeEntry>& out) {
+        const auto& e = c.elenco(o, campo);
+        for (std::size_t k = 0; k < e.size(); ++k) {
+            const std::string pe = indice(p + "/" + campo, k);
+            ModeEntry x;
+            x.mode = e[k].at("modo").get<std::string>() == "tachigrafo" ? TripModeKind::Tachograph : TripModeKind::Out;
+            if (e[k].contains("tipo_servizio")) x.kind = valore_di(kTipiServizio, e[k].at("tipo_servizio").get<std::string>());
+            x.service = c.ref_opz(e[k], "servizio", pe);
+            x.trip = c.ref_opz(e[k], "corsa", pe);
+            if (e[k].contains("forza")) x.strength = forza(e[k].at("forza"));
+            if (e[k].contains("forzatura")) x.forcing = giustificazione(e[k].at("forzatura"), pe + "/forzatura");
+            if (e[k].contains("dichiarazione")) x.declaration = giustificazione(e[k].at("dichiarazione"), pe + "/dichiarazione");
+            x.note = c.testo(e[k], "nota");
+            x.src = c.src(pe);
+            out.push_back(x);
+        }
+    };
+    voci("per_tipo_servizio", m.by_kind);
+    voci("servizi", m.by_service);
+    voci("corse", m.by_trip);
+    return m;
+}
+
+ReturnKey rientro(const JsonDati& o, Source src) {
+    ReturnKey k;
+    k.min_stop = Conversione::intero(o, "fermo_minimo_minuti");
+    k.driving_factor = Conversione::decimale(o, "fattore_guida");
+    k.max_empty_km = Conversione::decimale(o, "km_vuoti_massimi");
+    if (o.contains("forza")) k.strength = forza(o.at("forza"));
+    k.src = std::move(src);
+    return k;
+}
+
 // --- File per file -----------------------------------------------------------------------------------
 
 void manifesto(const JsonDati& d, Package& pk) {
@@ -584,9 +878,35 @@ void aziende(const JsonDati& d, Package& pk) {
                                                      {"fisso", DriverVehiclePairing::Fixed}},
                                                     imp.at("abbinamento_autista_mezzo").get<std::string>());
         const auto& att = c.elenco(a, "attivita");
-        for (std::size_t k = 0; k < att.size(); ++k)
-            x.activities.push_back({att[k].at("codice").get<std::string>(), att[k].at("nome").get<std::string>(),
-                                    att[k].at("usa_il_mezzo").get<bool>(), c.testo(att[k], "nota"), c.src(indice(p + "/attivita", k))});
+        for (std::size_t k = 0; k < att.size(); ++k) {
+            ActivityType y;
+            y.code = att[k].at("codice").get<std::string>();
+            y.name = att[k].at("nome").get<std::string>();
+            y.uses_vehicle = att[k].at("usa_il_mezzo").get<bool>();
+            if (att[k].contains("tempo")) y.time = categoria_tempo(att[k].at("tempo"));   // versione 2
+            y.note = c.testo(att[k], "nota");
+            y.src = c.src(indice(p + "/attivita", k));
+            x.activities.push_back(y);
+        }
+        // Versione 2 (K-011): orari di lavoro.
+        if (const auto it = imp.find("soste_non_scritte"); it != imp.end()) {
+            UnwrittenStops u;
+            u.category = categoria_tempo(it->at("categoria"));
+            u.over_minutes = c.intero(*it, "oltre_minuti");
+            if (it->contains("categoria_oltre")) u.category_over = categoria_tempo(it->at("categoria_oltre"));
+            u.src = c.src(p + "/impostazioni/soste_non_scritte");
+            x.unwritten = u;
+        }
+        x.days_margin = c.intero(imp, "margine_giornate_massime");
+        x.choices = scelte_orari(a, p, c);
+        if (a.contains("rientro")) x.return_key = rientro(a.at("rientro"), c.src(p + "/rientro"));
+        if (a.contains("modo_corse")) x.trip_modes = modo_corse(a.at("modo_corse"), p + "/modo_corse", c);
+        const auto& spec = c.elenco(a, "speciali_esigenze");
+        for (std::size_t k = 0; k < spec.size(); ++k) {
+            const std::string ps = indice(p + "/speciali_esigenze", k);
+            x.special_needs.push_back({c.ref(spec[k], "regola", ps), spec[k].at("riferimento").get<std::string>(), c.testo(spec[k], "nota"),
+                                       c.src(ps)});
+        }
         const auto voci = [&](const char* campo, std::vector<ListEntry>& out) {
             const auto& e = c.elenco(a, campo);
             for (std::size_t k = 0; k < e.size(); ++k)
@@ -658,6 +978,16 @@ void norme(const JsonDati& d, Package& pk) {
             y.note = c.testo(usi[k], "nota");
             y.src = c.src(pu);
             x.service_uses.push_back(y);
+        }
+        // Versione 2 (K-011): leggi e contratti collettivi sugli orari, cambi dell'ora.
+        const auto& reg = c.elenco(n, "regimi");
+        for (std::size_t k = 0; k < reg.size(); ++k) x.regimes.push_back(regime(reg[k], indice(p + "/regimi", k), c));
+        if (const auto it = n.find("cambi_ora"); it != n.end()) {
+            x.clock_source = fonte_documento(it->at("fonte"));
+            const auto& date = it->at("date");
+            for (std::size_t k = 0; k < date.size(); ++k)
+                x.clock_changes.push_back({c.data(date[k].at("data")), c.orario(date[k].at("da")), c.orario(date[k].at("a")),
+                                           c.src(indice(p + "/cambi_ora/date", k))});
         }
         x.note = c.testo(n, "nota");
         x.src = c.src(p);
@@ -1348,6 +1678,11 @@ void persone(const JsonDati& d, Package& pk) {
             x.preferences.push_back(y);
         }
         x.loans = prestiti(s, p, c);
+        // Versione 2 (K-011): scelte sugli orari, chiave del rientro, giornate prima del pacchetto (dati personali).
+        x.choices = scelte_orari(s, p, c);
+        if (s.contains("rientro")) x.return_key = rientro(s.at("rientro"), c.src(p + "/rientro"));
+        if (const auto it = s.find("giornate_a_chiamata"); it != s.end())
+            x.prior_days = PriorDays{it->at("giornate").get<int>(), c.data(it->at("contate_dal")), c.src(p + "/giornate_a_chiamata")};
         x.note = c.testo(s, "nota");
         x.src = c.src(p);
         pk.persons.push_back(x);

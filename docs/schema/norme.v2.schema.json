@@ -1,0 +1,1758 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "K-Zero - file di dati norme.json, versione 2",
+  "description": "Norme di un paese (file norme.json): elenco delle abilitazioni per guidare, elenco degli usi dei mezzi, requisiti per guidare un mezzo e usi ammessi per tipo di servizio, ognuno con la sua fonte. Nessuna patente e nessun uso e' scritto nel programma. Ogni azienda indica le norme che valgono per lei (aziende.json). Versione 2 (K-011): le leggi e i contratti collettivi sugli orari di lavoro come regimi con i loro tipi di regola (i numeri e le fonti stanno qui, il programma conosce solo i tipi), e i cambi dell'ora del paese.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "schema_versione",
+    "norme"
+  ],
+  "properties": {
+    "schema": {
+      "const": "norme",
+      "x-kzero-classe": "comune"
+    },
+    "schema_versione": {
+      "const": 2,
+      "x-kzero-classe": "comune"
+    },
+    "norme": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "codice",
+          "nome",
+          "paese"
+        ],
+        "properties": {
+          "codice": {
+            "$ref": "#/definitions/codice",
+            "x-kzero-classe": "comune"
+          },
+          "nome": {
+            "$ref": "#/definitions/testo",
+            "x-kzero-classe": "comune"
+          },
+          "paese": {
+            "description": "Paese, codice ISO 3166-1 di due lettere (es. IT).",
+            "type": "string",
+            "pattern": "^[A-Z]{2}$",
+            "x-kzero-classe": "comune"
+          },
+          "abilitazioni": {
+            "description": "Elenco delle abilitazioni del paese (patenti, carte di qualificazione, certificati...): le persone e i requisiti usano questi codici.",
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "codice",
+                "nome"
+              ],
+              "properties": {
+                "codice": {
+                  "$ref": "#/definitions/codice"
+                },
+                "nome": {
+                  "$ref": "#/definitions/testo"
+                },
+                "fonte": {
+                  "$ref": "#/definitions/fonte"
+                },
+                "nota": {
+                  "$ref": "#/definitions/nota"
+                }
+              }
+            },
+            "x-kzero-classe": "comune"
+          },
+          "usi": {
+            "description": "Elenco degli usi dei mezzi del paese (come li scrive la carta di circolazione, es. servizio di linea, noleggio con conducente, uso proprio).",
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "codice",
+                "nome"
+              ],
+              "properties": {
+                "codice": {
+                  "$ref": "#/definitions/codice"
+                },
+                "nome": {
+                  "$ref": "#/definitions/testo"
+                },
+                "fonte": {
+                  "$ref": "#/definitions/fonte"
+                },
+                "nota": {
+                  "$ref": "#/definitions/nota"
+                }
+              }
+            },
+            "x-kzero-classe": "comune"
+          },
+          "requisiti_guida": {
+            "description": "Quali abilitazioni servono per guidare un mezzo, per categoria, posti, rimorchio e uso. Valgono tutti i requisiti che corrispondono al mezzo.",
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "categorie",
+                "alternative",
+                "fonte"
+              ],
+              "properties": {
+                "categorie": {
+                  "description": "Categorie dei mezzi a cui vale il requisito.",
+                  "type": "array",
+                  "minItems": 1,
+                  "uniqueItems": true,
+                  "items": {
+                    "enum": [
+                      "M1",
+                      "M2",
+                      "M3"
+                    ]
+                  }
+                },
+                "posti_da": {
+                  "description": "Vale sui mezzi con almeno questi posti per i passeggeri.",
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 1000
+                },
+                "posti_fino_a": {
+                  "description": "Vale sui mezzi con al massimo questi posti per i passeggeri.",
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 1000
+                },
+                "rimorchio": {
+                  "description": "true = vale solo con il rimorchio; false = solo senza; assente = in tutti e due i casi.",
+                  "type": "boolean"
+                },
+                "usi": {
+                  "description": "Vale solo sui mezzi con uno di questi usi (codici dell'elenco 'usi'); assente = qualunque uso.",
+                  "type": "array",
+                  "minItems": 1,
+                  "uniqueItems": true,
+                  "items": {
+                    "$ref": "#/definitions/codice"
+                  }
+                },
+                "alternative": {
+                  "description": "Modi di soddisfare il requisito: basta uno.",
+                  "type": "array",
+                  "minItems": 1,
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "abilitazioni"
+                    ],
+                    "properties": {
+                      "abilitazioni": {
+                        "description": "Abilitazioni da avere tutte insieme (codici dell'elenco 'abilitazioni' di queste norme).",
+                        "type": "array",
+                        "minItems": 1,
+                        "uniqueItems": true,
+                        "items": {
+                          "$ref": "#/definitions/codice"
+                        }
+                      },
+                      "posti_fino_a": {
+                        "description": "L'alternativa vale solo sui mezzi con al massimo questi posti per i passeggeri.",
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 1000
+                      },
+                      "lunghezza_fino_a_m": {
+                        "description": "L'alternativa vale solo sui mezzi lunghi al massimo tanti metri (un mezzo senza lunghezza non la rispetta).",
+                        "type": "number",
+                        "exclusiveMinimum": 0,
+                        "maximum": 100
+                      }
+                    }
+                  }
+                },
+                "fonte": {
+                  "$ref": "#/definitions/fonte"
+                },
+                "da_confermare": {
+                  "description": "true = regola ancora da confermare.",
+                  "type": "boolean"
+                },
+                "nota": {
+                  "$ref": "#/definitions/nota"
+                }
+              }
+            },
+            "x-kzero-classe": "comune"
+          },
+          "usi_per_servizio": {
+            "description": "Usi dei mezzi ammessi per tipo di servizio. Un regolamento del territorio puo' decidere diversamente per i servizi dei suoi contratti.",
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "tipi_servizio",
+                "usi",
+                "fonte"
+              ],
+              "properties": {
+                "tipi_servizio": {
+                  "description": "Tipi di servizio (dichiarati dal committente) a cui vale.",
+                  "type": "array",
+                  "minItems": 1,
+                  "uniqueItems": true,
+                  "items": {
+                    "enum": [
+                      "linea",
+                      "scolastico",
+                      "disabili",
+                      "altro"
+                    ]
+                  }
+                },
+                "usi": {
+                  "description": "Usi dei mezzi ammessi per questi servizi: basta uno.",
+                  "type": "array",
+                  "minItems": 1,
+                  "uniqueItems": true,
+                  "items": {
+                    "$ref": "#/definitions/codice"
+                  }
+                },
+                "fonte": {
+                  "$ref": "#/definitions/fonte"
+                },
+                "da_confermare": {
+                  "description": "true = regola ancora da confermare.",
+                  "type": "boolean"
+                },
+                "nota": {
+                  "$ref": "#/definitions/nota"
+                }
+              }
+            },
+            "x-kzero-classe": "comune"
+          },
+          "nota": {
+            "$ref": "#/definitions/nota",
+            "x-kzero-classe": "comune"
+          },
+          "regimi": {
+            "description": "Versione 2: leggi e contratti collettivi sugli orari di lavoro.",
+            "type": "array",
+            "maxItems": 100,
+            "items": {
+              "$ref": "#/definitions/regime"
+            },
+            "x-kzero-classe": "comune"
+          },
+          "cambi_ora": {
+            "description": "Versione 2: cambi dell'ora del paese (ora legale), con la fonte: un turno che li attraversa si controlla a mano.",
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "fonte",
+              "date"
+            ],
+            "properties": {
+              "fonte": {
+                "$ref": "#/definitions/fonte"
+              },
+              "date": {
+                "type": "array",
+                "maxItems": 1000,
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "data",
+                    "da",
+                    "a"
+                  ],
+                  "properties": {
+                    "data": {
+                      "$ref": "#/definitions/data"
+                    },
+                    "da": {
+                      "$ref": "#/definitions/orario"
+                    },
+                    "a": {
+                      "$ref": "#/definitions/orario"
+                    }
+                  }
+                }
+              }
+            },
+            "x-kzero-classe": "comune"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "codice": {
+      "description": "Codice K-Zero: scelto da chi scrive i dati, unico per tipo di elemento. Lettere senza accenti, cifre, '-', '_' e '.'; inizia con una lettera o una cifra; al massimo 64 caratteri.",
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+    },
+    "testo": {
+      "description": "Testo di una riga, non vuoto (al massimo 300 caratteri).",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 300,
+      "pattern": "\\S"
+    },
+    "nota": {
+      "description": "Testo libero, non vuoto (al massimo 2000 caratteri).",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2000,
+      "pattern": "\\S"
+    },
+    "fonte": {
+      "description": "Fonte: documento (es. una legge o una delibera), punto del documento e altre norme citate.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "documento"
+      ],
+      "properties": {
+        "documento": {
+          "$ref": "#/definitions/testo"
+        },
+        "punto": {
+          "$ref": "#/definitions/testo"
+        },
+        "riferimenti": {
+          "$ref": "#/definitions/testo"
+        }
+      }
+    },
+    "minuti": {
+      "description": "Minuti (al massimo 100000, circa 69 giorni).",
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100000
+    },
+    "data": {
+      "description": "Data AAAA-MM-GG che esiste nel calendario (es. 2026-09-14; il 29 febbraio solo negli anni bisestili).",
+      "type": "string",
+      "pattern": "^([0-9]{4}-((0[13578]|1[02])-(0[1-9]|[12][0-9]|3[01])|(0[469]|11)-(0[1-9]|[12][0-9]|30)|02-(0[1-9]|1[0-9]|2[0-8]))|([0-9]{2}(0[48]|[2468][048]|[13579][26])|([02468][048]|[13579][26])00)-02-29)$"
+    },
+    "orario": {
+      "description": "Orario HH:MM (da 00:00 a 23:59).",
+      "type": "string",
+      "pattern": "^([01][0-9]|2[0-3]):[0-5][0-9]$"
+    },
+    "categorie": {
+      "description": "Categorie di tempo: guida, altre_mansioni, disponibilita (sul posto: pronto a partire, attesa con il mezzo), reperibilita (fuori dal posto di lavoro, a chiamata), interruzione (pausa, libero da ogni servizio).",
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": {
+        "enum": [
+          "guida",
+          "altre_mansioni",
+          "disponibilita",
+          "reperibilita",
+          "interruzione"
+        ]
+      }
+    },
+    "quota": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "categorie",
+        "percento"
+      ],
+      "properties": {
+        "categorie": {
+          "$ref": "#/definitions/categorie"
+        },
+        "percento": {
+          "description": "Percentuale contata come lavoro.",
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 100
+        }
+      }
+    },
+    "regola": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "codice",
+        "tipo",
+        "famiglia",
+        "fonte"
+      ],
+      "properties": {
+        "codice": {
+          "description": "Codice della regola (unico nelle norme).",
+          "$ref": "#/definitions/codice"
+        },
+        "tipo": {
+          "description": "Tipo di regola: il programma sa come si conta.",
+          "enum": [
+            "conteggio_lavoro",
+            "lavoro_massimo",
+            "guida_continua",
+            "guida_massima",
+            "lavoro_continuo",
+            "riposo_giornaliero",
+            "riposo_settimanale",
+            "lavoro_notturno",
+            "giornate_massime",
+            "ampiezza_massima",
+            "giorni_consecutivi"
+          ]
+        },
+        "famiglia": {
+          "description": "Famiglia della regola (per l'estensione e le esclusioni tra regimi).",
+          "enum": [
+            "guida",
+            "riposi",
+            "lavoro",
+            "notturno",
+            "giornate"
+          ]
+        },
+        "fonte": {
+          "$ref": "#/definitions/fonte"
+        },
+        "da_confermare": {
+          "description": "true = la regola non ha una lettura certa: solo avvisi.",
+          "type": "boolean"
+        },
+        "nota": {
+          "$ref": "#/definitions/nota"
+        },
+        "periodo": {
+          "description": "Il giorno della regola: giornata, 24_ore (dall'inizio della giornata), settimana (lunedi'-domenica), due_settimane, mese, tra_due_riposi.",
+          "enum": [
+            "giornata",
+            "24_ore",
+            "settimana",
+            "due_settimane",
+            "mese",
+            "tra_due_riposi"
+          ]
+        },
+        "misura": {
+          "description": "riposo_giornaliero: come si misura.",
+          "enum": [
+            "24_ore_dall_inizio_della_giornata",
+            "24_ore_dalla_fine_del_riposo",
+            "tra_due_giornate"
+          ]
+        },
+        "straordinario": {
+          "description": "lavoro_massimo con il normale: lo straordinario.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "denuncia",
+            "ricorrente"
+          ],
+          "properties": {
+            "denuncia": {
+              "description": "Cosa chiede la legge per lo straordinario (es. la denuncia entro 48 ore).",
+              "$ref": "#/definitions/testo"
+            },
+            "ricorrente": {
+              "description": "Cosa dice la legge dello straordinario su un turno ricorrente.",
+              "$ref": "#/definitions/testo"
+            },
+            "ricorrente_da_confermare": {
+              "type": "boolean"
+            }
+          }
+        },
+        "nome_misura": {
+          "description": "conteggio_lavoro: nome della misura (es. lavoro effettivo, orario di lavoro).",
+          "$ref": "#/definitions/testo"
+        },
+        "categorie": {
+          "description": "conteggio_lavoro: categorie di tempo contate come lavoro.",
+          "$ref": "#/definitions/categorie"
+        },
+        "soste_fino_a_minuti": {
+          "description": "conteggio_lavoro: le soste (interruzioni e reperibilita' dentro la giornata) fino a tanti minuti contano per intero come lavoro.",
+          "$ref": "#/definitions/minuti"
+        },
+        "inoperoso_fuori_residenza": {
+          "description": "conteggio_lavoro: tempo inoperoso fuori residenza (fuori dal comune della presa servizio) contato in parte come lavoro.",
+          "$ref": "#/definitions/quota"
+        },
+        "inoperoso_in_residenza": {
+          "description": "conteggio_lavoro: tempo inoperoso in residenza contato in parte come lavoro.",
+          "$ref": "#/definitions/quota"
+        },
+        "massimo_minuti": {
+          "description": "Massimo (lavoro, guida, guida continua, lavoro continuo, lavoro con lavoro notturno, ampiezza).",
+          "$ref": "#/definitions/minuti"
+        },
+        "normale_minuti": {
+          "description": "lavoro_massimo: oltre il normale e fino al massimo e' straordinario (avviso).",
+          "$ref": "#/definitions/minuti"
+        },
+        "media": {
+          "description": "lavoro_massimo: il massimo vale per la media alla settimana su un periodo mobile (uno solo tra settimane, mesi, giorni).",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "settimane": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 104
+            },
+            "mesi": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 24
+            },
+            "giorni": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 730
+            }
+          },
+          "minProperties": 1,
+          "maxProperties": 1
+        },
+        "estensione": {
+          "description": "guida_massima: estensione ammessa un numero limitato di volte a settimana.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "massimo_minuti",
+            "volte_a_settimana"
+          ],
+          "properties": {
+            "massimo_minuti": {
+              "description": "Massimo con l'estensione.",
+              "$ref": "#/definitions/minuti"
+            },
+            "volte_a_settimana": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 7
+            }
+          }
+        },
+        "azzera_con": {
+          "description": "guida_continua: interruzioni che azzerano il conto, in parti nell'ordine (es. 45, oppure 15 seguita da 30).",
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 10,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "parti_minuti"
+            ],
+            "properties": {
+              "parti_minuti": {
+                "type": "array",
+                "minItems": 1,
+                "maxItems": 5,
+                "items": {
+                  "$ref": "#/definitions/minuti"
+                }
+              },
+              "solo_servizi_occasionali": {
+                "description": "Vale solo per i servizi occasionali del regime.",
+                "type": "boolean"
+              }
+            }
+          }
+        },
+        "interrompono": {
+          "description": "guida_continua: categorie di tempo che interrompono la guida (il riposo tra due giornate la interrompe sempre).",
+          "$ref": "#/definitions/categorie"
+        },
+        "interruzioni_brevi_contate": {
+          "description": "guida_continua: le prime N interruzioni fino a tanti minuti si contano nella guida.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "fino_a_minuti",
+            "quante"
+          ],
+          "properties": {
+            "fino_a_minuti": {
+              "$ref": "#/definitions/minuti"
+            },
+            "quante": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 100
+            }
+          }
+        },
+        "eccezione_soste_capolinea_oltre_minuti": {
+          "description": "guida_continua: se tutte le soste ai capolinea della giornata superano tanti minuti, le violazioni sono solo avvisi (eccezione da confermare).",
+          "$ref": "#/definitions/minuti"
+        },
+        "frazione_minima_minuti": {
+          "description": "lavoro_continuo: le pause contano in parti di almeno tanti minuti.",
+          "$ref": "#/definitions/minuti"
+        },
+        "pause": {
+          "description": "lavoro_continuo: pause minime in base al lavoro della giornata.",
+          "type": "array",
+          "minItems": 1,
+          "maxItems": 10,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "lavoro_oltre_minuti",
+              "pausa_minuti"
+            ],
+            "properties": {
+              "lavoro_oltre_minuti": {
+                "$ref": "#/definitions/minuti"
+              },
+              "pausa_minuti": {
+                "$ref": "#/definitions/minuti"
+              }
+            }
+          }
+        },
+        "minimo_minuti": {
+          "description": "riposo_giornaliero, riposo_settimanale: minimo (regolare).",
+          "$ref": "#/definitions/minuti"
+        },
+        "frazionato": {
+          "description": "riposo_giornaliero: riposo frazionato in due parti nell'ordine (es. 180 e 540).",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "parti_minuti"
+          ],
+          "properties": {
+            "parti_minuti": {
+              "type": "array",
+              "minItems": 2,
+              "maxItems": 2,
+              "items": {
+                "$ref": "#/definitions/minuti"
+              }
+            }
+          }
+        },
+        "ridotto": {
+          "description": "riposo_giornaliero, riposo_settimanale: riposo ridotto ammesso (almeno tanti minuti); per il giornaliero al massimo tante volte tra due riposi settimanali.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "minimo_minuti"
+          ],
+          "properties": {
+            "minimo_minuti": {
+              "$ref": "#/definitions/minuti"
+            },
+            "volte": {
+              "type": "integer",
+              "minimum": 0,
+              "maximum": 100
+            }
+          }
+        },
+        "media_riposo": {
+          "description": "riposo_giornaliero: media del riposo su un periodo mobile di giorni.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "minimo_minuti",
+            "giorni"
+          ],
+          "properties": {
+            "minimo_minuti": {
+              "$ref": "#/definitions/minuti"
+            },
+            "giorni": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 366
+            },
+            "esclusi_riposi_di_almeno_minuti": {
+              "description": "Senza i riposi di almeno tanti minuti (il settimanale).",
+              "$ref": "#/definitions/minuti"
+            },
+            "salvo_interruzioni": {
+              "description": "Giornate escluse dalla media: con tante interruzioni di almeno tanti minuti.",
+              "type": "array",
+              "maxItems": 10,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "minuti",
+                  "quante"
+                ],
+                "properties": {
+                  "minuti": {
+                    "$ref": "#/definitions/minuti"
+                  },
+                  "quante": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 10
+                  }
+                }
+              }
+            }
+          }
+        },
+        "reperibilita_interrompe": {
+          "description": "riposo_giornaliero, riposo_settimanale: true = la reperibilita' interrompe il riposo (di base true).",
+          "type": "boolean"
+        },
+        "regolari_in_due_settimane": {
+          "description": "riposo_settimanale: in due settimane consecutive almeno tanti riposi regolari.",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 2
+        },
+        "entro_periodi_di_24_ore": {
+          "description": "riposo_settimanale: comincia al piu' tardi dopo tanti periodi di 24 ore dalla fine del precedente.",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 30
+        },
+        "cumulo_settimane": {
+          "description": "riposo_settimanale: un riposo lungo tante volte il minimo vale per tante settimane accanto (cumulo, con avviso).",
+          "type": "integer",
+          "minimum": 2,
+          "maximum": 4
+        },
+        "compensazione": {
+          "description": "riposo_settimanale: la riduzione si compensa tutta insieme entro la fine della N-esima settimana dopo, attaccata a un riposo di almeno tanti minuti.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "entro_settimane",
+            "attaccata_a_riposo_minuti"
+          ],
+          "properties": {
+            "entro_settimane": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 10
+            },
+            "attaccata_a_riposo_minuti": {
+              "$ref": "#/definitions/minuti"
+            }
+          }
+        },
+        "fascia": {
+          "description": "lavoro_notturno: fascia notturna (anche a cavallo della mezzanotte, es. 22:00-05:00).",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "dalle",
+            "alle"
+          ],
+          "properties": {
+            "dalle": {
+              "$ref": "#/definitions/orario"
+            },
+            "alle": {
+              "$ref": "#/definitions/orario"
+            }
+          }
+        },
+        "massimo_giornate": {
+          "description": "giornate_massime: giornate di lavoro al massimo.",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10000
+        },
+        "anni": {
+          "description": "giornate_massime: periodo mobile di tanti anni, a ritroso dal giorno.",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10
+        },
+        "massimo_giorni": {
+          "description": "giorni_consecutivi: giorni di lavoro di fila al massimo.",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 366
+        },
+        "prudente": {
+          "description": "Lettura prudente (piu' severa), per una legge incerta: violarla soltanto e' un avviso da confermare. Gli stessi campi della regola, che cambiano solo dove serve.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "nota"
+          ],
+          "properties": {
+            "nome_misura": {
+              "description": "conteggio_lavoro: nome della misura (es. lavoro effettivo, orario di lavoro).",
+              "$ref": "#/definitions/testo"
+            },
+            "categorie": {
+              "description": "conteggio_lavoro: categorie di tempo contate come lavoro.",
+              "$ref": "#/definitions/categorie"
+            },
+            "soste_fino_a_minuti": {
+              "description": "conteggio_lavoro: le soste (interruzioni e reperibilita' dentro la giornata) fino a tanti minuti contano per intero come lavoro.",
+              "$ref": "#/definitions/minuti"
+            },
+            "inoperoso_fuori_residenza": {
+              "description": "conteggio_lavoro: tempo inoperoso fuori residenza (fuori dal comune della presa servizio) contato in parte come lavoro.",
+              "$ref": "#/definitions/quota"
+            },
+            "inoperoso_in_residenza": {
+              "description": "conteggio_lavoro: tempo inoperoso in residenza contato in parte come lavoro.",
+              "$ref": "#/definitions/quota"
+            },
+            "massimo_minuti": {
+              "description": "Massimo (lavoro, guida, guida continua, lavoro continuo, lavoro con lavoro notturno, ampiezza).",
+              "$ref": "#/definitions/minuti"
+            },
+            "normale_minuti": {
+              "description": "lavoro_massimo: oltre il normale e fino al massimo e' straordinario (avviso).",
+              "$ref": "#/definitions/minuti"
+            },
+            "media": {
+              "description": "lavoro_massimo: il massimo vale per la media alla settimana su un periodo mobile (uno solo tra settimane, mesi, giorni).",
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "settimane": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 104
+                },
+                "mesi": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 24
+                },
+                "giorni": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 730
+                }
+              },
+              "minProperties": 1,
+              "maxProperties": 1
+            },
+            "estensione": {
+              "description": "guida_massima: estensione ammessa un numero limitato di volte a settimana.",
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "massimo_minuti",
+                "volte_a_settimana"
+              ],
+              "properties": {
+                "massimo_minuti": {
+                  "description": "Massimo con l'estensione.",
+                  "$ref": "#/definitions/minuti"
+                },
+                "volte_a_settimana": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 7
+                }
+              }
+            },
+            "azzera_con": {
+              "description": "guida_continua: interruzioni che azzerano il conto, in parti nell'ordine (es. 45, oppure 15 seguita da 30).",
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 10,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "parti_minuti"
+                ],
+                "properties": {
+                  "parti_minuti": {
+                    "type": "array",
+                    "minItems": 1,
+                    "maxItems": 5,
+                    "items": {
+                      "$ref": "#/definitions/minuti"
+                    }
+                  },
+                  "solo_servizi_occasionali": {
+                    "description": "Vale solo per i servizi occasionali del regime.",
+                    "type": "boolean"
+                  }
+                }
+              }
+            },
+            "interrompono": {
+              "description": "guida_continua: categorie di tempo che interrompono la guida (il riposo tra due giornate la interrompe sempre).",
+              "$ref": "#/definitions/categorie"
+            },
+            "interruzioni_brevi_contate": {
+              "description": "guida_continua: le prime N interruzioni fino a tanti minuti si contano nella guida.",
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "fino_a_minuti",
+                "quante"
+              ],
+              "properties": {
+                "fino_a_minuti": {
+                  "$ref": "#/definitions/minuti"
+                },
+                "quante": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 100
+                }
+              }
+            },
+            "eccezione_soste_capolinea_oltre_minuti": {
+              "description": "guida_continua: se tutte le soste ai capolinea della giornata superano tanti minuti, le violazioni sono solo avvisi (eccezione da confermare).",
+              "$ref": "#/definitions/minuti"
+            },
+            "frazione_minima_minuti": {
+              "description": "lavoro_continuo: le pause contano in parti di almeno tanti minuti.",
+              "$ref": "#/definitions/minuti"
+            },
+            "pause": {
+              "description": "lavoro_continuo: pause minime in base al lavoro della giornata.",
+              "type": "array",
+              "minItems": 1,
+              "maxItems": 10,
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "lavoro_oltre_minuti",
+                  "pausa_minuti"
+                ],
+                "properties": {
+                  "lavoro_oltre_minuti": {
+                    "$ref": "#/definitions/minuti"
+                  },
+                  "pausa_minuti": {
+                    "$ref": "#/definitions/minuti"
+                  }
+                }
+              }
+            },
+            "minimo_minuti": {
+              "description": "riposo_giornaliero, riposo_settimanale: minimo (regolare).",
+              "$ref": "#/definitions/minuti"
+            },
+            "frazionato": {
+              "description": "riposo_giornaliero: riposo frazionato in due parti nell'ordine (es. 180 e 540).",
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "parti_minuti"
+              ],
+              "properties": {
+                "parti_minuti": {
+                  "type": "array",
+                  "minItems": 2,
+                  "maxItems": 2,
+                  "items": {
+                    "$ref": "#/definitions/minuti"
+                  }
+                }
+              }
+            },
+            "ridotto": {
+              "description": "riposo_giornaliero, riposo_settimanale: riposo ridotto ammesso (almeno tanti minuti); per il giornaliero al massimo tante volte tra due riposi settimanali.",
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "minimo_minuti"
+              ],
+              "properties": {
+                "minimo_minuti": {
+                  "$ref": "#/definitions/minuti"
+                },
+                "volte": {
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 100
+                }
+              }
+            },
+            "media_riposo": {
+              "description": "riposo_giornaliero: media del riposo su un periodo mobile di giorni.",
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "minimo_minuti",
+                "giorni"
+              ],
+              "properties": {
+                "minimo_minuti": {
+                  "$ref": "#/definitions/minuti"
+                },
+                "giorni": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 366
+                },
+                "esclusi_riposi_di_almeno_minuti": {
+                  "description": "Senza i riposi di almeno tanti minuti (il settimanale).",
+                  "$ref": "#/definitions/minuti"
+                },
+                "salvo_interruzioni": {
+                  "description": "Giornate escluse dalla media: con tante interruzioni di almeno tanti minuti.",
+                  "type": "array",
+                  "maxItems": 10,
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "minuti",
+                      "quante"
+                    ],
+                    "properties": {
+                      "minuti": {
+                        "$ref": "#/definitions/minuti"
+                      },
+                      "quante": {
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 10
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            "reperibilita_interrompe": {
+              "description": "riposo_giornaliero, riposo_settimanale: true = la reperibilita' interrompe il riposo (di base true).",
+              "type": "boolean"
+            },
+            "regolari_in_due_settimane": {
+              "description": "riposo_settimanale: in due settimane consecutive almeno tanti riposi regolari.",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2
+            },
+            "entro_periodi_di_24_ore": {
+              "description": "riposo_settimanale: comincia al piu' tardi dopo tanti periodi di 24 ore dalla fine del precedente.",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 30
+            },
+            "cumulo_settimane": {
+              "description": "riposo_settimanale: un riposo lungo tante volte il minimo vale per tante settimane accanto (cumulo, con avviso).",
+              "type": "integer",
+              "minimum": 2,
+              "maximum": 4
+            },
+            "compensazione": {
+              "description": "riposo_settimanale: la riduzione si compensa tutta insieme entro la fine della N-esima settimana dopo, attaccata a un riposo di almeno tanti minuti.",
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "entro_settimane",
+                "attaccata_a_riposo_minuti"
+              ],
+              "properties": {
+                "entro_settimane": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 10
+                },
+                "attaccata_a_riposo_minuti": {
+                  "$ref": "#/definitions/minuti"
+                }
+              }
+            },
+            "fascia": {
+              "description": "lavoro_notturno: fascia notturna (anche a cavallo della mezzanotte, es. 22:00-05:00).",
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "dalle",
+                "alle"
+              ],
+              "properties": {
+                "dalle": {
+                  "$ref": "#/definitions/orario"
+                },
+                "alle": {
+                  "$ref": "#/definitions/orario"
+                }
+              }
+            },
+            "massimo_giornate": {
+              "description": "giornate_massime: giornate di lavoro al massimo.",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 10000
+            },
+            "anni": {
+              "description": "giornate_massime: periodo mobile di tanti anni, a ritroso dal giorno.",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 10
+            },
+            "massimo_giorni": {
+              "description": "giorni_consecutivi: giorni di lavoro di fila al massimo.",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 366
+            },
+            "nota": {
+              "description": "Perche' questa lettura e' prudente (mostrata negli avvisi da confermare).",
+              "$ref": "#/definitions/nota"
+            }
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "tipo": {
+                "const": "conteggio_lavoro"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "nome_misura",
+              "categorie"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "tipo": {
+                "const": "lavoro_massimo"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "periodo",
+              "massimo_minuti"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "tipo": {
+                "const": "guida_continua"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "massimo_minuti",
+              "azzera_con",
+              "interrompono"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "tipo": {
+                "const": "guida_massima"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "periodo",
+              "massimo_minuti"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "tipo": {
+                "const": "lavoro_continuo"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "massimo_minuti",
+              "pause",
+              "frazione_minima_minuti"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "tipo": {
+                "const": "riposo_giornaliero"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "misura",
+              "minimo_minuti"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "tipo": {
+                "const": "riposo_settimanale"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "minimo_minuti"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "tipo": {
+                "const": "lavoro_notturno"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "fascia"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "tipo": {
+                "const": "giornate_massime"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "massimo_giornate",
+              "anni"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "tipo": {
+                "const": "ampiezza_massima"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "massimo_minuti"
+            ]
+          }
+        },
+        {
+          "if": {
+            "properties": {
+              "tipo": {
+                "const": "giorni_consecutivi"
+              }
+            }
+          },
+          "then": {
+            "required": [
+              "massimo_giorni"
+            ]
+          }
+        }
+      ]
+    },
+    "condizione_testi": {
+      "description": "Contratti collettivi (i codici scritti nelle persone).",
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "certi": {
+          "description": "Valori per cui vale con certezza.",
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/definitions/testo"
+          }
+        },
+        "da_confermare": {
+          "description": "Valori per cui vale solo da confermare (solo avvisi).",
+          "type": "array",
+          "uniqueItems": true,
+          "items": {
+            "$ref": "#/definitions/testo"
+          }
+        }
+      },
+      "minProperties": 1
+    },
+    "regime": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "codice",
+        "nome",
+        "tipo",
+        "fonte",
+        "regole"
+      ],
+      "properties": {
+        "codice": {
+          "description": "Codice del regime (unico nelle norme).",
+          "$ref": "#/definitions/codice"
+        },
+        "nome": {
+          "$ref": "#/definitions/testo"
+        },
+        "tipo": {
+          "description": "legge oppure contratto_collettivo.",
+          "enum": [
+            "legge",
+            "contratto_collettivo"
+          ]
+        },
+        "fonte": {
+          "$ref": "#/definitions/fonte"
+        },
+        "valido_dal": {
+          "$ref": "#/definitions/data"
+        },
+        "valido_al": {
+          "$ref": "#/definitions/data"
+        },
+        "da_confermare": {
+          "description": "true = tutto il regime e' da confermare: solo avvisi.",
+          "type": "boolean"
+        },
+        "nota": {
+          "$ref": "#/definitions/nota"
+        },
+        "si_applica": {
+          "description": "Dove si applica. Senza una condizione: vale per tutti.",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "ruoli": {
+              "description": "Ruoli del turno.",
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "certi": {
+                  "description": "Valori per cui vale con certezza.",
+                  "type": "array",
+                  "uniqueItems": true,
+                  "items": {
+                    "enum": [
+                      "autista",
+                      "secondo_autista",
+                      "assistente"
+                    ]
+                  }
+                },
+                "da_confermare": {
+                  "description": "Valori per cui vale solo da confermare (solo avvisi).",
+                  "type": "array",
+                  "uniqueItems": true,
+                  "items": {
+                    "enum": [
+                      "autista",
+                      "secondo_autista",
+                      "assistente"
+                    ]
+                  }
+                }
+              },
+              "minProperties": 1
+            },
+            "rapporti": {
+              "description": "Rapporti di lavoro (persone.json).",
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "certi": {
+                  "description": "Valori per cui vale con certezza.",
+                  "type": "array",
+                  "uniqueItems": true,
+                  "items": {
+                    "enum": [
+                      "titolare",
+                      "collaboratore_familiare",
+                      "socio",
+                      "dipendente_tempo_pieno",
+                      "dipendente_part_time",
+                      "a_chiamata",
+                      "tempo_determinato",
+                      "stagionale",
+                      "autonomo",
+                      "volontario",
+                      "altro"
+                    ]
+                  }
+                },
+                "da_confermare": {
+                  "description": "Valori per cui vale solo da confermare (solo avvisi).",
+                  "type": "array",
+                  "uniqueItems": true,
+                  "items": {
+                    "enum": [
+                      "titolare",
+                      "collaboratore_familiare",
+                      "socio",
+                      "dipendente_tempo_pieno",
+                      "dipendente_part_time",
+                      "a_chiamata",
+                      "tempo_determinato",
+                      "stagionale",
+                      "autonomo",
+                      "volontario",
+                      "altro"
+                    ]
+                  }
+                }
+              },
+              "minProperties": 1
+            },
+            "contratti_collettivi": {
+              "$ref": "#/definitions/condizione_testi"
+            },
+            "tipi_servizio": {
+              "description": "Tipi di servizio della corsa (basta uno).",
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "certi": {
+                  "description": "Valori per cui vale con certezza.",
+                  "type": "array",
+                  "uniqueItems": true,
+                  "items": {
+                    "enum": [
+                      "linea",
+                      "scolastico",
+                      "disabili",
+                      "altro"
+                    ]
+                  }
+                },
+                "da_confermare": {
+                  "description": "Valori per cui vale solo da confermare (solo avvisi).",
+                  "type": "array",
+                  "uniqueItems": true,
+                  "items": {
+                    "enum": [
+                      "linea",
+                      "scolastico",
+                      "disabili",
+                      "altro"
+                    ]
+                  }
+                }
+              },
+              "minProperties": 1
+            },
+            "mezzi": {
+              "description": "Mezzo della corsa.",
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "persone_trasportabili_oltre"
+              ],
+              "properties": {
+                "persone_trasportabili_oltre": {
+                  "description": "Persone trasportabili compreso il conducente: posti + posti in piedi + 1.",
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 1000
+                },
+                "da_confermare": {
+                  "type": "boolean"
+                }
+              }
+            },
+            "percorso": {
+              "description": "Percorso della corsa (km dal primo all'ultimo passaggio, o i km totali).",
+              "type": "object",
+              "additionalProperties": false,
+              "properties": {
+                "fino_a_km": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 10000
+                },
+                "oltre_km": {
+                  "type": "number",
+                  "minimum": 0,
+                  "maximum": 10000
+                },
+                "da_confermare": {
+                  "type": "boolean"
+                }
+              },
+              "minProperties": 1
+            },
+            "come_regime": {
+              "description": "Le condizioni sulla corsa e le esclusioni di un altro regime (es. il D.Lgs. 234/2007 vale dove vale il Reg. 561/2006).",
+              "$ref": "#/definitions/codice"
+            },
+            "estensione_come_regime": {
+              "description": "Solo con come_regime, se l'altro regime vale per tutta la settimana (estensione): nei giorni della settimana senza le corse che lo fanno valere questo regime vale con certezza (\"vale\") oppure solo da confermare (\"da_confermare\", di base).",
+              "enum": [
+                "vale",
+                "da_confermare"
+              ]
+            }
+          },
+          "dependencies": {
+            "estensione_come_regime": [
+              "come_regime"
+            ]
+          }
+        },
+        "esclusioni": {
+          "description": "Corse escluse (es. servizi regolari di linea fino a 50 km): ogni tipo di servizio della corsa deve essere escluso.",
+          "type": "array",
+          "maxItems": 100,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "tipi_servizio"
+            ],
+            "properties": {
+              "tipi_servizio": {
+                "type": "array",
+                "minItems": 1,
+                "uniqueItems": true,
+                "items": {
+                  "enum": [
+                    "linea",
+                    "scolastico",
+                    "disabili",
+                    "altro"
+                  ]
+                }
+              },
+              "insieme_a": {
+                "description": "K-011 aggiunta 1: la voce vale per i suoi tipi solo se la corsa ha anche uno di questi tipi (es. i disabili sulla stessa corsa dello scolastico: chi sale in piu' non cambia il tipo di servizio).",
+                "type": "array",
+                "minItems": 1,
+                "uniqueItems": true,
+                "items": {
+                  "enum": [
+                    "linea",
+                    "scolastico",
+                    "disabili",
+                    "altro"
+                  ]
+                }
+              },
+              "percorso_fino_a_km": {
+                "type": "number",
+                "minimum": 0,
+                "maximum": 10000
+              },
+              "da_confermare": {
+                "type": "boolean"
+              },
+              "fonte": {
+                "$ref": "#/definitions/fonte"
+              },
+              "nota": {
+                "$ref": "#/definitions/nota"
+              }
+            }
+          }
+        },
+        "guida_delle_corse_escluse": {
+          "description": "Come contano, per le regole di guida e di interruzione del regime, i minuti di guida delle corse che il regime esclude o forse esclude (es. Reg. 561/2006 art. 6 c. 5: altre mansioni). Nella lettura certa 'conta_come', nella prudente 'prudente' (di base uguale); le corse da confermare nella lettura prudente sono sempre guida. Per il conteggio del lavoro restano lavoro. Senza questo campo la guida e' guida per tutte le regole.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "conta_come",
+            "fonte"
+          ],
+          "properties": {
+            "conta_come": {
+              "enum": [
+                "guida",
+                "altre_mansioni"
+              ]
+            },
+            "prudente": {
+              "enum": [
+                "guida",
+                "altre_mansioni"
+              ]
+            },
+            "fonte": {
+              "$ref": "#/definitions/fonte"
+            },
+            "nota": {
+              "$ref": "#/definitions/nota"
+            }
+          }
+        },
+        "servizi_occasionali": {
+          "description": "Tipi di servizio che sono servizi occasionali (gite, noleggi) per le regole che valgono solo per loro.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "tipi_servizio"
+          ],
+          "properties": {
+            "tipi_servizio": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {
+                "enum": [
+                  "linea",
+                  "scolastico",
+                  "disabili",
+                  "altro"
+                ]
+              }
+            },
+            "da_confermare": {
+              "type": "boolean"
+            }
+          }
+        },
+        "estensione": {
+          "description": "Una sola corsa che fa scattare il regime vale per tutta la settimana (lunedi'-domenica) della persona, per queste famiglie di regole.",
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "ambito",
+            "famiglie"
+          ],
+          "properties": {
+            "ambito": {
+              "const": "settimana"
+            },
+            "famiglie": {
+              "type": "array",
+              "minItems": 1,
+              "uniqueItems": true,
+              "items": {
+                "enum": [
+                  "guida",
+                  "riposi",
+                  "lavoro",
+                  "notturno",
+                  "giornate"
+                ]
+              }
+            },
+            "fonte": {
+              "$ref": "#/definitions/fonte"
+            },
+            "nota": {
+              "$ref": "#/definitions/nota"
+            }
+          }
+        },
+        "esclude": {
+          "description": "Altri regimi esclusi nei giorni (o nelle settimane, con l'estensione) in cui questo vale con certezza.",
+          "type": "array",
+          "maxItems": 20,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "regime",
+              "famiglie",
+              "effetto"
+            ],
+            "properties": {
+              "regime": {
+                "$ref": "#/definitions/codice"
+              },
+              "famiglie": {
+                "type": "array",
+                "minItems": 1,
+                "uniqueItems": true,
+                "items": {
+                  "enum": [
+                    "guida",
+                    "riposi",
+                    "lavoro",
+                    "notturno",
+                    "giornate"
+                  ]
+                }
+              },
+              "effetto": {
+                "description": "esclude (l'altro non vale) oppure da_confermare (l'altro vale solo da confermare).",
+                "enum": [
+                  "esclude",
+                  "da_confermare"
+                ]
+              }
+            }
+          }
+        },
+        "casi_non_trattati": {
+          "description": "Casi della legge che il programma non tratta: se compaiono, un avviso.",
+          "type": "array",
+          "maxItems": 20,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "caso",
+              "fonte"
+            ],
+            "properties": {
+              "caso": {
+                "enum": [
+                  "multipresenza"
+                ]
+              },
+              "fonte": {
+                "$ref": "#/definitions/fonte"
+              },
+              "nota": {
+                "$ref": "#/definitions/nota"
+              }
+            }
+          }
+        },
+        "regole": {
+          "type": "array",
+          "maxItems": 200,
+          "items": {
+            "$ref": "#/definitions/regola"
+          }
+        }
+      }
+    }
+  }
+}

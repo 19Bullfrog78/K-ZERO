@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # K-Zero - fuzzing (prove con dati casuali e deformati) di tutti i bersagli, per un tempo fisso ciascuno.
 # Bersagli: un file del pacchetto alla volta (25 tipi di file, partendo dai file del demo, del demo "solo numeri", della
-# copia del demo del K-007 per le versioni vecchie e di tests/fuzz/semi), la riga di comando, date e orari; dal K-010 la
+# copia del demo del K-007 per le versioni vecchie, del pacchetto di prova degli orari del K-011 e di tests/fuzz/semi;
+# dal K-011 anche il resoconto degli orari di kzero ore), la riga di comando, date e orari; dal K-010 la
 # cassaforte (il file, il testo decifrato delle sezioni), il registro (il file, il testo decifrato) e le password.
 # Un guasto (memoria, comportamento non definito, risultato incoerente, attesa oltre 10 secondi) ferma il bersaglio:
 # il file che lo provoca resta in <lavoro>/guasti/<bersaglio>/ e lo script esce con 1. Il file va corretto e messo in
@@ -79,7 +80,7 @@ prova_bersaglio() {
       f="${b#pacchetto-}"
       programma="$build/tests/fuzz_pacchetto"
       ambiente=(KZERO_FILE="$f")
-      for semi in "$radice/esempi/demo" "$radice/esempi/demo-numeri" "$radice/tests/esempi/k007-demo"; do
+      for semi in "$radice/esempi/demo" "$radice/esempi/demo-numeri" "$radice/tests/esempi/k007-demo" "$radice/tests/esempi/k011-orari"; do
         [ -f "$semi/$f" ] && cp "$semi/$f" "$corpus/seme-$(basename "$semi")-$f"
       done
       ;;

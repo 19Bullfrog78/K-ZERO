@@ -50,13 +50,14 @@ Resoconto controlla_pacchetto(const Sorgente& sorgente, const Visibilita& visibi
     return controlla_lettura(leggi_pacchetto(sorgente), visibilita);
 }
 
-Resoconto controlla_lettura(Lettura lettura, const Visibilita& visibilita) {
+Resoconto controlla_lettura(Lettura lettura, const Visibilita& visibilita, const kzero::HoursRequest* richiesta,
+                            kzero::HoursReport* orari) {
     Resoconto r;
     r.lettura = std::move(lettura);
     std::vector<kzero::Problem> problemi = r.lettura.problemi;
     if (r.lettura.forma_valida()) {
         r.contenuto_controllato = true;
-        std::vector<kzero::Problem> contenuto = kzero::check_package(r.lettura.pacchetto);
+        std::vector<kzero::Problem> contenuto = kzero::check_package(r.lettura.pacchetto, richiesta, orari);
         problemi.insert(problemi.end(), contenuto.begin(), contenuto.end());
     }
     const Presentatore presentatore(r.contenuto_controllato ? &r.lettura.pacchetto : nullptr, &r.lettura.versioni, visibilita);
@@ -68,6 +69,7 @@ Resoconto controlla_lettura(Lettura lettura, const Visibilita& visibilita) {
         // (sarebbe fatto su dati mancanti): il resoconto dice quali controlli non sono verificati.
         if (!verificabile(d, p.variant, posizione, in_trasportato(p.where, r.lettura), leggibili)) continue;
         (d.livello == Livello::Errore ? r.errori : r.avvisi) += 1;
+        if (d.livello == Livello::Errore && d.piano) r.errori_del_piano += 1;
         // Il problema rivela il piu' riservato tra cio' che dice in se' e il dato in cui sta la sua posizione. Se e' un
         // dato particolare (salute), di base si conta soltanto: niente codice, messaggio, posizione.
         const Classe rivela = piu_riservata(d.rivela_variante(p.variant), posizione);
@@ -76,10 +78,26 @@ Resoconto controlla_lettura(Lettura lettura, const Visibilita& visibilita) {
             continue;
         }
         std::vector<std::pair<kzero::Day, kzero::Day>> giorni;
-        for (const kzero::Param& x : p.params)
-            if (x.kind == kzero::Param::Kind::Days) giorni = periodi_di_giorni(x.days);
+        std::vector<kzero::Day> tutti;
+        std::string persona, corsa, servizio;
+        // K-011 aggiunta 1: i problemi del modo delle corse non parlano di una persona ma di una corsa o di un servizio.
+        const bool del_modo = p.check == kzero::Check::ModeForced || p.check == kzero::Check::ModeForcedRisk ||
+                              p.check == kzero::Check::ModeDeclared || p.check == kzero::Check::ModeOutNotValid ||
+                              p.check == kzero::Check::ModeMixed || p.check == kzero::Check::ModeForcedUseless ||
+                              p.check == kzero::Check::ModeDeclaredUseless;
+        for (const kzero::Param& x : p.params) {
+            if (x.kind == kzero::Param::Kind::Days) {
+                giorni = periodi_di_giorni(x.days);
+                tutti = x.days;
+            }
+            if (x.kind == kzero::Param::Kind::Ref && x.element == kzero::Element::Person && x.name == "persona") persona = x.text;
+            if (del_modo && x.kind == kzero::Param::Kind::Ref && x.element == kzero::Element::Trip && x.name == "corsa") corsa = x.text;
+            if (del_modo && x.kind == kzero::Param::Kind::Ref && x.element == kzero::Element::Service && x.name == "servizio")
+                servizio = x.text;
+        }
         const PosizioneMostrata dove = mostra_posizione(p.where, r.lettura, visibilita);
-        r.problemi.push_back({d.livello, d.codice, presentatore.messaggio(p), dove.posizione, dove.ridotta, giorni, p.where});
+        r.problemi.push_back({d.livello, d.piano, d.codice, presentatore.messaggio(p), dove.posizione, dove.ridotta, giorni, p.where, persona,
+                              tutti, corsa, servizio});
     }
     std::stable_sort(r.problemi.begin(), r.problemi.end(), prima);
     for (const Classe c : {Classe::Personale, Classe::Particolare}) {

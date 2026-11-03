@@ -14,6 +14,7 @@
 #include "errori.hpp"
 #include "esecutori.hpp"
 #include "turni.hpp"
+#include "orari.hpp"
 #include "vista.hpp"
 
 namespace kzero::api {
@@ -70,8 +71,8 @@ const char* modo_mezzo(kzero::VehicleSource s) {
 
 class Giornata {
 public:
-    Giornata(const kzero::Planner& piano, const Vista& vista)
-        : piano_(piano), idx_(piano.index()), vista_(vista) {}
+    Giornata(const kzero::Planner& piano, const Vista& vista, kzero::Day giorno)
+        : piano_(piano), idx_(piano.index()), vista_(vista), giorno_(giorno) {}
 
     // Dove e' scritta un'assegnazione, filtrata come le posizioni dei problemi (riservatezza.hpp): di base non entra mai
     // in un dato personale o particolare; null se non si puo' mostrare.
@@ -238,6 +239,8 @@ public:
                 for (const auto& g : sv->groups) non_noti = non_noti || g.counts == kzero::CountKind::Unknown;
         }
         j["servizi"] = servizi;
+        // K-011 aggiunta 1: il modo della corsa per l'azienda del turno (OUT o tachigrafo, forzatura, dichiarazione).
+        j["modo"] = vista_.modo_corsa(kzero::trip_mode(t, idx_.settings(s.company.code), idx_, giorno_));
         j["calendario"] = calendario(t.calendar.code);
         // Chi fornisce l'assistente a bordo: il turno, se lo dice; altrimenti il contratto, se a bordo c'e' l'assistente.
         bool a_bordo = it.item->trip.escort.has_value();
@@ -350,6 +353,7 @@ private:
     const kzero::Planner& piano_;
     const kzero::Index& idx_;
     const Vista& vista_;
+    kzero::Day giorno_;
 };
 
 // Dettaglio di una persona (assenze) da mostrare solo con i dati personali.
@@ -374,8 +378,8 @@ Json in_json(const DefinizioneComando& comando, const Resoconto& r, const Parame
     const kzero::Package& p = r.lettura.pacchetto;
     const kzero::Planner piano(p);
     const kzero::Index& idx = piano.index();
-    const Giornata g(piano, vista);
     const kzero::Day d = *par.data;
+    const Giornata g(piano, vista, d);
 
     Json j = documento(comando.schema);
     j["dati_inventati"] = p.manifest.invented;
@@ -387,7 +391,7 @@ Json in_json(const DefinizioneComando& comando, const Resoconto& r, const Parame
     pacchetto["livello"] = p.manifest.level == kzero::Level::Full ? "completo" : "solo_numeri";
     pacchetto["periodo"] = {{"dal", kzero::text_from_day(p.manifest.period.from)}, {"al", kzero::text_from_day(p.manifest.period.to)}};
     j["pacchetto"] = pacchetto;
-    j["controllo"] = {{"errori", r.errori}, {"avvisi", r.avvisi}};
+    j["controllo"] = {{"errori", r.errori}, {"errori_del_piano", r.errori_del_piano}, {"avvisi", r.avvisi}};
     if (cf.cassaforte) {
         Json x = Json::object();
         x["utente"] = cf.utente;
@@ -569,6 +573,7 @@ void elemento_testo(std::string& t, const Json& e) {
     }
     const Json& cal = e.at("calendario");
     t += "                servizi " + servizi + "\n";
+    if (!e.at("modo").is_null()) t += "                modo " + testo_modo_corsa(e.at("modo")) + "\n";
     t += "                calendario " + calendario_testo(cal) + ", " + testo(cal.at("giorni_nel_periodo")) + " giorni nel periodo; " +
          km_testo(e.at("km_pieni"), e.at("km_vuoti"));
     if (!e.at("assistente").is_null()) t += "; assistente fornito da" + std::string(e.at("assistente") == "azienda" ? "ll'azienda" : "l committente");
@@ -696,7 +701,9 @@ std::string in_testo(const Json& j) {
         feste += (feste.empty() ? "" : ", ") + f.at("nome").get<std::string>() + " (" + f.at("calendario").get<std::string>() +
                  (f.at("da_confermare").get<bool>() ? ", da confermare" : "") + ")";
     t += "Festivita': " + (feste.empty() ? std::string("nessuna") : feste) + ".\n";
-    t += "Controllo del pacchetto: " + quanti(j.at("controllo").at("errori").get<long long>(), "errore", "errori") + ", " +
+    const long long del_piano = j.at("controllo").at("errori_del_piano").get<long long>();
+    t += "Controllo del pacchetto: " + quanti(j.at("controllo").at("errori").get<long long>(), "errore", "errori") +
+         (del_piano > 0 ? " (" + std::to_string(del_piano) + " del piano degli orari, che non bloccano)" : std::string()) + ", " +
          quanti(j.at("controllo").at("avvisi").get<long long>(), "avviso", "avvisi") + " (dettagli con kzero controlla).\n";
     t += std::string("Dati personali: ") + (j.at("dati_personali_inclusi").get<bool>() ? "mostrati" : "sostituiti dal codice") +
          "; dati particolari: " + (j.at("dati_particolari_inclusi").get<bool>() ? "mostrati" : "riservati") + ".\n";
@@ -722,12 +729,18 @@ Risultato esegui_giornata(const DefinizioneComando& comando, const Parametri& pa
     std::string nota = "giornata del " + kzero::text_from_day(*parametri.data);
     if (!parametri.persona.empty()) nota += ", persona " + parametri.persona;
     if (!parametri.mezzo.empty()) nota += ", mezzo " + parametri.mezzo;
-    accesso::LetturaPerComando lc = accesso::leggi_per_comando(cartella, parametri, comando.nome, nota);
+    return giornata_su(comando, parametri, accesso::leggi_per_comando(cartella, parametri, comando.nome, nota));
+}
+
+Risultato giornata_su(const DefinizioneComando& comando, const Parametri& parametri, accesso::LetturaPerComando lc) {
+    const std::string& cartella = parametri.argomenti.at(0);
     const Visibilita visibilita = lc.visibilita;
     const Resoconto r = controlla_lettura(std::move(lc.lettura), visibilita);
-    if (r.errori > 0)
+    // Solo gli errori nei dati bloccano: gli errori del piano (K-011, le regole sugli orari) no, perche' la giornata serve
+    // proprio a correggerli (DECISIONI.md).
+    if (r.errori_nei_dati() > 0)
         throw ErroreKZero(Errore::PacchettoConErrori,
-                          "Il pacchetto ha " + quanti(r.errori, "errore", "errori") +
+                          "Il pacchetto ha " + quanti(r.errori_nei_dati(), "errore", "errori") +
                               " nei dati: la giornata non si mostra, perche' sarebbe falsata. Correggere prima gli errori: "
                               "kzero controlla " + cartella + (lc.utente.empty() ? "" : " --utente " + lc.utente));
     const kzero::Package& p = r.lettura.pacchetto;

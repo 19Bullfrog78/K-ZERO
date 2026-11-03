@@ -57,7 +57,11 @@ Una regola sola, ricavata dalle marcature degli schemi (`x-kzero-classe`, src/ap
   nome, casa, indirizzo, coordinate. Sono dati particolari e vanno in una **sezione a parte, quella dei legati**, cifrata
   con una chiave ricavata dalla chiave dei personali **e** da quella dei particolari insieme: li decifra solo chi ha tutti
   e due i permessi. Chi ne ha uno solo non li decifra, nemmeno lavorando sul file con le chiavi che si procura (aggiunta
-  1 del K-010; la prova interna lo verifica sul file, non solo sulle uscite).
+  1 del K-010; la prova interna lo verifica sul file, non solo sulle uscite);
+- per la stessa ragione **un campo personale dentro un dato particolare** va tra i legati (regola ricavata dagli schemi, K-011
+  aggiunta 2): oggi motivo e chi della dichiarazione del modo delle corse (dato particolare). Chi ha solo i particolari
+  riceve la dichiarazione senza motivo e chi; chi ha solo i personali non la riceve. Un elemento marcato intero non puo'
+  contenere campi dell'altra classe riservata (una prova lo controlla sugli schemi).
 
 Il numero dei valori di ogni classe (contati come li conta `kzero controlla`) si scrive nell'intestazione: lo vedono
 anche gli utenti che non possono aprire quella classe, mai i valori.

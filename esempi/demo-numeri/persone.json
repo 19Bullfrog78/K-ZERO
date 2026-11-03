@@ -1,6 +1,6 @@
 {
   "schema": "persone",
-  "schema_versione": 1,
+  "schema_versione": 2,
   "persone": [
     {
       "codice": "P-A",
@@ -76,7 +76,8 @@
         { "tipo": "CQC-P", "scadenza": "2031-02-01" }
       ],
       "autorizzazioni": [{ "committente": "CVA", "riferimento": "Cartellino n. 17 (inventato)", "scadenza": "2027-08-31" }],
-      "competenze": ["PEDANA", "ELETTRICO"]
+      "competenze": ["PEDANA", "ELETTRICO"],
+      "scelte_orari": [{ "tipo": "lavoro_massimo", "periodo": "giornata", "massimo_minuti": 420, "forza": "preferenza", "nota": "Part-time: giornate fino a 7 ore." }]
     },
     {
       "codice": "P-NUOVO",
@@ -128,7 +129,8 @@
       "ore": [{ "previste": { "settimana": 20 } }],
       "abilitazioni": [{ "tipo": "B" }, { "tipo": "D1", "scadenza": "2029-04-18" }, { "tipo": "CQC-P", "scadenza": "2029-04-18" }],
       "autorizzazioni": [{ "committente": "CVA", "riferimento": "Cartellino n. 21 (inventato)", "scadenza": "2027-08-31" }],
-      "competenze": ["PEDANA"]
+      "competenze": ["PEDANA"],
+      "rientro": { "fermo_minimo_minuti": 45 }
     },
     {
       "codice": "P-F",
@@ -146,7 +148,8 @@
       "presa_servizio": "L-RIMESSA-ALFA",
       "mezzo_abituale": "ALFA-06",
       "rapporto": { "tipo": "a_chiamata" },
-      "abilitazioni": [{ "tipo": "B" }, { "tipo": "D", "scadenza": "2030-12-12" }, { "tipo": "CQC-P", "scadenza": "2030-12-12" }]
+      "abilitazioni": [{ "tipo": "B" }, { "tipo": "D", "scadenza": "2030-12-12" }, { "tipo": "CQC-P", "scadenza": "2030-12-12" }],
+      "giornate_a_chiamata": { "giornate": 200, "contate_dal": "2023-09-01" }
     }
   ]
 }

@@ -9,6 +9,7 @@
     { "data": "2026-10-23", "turno": "T-SECONDO", "persona": "P-C" },
     { "data": "2026-11-03", "turno": "T-B-ASILO", "persona": "P-C" },
     { "data": "2026-11-03", "turno": "T-B-SERA", "persona": "P-C" },
+    { "data": "2026-11-13", "turno": "T-PRIMO", "persona": "P-C" },
     { "data": "2026-11-15", "turno": "T-GITA", "persona": "P-A" }
   ]
 }

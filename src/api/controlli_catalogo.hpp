@@ -43,6 +43,12 @@ struct DefinizioneControllo {
     // Dichiarato nel catalogo; una prova (test_unione) confronta i risultati di utenti con permessi diversi.
     bool richiede_personali = false;
     bool richiede_particolari = false;
+    // Orari di lavoro (K-011): un problema del piano (le violazioni delle regole sugli orari), non dei dati. Gli errori del
+    // piano non bloccano kzero giornata e kzero ore: il piano si deve poter vedere proprio per correggerlo (DECISIONI.md).
+    bool piano = false;
+    // Il modello "personali" vale solo se il problema ha davvero un valore personale nascosto (es. una regola sugli orari che
+    // vale per la persona per il suo rapporto); altrimenti si usa il modello completo.
+    bool personali_se_nascosti = false;
 
     Classe rivela_variante(int variante) const {
         const auto it = rivela_varianti.find(variante);

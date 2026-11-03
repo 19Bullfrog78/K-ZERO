@@ -48,6 +48,7 @@ Il programma e' diviso in tre piani, uno sopra l'altro:
 | `turni.cpp` | Chi fa ogni turno in una data (`Planner`): assegnazione del singolo giorno, poi servizio fisso, poi rotazione; i fatti con le date (assenze, disponibilita', scadenze, fermi, distrazioni, prestiti) che lasciano un turno scoperto o senza mezzo; requisiti di guida; km e tempi fermi di un turno. Il programma non inventa assegnazioni. |
 | `controlli.cpp` | Controlli sul contenuto di un pacchetto: ogni problema con il suo tipo, la posizione e i valori, **senza testi** (i testi stanno nel catalogo dell'API). |
 | `controlli_turni.cpp` | Controlli sui turni giorno per giorno, anche a cavallo della mezzanotte (K-CTR-054 ... 087); i problemi uguali di molti giorni si raggruppano in periodi. |
+| `orari.cpp`, `orari_regole.cpp`, `controlli_orari.cpp` | (K-011) Orari di lavoro: i tempi di ogni persona giorno per giorno per categoria (guida, altre mansioni, disponibilita', reperibilita', interruzione, riposo), quali regimi delle norme valgono e perche' (corsa per corsa, estensione alla settimana, esclusioni tra regimi), il lavoro contato da ogni regime, i tipi di regola (elenco chiuso: ogni tipo sa come si conta, i numeri vengono dai dati) valutati in un mondo certo (errori) e in uno prudente (avvisi con i motivi), il contratto della persona, le scelte dell'azienda e della persona, la chiave del rientro; i controlli sulle regole scritte nelle norme (K-CTR-101 ... 126). Con una richiesta (`HoursRequest`) anche il resoconto per `kzero ore` (`HoursReport`). |
 | `dimostrazione.cpp` | Alcune regole applicate ai dati di un pacchetto: nessun dato scritto nel codice. |
 
 ## Piano 2 - API (`src/api`): il contratto ufficiale
@@ -64,7 +65,7 @@ Il programma e' diviso in tre piani, uno sopra l'altro:
 | `parametri.cpp` | Lettura dei parametri con CLI11; i controlli e i messaggi in italiano sono di K-Zero. |
 | `errori.cpp` | Catalogo dei codici K-ERR e presentazione degli errori in testo o JSON. |
 | `uscita.cpp` | Strumenti comuni: documento JSON con "schema" e "schema_versione", arrotondamenti, orari. |
-| `comando_*.cpp` | Un file per comando: chiede i risultati al nucleo e li presenta in testo o JSON. `comando_giornata.cpp` mostra i turni di un giorno (tutti, di una persona o di un mezzo) e non mostra nulla se il pacchetto ha errori. |
+| `comando_*.cpp` | Un file per comando: chiede i risultati al nucleo e li presenta in testo o JSON. `comando_giornata.cpp` mostra i turni di un giorno (tutti, di una persona o di un mezzo) e non mostra nulla se il pacchetto ha errori nei dati; `comando_ore.cpp` (K-011) mostra gli orari di lavoro di un giorno o di un periodo, una persona alla volta (il testo si scrive dal JSON della persona). Gli errori del piano degli orari non bloccano ne' la giornata ne' gli orari. |
 | `vista.cpp` | Strumenti comuni ai comandi che mostrano i dati (dimostrazione, giornata): filtro delle classi dei dati, etichette, numeri e durate in italiano. |
 | `esegui.cpp` | Dalla riga di comando all'esito: prepara tutto in memoria (`esegui`), poi lo scrive (`consegna`). Cosi' un errore non lascia mai un risultato a meta'. |
 | `formato_dati.cpp` | Elenco dei file di un pacchetto, con lo schema e le versioni che il programma sa leggere. |
@@ -233,7 +234,7 @@ docs/formato-dati.md e docs/schema coincidano con il programma.
 
 | Etichetta | Cosa controlla |
 |---|---|
-| `nucleo` | Regole del mestiere, date e orari, ricerca e normalizzazione, calendari, persone a bordo, ogni controllo sul contenuto, dimostrazione; dal K-008 chi fa il turno (rotazioni di ogni forma, servizi fissi, assegnazioni, fatti con le date, giorni del demo controllati a mano) e ogni controllo sui turni (GoogleTest, con i dati del pacchetto demo). |
+| `nucleo` | Regole del mestiere, date e orari, ricerca e normalizzazione, calendari, persone a bordo, ogni controllo sul contenuto, dimostrazione; dal K-008 chi fa il turno (rotazioni di ogni forma, servizi fissi, assegnazioni, fatti con le date, giorni del demo controllati a mano) e ogni controllo sui turni; dal K-011 ogni tipo di regola sugli orari con i casi al limite (esattamente il limite e un minuto oltre, mezzanotte, cambio di settimana, riposi frazionati, compensazioni), la scelta dei regimi, i conteggi, i livelli e la chiave del rientro (GoogleTest, con i dati del pacchetto demo). |
 | `api` | Tabella dei comandi, cataloghi degli errori e dei controlli, controlli sulla forma dei file, file costruiti per rompere il programma, limiti di buon senso negli schemi, messaggi in italiano, classi dei dati e loro filtro, comando giornata (scheda scuola del committente ricavata dall'uscita) (GoogleTest). |
 | `programma` | Lanciano `kzero` due volte: codice di uscita, K-ERR per i parametri sbagliati, JSON valido, uscite identiche byte per byte, dati personali e particolari assenti di base e presenti con il parametro, `kzero controlla` sui pacchetti di esempio e su un pacchetto rotto per ogni errore (il demo con un solo valore cambiato), due regolamenti con esiti diversi. |
 | `documentazione` | docs/errori.md, docs/controlli.md, docs/formato-dati.md e docs/schema coincidono con `kzero descrivi`; la tabella delle lettere di docs/formato-dati.md coincide con il programma. |
@@ -242,7 +243,7 @@ docs/formato-dati.md e docs/schema coincidano con il programma.
 | `sicurezza` (K-010) | Prove interne della cassaforte e del registro: chiusura e riapertura identica, permessi, cambio delle chiavi, ogni byte cambiato, chiave pubblica sostituita, permesso alzato a mano, utente tolto, catena del registro, voce non scritta = nessun dato, interruzioni a meta' (processo fermato di colpo), comandi insieme, dati decifrati mai su disco; unione per codice dopo riordini e cancellazioni; "non verificato" su centinaia di pacchetti; (aggiunta 1) dati legati a un luogo sensibile decifrati solo con tutti e due i permessi, provato sul file anche dopo un cambio delle chiavi, cassaforte finta fatta da chi ha solo i file, registro riscritto prima dell'ancora, avvisi sulle password; sul programma vero la copia congelata della cassaforte versione 1 (tests/esempi/k010-cassaforte) per i tre tipi di utente, in testo e JSON. |
 | `fuzz` | (K-009) Ogni file del demo nel suo bersaglio di fuzzing e ogni caso gia' trovato dal fuzzing (tests/fuzz/casi), rigiocati come prove normali. Il fuzzing vero (libFuzzer, `-DKZERO_FUZZ=ON`) gira nel controllo GitHub per un tempo fisso e in locale a lungo (CLAUDE.md). |
 | `schemi` | Con lo strumento standard check-jsonschema: schemi validi per draft-07; ogni uscita JSON delle prove e ogni file dei pacchetti di esempio rispetta lo schema che dichiara. |
-| `scala` | Un pacchetto grande generato con un seme fisso (600 mezzi, 5.000 fermate, 10.000 corse; dal K-008 1.320 persone, 1.200 turni, rotazioni di lunghezze diverse, un anno di festivita') passa `kzero controlla` senza errori e `kzero giornata` su una data. Tempo e memoria si annotano nel DIARIO, non sono una soglia della prova. |
+| `scala` | Un pacchetto grande generato con un seme fisso (600 mezzi, 5.000 fermate, 10.000 corse; dal K-008 1.320 persone, 1.200 turni, rotazioni di lunghezze diverse, un anno di festivita') passa `kzero controlla` senza errori e `kzero giornata` su una data; dal K-011 con le leggi sugli orari del demo (resta un solo avviso, la media su 4 mesi che esce dal periodo) e `kzero ore` di tutti per un mese. Tempo e memoria si annotano nel DIARIO, non sono una soglia della prova. |
 
 ## Limiti noti
 
@@ -252,7 +253,8 @@ docs/formato-dati.md e docs/schema coincidano con il programma.
   (docs/sicurezza.md, con esempi).
 - Ricerca: le lettere di altri alfabeti (greco, cirillico...) non vengono ricondotte all'alfabeto latino.
 - Ora legale: gli orari sono orari dell'orologio; nei due giorni del cambio una corsa che attraversa le
-  02:00-03:00 dura un'ora in piu' o in meno di quanto risulta (docs/formato-dati.md).
+  02:00-03:00 dura un'ora in piu' o in meno di quanto risulta (docs/formato-dati.md). Dal K-011 un turno che attraversa
+  il cambio (date nelle norme del paese) da' un avviso (K-CTR-103): le sue durate vanno controllate a mano.
 - I messaggi della libreria di validazione sono in inglese e vengono tradotti: un messaggio che la
   traduzione non conosce compare come "non rispetta lo schema (...)" con il testo originale.
 - Windows (mandato del programma per Windows): argomenti con lettere accentate e a capo "CR LF" sono da sistemare e
@@ -261,5 +263,7 @@ docs/formato-dati.md e docs/schema coincidano con il programma.
   memoria protetta.
 - Stesso input = stesso output vale a parita' di programma e di sistema. Tra sistemi diversi i valori
   calcolati con decimali potrebbero differire all'ultima cifra: per questo il JSON li arrotonda.
-- `kzero giornata` rifa' tutti i controlli del pacchetto prima di mostrare un giorno (con errori non mostra
-  nulla): con 600 mezzi e 1.200 turni i controlli giorno per giorno di un anno richiedono qualche secondo (DIARIO).
+- `kzero giornata` e `kzero ore` rifanno tutti i controlli del pacchetto prima di mostrare un giorno (con errori nei
+  dati non mostrano nulla): con 600 mezzi, 1.200 turni e 1.320 persone i controlli di un anno, orari compresi,
+  richiedono circa 11 secondi; gli orari di tutte le persone per un anno intero si preparano tutti in memoria prima di
+  scriverli (circa 1,4 GB in testo, 3,4 GB in JSON: meglio un mese alla volta, DIARIO).

@@ -1,0 +1,33 @@
+{
+  "schema": "pacchetto",
+  "schema_versione": 2,
+  "codice": "K011-ORARI",
+  "nome": "Prova degli orari di lavoro (K-011)",
+  "dati_inventati": true,
+  "aziende": [
+    {
+      "codice": "ALFA",
+      "nome": "Autoservizi Alfa"
+    },
+    {
+      "codice": "BETA",
+      "nome": "Trasporti Beta"
+    }
+  ],
+  "periodo": {
+    "dal": "2026-09-01",
+    "al": "2027-08-31"
+  },
+  "origine": {
+    "tipo": "scenario",
+    "nota": "Dati inventati per le prove degli orari di lavoro (K-011), dal pacchetto demo: i tre esempi della pausa di Mauro, una violazione per tipo di regola, la corsa di 52 km con mezzi da 17, 8 e 9 posti, una corsa senza km, un titolare."
+  },
+  "livello": "completo",
+  "fuso_orario": "Europe/Rome",
+  "valuta": "EUR",
+  "impostazioni": {
+    "margine_trasbordo_minuti": 3,
+    "porta_a_porta_sensibile": true
+  },
+  "cassaforte": false
+}

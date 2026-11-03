@@ -34,7 +34,7 @@ int main(int argc, char** argv) {
             ++provati;
         }
         provati += kzero::fuzz::prova_semi_cassaforte();
-        std::printf("%d semi provati nei loro bersagli (file del demo e cassaforte)\n", provati);
+        std::printf("%d semi provati nei loro bersagli (file del demo e cassaforte del pacchetto di prova degli orari)\n", provati);
         return 0;
     }
     if (argc == 3 && std::string(argv[1]) == "--scrivi-semi") {

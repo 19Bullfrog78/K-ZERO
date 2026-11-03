@@ -3,6 +3,7 @@
 // il problema giusto nel punto giusto (file e percorso JSON).
 #include <algorithm>
 #include <string>
+#include <tuple>
 #include <vector>
 
 #include <gtest/gtest.h>
@@ -64,23 +65,43 @@ Source dove(const std::string& file, const std::string& puntatore) { return Sour
 // trasbordo autorizzato a voce. Dal K-008: la distrazione dell'autobus di linea e la CQC di P-C che scadono il
 // 2027-06-30 (da luglio il secondo del mercoledi', che e' di P-C, e' scoperto), il primo scoperto il giorno della
 // formazione di P-B, il mezzo di scorta al posto del mezzo abituale di P-E nei due giorni della revisione.
+// Dal K-011 gli avvisi degli orari: le regole che si verificano solo in parte all'inizio e alla fine del periodo, il fermo
+// minimo del rientro di Alfa (30 minuti) uguale alle soste che la L. 138 conta come lavoro, P-G a chiamata vicina alle 400
+// giornate, il titolare P-C (L. 138 da confermare per il suo rapporto), il riposo settimanale di P-A dopo la gita, le
+// giornate oltre la preferenza di Alfa (11 ore).
 void solo_avvisi_voluti(const std::vector<Problem>& v) {
-    ASSERT_EQ(v.size(), 8u) << elenco(v);
-    const std::vector<std::pair<Check, std::string>> attesi = {
-        {Check::PlaceWithoutCoordinates, "/luoghi/5"},
-        {Check::DwellTimesUndefined, ""},
-        {Check::TransferVerbalOnly, "/luoghi/17/trasbordo"},
-        {Check::ExpiresInPeriod, "/mezzi/6/autorizzazioni_uso/0"},
-        {Check::ExpiresInPeriod, "/persone/2/abilitazioni/2"},
-        {Check::RecurringShiftPersonFact, "/persone/2/abilitazioni/2"},
-        {Check::RecurringShiftPersonFact, "/assenze/2"},
-        {Check::PairingNotRespected, "/servizi_fissi/2"},
+    ASSERT_EQ(v.size(), 31u) << elenco(v);
+    const std::vector<std::tuple<Check, std::string, int>> attesi = {
+        {Check::PlaceWithoutCoordinates, "/luoghi/5", 1},
+        {Check::DwellTimesUndefined, "", 1},
+        {Check::TransferVerbalOnly, "/luoghi/17/trasbordo", 1},
+        {Check::ExpiresInPeriod, "/mezzi/6/autorizzazioni_uso/0", 1},
+        {Check::ExpiresInPeriod, "/persone/2/abilitazioni/2", 1},
+        {Check::RecurringShiftPersonFact, "/persone/2/abilitazioni/2", 1},
+        {Check::RecurringShiftPersonFact, "/assenze/2", 1},
+        {Check::PairingNotRespected, "/servizi_fissi/2", 1},
+        {Check::PartialVerification, "/norme/0/regimi/0/regole/2", 1},
+        {Check::PartialVerification, "/norme/0/regimi/0/regole/5", 1},
+        {Check::PartialVerification, "/norme/0/regimi/1/regole/2", 1},
+        {Check::PartialVerification, "/norme/0/regimi/1/regole/3", 1},
+        {Check::PartialVerification, "/norme/0/regimi/2/regole/1", 1},
+        {Check::PartialVerification, "/norme/0/regimi/2/regole/2", 1},
+        {Check::PartialVerification, "/norme/0/regimi/4/regole/2", 1},
+        {Check::ReturnStopBelowCountedStops, "/aziende/0/rientro", 1},
+        {Check::DaysNearLimit, "/persone/11", 1},
+        {Check::LawWorkToConfirm, "/persone/2", 2},
+        {Check::LawOvertime, "/persone/2", 1},
+        {Check::LawDailyRestToConfirm, "/persone/2", 3},
+        {Check::LawWeeklyRestToConfirm, "/persone/0", 1},
+        {Check::ChoiceNotRespected, "/persone/0", 2},
+        {Check::ChoiceNotRespected, "/persone/1", 2},
+        {Check::ChoiceNotRespected, "/persone/2", 3},
     };
-    for (const auto& atteso : attesi) {
-        const Check c = atteso.first;
-        const std::string& puntatore = atteso.second;   // C++17: una lambda non cattura i nomi di [c, puntatore]
-        EXPECT_TRUE(std::any_of(v.begin(), v.end(), [&](const Problem& x) { return x.check == c && x.where.pointer == puntatore; }))
-            << api::definizione_controllo(c).codice << " " << puntatore << elenco(v);
+    for (const auto& [c, puntatore, n] : attesi) {
+        const Check cc = c;   // C++17: una lambda non cattura i nomi di un legame strutturato
+        const std::string pp = puntatore;
+        EXPECT_EQ(std::count_if(v.begin(), v.end(), [&](const Problem& x) { return x.check == cc && x.where.pointer == pp; }), n)
+            << api::definizione_controllo(cc).codice << " " << pp << elenco(v);
     }
     for (const Problem& x : v) EXPECT_EQ(api::definizione_controllo(x.check).livello, api::Livello::Avviso) << elenco(v);
 }
@@ -434,8 +455,9 @@ TEST(Controlli, K_CTR_019_dati_personali_in_solo_numeri) {
     EXPECT_TRUE(segnala(p, Check::NumbersOnlyPersonalData, 6, "servizi_fissi.json", "/servizi_fissi/0/nota"));
     EXPECT_TRUE(segnala(p, Check::NumbersOnlyPersonalData, 7, "assegnazioni.json", "/assegnazioni/2/nota"));
     // 5 luoghi privati, 3 gruppi con passeggeri; dal K-008 anche 11 nomi e 5 case di persone, 2 note di rotazioni,
-    // 2 di servizi fissi e 8 di assegnazioni del singolo giorno.
-    EXPECT_EQ(quanti(p, Check::NumbersOnlyPersonalData), 36);
+    // 2 di servizi fissi e 8 di assegnazioni del singolo giorno; dal K-011 una nota in piu' (la sostituzione di P-A il
+    // 2026-11-13, per il riposo settimanale nella settimana della gita).
+    EXPECT_EQ(quanti(p, Check::NumbersOnlyPersonalData), 37);
 }
 
 TEST(Controlli, K_CTR_020_persone_a_bordo_sotto_zero) {
@@ -792,5 +814,17 @@ TEST(Controlli, catalogo_coperto) {
     EXPECT_EQ(api::definizione_controllo(Check::KeysFromEnvelope).codice, "K-CTR-098");   // K-010 aggiunta 1: password
     EXPECT_EQ(api::definizione_controllo(Check::UserRemovedPasswords).codice, "K-CTR-099");
     EXPECT_EQ(api::definizione_controllo(Check::PasswordWrittenByOther).codice, "K-CTR-100");
-    EXPECT_EQ(api::catalogo_controlli().size(), 100u);
+    // K-011: orari di lavoro (le prove dei controlli stanno in test_orari, quelle del rientro in test_regole).
+    EXPECT_EQ(api::definizione_controllo(Check::TimeCategoryMissing).codice, "K-CTR-101");
+    EXPECT_EQ(api::definizione_controllo(Check::LawWorkViolated).codice, "K-CTR-110");
+    EXPECT_EQ(api::definizione_controllo(Check::ReturnNotJudged).codice, "K-CTR-125");
+    EXPECT_EQ(api::definizione_controllo(Check::WorkRuleIncoherent).codice, "K-CTR-126");
+    // K-011 aggiunta 1: modo delle corse (OUT o tachigrafo).
+    EXPECT_EQ(api::definizione_controllo(Check::ChosenRegimeLimit).codice, "K-CTR-127");
+    EXPECT_EQ(api::definizione_controllo(Check::ModeForced).codice, "K-CTR-129");
+    EXPECT_EQ(api::definizione_controllo(Check::ModeMixed).codice, "K-CTR-133");
+    // K-011 aggiunta 2: forzatura e dichiarazione che non servono.
+    EXPECT_EQ(api::definizione_controllo(Check::ModeForcedUseless).codice, "K-CTR-134");
+    EXPECT_EQ(api::definizione_controllo(Check::ModeDeclaredUseless).codice, "K-CTR-135");
+    EXPECT_EQ(api::catalogo_controlli().size(), 135u);
 }

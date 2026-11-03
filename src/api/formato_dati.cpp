@@ -7,10 +7,12 @@ const std::vector<FileDati>& file_dati() {
     static const std::vector<FileDati> elenco = {
         {"pacchetto.json", "pacchetto", {1, 2}, true,
          "Manifesto: aziende, periodo, origine, livello dei dati, fuso orario, valuta, impostazioni, cassaforte."},
-        {"aziende.json", "aziende", {1}, false,
-         "Elenchi e impostazioni di ogni azienda: attivita', assenze, fermi, competenze, norme, ricovero, abbinamento."},
-        {"norme.json", "norme", {1}, false,
-         "Norme di un paese: abilitazioni, usi dei mezzi, requisiti per guidare, usi per tipo di servizio, con la fonte."},
+        {"aziende.json", "aziende", {1, 2}, false,
+         "Elenchi e impostazioni di ogni azienda: attivita', assenze, fermi, competenze, norme, ricovero, abbinamento; dalla "
+         "versione 2 le categorie di tempo, le soste non scritte, le scelte sugli orari e la chiave del rientro."},
+        {"norme.json", "norme", {1, 2}, false,
+         "Norme di un paese: abilitazioni, usi dei mezzi, requisiti per guidare, usi per tipo di servizio, con la fonte; dalla "
+         "versione 2 le leggi e i contratti collettivi sugli orari di lavoro (regimi) e i cambi dell'ora."},
         {"luoghi.json", "luoghi", {1, 2}, false, "Luoghi pubblici (fermate, scuole, centri, rimesse...) e luoghi privati."},
         {"tratti.json", "tratti", {1}, false, "Tratti di strada tra due luoghi con i loro limiti."},
         {"regolamenti.json", "regolamenti", {1, 2}, false, "Regolamenti di un territorio o di un committente."},
@@ -27,8 +29,9 @@ const std::vector<FileDati>& file_dati() {
          "Mezzi delle aziende: posti, attrezzature, costi, uso della carta di circolazione, distrazioni, prestiti."},
         {"rimesse.json", "rimesse", {1}, false, "Rimesse e ricoveri."},
         {"tempi_sosta.json", "tempi_sosta", {1}, false, "Tempi di sosta alle fermate."},
-        {"persone.json", "persone", {1}, false,
-         "Persone (autisti e assistenti): ruoli, rapporto, ore, disponibilita', abilitazioni, competenze, preferenze."},
+        {"persone.json", "persone", {1, 2}, false,
+         "Persone (autisti e assistenti): ruoli, rapporto, ore, disponibilita', abilitazioni, competenze, preferenze; dalla "
+         "versione 2 le scelte sugli orari, la chiave del rientro e le giornate prima del pacchetto."},
         {"assenze.json", "assenze", {1}, false, "Assenze programmate delle persone: periodo e tipo, mai la causa."},
         {"fermi.json", "fermi", {1}, false, "Fermi programmati dei mezzi (es. revisione)."},
         {"turni.json", "turni", {1}, false,

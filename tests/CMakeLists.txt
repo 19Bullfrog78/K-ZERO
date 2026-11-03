@@ -9,7 +9,7 @@ add_executable(test_tempo test_tempo.cpp)
 target_link_libraries(test_tempo PRIVATE kzero_nucleo GTest::gtest_main)
 target_compile_options(test_tempo PRIVATE ${KZERO_WARNINGS})
 gtest_discover_tests(test_tempo PROPERTIES LABELS nucleo)
-foreach(prova test_regole test_dimostrazione test_ricerca test_pacchetto test_controlli test_turni)
+foreach(prova test_regole test_dimostrazione test_ricerca test_pacchetto test_controlli test_turni test_orari)
   add_executable(${prova} ${prova}.cpp)
   target_link_libraries(${prova} PRIVATE kzero_api GTest::gtest_main)
   target_compile_options(${prova} PRIVATE ${KZERO_WARNINGS})
@@ -219,21 +219,21 @@ foreach(pacchetto demo demo-numeri)
   kzero_prova(controlla_${n}_testo USCITA 0 FORMATO testo
               # Il riepilogo in due pezzi: in CMake il punto e virgola separa gli elementi di un elenco.
               CONTIENE "Riepilogo: 2 aziende, ${luoghi_${pacchetto}} luoghi, 9 servizi, 26 corse, 10 mezzi, 12 persone, 18 turni"
-                       " 0 errori, 8 avvisi."
+                       " 0 errori, 31 avvisi."
               PROBLEMI ${AVVISI_DEMO} NON_CONTIENE "Errore K-CTR" "abilitazioni" "assenze.json" "Problemi sui dati particolari"
               ARGOMENTI controlla ${PROJECT_SOURCE_DIR}/esempi/${pacchetto})
   kzero_prova(controlla_${n}_json USCITA 0 FORMATO json SCHEMA controlla
-              CONTIENE "\"errori\": 0" "\"avvisi\": 8" "\"posizione_completa_con\": \"--includi-dati-personali\""
+              CONTIENE "\"errori\": 0" "\"avvisi\": 31" "\"posizione_completa_con\": \"--includi-dati-personali\""
               PROBLEMI ${AVVISI_DEMO} NON_CONTIENE "abilitazioni" "assenze.json"
               ARGOMENTI controlla ${PROJECT_SOURCE_DIR}/esempi/${pacchetto} --formato json)
 endforeach()
 kzero_prova(controlla_demo_dati_personali USCITA 0 FORMATO testo PROBLEMI ${AVVISI_DEMO_COMPLETI} NON_CONTIENE "il punto preciso"
-            CONTIENE "Dati personali e particolari nel pacchetto: 248 valori personali e 37 particolari: luoghi.json 25 personali"
+            CONTIENE "Dati personali e particolari nel pacchetto: 257 valori personali e 37 particolari: luoghi.json 25 personali"
                      "assenze.json 9 personali e 0 particolari"
             ARGOMENTI controlla ${PROJECT_SOURCE_DIR}/esempi/demo --includi-dati-personali)
 # Quali dati personali e particolari ci sono nel pacchetto (es. se va perso): di base solo i totali.
 kzero_prova(controlla_demo_dati_presenti USCITA 0 FORMATO testo
-            CONTIENE "Dati personali e particolari nel pacchetto: 248 valori personali e 37 particolari (file per file: --includi-dati-personali)."
+            CONTIENE "Dati personali e particolari nel pacchetto: 257 valori personali e 37 particolari (file per file: --includi-dati-personali)."
             NON_CONTIENE "assenze.json"
             ARGOMENTI controlla ${PROJECT_SOURCE_DIR}/esempi/demo)
 kzero_prova(controlla_demo_tutti_i_dati USCITA 0 FORMATO json SCHEMA controlla
@@ -368,7 +368,10 @@ kzero_prova(rotto_tipo_di_assenza_inesistente_dati_personali USCITA 1 FORMATO js
 kzero_rotto(rotto_tipo_di_fermo_inesistente FORMATO testo MODIFICA IMPOSTA fermi.json /fermi/0/tipo "\"OFFICINA\""
             PROBLEMI "K-CTR-010|fermi.json|/fermi/0/tipo" CONTIENE "Il codice OFFICINA non esiste tra i tipi di fermo dell'azienda ALFA")
 kzero_rotto(rotto_assenza_rovesciata FORMATO testo MODIFICA IMPOSTA assenze.json /assenze/0/al "\"2026-10-21\""
-            PROBLEMI "K-CTR-012|persone.json|/persone/0" NON_CONTIENE "2026-10-21" "2026-10-22" "2026-10-23" "assenze")
+            # Dal K-011 i giorni del 21 e del 22 ottobre compaiono negli avvisi degli orari di P-C (i giorni del piano, non
+            # dell'assenza): si controlla che le date dell'assenza non compaiano nel messaggio dell'errore.
+            PROBLEMI "K-CTR-012|persone.json|/persone/0"
+            NON_CONTIENE "finisce (2026-10-21)" "cominciare (2026-10-2" "assenze")
 # Caso reale: "16.08" scritto tra 12.05 e 12.19.
 kzero_rotto(rotto_orario_indietro FORMATO testo MODIFICA IMPOSTA corse.json /corse/3/passaggi/2/orario "\"16:08\""
             PROBLEMI "K-CTR-017|corse.json|/corse/3/passaggi/2"
@@ -410,7 +413,7 @@ if(NOT WIN32)
   # Un collegamento a un file normale dentro la cartella si segue: il pacchetto e' quello del demo (piu' l'avviso
   # sulla sottocartella "archivio", che non fa parte del formato).
   kzero_prova(collegamento_dentro_la_cartella USCITA 0 FORMATO testo BASE ${KZERO_DEMO} MODIFICA COLLEGA persone.json @DENTRO@
-              PROBLEMI "K-CTR-008|archivio" CONTIENE " 0 errori, 9 avvisi."
+              PROBLEMI "K-CTR-008|archivio" CONTIENE " 0 errori, 32 avvisi."
               ARGOMENTI controlla @PACCHETTO@)
   kzero_prova(giornata_con_una_pipe USCITA 1 FORMATO testo ERRORE K-ERR-018 BASE ${KZERO_DEMO} MODIFICA PIPE turni.json
               ARGOMENTI giornata @PACCHETTO@ --data 2026-10-22)
@@ -509,7 +512,7 @@ kzero_prova(giornata_luogo_sensibile_senza_case USCITA 0 FORMATO testo BASE ${KZ
 # singolo giorno e' un errore: kzero giornata non mostra nulla.
 kzero_prova(avviso_assenza_senza_sostituzione USCITA 0 FORMATO testo BASE ${KZERO_DEMO}
             MODIFICA TOGLI assegnazioni.json /assegnazioni/3
-            PROBLEMI "K-CTR-078|persone.json|/persone/0" CONTIENE " 0 errori, 9 avvisi." NON_CONTIENE "assenze.json"
+            PROBLEMI "K-CTR-078|persone.json|/persone/0" CONTIENE " 0 errori, 30 avvisi." NON_CONTIENE "assenze.json"
             ARGOMENTI controlla @PACCHETTO@)
 kzero_prova(giornata_assenza_senza_sostituzione USCITA 0 FORMATO testo BASE ${KZERO_DEMO}
             MODIFICA TOGLI assegnazioni.json /assegnazioni/3
@@ -519,7 +522,7 @@ kzero_prova(giornata_assenza_senza_sostituzione USCITA 0 FORMATO testo BASE ${KZ
             ARGOMENTI giornata @PACCHETTO@ --data 2026-10-22 --persona P-A)
 kzero_prova(avviso_fermo_senza_sostituzione USCITA 0 FORMATO testo BASE ${KZERO_DEMO}
             MODIFICA TOGLI assegnazioni.json /assegnazioni/0
-            PROBLEMI "K-CTR-079|fermi.json|/fermi/0" CONTIENE " 0 errori, 9 avvisi."
+            PROBLEMI "K-CTR-079|fermi.json|/fermi/0" CONTIENE " 0 errori, 32 avvisi."
             ARGOMENTI controlla @PACCHETTO@)
 kzero_prova(giornata_fermo_senza_sostituzione USCITA 0 FORMATO testo BASE ${KZERO_DEMO}
             MODIFICA TOGLI assegnazioni.json /assegnazioni/0
@@ -565,6 +568,354 @@ kzero_prova(giornata_mezzo_inesistente USCITA 2 FORMATO testo ERRORE K-ERR-017
 kzero_prova(giornata_cartella_inesistente USCITA 1 FORMATO testo ERRORE K-ERR-012
             ARGOMENTI giornata ${CMAKE_CURRENT_BINARY_DIR}/cartella-che-non-esiste --data 2026-10-22)
 
+# --- Orari di lavoro (K-011): kzero ore ---------------------------------------------------------------------------
+set(ORE_K011 ${CMAKE_CURRENT_SOURCE_DIR}/esempi/k011-orari)
+# Dati personali degli orari: il rapporto, il contratto collettivo, le ore del contratto, le leggi che valgono per il
+# rapporto (es. la L. 138, il regime del lavoro a chiamata, il contratto collettivo inventato) e i nomi delle persone.
+set(DATI_PERSONALI_ORE "Rossi Mario" "Verdi Carlo" "rapporto dipendente" "rapporto titolare" "previste 39 ore"
+    "ESEMPIO-01" "R-CHIAMATA" "\"dipendente_tempo_pieno\"" "\"titolare\"")
+# La L. 138 vale per il rapporto: negli orari di una persona e' riservata (in kzero controlla si vede solo dove parla
+# dell'azienda, es. la chiave del rientro K-CTR-105).
+set(DATI_PERSONALI_ORE_PERSONA ${DATI_PERSONALI_ORE} "R-L138")
+# La settimana della gita di P-A: il Reg. 561/2006 vale per la gita della domenica e, per estensione, tutta la settimana
+# (INL 61/2021); il riposo settimanale dopo la gita arriva oltre i 6 periodi di 24 ore se il 561 vale per i servizi
+# scolastici (da confermare: un avviso). Di base il rapporto, il contratto, le ore e la L. 138 sono riservati.
+kzero_prova(ore_settimana_della_gita USCITA 0 FORMATO testo
+            CONTIENE "Orari di lavoro dal 2026-11-09 al 2026-11-15 - pacchetto DEMO-2026"
+                     "Persona P-A, azienda ALFA, rapporto riservato, contratto collettivo riservato, ore previste riservate"
+                     "domenica 2026-11-15: T-GITA (autista, giorno), dalle 07:40 alle 17:55"
+                     "Regime R-561 per guida e riposi: vale con certezza per tutte le corse."
+                     "vale con certezza da lunedi' 2026-11-09 a domenica 2026-11-15 per guida, riposi (estensione alla settimana, per una corsa del 2026-11-15)"
+                     "4 regimi riservati: dipendono dal rapporto o dal contratto collettivo della persona (--includi-dati-personali)."
+                     "Rientro tra C-LIN-545 e C-LIN-549: fermo 2 ore e 13 minuti a L-RIMESSA-ALFA" "Avviso K-CTR-118"
+                     "Settimana dal lunedi' 2026-11-09: guida 11 ore e 2 minuti"
+            NON_CONTIENE ${DATI_PERSONALI_ORE_PERSONA} ${DATI_PERSONALI} ${DATI_PARTICOLARI} "regolare\""
+            ARGOMENTI ore ${KZERO_DEMO} --dal 2026-11-09 --al 2026-11-15 --persona P-A)
+kzero_prova(ore_settimana_della_gita_json USCITA 0 FORMATO json SCHEMA ore
+            CONTIENE "\"schema\": \"ore\"" "\"rapporto\": \"riservato\"" "\"codice\": \"riservato\"" "\"tipo\": \"settimana\""
+            NON_CONTIENE ${DATI_PERSONALI_ORE_PERSONA} ${DATI_PERSONALI} ${DATI_PARTICOLARI}
+            ARGOMENTI ore ${KZERO_DEMO} --dal 2026-11-09 --al 2026-11-15 --persona P-A --formato json)
+kzero_prova(ore_settimana_della_gita_dati_personali USCITA 0 FORMATO testo
+            CONTIENE "Persona P-A (Rossi Mario), azienda ALFA, rapporto dipendente tempo pieno, contratto collettivo ESEMPIO-01, ore previste 39 ore a settimana"
+                     "Regime R-L138 per " "(previste 39 ore, differenza -" "R-L138 lavoro effettivo"
+            NON_CONTIENE ${DATI_PARTICOLARI} "regimi riservati"
+            ARGOMENTI ore ${KZERO_DEMO} --dal 2026-11-09 --al 2026-11-15 --persona P-A --includi-dati-personali)
+kzero_prova(ore_settimana_della_gita_tutti_i_dati_json USCITA 0 FORMATO json SCHEMA ore
+            CONTIENE "\"scolastico\"" "\"dati_particolari_inclusi\": true" "\"rapporto\": \"dipendente_tempo_pieno\""
+            ARGOMENTI ore ${KZERO_DEMO} --dal 2026-11-09 --al 2026-11-15 --persona P-A --includi-dati-personali
+                      --includi-dati-particolari --formato json)
+# Un giorno: il titolare P-C che sostituisce dopo la reperibilita' della notte; P-A con i due rientri giustificati.
+kzero_prova(ore_giorno_dopo_la_reperibilita USCITA 0 FORMATO testo
+            CONTIENE "giovedi' 2026-10-22: T-DIS (autista, giorno), T-SECONDO (autista, giorno), dalle 07:25 alle 20:30"
+                     "Riposo prima: 55 minuti dal 2026-10-22 06:30" "dopo la reperibilita', che qui non conta come riposo"
+                     "Corse con il mezzo ALFA-03 (13 persone): C-DIS-1 (25,8 km); con il mezzo ALFA-05 (56 persone)"
+                     "Rientro tra C-DIS-1 e C-LIN-549: fermo 7 ore e 45 minuti a L-RIMESSA-ALFA"
+            NON_CONTIENE ${DATI_PERSONALI_ORE_PERSONA} ${DATI_PERSONALI} ${DATI_PARTICOLARI} "servizio disabili"
+            ARGOMENTI ore ${KZERO_DEMO} --data 2026-10-22 --persona P-C)
+kzero_prova(ore_giorno_rientri_giustificati USCITA 0 FORMATO testo
+            CONTIENE "martedi' 2026-10-20: T-PRIMO (autista, rotazione), dalle 07:15 alle 17:15 (ampiezza 10 ore)"
+                     "Rientro tra C-LIN-537 e C-RM-1: fermo 2 ore e 34 minuti a L-RIMESSA-ALFA"
+                     "27 minuti di guida a vuoto in piu' (il luogo dopo e' lo stesso), con il fattore 2 ne servono almeno 54 minuti; fermo minimo 30 minuti; 12,8 km: giustificato."
+                     "Problemi degli orari: nessuno in questo periodo."
+            ARGOMENTI ore ${KZERO_DEMO} --data 2026-10-20 --persona P-A)
+# Tutte le persone di un giorno, con la media (solo da vedere); il pacchetto "solo numeri".
+kzero_prova(ore_tutti USCITA 0 FORMATO testo CONTIENE "Persona P-C," "Persona P-B1," "Media tra le "
+            NON_CONTIENE ${DATI_PERSONALI_ORE_PERSONA} ${DATI_PERSONALI} ${DATI_PARTICOLARI}
+            ARGOMENTI ore ${KZERO_DEMO} --data 2026-10-22)
+kzero_prova(ore_tutti_json USCITA 0 FORMATO json SCHEMA ore CONTIENE "\"media_tra_le_persone\": {" "\"persona\": null"
+            ARGOMENTI ore ${KZERO_DEMO} --data 2026-10-22 --formato json)
+kzero_prova(ore_demo_numeri USCITA 0 FORMATO json SCHEMA ore CONTIENE "\"livello\": \"solo_numeri\""
+            ARGOMENTI ore ${PROJECT_SOURCE_DIR}/esempi/demo-numeri --dal 2026-11-09 --al 2026-11-15 --formato json)
+# Una persona che nel periodo non lavora: si mostra lo stesso, senza giornate.
+kzero_prova(ore_persona_senza_turni USCITA 0 FORMATO testo
+            CONTIENE "Persona P-A, azienda ALFA" "Nessuna giornata di lavoro nel periodo." "Totali del periodo: nessuna giornata"
+            ARGOMENTI ore ${ORE_K011} --data 2026-11-05 --persona P-A)
+# Errori dei parametri: il periodo manca, e' a meta', e' rovesciato, ha --data insieme a --dal; date fuori dal periodo del
+# pacchetto; persona che non c'e'; pacchetto con errori nei dati (K-ERR-018).
+kzero_prova(ore_senza_periodo USCITA 2 FORMATO testo ERRORE K-ERR-040 CONTIENE "Manca il giorno o il periodo da mostrare"
+            ARGOMENTI ore ${KZERO_DEMO})
+kzero_prova(ore_senza_periodo_json USCITA 2 FORMATO json SCHEMA errore ERRORE K-ERR-040 ARGOMENTI ore ${KZERO_DEMO} --formato json)
+kzero_prova(ore_periodo_a_meta USCITA 2 FORMATO testo ERRORE K-ERR-040 CONTIENE "manca --al"
+            ARGOMENTI ore ${KZERO_DEMO} --dal 2026-10-19)
+kzero_prova(ore_periodo_a_meta_dal USCITA 2 FORMATO testo ERRORE K-ERR-040 CONTIENE "manca --dal"
+            ARGOMENTI ore ${KZERO_DEMO} --al 2026-10-25)
+kzero_prova(ore_periodo_rovesciato USCITA 2 FORMATO testo ERRORE K-ERR-039
+            CONTIENE "Il periodo finisce (--al 2026-10-19) prima di cominciare (--dal 2026-10-25)"
+            ARGOMENTI ore ${KZERO_DEMO} --dal 2026-10-25 --al 2026-10-19)
+kzero_prova(ore_periodo_rovesciato_json USCITA 2 FORMATO json SCHEMA errore ERRORE K-ERR-039
+            ARGOMENTI ore ${KZERO_DEMO} --dal 2026-10-25 --al 2026-10-19 --formato json)
+kzero_prova(ore_data_e_periodo USCITA 2 FORMATO testo ERRORE K-ERR-015
+            ARGOMENTI ore ${KZERO_DEMO} --data 2026-10-22 --dal 2026-10-19 --al 2026-10-25)
+kzero_prova(ore_data_scritta_male USCITA 2 FORMATO testo ERRORE K-ERR-014 ARGOMENTI ore ${KZERO_DEMO} --dal 19/10/2026 --al 2026-10-25)
+kzero_prova(ore_data_fuori_periodo USCITA 2 FORMATO testo ERRORE K-ERR-016 CONTIENE "La data 2027-09-01" "(dal 2026-09-01 al 2027-08-31)"
+            ARGOMENTI ore ${KZERO_DEMO} --dal 2027-08-25 --al 2027-09-01)
+kzero_prova(ore_data_fuori_periodo_json USCITA 2 FORMATO json SCHEMA errore ERRORE K-ERR-016
+            ARGOMENTI ore ${KZERO_DEMO} --data 2026-08-31 --formato json)
+kzero_prova(ore_persona_inesistente USCITA 2 FORMATO testo ERRORE K-ERR-017 CONTIENE "La persona P-ZZZ non c'e'"
+            ARGOMENTI ore ${KZERO_DEMO} --data 2026-10-22 --persona P-ZZZ)
+kzero_prova(ore_pacchetto_con_errori USCITA 1 FORMATO testo ERRORE K-ERR-018 BASE ${KZERO_DEMO}
+            MODIFICA IMPOSTA persone.json /persone/0/azienda "\"ZETA\"" CONTIENE "nei dati: gli orari non si mostrano"
+            ARGOMENTI ore @PACCHETTO@ --data 2026-10-22)
+kzero_prova(ore_cartella_inesistente USCITA 1 FORMATO testo ERRORE K-ERR-012
+            ARGOMENTI ore ${CMAKE_CURRENT_BINARY_DIR}/cartella-che-non-esiste --data 2026-10-22)
+# Gli errori del piano (le regole sugli orari) non bloccano kzero ore ne' kzero giornata: servono proprio a correggerli.
+kzero_prova(ore_errori_del_piano_non_bloccano USCITA 0 FORMATO testo
+            CONTIENE "Controllo del pacchetto: 11 errori (11 del piano degli orari, che non bloccano), 107 avvisi"
+                     "Errore K-CTR-110: La persona P-L138 supera una regola sugli orari (dati personali: riservati), il 2026-11-05."
+            ARGOMENTI ore ${ORE_K011} --dal 2026-11-05 --al 2026-11-06 --persona P-L138)
+kzero_prova(giornata_errori_del_piano_non_bloccano USCITA 0 FORMATO testo
+            CONTIENE "11 errori (11 del piano degli orari, che non bloccano)" "T-L138-GIO"
+            ARGOMENTI giornata ${ORE_K011} --data 2026-11-05)
+kzero_prova(giornata_errori_del_piano_non_bloccano_json USCITA 0 FORMATO json SCHEMA giornata CONTIENE "\"errori_del_piano\": 11"
+            ARGOMENTI giornata ${ORE_K011} --data 2026-11-05 --formato json)
+# Il pacchetto di prova degli orari (dati inventati): un problema per ogni tipo di regola e di controllo nuovo.
+kzero_prova(controlla_orari USCITA 1 FORMATO testo RESOCONTO
+            CONTIENE "11 errori (11 del piano degli orari), 107 avvisi."
+            PROBLEMI "K-CTR-102|corse.json|/corse/34" "K-CTR-104|norme.json|/norme/0/regimi/2/regole/2"
+                     "K-CTR-105|aziende.json|/aziende/0/rientro" "K-CTR-108|turni.json|/turni/31"
+                     "K-CTR-109|persone.json|/persone/19" "K-CTR-110|persone.json|/persone/13" "K-CTR-110|persone.json|/persone/20"
+                     "K-CTR-111|persone.json|/persone/19" "K-CTR-112|persone.json|/persone/18" "K-CTR-113|persone.json|/persone/13"
+                     "K-CTR-114|persone.json|/persone/27" "K-CTR-114|persone.json|/persone/29"
+                     "K-CTR-115|persone.json|/persone/13" "K-CTR-117|persone.json|/persone/14"
+                     "K-CTR-119|persone.json|/persone/22" "K-CTR-122|persone.json|/persone/13" "K-CTR-123|persone.json|/persone/21"
+                     "K-CTR-124|persone.json|/persone/12"
+                     "K-CTR-129|aziende.json|/aziende/0/modo_corse/corse/0/forzatura"
+                     "K-CTR-130|aziende.json|/aziende/0/modo_corse/corse/0/forzatura"
+                     "K-CTR-129|aziende.json|/aziende/0/modo_corse/servizi/1/forzatura"
+                     "K-CTR-134|aziende.json|/aziende/0/modo_corse/servizi/1/forzatura"
+            NON_CONTIENE ${DATI_PERSONALI_ORE} "Linea Lunga" "Esempi Pausa"
+            ARGOMENTI controlla ${ORE_K011})
+kzero_prova(controlla_orari_json USCITA 1 FORMATO json SCHEMA controlla RESOCONTO
+            CONTIENE "\"errori_del_piano\": 11" "\"natura\": \"piano\"" "\"natura\": \"dati\""
+            ARGOMENTI controlla ${ORE_K011} --formato json)
+kzero_prova(controlla_orari_dati_personali USCITA 1 FORMATO testo RESOCONTO
+            CONTIENE "La persona P-L138 (Linea Lunga) supera la regola R-L138 L138-GIORNO (L. 14 febbraio 1958, n. 138, artt. 2 e 3): lavoro effettivo della giornata 11 ore e 35 minuti, massimo 10 ore, il 2026-11-05."
+                     "La persona P-ORE (Ore Contratto) supera le ore massime del suo contratto: lavoro contato nella giornata 5 ore e 35 minuti, massimo 4 ore, il 2026-12-01."
+                     "Straordinario: la persona P-TITOLARE (Titolare Prova) ha 9 ore e 35 minuti di lavoro effettivo, oltre il normale di 8 ore (massimo 10 ore) della regola R-L138 L138-GIORNO"
+                     "va confermato se la legge vale per il rapporto di lavoro della persona"
+            ARGOMENTI controlla ${ORE_K011} --includi-dati-personali)
+# I tre esempi della pausa di Mauro (20/10), con la chiave del rientro di Alfa (30 minuti, fattore 2, preferenza).
+kzero_prova(ore_tre_esempi_della_pausa USCITA 0 FORMATO testo
+            CONTIENE "Rientro tra C-PAUSA-A1 e C-PAUSA-A2: fermo 30 minuti a L-RIMESSA-ALFA; 40 minuti di guida a vuoto in piu' (il luogo dopo e' lo stesso), con il fattore 2 ne servono almeno 1 ora e 20 minuti; fermo minimo 30 minuti; 20 km: non giustificato (fermo troppo corto per la guida in piu')."
+                     "Rientro tra C-PAUSA-B1 e C-PAUSA-B2: fermo 15 minuti a L-RIMESSA-ALFA; 30 minuti di guida a vuoto in piu' (il luogo dopo e' lo stesso), con il fattore 2 ne servono almeno 1 ora; fermo minimo 30 minuti; 40 km: non giustificato (fermo sotto il minimo)."
+                     "Rientro tra C-PAUSA-C1 e C-PAUSA-C2: fermo 2 ore e 16 minuti a L-RIMESSA-ALFA; 36 minuti di guida a vuoto in piu' (il luogo dopo e' lo stesso), con il fattore 2 ne servono almeno 1 ora e 12 minuti; fermo minimo 30 minuti; 24 km: giustificato."
+                     "Avviso K-CTR-124"
+            ARGOMENTI ore ${ORE_K011} --dal 2026-11-02 --al 2026-11-04 --persona P-PAUSE)
+kzero_prova(ore_tre_esempi_della_pausa_json USCITA 0 FORMATO json SCHEMA ore
+            CONTIENE "\"esito\": \"non_giustificato\"" "\"esito\": \"giustificato\"" "\"fattore_guida\": 2"
+            ARGOMENTI ore ${ORE_K011} --dal 2026-11-02 --al 2026-11-04 --persona P-PAUSE --formato json)
+# La regola dei 50 km del Reg. 561/2006: 52 km con il mezzo da 8 posti (9 persone con il conducente) no, da 9 posti si';
+# con il mezzo da 17 posti di mercoledi' il 561 vale per tutta la settimana (estensione); senza km non si sa.
+kzero_prova(ore_52_km_mezzo_da_8_posti USCITA 0 FORMATO testo
+            CONTIENE "Corse con il mezzo V-8 (9 persone): C-52KM (52 km), C-52KM-R (52 km)." "Non valgono: R-561."
+            ARGOMENTI ore ${ORE_K011} --data 2026-11-18 --persona P-561-8)
+kzero_prova(ore_52_km_mezzo_da_9_posti USCITA 0 FORMATO testo
+            CONTIENE "Corse con il mezzo V-9 (10 persone): C-52KM (52 km), C-52KM-R (52 km)."
+                     "Regime R-561 per guida e riposi: vale con certezza per tutte le corse."
+            ARGOMENTI ore ${ORE_K011} --data 2026-11-25 --persona P-561-9)
+# K-011 aggiunta 1: la guida delle linee fino a 50 km e' altre mansioni per le regole di guida del 561 (art. 6 c. 5): gli
+# errori di guida di mercoledi' e giovedi' (prima "Errore K-CTR-113") sono avvisi da confermare; il riposo settimanale resta.
+kzero_prova(ore_52_km_tutta_la_settimana USCITA 0 FORMATO testo
+            CONTIENE "vale con certezza da lunedi' 2026-11-09 a domenica 2026-11-15 per guida, riposi (estensione alla settimana, per una corsa del 2026-11-11)"
+                     "Errore K-CTR-117" "Avviso K-CTR-114"
+            NON_CONTIENE "Errore K-CTR-113"
+            ARGOMENTI ore ${ORE_K011} --dal 2026-11-09 --al 2026-11-15 --persona P-561-17)
+# Mercoledi' 11: per le regole di guida del 561 contano solo le corse di 52 km e il trasferimento che le precede (2 ore e
+# 35), non le linee fino a 50 km; con la lettura prudente tutta la guida (10 ore e 15): avvisi con il motivo. Giovedi' 12,
+# solo linee fino a 50 km: 0 minuti nella lettura certa, 11 ore e 10 in quella prudente.
+kzero_prova(ore_guida_delle_corse_escluse_altre_mansioni USCITA 0 FORMATO testo
+            CONTIENE "Regime R-561 per guida e riposi: vale con certezza per le corse C-52KM, C-52KM-R; non vale per le corse C-ORA-07, C-ORA-08, C-ORA-09, C-ORA-10, C-ORA-11, C-ORA-12, C-ORA-13, C-ORA-14, C-ORA-15 (per un dato particolare); per le sue regole di guida conta 2 ore e 35 minuti di guida (la guida delle corse escluse conta come altre mansioni; con la lettura prudente 10 ore e 15 minuti)."
+                     "per le sue regole di guida conta 0 minuti di guida (la guida delle corse escluse conta come altre mansioni; con la lettura prudente 11 ore e 10 minuti)."
+                     "Avviso K-CTR-114: La persona P-561-17 (Mezzo Diciassette) potrebbe superare la regola R-561 561-GUIDA-GIORNO (Reg. (CE) n. 561/2006 (testo consolidato al 31/12/2024), art. 6 c. 1): guida tra due riposi giornalieri 11 ore e 10 minuti, oltre il massimo con l'estensione di 10 ore, il 2026-11-12. E' un avviso perche' conta come guida anche la guida delle corse che il regime esclude o forse esclude"
+            NON_CONTIENE "Errore K-CTR-113"
+            ARGOMENTI ore ${ORE_K011} --dal 2026-11-11 --al 2026-11-12 --persona P-561-17 --includi-dati-personali)
+kzero_prova(ore_guida_delle_corse_escluse_altre_mansioni_json USCITA 0 FORMATO json SCHEMA ore
+            CONTIENE "\"guida_per_le_regole_minuti\": {" "\"corse_escluse_come\": \"altre_mansioni\"" "\"lettura_certa\": 155"
+            ARGOMENTI ore ${ORE_K011} --data 2026-11-11 --persona P-561-17 --formato json)
+# K-011 aggiunta 1: il D.Lgs. 234 prende le condizioni sulla corsa dal Reg. 561 (come_regime). Nei giorni della settimana
+# in cui il 561 vale per estensione (la corsa di 52 km di mercoledi') e senza corse sopra i 50 km, il 234 vale da
+# confermare (che segua l'estensione non e' scritto: estensione_come_regime, di base "da_confermare"), con il motivo; una
+# sua violazione in quei giorni e' un avviso. Con "vale" nei dati diventa un errore.
+kzero_prova(ore_234_da_confermare_nei_giorni_estesi USCITA 0 FORMATO testo
+            CONTIENE "Regime R-234 per lavoro e notturno: non vale per nessuna corsa (per un dato particolare); vale da confermare da lunedi' 2026-11-09 a domenica 2026-11-15 per lavoro, notturno (estensione alla settimana del regime R-561, per una corsa del 2026-11-11: va confermato se vale per tutta la settimana)."
+            ARGOMENTI ore ${ORE_K011} --data 2026-11-09 --persona P-561-17 --includi-dati-personali)
+kzero_prova(ore_234_violazione_nei_giorni_estesi_avviso USCITA 0 FORMATO testo
+            CONTIENE "Avviso K-CTR-111: La persona P-561-17 (Mezzo Diciassette) potrebbe superare la regola R-234 234-PAUSE (D.Lgs. 19 novembre 2007, n. 234, art. 5): pause della giornata (in parti di almeno 15 minuti) 0 minuti, ma con 11 ore e 30 minuti di lavoro ne servono 45 minuti, il 2026-11-12. E' un avviso perche' va confermato se la legge vale per tutta la settimana, come il regime da cui prende le condizioni sulla corsa."
+            NON_CONTIENE "Errore K-CTR-110: La persona P-561-17 (Mezzo Diciassette) supera la regola R-234"
+            ARGOMENTI ore ${ORE_K011} --data 2026-11-12 --persona P-561-17 --includi-dati-personali)
+kzero_prova(ore_234_estensione_che_vale_errore USCITA 0 FORMATO testo BASE ${ORE_K011}
+            MODIFICA IMPOSTA norme.json /norme/0/regimi/2/si_applica/estensione_come_regime "\"vale\""
+            CONTIENE "Errore K-CTR-110: La persona P-561-17 (Mezzo Diciassette) supera la regola R-234 234-PAUSE (D.Lgs. 19 novembre 2007, n. 234, art. 5): pause della giornata (in parti di almeno 15 minuti) 0 minuti, ma con 11 ore e 30 minuti di lavoro ne servono 45 minuti, il 2026-11-12."
+                     "vale con certezza da lunedi' 2026-11-09 a domenica 2026-11-15 per lavoro, notturno (estensione alla settimana del regime R-561, per una corsa del 2026-11-11)."
+            ARGOMENTI ore @PACCHETTO@ --data 2026-11-12 --persona P-561-17 --includi-dati-personali)
+# K-011 aggiunta 1: il limite dei 50 km (Reg. 561/2006 art. 3 a, "fino a 50 km"): una linea di esattamente 50 km con il
+# mezzo da 17 posti e' esclusa, una di 50,1 km no.
+kzero_prova(ore_50_km_esatti_esclusi USCITA 0 FORMATO testo
+            CONTIENE "Corse con il mezzo V-17 (18 persone): C-50KM (50 km)." "Non valgono: R-561."
+            NON_CONTIENE "Regime R-561"
+            ARGOMENTI ore ${ORE_K011} --data 2026-11-16 --persona P-50KM)
+kzero_prova(ore_50_virgola_1_km_561 USCITA 0 FORMATO testo
+            CONTIENE "Corse con il mezzo V-17 (18 persone): C-50KM1 (50,1 km)."
+                     "Regime R-561 per guida e riposi: vale con certezza per la corsa C-50KM1."
+            ARGOMENTI ore ${ORE_K011} --data 2026-11-17 --persona P-50KM1)
+kzero_prova(ore_senza_km USCITA 0 FORMATO testo
+            CONTIENE "Corse con il mezzo V-17 (18 persone): C-SENZA-KM (km non noti)" "per i km del percorso"
+            ARGOMENTI ore ${ORE_K011} --data 2026-11-19 --persona P-SENZA-KM)
+# K-011 aggiunta 1 (caso dell'arbitro): ore massime del contratto contate con certezza solo quando sono certe. P-A con al
+# massimo 2,1 ore al giorno; mercoledi' 14 ottobre fa solo T-DIS (C-DIS-1): L. 138, Reg. 561 e D.Lgs. 234 valgono tutti
+# da confermare, quindi i conteggi possibili sono 2 ore e 10 (senza regime e L. 138) e 2 ore e 5 (D.Lgs. 234): nella
+# lettura certa il piu' basso, sotto il limite. Un avviso con il motivo, non un errore. Con 2 ore tutti superano: errore.
+kzero_prova(ore_contratto_errore_solo_se_certo USCITA 0 FORMATO testo BASE ${KZERO_DEMO}
+            MODIFICA IMPOSTA persone.json /persone/0/ore/0/massime/giorno 2.1
+            CONTIENE "Avviso K-CTR-120: La persona P-A (Rossi Mario) potrebbe superare le ore massime del suo contratto: lavoro contato nella giornata 2 ore e 10 minuti, massimo 2 ore e 6 minuti"
+                     "va confermato se la legge vale per il tipo di servizio della corsa"
+                     "Lavoro: R-L138 lavoro effettivo 2 ore e 10 minuti; R-234 orario di lavoro 2 ore e 5 minuti; per il contratto 2 ore e 5 minuti"
+            NON_CONTIENE "K-CTR-119"
+            ARGOMENTI ore @PACCHETTO@ --data 2026-10-14 --persona P-A --includi-dati-personali --includi-dati-particolari)
+kzero_prova(ore_contratto_errore_se_tutti_i_conteggi_superano USCITA 0 FORMATO testo BASE ${KZERO_DEMO}
+            MODIFICA IMPOSTA persone.json /persone/0/ore/0/massime/giorno 2
+            CONTIENE "Errore K-CTR-119: La persona P-A (Rossi Mario) supera le ore massime del suo contratto: lavoro contato nella giornata 2 ore e 5 minuti, massimo 2 ore"
+            ARGOMENTI ore @PACCHETTO@ --data 2026-10-14 --persona P-A --includi-dati-personali --includi-dati-particolari)
+# Il titolare oltre le 8 ore della L. 138: la legge vale da confermare per il suo rapporto, quindi avvisi, mai errori.
+kzero_prova(ore_titolare USCITA 0 FORMATO testo CONTIENE "Avviso K-CTR-112" "Avviso K-CTR-114" "rapporto titolare"
+            NON_CONTIENE "Errore K-CTR"
+            ARGOMENTI ore ${ORE_K011} --data 2026-11-20 --persona P-TITOLARE --includi-dati-personali)
+
+# K-011 aggiunta 1, OUT o tachigrafo (Mauro 28/10). La forzatura cosciente di Alfa sulla corsa C-FORZATA (55 km, mezzo da
+# 17 posti: con i dati scritti vale il Reg. 561): il programma pianifica OUT come ha scelto l'azienda (nella lettura certa
+# il 561 non conta), ma la forzatura si vede sempre (modo della corsa e K-CTR-129) e il suo rischio e' un avviso (K-CTR-130,
+# K-CTR-114 con il motivo), mai un errore. Motivo e chi l'ha scritta sono dati personali.
+kzero_prova(ore_forzatura_con_avviso_e_rischio USCITA 0 FORMATO testo
+            CONTIENE "Modo delle corse: C-FORZATA: OUT, scelta per la corsa, forzatura dell'azienda (motivo: \"Il percorso vero e' di 48 km"
+                     "scritta da Ufficio turni Alfa il 2026-10-28; vale fino al 2027-06-30) (regime R-561)."
+                     "Regime R-561 per guida e riposi: vale da confermare per la corsa C-FORZATA (per la forzatura dell'azienda (OUT): nella lettura prudente vale la legge come la calcolano i dati)"
+                     "Avviso K-CTR-129: Forzatura dell'azienda ALFA (Autoservizi Alfa): la corsa C-FORZATA (Linea lunga, OUT forzato dall'azienda) si fa OUT per scelta cosciente dell'azienda, qualunque cosa dicano i dati scritti sul regime R-561."
+                     "Avviso K-CTR-130: Rischio della forzatura dell'azienda ALFA (Autoservizi Alfa) sulla corsa C-FORZATA (Linea lunga, OUT forzato dall'azienda): se la forzatura e' sbagliata, con il regime R-561 ci sarebbe una violazione (R-561 561-GUIDA-CONTINUA; persone: 1), il 2026-11-24."
+                     "Avviso K-CTR-114: La persona P-FORZATA (Forzatura Prova) potrebbe superare la regola R-561 561-GUIDA-CONTINUA"
+                     "E' un avviso perche' la corsa e' OUT per una forzatura dell'azienda"
+            NON_CONTIENE "Errore K-CTR"
+            ARGOMENTI ore ${ORE_K011} --data 2026-11-24 --persona P-FORZATA --includi-dati-personali)
+kzero_prova(ore_forzatura_motivo_riservato USCITA 0 FORMATO testo
+            CONTIENE "forzatura dell'azienda (motivo: riservato; scritta da riservato il 2026-10-28; vale fino al 2027-06-30)"
+                     "Motivo: riservato; scritta da riservato il 2026-10-28. Vale fino al 2027-06-30."
+                     "ci sarebbero violazioni della legge (quali e per chi: dati personali, riservati)"
+            NON_CONTIENE "Ufficio turni Alfa" "Il percorso vero" "Forzatura Prova"
+            ARGOMENTI ore ${ORE_K011} --data 2026-11-24 --persona P-FORZATA)
+kzero_prova(ore_forzatura_json USCITA 0 FORMATO json SCHEMA ore
+            CONTIENE "\"modo\": \"forzatura\"" "\"forzatura\": {" "\"chi\": \"riservato\"" "\"fino_al\": \"2027-06-30\""
+            NON_CONTIENE "Ufficio turni Alfa"
+            ARGOMENTI ore ${ORE_K011} --data 2026-11-24 --persona P-FORZATA --formato json)
+kzero_prova(giornata_forzatura_visibile USCITA 0 FORMATO testo
+            CONTIENE "modo OUT, scelta per la corsa, forzatura dell'azienda (motivo: riservato; scritta da riservato il 2026-10-28; vale fino al 2027-06-30) (regime R-561)"
+            ARGOMENTI giornata ${ORE_K011} --data 2026-11-24 --persona P-FORZATA)
+kzero_prova(controlla_forzatura_visibile USCITA 1 FORMATO testo RESOCONTO
+            CONTIENE "Avviso K-CTR-129 (aziende.json, /aziende/0/modo_corse/corse/0/forzatura): Forzatura dell'azienda ALFA (Autoservizi Alfa): la corsa C-FORZATA (Linea lunga, OUT forzato dall'azienda) si fa OUT per scelta cosciente dell'azienda, qualunque cosa dicano i dati scritti sul regime R-561. Motivo: \"Il percorso vero e' di 48 km"
+                     "\"; scritta da Ufficio turni Alfa il 2026-10-28. Vale fino al 2027-06-30."
+            ARGOMENTI controlla ${ORE_K011} --includi-dati-personali)
+# K-011 aggiunta 2: testi veri e avvisi "non serve". Caso dell'arbitro: una forzatura su C-ORA-06 (linea di 15,1 km, gia'
+# esclusa dalla legge): K-CTR-129 non dice piu' che la legge vuole il regime, e K-CTR-134 dice che la forzatura non serve.
+kzero_prova(controlla_forzatura_che_non_serve USCITA 1 FORMATO testo RESOCONTO BASE ${ORE_K011}
+            MODIFICA IMPOSTA aziende.json /aziende/0/modo_corse/corse/2
+                     "{\"corsa\": \"C-ORA-06\", \"modo\": \"out\", \"forzatura\": {\"motivo\": \"Prova\", \"chi\": \"Prova\", \"quando\": \"2026-10-28\"}}"
+            CONTIENE "Avviso K-CTR-129 (aziende.json, /aziende/0/modo_corse/corse/2/forzatura): Forzatura dell'azienda ALFA (Autoservizi Alfa): la corsa C-ORA-06 (Linea delle 06) si fa OUT per scelta cosciente dell'azienda, qualunque cosa dicano i dati scritti sul regime R-561."
+                     "Se con i dati scritti vale il regime, il programma pianifica comunque OUT"
+                     "Avviso K-CTR-134 (aziende.json, /aziende/0/modo_corse/corse/2/forzatura): La forzatura dell'azienda ALFA (Autoservizi Alfa) sulla corsa C-ORA-06 (Linea delle 06) non cambia niente nel periodo del pacchetto: dove vale, con i dati scritti il regime R-561 non vale con certezza"
+            NON_CONTIENE "si fa OUT anche dove"
+            ARGOMENTI controlla @PACCHETTO@)
+# Nel pacchetto di prova: la forzatura sul servizio S-LIN-PROVA e la dichiarazione sulla corsa C-NONSERVE-2 (linee corte) non
+# servono; la forzatura su C-FORZATA (55 km) e la dichiarazione su S-DIS-GIO (solo disabili) servono. La dichiarazione e' un
+# dato particolare: K-CTR-135 di base si conta soltanto.
+kzero_prova(controlla_non_serve_con_dati_particolari USCITA 1 FORMATO testo RESOCONTO
+            CONTIENE "Avviso K-CTR-134 (aziende.json, /aziende/0/modo_corse/servizi/1/forzatura): La forzatura dell'azienda ALFA (Autoservizi Alfa) sul servizio S-LIN-PROVA"
+                     "Avviso K-CTR-135 (aziende.json, /aziende/0/modo_corse/corse/1/dichiarazione): La dichiarazione dell'azienda ALFA (Autoservizi Alfa) sulla corsa C-NONSERVE-2 (Linea, ritorno) non cambia niente nel periodo del pacchetto: dove vale, l'esclusione dal regime R-561 non e' da confermare."
+                     "e' dichiarata esclusa dal regime R-561." "Se l'esclusione e' da confermare, il programma la tratta come certa"
+            NON_CONTIENE "K-CTR-134 (aziende.json, /aziende/0/modo_corse/corse/0/forzatura)" "K-CTR-135 (aziende.json, /aziende/0/modo_corse/servizi/0/dichiarazione)"
+            ARGOMENTI controlla ${ORE_K011} --includi-dati-particolari)
+kzero_prova(controlla_non_serve_di_base USCITA 1 FORMATO testo RESOCONTO
+            CONTIENE "Avviso K-CTR-134 (aziende.json, /aziende/0/modo_corse/servizi/1/forzatura)"
+            NON_CONTIENE "K-CTR-135" "C-NONSERVE-2 (Linea, ritorno) e' dichiarata"
+            ARGOMENTI controlla ${ORE_K011})
+kzero_prova(ore_forzatura_che_non_serve USCITA 0 FORMATO testo
+            CONTIENE "Modo delle corse: C-NONSERVE-1: OUT, scelta per il servizio, forzatura dell'azienda"
+                     "Avviso K-CTR-134: La forzatura dell'azienda ALFA (Autoservizi Alfa) sul servizio S-LIN-PROVA"
+            ARGOMENTI ore ${ORE_K011} --data 2026-11-23 --persona P-NONSERVE)
+# La dichiarazione di Alfa sul servizio S-DIS-GIO (solo disabili, dove l'esclusione dal 561 e' da confermare): da li' il
+# servizio e' escluso con certezza, con una sola nota (K-CTR-131) invece degli avvisi da confermare su ogni corsa.
+# K-011 aggiunta 2: la dichiarazione e' un dato particolare (c'e' solo dove l'esclusione e' da confermare: dice il tipo di
+# servizio). Di base la riga del modo non la nomina e K-CTR-131 si conta soltanto; con i dati particolari si vede, con motivo e
+# chi riservati; motivo e chi solo con tutti e due i permessi.
+kzero_prova(ore_dichiarazione_con_una_nota USCITA 0 FORMATO testo
+            CONTIENE "OUT, scelta per il servizio, dichiarazione dell'azienda (motivo: riservato; scritta da riservato il 2026-10-28) (regime R-561)."
+                     "Non valgono: R-561."
+                     "Avviso K-CTR-131: Dichiarazione dell'azienda ALFA (Autoservizi Alfa): il servizio S-DIS-GIO"
+            NON_CONTIENE "K-CTR-114" "K-CTR-118" "vale da confermare" "servizio scolastico speciale"
+            ARGOMENTI ore ${ORE_K011} --data 2026-11-26 --persona P-DICHIARA --includi-dati-particolari)
+kzero_prova(ore_dichiarazione_riservata USCITA 0 FORMATO testo
+            CONTIENE "C-DICH-LUNGA-6: OUT, scelta per il servizio (regime R-561)."
+            NON_CONTIENE "dichiarazione" "K-CTR-131"
+            ARGOMENTI ore ${ORE_K011} --data 2026-11-26 --persona P-DICHIARA --includi-dati-personali)
+kzero_prova(ore_dichiarazione_riservata_json USCITA 0 FORMATO json SCHEMA ore
+            CONTIENE "\"dichiarazione\": \"riservato\""
+            NON_CONTIENE "servizio scolastico speciale" "K-CTR-131"
+            ARGOMENTI ore ${ORE_K011} --data 2026-11-26 --persona P-DICHIARA --includi-dati-personali --formato json)
+kzero_prova(ore_dichiarazione_con_tutti_i_dati USCITA 0 FORMATO testo
+            CONTIENE "dichiarazione dell'azienda (motivo: \"Il centro diurno del giovedi' e' per l'azienda un servizio scolastico speciale (prova inventata).\"; scritta da Ufficio turni Alfa il 2026-10-28)"
+            ARGOMENTI ore ${ORE_K011} --data 2026-11-26 --persona P-DICHIARA --includi-dati-personali --includi-dati-particolari)
+# La scelta OUT per tipo di servizio dove con i dati scritti vale la legge (la linea di 50,1 km): vale la legge, con un
+# avviso. La scelta per tipo rivela il tipo di servizio: dato particolare, si vede solo con --includi-dati-particolari.
+kzero_prova(controlla_out_dove_vale_la_legge USCITA 1 FORMATO testo RESOCONTO
+            CONTIENE "Avviso K-CTR-131 (aziende.json, /aziende/0/modo_corse/servizi/0/dichiarazione): Dichiarazione dell'azienda ALFA"
+                     "Avviso K-CTR-131 (aziende.json, /aziende/0/modo_corse/corse/1/dichiarazione): Dichiarazione dell'azienda ALFA"
+                     "Avviso K-CTR-132 (aziende.json, /aziende/0/modo_corse/per_tipo_servizio/0): La scelta OUT dell'azienda ALFA (Autoservizi Alfa) per il tipo di servizio della corsa C-50KM1 (Linea di 50,1 km) non vale: con i dati scritti vale il regime R-561"
+            ARGOMENTI controlla ${ORE_K011} --includi-dati-personali --includi-dati-particolari)
+kzero_prova(controlla_out_dove_vale_la_legge_riservato USCITA 1 FORMATO testo RESOCONTO
+            NON_CONTIENE "K-CTR-132 (aziende.json"
+            ARGOMENTI controlla ${ORE_K011})
+# Trasporti Beta registra le linee con il tachigrafo: per sua scelta segue il Reg. 561 (come preferenza), anche se per
+# legge le linee fino a 50 km ne sono escluse. K-011 aggiunta 2 (decisione dell'arbitro): la scelta e' per tipo di servizio,
+# quindi senza i dati particolari il regime per scelta e' riservato tutto, con una riga fissa per la persona (sempre, che
+# valga o no): niente riga del regime, "Non valgono" senza "per legge", modo "per un dato particolare". Con i dati
+# particolari si vede tutto.
+kzero_prova(ore_tachigrafo_per_scelta_beta USCITA 0 FORMATO testo
+            CONTIENE "Modo delle corse: C-B620-01, C-B620-02, C-B620-03, C-B620-04: tachigrafo come preferenza, scelta per il tipo di servizio (regime R-561)."
+                     "Regime R-561 per scelta dell'azienda (tachigrafo, non per legge) per guida e riposi: vale per scelta dell'azienda (tachigrafo) per tutte le corse."
+                     "Non valgono per legge: R-561."
+            NON_CONTIENE "Regimi seguiti per scelta dell'azienda: riservati"
+            ARGOMENTI ore ${KZERO_DEMO} --data 2026-10-19 --persona P-B1 --includi-dati-particolari)
+kzero_prova(ore_tachigrafo_per_scelta_beta_json USCITA 0 FORMATO json SCHEMA ore
+            CONTIENE "\"per_scelta\": true" "\"modo\": \"tachigrafo_per_scelta\"" "\"forza\": \"preferenza\"" "\"regimi_per_scelta\": null"
+            ARGOMENTI ore ${KZERO_DEMO} --data 2026-10-19 --persona P-B1 --includi-dati-particolari --formato json)
+kzero_prova(ore_tachigrafo_per_tipo_riservato USCITA 0 FORMATO testo
+            CONTIENE "Persona P-B1, azienda BETA, rapporto riservato\n  Regimi seguiti per scelta dell'azienda: riservati (dato particolare; --includi-dati-particolari)."
+                     "Modo delle corse: C-B620-01, C-B620-02, C-B620-03, C-B620-04: per un dato particolare."
+                     "Non valgono: R-561."
+            NON_CONTIENE "per scelta dell'azienda (tachigrafo" "Non valgono per legge" "tachigrafo come" "settimanale regolare"
+            ARGOMENTI ore ${KZERO_DEMO} --data 2026-10-19 --persona P-B1)
+kzero_prova(ore_tachigrafo_per_tipo_riservato_json USCITA 0 FORMATO json SCHEMA ore
+            CONTIENE "\"regimi_per_scelta\": \"riservato\"" "\"modo\": \"riservato\""
+            NON_CONTIENE "\"per_scelta\": true" "tachigrafo_per_scelta" "\"tachigrafo\""
+            ARGOMENTI ore ${KZERO_DEMO} --data 2026-10-19 --persona P-B1 --formato json)
+# K-011 aggiunta 2, caso dell'arbitro: nel demo Alfa ha scelte per linea, scolastico e altro (come Mauro: gita, linea e
+# scolastico), nessuna per i disabili. Di base la corsa per disabili C-DIS-1 ha la stessa riga del modo delle linee ("per un
+# dato particolare"), cosi' la riga non dice il tipo; con i dati particolari si vede tutto, anche "nessuna scelta".
+kzero_prova(giornata_modo_uguale_senza_dati_particolari USCITA 0 FORMATO testo
+            CONTIENE "corsa C-DIS-1 \"Centro diurno, giro principale\"\n                servizi S-DIS (tipo riservato, contratto CT-SCU, committente CVA)\n                modo per un dato particolare\n"
+                     "corsa C-LIN-533 \"Linea B610, corsa delle 07:52\"\n                servizi S-LIN-B610 (tipo riservato, contratto CT-LIN, committente TPV)\n                modo per un dato particolare\n"
+            NON_CONTIENE "modo OUT" "modo tachigrafo" "nessuna scelta" "scelta per il tipo"
+            ARGOMENTI ${GIORNATA_DEMO} --data 2026-11-11)
+kzero_prova(giornata_modo_uguale_senza_dati_particolari_json USCITA 0 FORMATO json SCHEMA giornata
+            CONTIENE "\"modo\": \"riservato\""
+            NON_CONTIENE "\"modo\": \"out\"" "\"modo\": \"nessuna\"" "\"modo\": \"tachigrafo\""
+            ARGOMENTI ${GIORNATA_DEMO} --data 2026-11-11 --formato json)
+kzero_prova(giornata_modo_con_dati_particolari USCITA 0 FORMATO testo
+            CONTIENE "servizi S-DIS (tipo disabili, contratto CT-SCU, committente CVA)\n                modo nessuna scelta, decide la legge (regime R-561)\n"
+                     "servizi S-LIN-B610 (tipo linea, contratto CT-LIN, committente TPV)\n                modo OUT, scelta per il tipo di servizio (regime R-561)\n"
+            ARGOMENTI ${GIORNATA_DEMO} --data 2026-11-11 --includi-dati-particolari)
+# La riga fissa c'e' anche nei giorni senza tachigrafo e per chi non lavora (Beta ha scelte del tachigrafo per tipo).
+kzero_prova(ore_tachigrafo_per_tipo_riga_fissa USCITA 0 FORMATO testo
+            CONTIENE "Persona P-B4, azienda BETA, rapporto riservato\n  Regimi seguiti per scelta dell'azienda: riservati (dato particolare; --includi-dati-particolari).\n  Nessuna giornata di lavoro nel periodo."
+            ARGOMENTI ore ${KZERO_DEMO} --data 2026-10-25 --persona P-B4)
+
 # Turni (K-008), i due pacchetti rotti chiesti dal mandato. La reperibilita' notturna di P-C del mercoledi' finisce
 # alle 07:30 invece che alle 06:30: il giovedi' della sostituzione P-C comincia il centro diurno alle 07:25.
 kzero_rotto(rotto_persona_in_due_turni_a_cavallo_della_mezzanotte FORMATO testo
@@ -580,7 +931,7 @@ kzero_rotto(rotto_persona_in_due_turni_a_cavallo_della_mezzanotte_json FORMATO j
 kzero_rotto(rotto_autista_senza_abilitazione FORMATO testo MODIFICA TOGLI persone.json /persone/10/abilitazioni/1
             PROBLEMI "K-CTR-068|servizi_fissi.json|/servizi_fissi/4"
             CONTIENE "Nel turno T-SCUOLA-2 (Scuola 2) la persona P-F guida il mezzo ALFA-02 (AA 102 AA) senza un'abilitazione richiesta dalle norme (dati personali: riservati), in 175 giorni tra il 2026-09-14 e il 2027-06-11"
-                     "1 errore, 8 avvisi."
+                     "1 errore, 31 avvisi."
             NON_CONTIENE "Moretti Luca" "serve una di")
 kzero_rotto(rotto_autista_senza_abilitazione_json FORMATO json MODIFICA TOGLI persone.json /persone/10/abilitazioni/1
             PROBLEMI "K-CTR-068|servizi_fissi.json|/servizi_fissi/4")
@@ -589,7 +940,7 @@ kzero_rotto(rotto_autista_senza_abilitazione_json FORMATO json MODIFICA TOGLI pe
 kzero_rotto(rotto_mezzo_senza_uso_richiesto FORMATO testo MODIFICA TOGLI mezzi.json /mezzi/6/autorizzazioni_uso/0
             PROBLEMI "K-CTR-069|turni.json|/turni/11/mezzo"
             CONTIENE "Nel turno T-GITA (Gita) il mezzo ALFA-05 (AA 105 AA) (uso LINEA) fa il servizio S-GITA (Gita della Pro Loco al lago di Lagobello), che chiede l'uso NCC, e non ha un'autorizzazione a quell'uso (distrazione), il 2026-11-15."
-                     "1 errore, 7 avvisi.")
+                     "1 errore, 30 avvisi.")
 kzero_rotto(rotto_mezzo_senza_uso_richiesto_json FORMATO json MODIFICA TOGLI mezzi.json /mezzi/6/autorizzazioni_uso/0
             PROBLEMI "K-CTR-069|turni.json|/turni/11/mezzo")
 kzero_rotto(rotto_trasbordo_non_autorizzato FORMATO testo MODIFICA TOGLI luoghi.json /luoghi/16/trasbordo
@@ -630,7 +981,7 @@ kzero_rotto(due_regolamenti_medie_con_r_inv FORMATO testo MODIFICA IMPOSTA contr
             CONTIENE "(minuti concordati: 20; massimo: 15)" "(minuti concordati: 15; massimo: 10)")
 kzero_prova(due_regolamenti_linee_con_r_tn USCITA 0 FORMATO testo BASE ${KZERO_DEMO}
             MODIFICA IMPOSTA contratti.json /contratti/2/regolamento "\"R-TN\""
-            PROBLEMI "K-CTR-037|servizi.json|/servizi/2/domanda/gruppi/0" CONTIENE "0 errori, 9 avvisi."
+            PROBLEMI "K-CTR-037|servizi.json|/servizi/2/domanda/gruppi/0" CONTIENE "0 errori, 32 avvisi."
             ARGOMENTI controlla @PACCHETTO@)
 
 # Gli avvisi non bloccano: uscita 0. Es. domanda 8 a una fermata, corse 7.
@@ -650,14 +1001,19 @@ kzero_prova(avviso_distrazione_che_scade USCITA 0 FORMATO testo BASE ${KZERO_DEM
 kzero_prova(avviso_mezzo_senza_uso USCITA 0 FORMATO json SCHEMA controlla BASE ${KZERO_DEMO}
             MODIFICA TOGLI mezzi.json /mezzi/5/uso PROBLEMI "K-CTR-051|mezzi.json|/mezzi/5"
             ARGOMENTI controlla @PACCHETTO@ --formato json)
-kzero_prova(avviso_azienda_senza_norme USCITA 0 FORMATO testo BASE ${KZERO_DEMO}
-            MODIFICA TOGLI aziende.json /aziende/0/norme PROBLEMI "K-CTR-052|pacchetto.json|/aziende/0"
+# Dal K-011 senza le norme non vale nessuna legge sugli orari: il lavoro di P-A si conta senza regime (guida, altre mansioni e
+# disponibilita' sul posto) e la domenica della gita supera le 10 ore al giorno del suo contratto (K-CTR-119, errore del
+# piano, uscita 1). Prima: uscita 0.
+kzero_prova(avviso_azienda_senza_norme USCITA 1 FORMATO testo RESOCONTO BASE ${KZERO_DEMO}
+            MODIFICA TOGLI aziende.json /aziende/0/norme PROBLEMI "K-CTR-052|pacchetto.json|/aziende/0" "K-CTR-119|persone.json|/persone/0"
             ARGOMENTI controlla @PACCHETTO@)
 kzero_prova(avviso_abilitazione_che_scade USCITA 0 FORMATO testo BASE ${KZERO_DEMO}
             MODIFICA IMPOSTA persone.json /persone/2/abilitazioni/2/scadenza "\"2027-03-31\""
             PROBLEMI "K-CTR-050|persone.json|/persone/2"
             CONTIENE "Un'abilitazione o un'autorizzazione della persona P-C scade dentro il periodo del pacchetto"
-            NON_CONTIENE "CQC" "2027-03-31" "Verdi Carlo"
+            # Dal K-011 il 2027-03-31 (un mercoledi') compare come ultimo giorno di lavoro di P-C negli avvisi degli orari, che
+            # mostrano i giorni del piano: si controlla che la scadenza non compaia come scadenza.
+            NON_CONTIENE "CQC" "scade il 2027-03-31" "Verdi Carlo"
             ARGOMENTI controlla @PACCHETTO@)
 kzero_prova(avviso_abilitazione_che_scade_dati_personali USCITA 0 FORMATO json SCHEMA controlla BASE ${KZERO_DEMO}
             MODIFICA IMPOSTA persone.json /persone/2/abilitazioni/2/scadenza "\"2027-03-31\""
@@ -685,7 +1041,7 @@ kzero_prova(classi_trasbordo_in_una_casa_tutti_i_dati USCITA 1 FORMATO json SCHE
 # Dal K-009 un problema che rivela un dato particolare (carrozzine, assistente, tipo "disabili") di base non si elenca:
 # una riga sola, senza codice ne' posizione, con quanti errori e avvisi sono; il codice di uscita non cambia.
 kzero_rotto(classi_carrozzine FORMATO testo MODIFICA IMPOSTA servizi.json /servizi/3/domanda/gruppi/0/fermate/0/carrozzine 0
-            CONTIENE "Problemi sui dati particolari (salute), non elencati uno per uno: 1 errore e nessun avviso." " 1 errore, 8 avvisi."
+            CONTIENE "Problemi sui dati particolari (salute), non elencati uno per uno: 1 errore e nessun avviso." " 1 errore, 31 avvisi."
             NON_CONTIENE "carrozzin" "K-CTR-031" "/servizi/3/domanda")
 kzero_prova(classi_carrozzine_dati_particolari USCITA 1 FORMATO testo RESOCONTO BASE ${KZERO_DEMO}
             MODIFICA IMPOSTA servizi.json /servizi/3/domanda/gruppi/0/fermate/0/carrozzine 0
@@ -760,7 +1116,10 @@ endfunction()
 # Versione 1 leggibile, permessi in ogni uscita: controlla per i tre tipi di utente, in testo e in JSON.
 kzero_cassaforte(cassaforte_controlla_titolare TITOLARE USCITA 0 FORMATO testo PROBLEMI ${AVVISI_DEMO}
                  CONTIENE "Cassaforte aperta dall'utente TITOLARE (dati personali e particolari); conservazione dei dati fino al 2099-12-31."
-                          "248 valori personali e 37 particolari, nella cassaforte" " 0 errori, 8 avvisi."
+                          # Dal K-011 la copia congelata (aziende, norme e persone versione 1) ha anche gli avvisi degli orari: le
+                          # categorie di tempo non dette (2), i dipendenti senza nessuna legge sugli orari nei dati (8) e il
+                          # contratto di P-A forse superato per le categorie presunte (5). Prima: 8 avvisi.
+                          "248 valori personali e 37 particolari, nella cassaforte" " 0 errori, 24 avvisi."
                  NON_CONTIENE "Non verificato" "Bianchi" "Deambulatore"
                  ARGOMENTI controlla @PACCHETTO@)
 kzero_cassaforte(cassaforte_controlla_titolare_json TITOLARE USCITA 0 FORMATO json SCHEMA controlla PROBLEMI ${AVVISI_DEMO}
@@ -821,6 +1180,43 @@ foreach(utente TITOLARE UFFICIO SALUTE)
                      ARGOMENTI giornata @PACCHETTO@ --data 2026-10-22 ${scelta} --formato json)
   endforeach()
 endforeach()
+# kzero ore (K-011) per i tre tipi di utente, sulla copia congelata (versione 1: categorie dei tempi presunte). Chi non puo'
+# aprire una classe legge "non verificato" (leggi, lavoro, rientri, problemi), mai un risultato fatto su dati mancanti.
+kzero_cassaforte(cassaforte_ore_titolare TITOLARE USCITA 0 FORMATO testo
+                 CONTIENE "Cassaforte aperta dall'utente TITOLARE (dati personali e particolari)." "Persona P-A, azienda ALFA"
+                          "categoria presunta per"
+                 NON_CONTIENE "Non verificato" "non verificati" ${DATI_PERSONALI} ${DATI_PARTICOLARI} ${DATI_PERSONALI_ORE_PERSONA}
+                 ARGOMENTI ore @PACCHETTO@ --dal 2026-10-19 --al 2026-10-25)
+kzero_cassaforte(cassaforte_ore_titolare_tutti_i_dati TITOLARE USCITA 0 FORMATO testo
+                 # Le norme della versione 1 non hanno regimi: nessuna legge sugli orari, mai "regolare".
+                 CONTIENE "Persona P-A (Rossi Mario), azienda ALFA, rapporto dipendente tempo pieno"
+                          "Nessuna legge sugli orari nei dati per questo caso: gli orari di questo giorno non si giudicano (non vuol dire \"regolare\")."
+                 ARGOMENTI ore @PACCHETTO@ --dal 2026-10-19 --al 2026-10-25 --includi-dati-personali --includi-dati-particolari)
+foreach(utente UFFICIO SALUTE)
+  string(TOLOWER ${utente} u)
+  if(utente STREQUAL "UFFICIO")
+    set(manca particolari)
+  else()
+    set(manca personali)
+  endif()
+  kzero_cassaforte(cassaforte_ore_${u} ${utente} USCITA 0 FORMATO testo
+                   CONTIENE "Non verificato (servono i dati ${manca}):"
+                            "Leggi, lavoro e rientri: non verificati (servono insieme i dati personali e quelli particolari)."
+                   NON_CONTIENE ${DATI_PERSONALI} ${DATI_PARTICOLARI} ${DATI_PERSONALI_ORE_PERSONA} "Problemi degli orari"
+                   ARGOMENTI ore @PACCHETTO@ --dal 2026-10-19 --al 2026-10-25)
+  kzero_cassaforte(cassaforte_ore_${u}_json ${utente} USCITA 0 FORMATO json SCHEMA ore
+                   CONTIENE "\"servono\": \"${manca}\"" "\"regimi\": null" "\"problemi\": null" "\"utente\": \"${utente}\""
+                   NON_CONTIENE ${DATI_PERSONALI} ${DATI_PARTICOLARI} ${DATI_PERSONALI_ORE_PERSONA}
+                   ARGOMENTI ore @PACCHETTO@ --dal 2026-10-19 --al 2026-10-25 --formato json)
+endforeach()
+kzero_cassaforte(cassaforte_ore_ufficio_dati_personali UFFICIO USCITA 0 FORMATO testo
+                 CONTIENE "Persona P-A (Rossi Mario), azienda ALFA, rapporto dipendente tempo pieno" "non verificati"
+                 NON_CONTIENE ${DATI_PARTICOLARI} "Regime R-L138"
+                 ARGOMENTI ore @PACCHETTO@ --dal 2026-10-19 --al 2026-10-25 --includi-dati-personali)
+kzero_cassaforte(cassaforte_ore_ufficio_dati_particolari UFFICIO USCITA 2 FORMATO testo ERRORE K-ERR-023
+                 ARGOMENTI ore @PACCHETTO@ --data 2026-10-22 --includi-dati-particolari)
+kzero_cassaforte(cassaforte_ore_salute_dati_personali SALUTE USCITA 2 FORMATO json SCHEMA errore ERRORE K-ERR-023
+                 ARGOMENTI ore @PACCHETTO@ --data 2026-10-22 --includi-dati-personali --formato json)
 # LegameSensibile segue i permessi: chi ha i soli dati personali non legge mai il nome o la casa di chi va al centro, ne'
 # senza ne' con --includi-dati-personali; il centro si vede sempre.
 kzero_cassaforte(cassaforte_giornata_mezzo_ufficio_dati_personali UFFICIO USCITA 0 FORMATO testo
@@ -862,7 +1258,7 @@ kzero_cassaforte(cassaforte_registro_dopo_giornata UFFICIO USCITA 0 FORMATO test
 
 # Chiusura del demo: identica alla riapertura; manifesto 1, cartella che c'e' gia', password corta.
 kzero_prova(cassaforte_chiudi BASE ${KZERO_DEMO} USCITA 0 FORMATO testo VARIABILI INGRESSO "una frase lunga per chiudere"
-            CONTIENE "riaperto e controllato, i dati sono identici all'originale" "Valori: 248 personali e 37 particolari"
+            CONTIENE "riaperto e controllato, i dati sono identici all'originale" "Valori: 257 personali e 37 particolari"
                      "va cancellata a mano"
             ARGOMENTI chiudi @PACCHETTO@ --scrivi @NUOVA@ --utente A --conservazione 2030-12-31 --password-da-ingresso)
 kzero_prova(cassaforte_chiudi_json BASE ${KZERO_DEMO} USCITA 0 FORMATO json SCHEMA cassaforte VARIABILI
@@ -1082,8 +1478,73 @@ kzero_prova(cassaforte_dopo_la_cancellazione BASE ${KZERO_CASSAFORTE} USCITA 1 F
 # Dati personali in chiaro senza "dati_inventati": avviso a ogni lettura.
 kzero_prova(dati_in_chiaro_senza_dati_inventati BASE ${KZERO_DEMO} USCITA 0 FORMATO testo
             MODIFICA TOGLI pacchetto.json /dati_inventati
-            CONTIENE "Avviso K-CTR-096: Il pacchetto contiene 248 valori personali e 37 particolari in chiaro"
+            CONTIENE "Avviso K-CTR-096: Il pacchetto contiene 257 valori personali e 37 particolari in chiaro"
             ARGOMENTI controlla @PACCHETTO@)
+
+# K-011 aggiunta 2: il pacchetto di prova degli orari chiuso nella cassaforte vera con tre utenti (TIT tutti i permessi,
+# UFF solo i dati personali, SAL solo i particolari); kzero controlla, giornata e ore per ciascuno: mai un errore interno
+# (prima: K-ERR-009 per chi aveva solo i dati particolari) e niente fuori dai suoi permessi.
+set(PW_K011_TIT "titolare delle prove degli orari")
+set(PW_K011_UFF "ufficio delle prove degli orari")
+set(PW_K011_SAL "salute delle prove degli orari")
+set(K011_CHIUSO ${CMAKE_CURRENT_BINARY_DIR}/k011-chiuso)
+add_test(NAME cassaforte.k011_chiudi
+         COMMAND ${CMAKE_COMMAND} -DKZERO=$<TARGET_FILE:kzero> -DORIGINE=${ORE_K011} -DDESTINAZIONE=${K011_CHIUSO}
+                 -DPW_TIT=${PW_K011_TIT} -DPW_UFF=${PW_K011_UFF} -DPW_SAL=${PW_K011_SAL}
+                 -P ${CMAKE_CURRENT_SOURCE_DIR}/programma/chiudi_k011.cmake)
+set_tests_properties(cassaforte.k011_chiudi PROPERTIES FIXTURES_SETUP k011_chiuso LABELS "programma;sicurezza")
+# Dati che ognuno non deve vedere: SAL (solo particolari) mai nomi, motivi e chi; UFF (solo personali) mai i tipi di servizio
+# e le esigenze.
+set(K011_PERSONALI "Dichiarazione Prova" "Forzatura Prova" "Ufficio turni Alfa" "servizio scolastico speciale" "Il percorso vero")
+# La dichiarazione (K-011 aggiunta 2) e' un dato particolare; il suo motivo, personale, solo con tutti e due i permessi.
+set(K011_PARTICOLARI "servizio disabili" "tipo disabili" "scelta per il tipo di servizio" "tipo scolastico" "dichiarazione dell'azienda"
+    "servizio scolastico speciale" "K-CTR-131")
+function(kzero_k011_chiuso nome utente password)
+  kzero_prova(${nome} BASE ${K011_CHIUSO} INGRESSO "${password}" ${ARGN})
+  set_tests_properties(programma.${nome} PROPERTIES FIXTURES_REQUIRED k011_chiuso LABELS "programma;sicurezza")
+endfunction()
+kzero_k011_chiuso(k011_chiuso_tit_controlla TIT "${PW_K011_TIT}" USCITA 1 FORMATO testo RESOCONTO
+                  CONTIENE "Cassaforte aperta dall'utente TIT (dati personali e particolari)"
+                           "11 errori (11 del piano degli orari), 107 avvisi."
+                  ARGOMENTI controlla @PACCHETTO@ --utente TIT --password-da-ingresso --includi-dati-personali --includi-dati-particolari)
+kzero_k011_chiuso(k011_chiuso_tit_giornata TIT "${PW_K011_TIT}" USCITA 0 FORMATO testo
+                  CONTIENE "dichiarazione dell'azienda (motivo: \"Il centro diurno del giovedi' e' per l'azienda un servizio scolastico speciale"
+                           "C-DIS-LUNGA-1"
+                  ARGOMENTI giornata @PACCHETTO@ --data 2026-11-26 --utente TIT --password-da-ingresso --includi-dati-personali
+                            --includi-dati-particolari)
+kzero_k011_chiuso(k011_chiuso_tit_ore TIT "${PW_K011_TIT}" USCITA 0 FORMATO testo
+                  CONTIENE "Persona P-DICHIARA (Dichiarazione Prova)" "Avviso K-CTR-131"
+                  ARGOMENTI ore @PACCHETTO@ --data 2026-11-26 --persona P-DICHIARA --utente TIT --password-da-ingresso
+                            --includi-dati-personali --includi-dati-particolari)
+kzero_k011_chiuso(k011_chiuso_uff_controlla UFF "${PW_K011_UFF}" USCITA 0 FORMATO testo RESOCONTO
+                  CONTIENE "Cassaforte aperta dall'utente UFF (dati personali)"
+                  NON_CONTIENE ${K011_PARTICOLARI} "K-ERR-009"
+                  ARGOMENTI controlla @PACCHETTO@ --utente UFF --password-da-ingresso --includi-dati-personali)
+kzero_k011_chiuso(k011_chiuso_uff_giornata UFF "${PW_K011_UFF}" USCITA 0 FORMATO testo
+                  CONTIENE "Cassaforte aperta dall'utente UFF (dati personali)" "C-DIS-LUNGA-1"
+                  NON_CONTIENE ${K011_PARTICOLARI}
+                  ARGOMENTI giornata @PACCHETTO@ --data 2026-11-26 --utente UFF --password-da-ingresso --includi-dati-personali)
+kzero_k011_chiuso(k011_chiuso_uff_ore UFF "${PW_K011_UFF}" USCITA 0 FORMATO testo
+                  CONTIENE "Persona P-DICHIARA (Dichiarazione Prova)" "Leggi, lavoro e rientri: non verificati"
+                  NON_CONTIENE ${K011_PARTICOLARI}
+                  ARGOMENTI ore @PACCHETTO@ --data 2026-11-26 --persona P-DICHIARA --utente UFF --password-da-ingresso
+                            --includi-dati-personali)
+kzero_k011_chiuso(k011_chiuso_sal_controlla SAL "${PW_K011_SAL}" USCITA 0 FORMATO testo RESOCONTO
+                  CONTIENE "Cassaforte aperta dall'utente SAL (dati particolari)"
+                           "Avviso K-CTR-129 (aziende.json, /aziende/0/modo_corse/corse/0/forzatura): Forzatura dell'azienda ALFA"
+                           "Motivo: riservato; scritta da riservato il 2026-10-28. Vale fino al 2027-06-30."
+                  NON_CONTIENE ${K011_PERSONALI} "K-ERR-009"
+                  ARGOMENTI controlla @PACCHETTO@ --utente SAL --password-da-ingresso --includi-dati-particolari)
+kzero_k011_chiuso(k011_chiuso_sal_giornata SAL "${PW_K011_SAL}" USCITA 0 FORMATO testo
+                  CONTIENE "Cassaforte aperta dall'utente SAL (dati particolari)" "C-DIS-LUNGA-1"
+                           "dichiarazione dell'azienda (motivo: riservato; scritta da riservato il 2026-10-28)"
+                  NON_CONTIENE ${K011_PERSONALI}
+                  ARGOMENTI giornata @PACCHETTO@ --data 2026-11-26 --utente SAL --password-da-ingresso --includi-dati-particolari)
+kzero_k011_chiuso(k011_chiuso_sal_ore SAL "${PW_K011_SAL}" USCITA 0 FORMATO testo
+                  CONTIENE "Persona P-DICHIARA, azienda ALFA" "Leggi, lavoro e rientri: non verificati"
+                  NON_CONTIENE ${K011_PERSONALI}
+                  ARGOMENTI ore @PACCHETTO@ --data 2026-11-26 --persona P-DICHIARA --utente SAL --password-da-ingresso
+                            --includi-dati-particolari)
 
 # --- Documentazione e architettura --------------------------------------------------
 add_test(NAME documentazione.errori_e_schemi
@@ -1132,6 +1593,7 @@ set_tests_properties(sicurezza.elenco_dei_componenti PROPERTIES LABELS sicurezza
 add_library(kzero_bersagli_fuzz STATIC fuzz/bersagli.cpp)
 target_link_libraries(kzero_bersagli_fuzz PUBLIC kzero_api)
 target_compile_options(kzero_bersagli_fuzz PRIVATE ${KZERO_WARNINGS})
+target_compile_definitions(kzero_bersagli_fuzz PRIVATE KZERO_SORGENTI="${PROJECT_SOURCE_DIR}")   # semi della cassaforte
 add_executable(rigioca_fuzz fuzz/rigioca_fuzz.cpp)
 target_link_libraries(rigioca_fuzz PRIVATE kzero_bersagli_fuzz)
 target_compile_options(rigioca_fuzz PRIVATE ${KZERO_WARNINGS})
@@ -1162,10 +1624,23 @@ target_compile_options(genera_scala PRIVATE ${KZERO_WARNINGS})
 add_test(NAME scala.genera COMMAND genera_scala ${CMAKE_CURRENT_BINARY_DIR}/scala)
 set_tests_properties(scala.genera PROPERTIES FIXTURES_SETUP scala LABELS scala)
 # Il riepilogo in due pezzi: in CMake il punto e virgola separa gli elementi di un elenco.
+# Dal K-011 con le leggi sugli orari della dimostrazione: i turni le rispettano anche nella lettura prudente. Dal K-011
+# aggiunta 1 le corse scolastiche fino a 50 km sono escluse con certezza dal Reg. 561 (e quindi dal D.Lgs. 234): sparisce
+# l'avviso sulla media di 4 mesi del D.Lgs. 234, perche' la legge non vale piu' per nessuno (la prova di scala ha solo
+# servizi scolastici).
 kzero_prova(scala_controlla USCITA 0 FORMATO testo
             CONTIENE "10000 corse, 600 mezzi, 1320 persone, 1200 turni" " 0 errori, 0 avvisi."
+            NON_CONTIENE "K-CTR-104"
             ARGOMENTI controlla ${CMAKE_CURRENT_BINARY_DIR}/scala)
 set_tests_properties(programma.scala_controlla PROPERTIES FIXTURES_REQUIRED scala LABELS "programma;scala")
+# K-011: gli orari di tutte le 1.320 persone in un mese, e quelli di una persona in una settimana (un anno intero si misura
+# a mano, DIARIO.md).
+kzero_prova(scala_ore USCITA 0 FORMATO testo CONTIENE "Persona P-10-132" "Totali del periodo"
+            ARGOMENTI ore ${CMAKE_CURRENT_BINARY_DIR}/scala --dal 2026-10-01 --al 2026-10-31)
+set_tests_properties(programma.scala_ore PROPERTIES FIXTURES_REQUIRED scala LABELS "programma;scala")
+kzero_prova(scala_ore_persona USCITA 0 FORMATO json SCHEMA ore CONTIENE "\"codice\": \"P-03-007\""
+            ARGOMENTI ore ${CMAKE_CURRENT_BINARY_DIR}/scala --dal 2026-10-12 --al 2026-10-18 --persona P-03-007 --formato json)
+set_tests_properties(programma.scala_ore_persona PROPERTIES FIXTURES_REQUIRED scala LABELS "programma;scala")
 # K-008: la giornata di un giovedi' di scuola (tutti i turni) e quella di una persona finiscono senza errori.
 kzero_prova(scala_giornata USCITA 0 FORMATO testo CONTIENE "Totali: 1200 turni (nessuno scoperto, nessuno senza mezzo)"
             ARGOMENTI giornata ${CMAKE_CURRENT_BINARY_DIR}/scala --data 2026-10-15)

@@ -1,7 +1,7 @@
 Giornata del 2026-12-08, martedi' - pacchetto DEMO-2026 "Pacchetto dimostrativo K-Zero" (dati inventati)
 Persona P-B3, azienda BETA, presa servizio a L-RIMESSA-BETA (Sorgenta, rimessa Trasporti Beta)
 Festivita': Immacolata Concezione (FEST-IT).
-Controllo del pacchetto: nessun errore, 8 avvisi (dettagli con kzero controlla).
+Controllo del pacchetto: nessun errore, 31 avvisi (dettagli con kzero controlla).
 Dati personali: sostituiti dal codice; dati particolari: riservati.
 
 T-B-FESTIVO "Festivo"  08:40-18:20 (9 ore e 40 minuti)  azienda BETA, autista
@@ -14,6 +14,7 @@ T-B-FESTIVO "Festivo"  08:40-18:20 (9 ore e 40 minuti)  azienda BETA, autista
                 (fermo 2 minuti)
    09:00-09:30  corsa C-B620-11 "Linea B620, festiva delle 09:00"
                 servizi S-LIN-B620 (tipo riservato, contratto CT-LIN-BETA, committente TPV)
+                modo per un dato particolare
                 calendario CAL-FESTIVI "Domeniche e festivita' nazionali", 60 giorni nel periodo; km a pieno 14,1, a vuoto 0
       09:00  F-SORGENTA  Sorgenta, Municipio  a bordo non noto
       09:12  F-LAGOBELLO  Lagobello, Lago  km a pieno 6,2  a bordo non noto
@@ -21,6 +22,7 @@ T-B-FESTIVO "Festivo"  08:40-18:20 (9 ore e 40 minuti)  azienda BETA, autista
    09:30-09:40  Sosta al capolinea (SOSTA), a F-MONTEBRINO (Montebrino, Centro)
    09:40-10:10  corsa C-B620-12 "Linea B620, festiva delle 09:40"
                 servizi S-LIN-B620 (tipo riservato, contratto CT-LIN-BETA, committente TPV)
+                modo per un dato particolare
                 calendario CAL-FESTIVI "Domeniche e festivita' nazionali", 60 giorni nel periodo; km a pieno 14,1, a vuoto 0
       09:40  F-MONTEBRINO  Montebrino, Centro  a bordo non noto
       09:58  F-LAGOBELLO  Lagobello, Lago  km a pieno 7,9  a bordo non noto
@@ -32,6 +34,7 @@ T-B-FESTIVO "Festivo"  08:40-18:20 (9 ore e 40 minuti)  azienda BETA, autista
                 (fermo 2 minuti)
    17:00-17:30  corsa C-B620-13 "Linea B620, festiva delle 17:00"
                 servizi S-LIN-B620 (tipo riservato, contratto CT-LIN-BETA, committente TPV)
+                modo per un dato particolare
                 calendario CAL-FESTIVI "Domeniche e festivita' nazionali", 60 giorni nel periodo; km a pieno 14,1, a vuoto 0
       17:00  F-SORGENTA  Sorgenta, Municipio  a bordo non noto
       17:12  F-LAGOBELLO  Lagobello, Lago  km a pieno 6,2  a bordo non noto
@@ -39,6 +42,7 @@ T-B-FESTIVO "Festivo"  08:40-18:20 (9 ore e 40 minuti)  azienda BETA, autista
    17:30-17:40  Sosta al capolinea (SOSTA), a F-MONTEBRINO (Montebrino, Centro)
    17:40-18:10  corsa C-B620-14 "Linea B620, festiva delle 17:40"
                 servizi S-LIN-B620 (tipo riservato, contratto CT-LIN-BETA, committente TPV)
+                modo per un dato particolare
                 calendario CAL-FESTIVI "Domeniche e festivita' nazionali", 60 giorni nel periodo; km a pieno 14,1, a vuoto 0
       17:40  F-MONTEBRINO  Montebrino, Centro  a bordo non noto
       17:58  F-LAGOBELLO  Lagobello, Lago  km a pieno 7,9  a bordo non noto

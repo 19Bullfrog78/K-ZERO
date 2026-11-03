@@ -18,11 +18,17 @@
 
 #include "chiusura.hpp"
 #include "classi.hpp"
+#include "comandi.hpp"
 #include "controllo.hpp"
+#include "errori.hpp"
+#include "esecutori.hpp"
 #include "formato_dati.hpp"
 #include "controlli.hpp"
 #include "lettore.hpp"
 #include "riservatezza.hpp"
+#include "orari.hpp"
+#include "schemi_dati.hpp"
+#include "tempo.hpp"
 
 using namespace kzero::api;
 using kzero::Check;
@@ -569,4 +575,281 @@ TEST(Unione, StessaRegolaDelConteggio) {
         const ValoriPerClasse rimasti = conta_valori(doc, f->schema, l.versioni.at(file));
         EXPECT_EQ(rimasti.personali + rimasti.particolari, 0u) << file;
     }
+}
+
+// --- K-011 aggiunta 2: i comandi con i permessi parziali, su tutti i pacchetti delle prove --------------------------------
+// La separazione dei dati segue gli schemi (classi.hpp): ogni campo personale o particolare, anche quelli che verranno,
+// arriva a un utente con permessi parziali solo se ne ha il permesso. La prova legge ogni pacchetto delle prove come lo
+// riceve chi ha solo i dati personali, chi ha solo i particolari (niente legati) e chi li ha tutti, e lancia kzero controlla,
+// kzero giornata e kzero ore: mai un errore interno. Perche' valga anche per i campi futuri, controlla prima che ogni campo
+// personale o particolare degli schemi compaia in almeno uno dei pacchetti (altrimenti: aggiungerlo al pacchetto di prova
+// degli orari, tests/strumenti/genera_k011.py).
+
+namespace {
+
+InMemoria da_cartella(const std::string& cartella) {
+    InMemoria m;
+    const CartellaSuDisco d(cartella);
+    for (const Sorgente::Voce& v : d.voci())
+        if (!v.cartella) m.file[v.nome] = d.leggi(v.nome, kMassimoByteFile).testo;
+    return m;
+}
+
+struct PacchettoDiProva {
+    std::string nome;
+    InMemoria chiaro;
+};
+
+std::vector<PacchettoDiProva> pacchetti_delle_prove() {
+    const std::string prove = KZERO_CARTELLA_PROVE;
+    std::vector<PacchettoDiProva> out;
+    for (const char* c : {"/../esempi/demo", "/../esempi/demo-numeri", "/esempi/k011-orari", "/esempi/k007-demo", "/esempi/k007-demo-numeri"})
+        out.push_back({c, da_cartella(prove + c)});
+    return out;
+}
+
+// I campi marcati personali o particolari di uno schema (marcatura scritta sul campo o sulla sua definizione), come
+// percorsi con "[]" per gli elementi degli elenchi. Si seguono properties, items, oneOf, anyOf e allOf.
+void campi_riservati(const JsonDati& radice, const JsonDati& nodo, const std::string& percorso, std::set<std::string>& out, int prof) {
+    if (prof > 40 || !nodo.is_object()) return;
+    const JsonDati& def = SchemiDati::risolvi(radice, nodo);
+    for (const JsonDati* x : {&nodo, &def}) {
+        const auto c = x->find("x-kzero-classe");
+        if (c != x->end() && c->is_string() && c->get<std::string>() != "comune" && !percorso.empty()) out.insert(percorso);
+    }
+    if (!def.is_object()) return;
+    if (const auto props = def.find("properties"); props != def.end() && props->is_object())
+        for (const auto& [k, v] : props->items()) campi_riservati(radice, v, percorso + "/" + k, out, prof + 1);
+    if (const auto items = def.find("items"); items != def.end() && items->is_object())
+        campi_riservati(radice, *items, percorso + "/[]", out, prof + 1);
+    for (const char* k : {"oneOf", "anyOf", "allOf"})
+        if (const auto alt = def.find(k); alt != def.end() && alt->is_array())
+            for (const JsonDati& a : *alt) campi_riservati(radice, a, percorso, out, prof + 1);
+}
+
+// I percorsi che un documento usa davvero (gli stessi "[]").
+void percorsi_usati(const JsonDati& v, const std::string& percorso, std::set<std::string>& out) {
+    if (v.is_object()) {
+        for (const auto& [k, x] : v.items()) {
+            out.insert(percorso + "/" + k);
+            percorsi_usati(x, percorso + "/" + k, out);
+        }
+    } else if (v.is_array() && !v.empty()) {
+        out.insert(percorso + "/[]");
+        for (const JsonDati& x : v) percorsi_usati(x, percorso + "/[]", out);
+    }
+}
+
+std::string nome_dell_errore(const ErroreKZero& e) { return e.definizione().codice + ": " + e.messaggio(); }
+
+// Lancia un comando su un pacchetto gia' letto: true se finisce senza un errore interno (un errore K-ERR dei dati o dei
+// parametri va bene: e' una risposta del programma); altrimenti scrive cosa e' successo in "dove".
+bool senza_errore_interno(const std::function<Risultato()>& comando, const std::string& dove, std::string& errori) {
+    try {
+        const Risultato r = comando();
+        if (r.codice == static_cast<int>(CodiceUscita::ErroreInterno)) {
+            errori += dove + ": uscita 3\n";
+            return false;
+        }
+    } catch (const ErroreKZero& e) {
+        if (e.definizione().errore == Errore::ErroreInterno) {
+            errori += dove + ": " + nome_dell_errore(e) + "\n";
+            return false;
+        }
+    } catch (const std::exception& e) {
+        errori += dove + ": eccezione " + e.what() + "\n";
+        return false;
+    }
+    return true;
+}
+
+}  // namespace
+
+// Un elemento marcato intero (es. un'assenza) va nella cassaforte tutto nella sua classe: non puo' contenere campi marcati con
+// l'altra classe riservata, che finirebbero a chi non ha il loro permesso (K-011 aggiunta 2). Un campo personale dentro un
+// campo particolare invece si separa e va tra i legati (classi.hpp).
+namespace {
+void elementi_interi(const JsonDati& radice, const JsonDati& nodo, const std::string& percorso, const std::string& intero,
+                     const std::string& classe_intero, std::string& errori, int prof) {
+    if (prof > 40 || !nodo.is_object()) return;
+    const JsonDati& def = SchemiDati::risolvi(radice, nodo);
+    std::string classe;
+    for (const JsonDati* x : {&def, &nodo}) {
+        const auto c = x->find("x-kzero-classe");
+        if (c != x->end() && c->is_string()) classe = c->get<std::string>();
+    }
+    if (!intero.empty() && !classe.empty() && classe != "comune" && classe != classe_intero)
+        errori += percorso + " (" + classe + ") dentro l'elemento intero " + intero + " (" + classe_intero + ")\n";
+    if (!def.is_object()) return;
+    if (const auto props = def.find("properties"); props != def.end() && props->is_object())
+        for (const auto& [k, v] : props->items()) elementi_interi(radice, v, percorso + "/" + k, intero, classe_intero, errori, prof + 1);
+    if (const auto items = def.find("items"); items != def.end() && items->is_object()) {
+        std::string ci;
+        const JsonDati& di = SchemiDati::risolvi(radice, *items);
+        for (const JsonDati* x : {&di, &*items}) {
+            const auto c = x->find("x-kzero-classe");
+            if (c != x->end() && c->is_string()) ci = c->get<std::string>();
+        }
+        const bool marcato_intero = intero.empty() && !ci.empty() && ci != "comune";
+        elementi_interi(radice, *items, percorso + "/[]", marcato_intero ? percorso + "/[]" : intero, marcato_intero ? ci : classe_intero,
+                        errori, prof + 1);
+    }
+    for (const char* k : {"oneOf", "anyOf", "allOf"})
+        if (const auto alt = def.find(k); alt != def.end() && alt->is_array())
+            for (const JsonDati& a : *alt) elementi_interi(radice, a, percorso, intero, classe_intero, errori, prof + 1);
+}
+}  // namespace
+
+TEST(Unione, ElementiInteriSenzaCampiDiUnAltraClasse) {
+    std::string errori;
+    for (const FileDati& f : file_dati())
+        for (const int v : f.versioni) {
+            const JsonDati* radice = SchemiDati::incorporati().schema(f.schema, v);
+            ASSERT_NE(radice, nullptr) << f.schema;
+            elementi_interi(*radice, *radice, f.schema + ".v" + std::to_string(v), "", "", errori, 0);
+        }
+    EXPECT_TRUE(errori.empty()) << errori;
+}
+
+// K-011 aggiunta 2: la dichiarazione del modo delle corse e' un dato particolare; motivo e chi, personali dentro un dato
+// particolare, stanno tra i legati (tutti e due i permessi). La forzatura resta comune: motivo e chi solo personali.
+TEST(Unione, DichiarazioneParticolareConMotivoLegato) {
+    const std::string prove = KZERO_CARTELLA_PROVE;
+    const Chiuso c = chiudi(da_cartella(prove + "/esempi/k011-orari"));
+    std::map<std::string, std::string> trovate;   // "<cosa>/<campo>" -> classe e legato
+    for (const Voce& v : c.voci) {
+        if (v.file != "aziende.json") continue;
+        std::string cosa;
+        for (const JsonDati& p : v.percorso)
+            if (p.is_string() && (p == "dichiarazione" || p == "forzatura")) cosa = p.get<std::string>();
+        if (cosa.empty()) continue;
+        const std::string chiave = cosa + "/" + v.campo;
+        const std::string valore = std::string(v.classe == Classe::Particolare ? "particolare" : "personale") + (v.legato ? " legato" : "");
+        EXPECT_TRUE(!trovate.count(chiave) || trovate[chiave] == valore) << chiave;
+        trovate[chiave] = valore;
+    }
+    EXPECT_EQ(trovate["dichiarazione/motivo"], "particolare legato");
+    EXPECT_EQ(trovate["dichiarazione/chi"], "particolare legato");
+    EXPECT_EQ(trovate["dichiarazione/quando"], "particolare");
+    EXPECT_EQ(trovate["forzatura/motivo"], "personale");
+    EXPECT_EQ(trovate["forzatura/chi"], "personale");
+    EXPECT_FALSE(trovate.count("forzatura/quando"));   // comune: resta nel file normale
+    // Chi ha solo i dati particolari riceve la dichiarazione senza motivo e chi; chi ha solo i personali non la riceve.
+    for (const Visibilita v : {Visibilita{false, true}, Visibilita{true, false}}) {
+        const ValoriCassaforte x = valori(c, v);
+        const Lettura l = leggi_pacchetto(c.normali, &x);
+        ASSERT_TRUE(l.forma_valida()) << elenco(l.problemi);
+        const kzero::CompanySettings* alfa = nullptr;
+        for (const kzero::CompanySettings& a : l.pacchetto.company_settings)
+            if (a.company.code == "ALFA") alfa = &a;
+        ASSERT_TRUE(alfa && alfa->trip_modes);
+        std::size_t dichiarazioni = 0;
+        for (const auto* elenco_voci : {&alfa->trip_modes->by_service, &alfa->trip_modes->by_trip})
+            for (const kzero::ModeEntry& e : *elenco_voci)
+                if (e.declaration) {
+                    ++dichiarazioni;
+                    EXPECT_TRUE(e.declaration->reason.empty() && e.declaration->who.empty());
+                }
+        EXPECT_EQ(dichiarazioni, v.particolari ? 2u : 0u);
+    }
+}
+
+TEST(Unione, OgniCampoRiservatoDegliSchemiCompareNeiPacchettiDelleProve) {
+    std::map<std::string, std::set<std::string>> usati;   // schema -> percorsi usati nei file dell'ultima versione
+    for (const PacchettoDiProva& p : pacchetti_delle_prove())
+        for (const auto& [file, testo] : p.chiaro.file) {
+            const FileDati* f = file_dati_per_nome(file);
+            if (!f || file == "pacchetto.json") continue;
+            const JsonDati d = JsonDati::parse(testo);
+            if (d.value("schema_versione", 0) != f->versioni.back()) continue;
+            percorsi_usati(d, "", usati[f->schema]);
+        }
+    std::string mancanti;
+    for (const FileDati& f : file_dati()) {
+        if (f.file == "pacchetto.json") continue;
+        const JsonDati* radice = SchemiDati::incorporati().schema(f.schema, f.versioni.back());
+        ASSERT_NE(radice, nullptr) << f.schema;
+        std::set<std::string> riservati;
+        campi_riservati(*radice, *radice, "", riservati, 0);
+        for (const std::string& c : riservati)
+            if (!usati[f.schema].count(c)) mancanti += f.file + " " + c + "\n";
+    }
+    EXPECT_TRUE(mancanti.empty()) << "Campi personali o particolari degli schemi che nessun pacchetto delle prove usa (vanno "
+                                     "aggiunti al pacchetto di prova degli orari, tests/strumenti/genera_k011.py):\n"
+                                  << mancanti;
+}
+
+TEST(Unione, ComandiConPermessiParziali) {
+    const DefinizioneComando* controlla = trova_comando("controlla");
+    const DefinizioneComando* giornata = trova_comando("giornata");
+    const DefinizioneComando* ore = trova_comando("ore");
+    ASSERT_TRUE(controlla && giornata && ore);
+    std::string errori;
+    for (const PacchettoDiProva& p : pacchetti_delle_prove()) {
+        // I giorni della giornata: pochi, scelti perche' ogni corsa fatta da una persona compaia almeno una volta.
+        const Lettura completa = leggi_pacchetto(p.chiaro);
+        ASSERT_TRUE(completa.forma_valida()) << p.nome << "\n" << elenco(completa.problemi);
+        const kzero::DateRange periodo = completa.pacchetto.manifest.period;
+        kzero::HoursRequest richiesta;
+        richiesta.report = true;
+        richiesta.from = periodo.from;
+        richiesta.to = periodo.to;
+        kzero::HoursReport orari;
+        const Resoconto r = controlla_lettura(leggi_pacchetto(p.chiaro), Visibilita{true, true}, &richiesta, &orari);
+        std::map<kzero::Day, std::set<std::string>> corse_del_giorno;
+        for (const kzero::PersonHours& ph : orari.persons)
+            for (const kzero::DayHours& dh : ph.days)
+                for (const kzero::TripOnDay& t : dh.trips) corse_del_giorno[dh.pd->day].insert(t.trip->code);
+        std::set<std::string> da_coprire;
+        for (const auto& [d, c] : corse_del_giorno) da_coprire.insert(c.begin(), c.end());
+        std::vector<kzero::Day> giorni = {periodo.from};
+        while (!da_coprire.empty()) {
+            kzero::Day migliore = 0;
+            std::size_t quante = 0;
+            for (const auto& [d, c] : corse_del_giorno) {
+                const std::size_t n = static_cast<std::size_t>(std::count_if(c.begin(), c.end(), [&](const std::string& x) { return da_coprire.count(x) > 0; }));
+                if (n > quante) {
+                    quante = n;
+                    migliore = d;
+                }
+            }
+            if (quante == 0) break;
+            giorni.push_back(migliore);
+            for (const std::string& x : corse_del_giorno.at(migliore)) da_coprire.erase(x);
+        }
+        const Chiuso c = chiudi(p.chiaro);
+        for (const Visibilita v : {Visibilita{true, false}, Visibilita{false, true}, Visibilita{true, true}}) {
+            const ValoriCassaforte valori_utente = valori(c, v);
+            const auto lettura = [&] {
+                accesso::LetturaPerComando lc;
+                lc.lettura = leggi_pacchetto(c.normali, &valori_utente);
+                lc.visibilita = v;
+                lc.utente = "PROVA";
+                lc.permessi = cassaforte::Permessi{v.personali, v.particolari};
+                return lc;
+            };
+            const std::string chi = p.nome + (v.personali && v.particolari ? " (tutti i permessi)" : v.personali ? " (solo personali)" : " (solo particolari)");
+            for (const Formato formato : {Formato::Testo, Formato::Json}) {
+                Parametri par;
+                par.formato = formato;
+                par.includi_dati_personali = v.personali;
+                par.includi_dati_particolari = v.particolari;
+                par.utente = "PROVA";
+                par.argomenti = {"pacchetto in memoria"};
+                const std::string f = formato == Formato::Json ? " json" : "";
+                senza_errore_interno([&] { return controlla_su(*controlla, par, lettura()); }, chi + ": controlla" + f, errori);
+                Parametri po = par;
+                po.dal = periodo.from;
+                po.al = periodo.to;
+                senza_errore_interno([&] { return ore_su(*ore, po, lettura()); }, chi + ": ore di tutto il periodo" + f, errori);
+                for (const kzero::Day d : giorni) {
+                    Parametri pg = par;
+                    pg.data = d;
+                    senza_errore_interno([&] { return giornata_su(*giornata, pg, lettura()); },
+                                         chi + ": giornata del " + kzero::text_from_day(d) + f, errori);
+                }
+            }
+        }
+    }
+    EXPECT_TRUE(errori.empty()) << errori;
 }

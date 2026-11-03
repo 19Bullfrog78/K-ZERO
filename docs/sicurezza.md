@@ -24,7 +24,7 @@ La valutazione d'impatto la fa il titolare; questa sezione gli da' i fatti sul p
 | Domanda | Risposta |
 |---|---|
 | Perche' (finalita') | Pianificare il trasporto: servizi di linea, scolastici, per disabili, ibridi; turni di autisti e assistenti; mezzi. |
-| Quali dati | Comuni: fermate pubbliche, scuole e centri, orari, calendari, mezzi, contratti, regolamenti, conteggi. Personali: dei passeggeri nome, casa, punto porta a porta, motivi scritti a mano (solo nel livello "completo"); di autisti e assistenti nome, casa, ruoli, rapporto e ore, disponibilita', abilitazioni, autorizzazioni, competenze, preferenze, assenze (tipo e giorni, mai la causa). Particolari (salute): esigenze dei passeggeri (carrozzina, ausili piegati, assistente necessario), tipo "disabili" di servizi e gruppi, conteggi di carrozzine e ausili, competenze richieste da un servizio o da un turno. Elenco completo, campo per campo: [formato-dati.md](formato-dati.md). |
+| Quali dati | Comuni: fermate pubbliche, scuole e centri, orari, calendari, mezzi, contratti, regolamenti, conteggi. Personali: dei passeggeri nome, casa, punto porta a porta, motivi scritti a mano (solo nel livello "completo"); di autisti e assistenti nome, casa, ruoli, rapporto e ore, disponibilita', abilitazioni, autorizzazioni, competenze, preferenze, assenze (tipo e giorni, mai la causa); dal K-011 anche contratto collettivo, ore previste e massime, scelte sugli orari e chiave del rientro della persona, giornate a chiamata, e quale legge sugli orari vale per la persona quando dipende dal rapporto o dal contratto collettivo. Particolari (salute): esigenze dei passeggeri (carrozzina, ausili piegati, assistente necessario), tipo "disabili" di servizi e gruppi, conteggi di carrozzine e ausili, competenze richieste da un servizio o da un turno; dal K-011 anche il tipo di servizio come motivo di un avviso sugli orari ("c'e' un motivo riservato"). Elenco completo, campo per campo: [formato-dati.md](formato-dati.md). |
 | Di chi | Alunni (minori), persone con disabilita' e loro accompagnatori, autisti e assistenti delle aziende. |
 | Quali dati mai | Codice fiscale, telefoni, mail, data di nascita, idoneita' medica, cause delle assenze: il formato non ha campi per scriverli (un campo cosi' aggiunto a mano e' un errore). |
 | Quanto | Il minimo: il livello "solo numeri" (consigliato) ha solo conteggi per fermata, niente nomi, case, porta a porta, motivi. |
@@ -230,6 +230,9 @@ non ha una password; non protegge da tutto. Detto onestamente:
   del programma.
 - **Memoria.** Un file vicino al massimo di 256 MB, preparato apposta, puo' occupare in memoria diversi GB mentre lo si
   legge. Il limite ferma gli errori e i file sbagliati, non un attacco fatto per esaurire la memoria di un PC piccolo.
+  Anche un'uscita grande si prepara tutta in memoria prima di scriverla (con un errore non resta mai a meta'): `kzero ore`
+  di un anno intero per oltre 1.000 persone chiede 1,4 GB in testo e 3,4 GB in JSON (DIARIO.md); su un PC piccolo
+  conviene chiedere un mese alla volta.
 - **Chi ha gia' accesso al PC** puo' cambiare i file mentre il programma li legge, o usare un collegamento fisso ("hard
   link", che il sistema non distingue da un file normale): sono fuori da cio' che il programma puo' controllare.
 - **Cartelle condivise in rete.** Il blocco della cartella dipende dal sistema: se non si puo' bloccare, il comando si

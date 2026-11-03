@@ -29,6 +29,72 @@ Json Vista::filtra(Classe c, Json valore, const std::string& codice) const {
     return c == Classe::Personale ? Json(codice) : Json(kRiservato);
 }
 
+Json Vista::modo_corsa(const kzero::TripMode& m) const {
+    // Nessuna riga per l'azienda senza il modo delle corse (non ha niente da dire).
+    if (!m.modes) return Json(nullptr);
+    using F = kzero::TripMode::From;
+    // K-011 aggiunta 2: tutto quello che dipende dalle scelte per tipo di servizio (che ci siano, che manchino, cosa dicono) e'
+    // un dato particolare. Senza i dati particolari, ogni corsa senza una scelta propria o del suo servizio mostra la stessa
+    // cosa ("riservato") se l'azienda ha almeno una scelta per tipo, anche quando per il suo tipo non c'e' nessuna scelta.
+    const bool dai_tipi = m.by_kinds || (!m.any && !m.modes->by_kind.empty());
+    if (dai_tipi && !visibile(Classe::Particolare, visibilita_)) return Json(kRiservato);
+    Json j = Json::object();
+    if (!m.any) {   // nessuna scelta: decide la legge
+        j["modo"] = "nessuna";
+        j["da"] = nullptr;
+    } else {
+        j["modo"] = m.mode == kzero::TripModeKind::Out ? "out" : "tachigrafo";
+        j["da"] = m.from == F::Trip ? "corsa" : m.from == F::Service ? "servizio" : m.from == F::Kind ? "tipo_di_servizio" : "impostazione";
+    }
+    j["regime"] = m.modes->regime.code;
+    j["forza"] = m.any && m.mode == kzero::TripModeKind::Tachograph ? Json(m.strength == kzero::ChoiceStrength::Limit ? "limite" : "preferenza")
+                                                                    : Json(nullptr);
+    // Motivo e chi: personali. Nella dichiarazione (dato particolare, K-011 aggiunta 2) stanno dentro un dato particolare:
+    // si vedono solo con tutti e due i permessi, come nome e casa di chi va in un luogo sensibile. Un testo vuoto: non
+    // arrivato dalla cassaforte (permessi), quindi riservato.
+    const bool legati = visibile(Classe::Personale, visibilita_) && visibile(Classe::Particolare, visibilita_);
+    const auto giustificazione = [&](const kzero::ModeEntry* e, bool forzatura) -> Json {
+        if (!e) return Json(nullptr);
+        const kzero::ModeJustification& g = forzatura ? *e->forcing : *e->declaration;
+        const bool vede = forzatura ? visibile(Classe::Personale, visibilita_) : legati;
+        Json x = Json::object();
+        x["motivo"] = vede && !g.reason.empty() ? Json(g.reason) : Json(kRiservato);
+        x["chi"] = vede && !g.who.empty() ? Json(g.who) : Json(kRiservato);
+        x["quando"] = kzero::text_from_day(g.when);
+        x["fino_al"] = g.until ? Json(kzero::text_from_day(*g.until)) : Json(nullptr);
+        return x;
+    };
+    j["forzatura"] = giustificazione(m.forcing, true);
+    // La dichiarazione c'e' solo dove l'esclusione e' da confermare (dice il tipo di servizio): senza i dati particolari
+    // "riservato" su ogni corsa, che ci sia o no, e la riga di testo non la nomina.
+    j["dichiarazione"] = visibile(Classe::Particolare, visibilita_) ? giustificazione(m.declaration, false) : Json(kRiservato);
+    return j;
+}
+
+std::string testo_modo_corsa(const Json& m) {
+    const auto txt = [](const Json& v) { return v.is_string() ? v.get<std::string>() : v.dump(); };
+    if (m.is_string()) return "per un dato particolare";   // riservato: dipende dalle scelte per tipo di servizio
+    if (m.at("modo") == "nessuna") return "nessuna scelta, decide la legge (regime " + txt(m.at("regime")) + ")";
+    const std::string da = txt(m.at("da"));
+    std::string x = m.at("modo") == "out" ? std::string("OUT") : std::string("tachigrafo");
+    if (m.at("forza").is_string()) x += " come " + m.at("forza").get<std::string>();
+    x += da == "corsa"              ? ", scelta per la corsa"
+         : da == "servizio"         ? ", scelta per il servizio"
+         : da == "tipo_di_servizio" ? ", scelta per il tipo di servizio"
+                                    : ", per l'impostazione dell'azienda sulle scelte diverse";
+    const auto giustificazione = [&](const char* campo, const char* nome) {
+        const Json& g = m.at(campo);
+        if (!g.is_object()) return;   // nessuna, oppure riservata (la dichiarazione senza i dati particolari)
+        // Il motivo e' un testo libero: tra virgolette, perche' puo' finire con il suo punto.
+        const std::string motivo = g.at("motivo") == kRiservato ? txt(g.at("motivo")) : "\"" + txt(g.at("motivo")) + "\"";
+        x += std::string(", ") + nome + " (motivo: " + motivo + "; scritta da " + txt(g.at("chi")) + " il " +
+             txt(g.at("quando")) + (g.at("fino_al").is_null() ? std::string() : "; vale fino al " + txt(g.at("fino_al"))) + ")";
+    };
+    giustificazione("forzatura", "forzatura dell'azienda");
+    giustificazione("dichiarazione", "dichiarazione dell'azienda");
+    return x + " (regime " + txt(m.at("regime")) + ")";
+}
+
 const char* nome_tipo_luogo(kzero::PlaceType t) {
     switch (t) {
         case kzero::PlaceType::Stop: return "fermata";

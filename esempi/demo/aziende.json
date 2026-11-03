@@ -1,23 +1,28 @@
 {
   "schema": "aziende",
-  "schema_versione": 1,
+  "schema_versione": 2,
   "aziende": [
     {
       "azienda": "ALFA",
       "norme": "N-IT",
-      "impostazioni": { "ricovero_vicino_a_casa": "preferito", "abbinamento_autista_mezzo": "preferito" },
+      "impostazioni": {
+        "ricovero_vicino_a_casa": "preferito",
+        "abbinamento_autista_mezzo": "preferito",
+        "soste_non_scritte": { "categoria": "disponibilita", "oltre_minuti": 30, "categoria_oltre": "interruzione" },
+        "margine_giornate_massime": 30
+      },
       "attivita": [
-        { "codice": "PRESA", "nome": "Presa servizio con il controllo del mezzo", "usa_il_mezzo": true },
-        { "codice": "FINE", "nome": "Fine servizio con il controllo del mezzo", "usa_il_mezzo": true },
-        { "codice": "PULIZIA", "nome": "Pulizia del mezzo", "usa_il_mezzo": true },
-        { "codice": "RIFORNIMENTO", "nome": "Rifornimento", "usa_il_mezzo": true },
-        { "codice": "RICARICA", "nome": "Ricarica del mezzo elettrico", "usa_il_mezzo": true },
-        { "codice": "ATTESA", "nome": "Attesa con il mezzo", "usa_il_mezzo": true },
-        { "codice": "PAUSA", "nome": "Pausa", "usa_il_mezzo": false },
-        { "codice": "VUOTO", "nome": "Trasferimento a vuoto", "usa_il_mezzo": true },
-        { "codice": "RISERVA", "nome": "Riserva a disposizione in rimessa", "usa_il_mezzo": false },
-        { "codice": "REPERIBILE", "nome": "Reperibilita'", "usa_il_mezzo": false },
-        { "codice": "A-PIEDI", "nome": "Spostamento della persona senza il mezzo", "usa_il_mezzo": false }
+        { "codice": "PRESA", "nome": "Presa servizio con il controllo del mezzo", "usa_il_mezzo": true, "tempo": "altre_mansioni" },
+        { "codice": "FINE", "nome": "Fine servizio con il controllo del mezzo", "usa_il_mezzo": true, "tempo": "altre_mansioni" },
+        { "codice": "PULIZIA", "nome": "Pulizia del mezzo", "usa_il_mezzo": true, "tempo": "altre_mansioni" },
+        { "codice": "RIFORNIMENTO", "nome": "Rifornimento", "usa_il_mezzo": true, "tempo": "altre_mansioni" },
+        { "codice": "RICARICA", "nome": "Ricarica del mezzo elettrico", "usa_il_mezzo": true, "tempo": "disponibilita", "nota": "Il conducente resta con il mezzo in carica, pronto a ripartire: disponibilita' (lavoro effettivo per la L. 138, non orario di lavoro per il D.Lgs. 234)." },
+        { "codice": "ATTESA", "nome": "Attesa con il mezzo", "usa_il_mezzo": true, "tempo": "disponibilita", "nota": "Attesa con il mezzo, pronto a partire (es. la gita): disponibilita'. Se il conducente e' libero di andarsene, si scrive PAUSA." },
+        { "codice": "PAUSA", "nome": "Pausa", "usa_il_mezzo": false, "tempo": "interruzione" },
+        { "codice": "VUOTO", "nome": "Trasferimento a vuoto", "usa_il_mezzo": true, "tempo": "guida" },
+        { "codice": "RISERVA", "nome": "Riserva a disposizione in rimessa", "usa_il_mezzo": false, "tempo": "disponibilita", "nota": "In rimessa, comandato a disposizione (L. 138 art. 6): disponibilita'." },
+        { "codice": "REPERIBILE", "nome": "Reperibilita'", "usa_il_mezzo": false, "tempo": "reperibilita", "nota": "Da casa, con il solo obbligo di essere raggiungibile: reperibilita' (non lavoro effettivo nella lettura certa della L. 138)." },
+        { "codice": "A-PIEDI", "nome": "Spostamento della persona senza il mezzo", "usa_il_mezzo": false, "tempo": "altre_mansioni", "nota": "Spostamento per servizio senza il mezzo: e' lavoro ma non guida, quindi altre mansioni." }
       ],
       "tipi_assenza": [
         { "codice": "FERIE", "nome": "Ferie" },
@@ -32,20 +37,48 @@
         { "codice": "PEDANA", "nome": "Formato per l'uso della pedana" },
         { "codice": "LINEA-B610", "nome": "Conosce la linea B610" },
         { "codice": "ELETTRICO", "nome": "Formato per il mezzo elettrico" }
-      ]
+      ],
+      "scelte_orari": [
+        { "tipo": "ampiezza_massima", "massimo_minuti": 660, "forza": "preferenza", "nota": "Giornate non piu' lunghe di 11 ore, se si puo'." }
+      ],
+      "rientro": { "fermo_minimo_minuti": 30, "fattore_guida": 2, "forza": "preferenza" },
+      "modo_corse": {
+        "regime": "R-561",
+        "per_tipo_servizio": [
+          { "tipo_servizio": "linea", "modo": "out" },
+          { "tipo_servizio": "scolastico", "modo": "out" },
+          { "tipo_servizio": "altro", "modo": "tachigrafo", "nota": "Gite: niente OUT, solo la carta del tachigrafo." }
+        ],
+        "nota": "Linee e scolastico con le regole nazionali dove la legge lo permette; le gite con il tachigrafo."
+      }
     },
     {
       "azienda": "BETA",
       "norme": "N-IT",
-      "impostazioni": { "ricovero_vicino_a_casa": "mai", "abbinamento_autista_mezzo": "nessuno" },
+      "impostazioni": {
+        "ricovero_vicino_a_casa": "mai",
+        "abbinamento_autista_mezzo": "nessuno",
+        "soste_non_scritte": { "categoria": "disponibilita", "oltre_minuti": 15, "categoria_oltre": "interruzione" }
+      },
       "attivita": [
-        { "codice": "PRESA-SERVIZIO", "nome": "Uscita dalla rimessa e controllo", "usa_il_mezzo": true },
-        { "codice": "RIENTRO", "nome": "Rientro in rimessa", "usa_il_mezzo": true },
-        { "codice": "SOSTA", "nome": "Sosta al capolinea", "usa_il_mezzo": true }
+        { "codice": "PRESA-SERVIZIO", "nome": "Uscita dalla rimessa e controllo", "usa_il_mezzo": true, "tempo": "altre_mansioni" },
+        { "codice": "RIENTRO", "nome": "Rientro in rimessa", "usa_il_mezzo": true, "tempo": "guida" },
+        { "codice": "SOSTA", "nome": "Sosta al capolinea", "usa_il_mezzo": true, "tempo": "disponibilita", "nota": "Sosta con il mezzo al capolinea, pronto a ripartire: disponibilita'. Una sosta in cui il conducente e' libero si scrive come pausa o resta non scritta (oltre 15 minuti e' interruzione)." }
       ],
       "tipi_assenza": [{ "codice": "FERIE", "nome": "Ferie" }],
       "tipi_fermo": [{ "codice": "OFFICINA", "nome": "In officina" }],
       "competenze": [{ "codice": "INFANZIA", "nome": "Formata per l'accompagnamento dei bambini" }],
+      "scelte_orari": [
+        { "tipo": "lavoro_massimo", "periodo": "giornata", "massimo_minuti": 540, "forza": "limite", "nota": "Beta non fa giornate oltre 9 ore di lavoro." },
+        { "tipo": "riposo_giornaliero", "minimo_minuti": 660, "forza": "preferenza" }
+      ],
+      "rientro": { "fermo_minimo_minuti": 45, "fattore_guida": 1.5, "km_vuoti_massimi": 15, "forza": "limite" },
+      "modo_corse": {
+        "regime": "R-561",
+        "forza": "preferenza",
+        "per_tipo_servizio": [ { "tipo_servizio": "linea", "modo": "tachigrafo" } ],
+        "nota": "Trasporti Beta registra anche le linee con il tachigrafo: per scelta segue il Reg. 561 (come preferenza)."
+      },
       "nota": "Trasporti Beta vuole i mezzi sempre in rimessa la notte."
     }
   ]
