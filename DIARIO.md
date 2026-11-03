@@ -354,6 +354,32 @@
   i sanitizer 832 su 832 (29 minuti, 3 prove insieme). Fuzzing in locale sul codice finale, i 32 bersagli 60 secondi
   ciascuno, uno alla volta: 22.761 file del pacchetto, 16.911 righe di comando, 2.215.593 date e orari, 77.156
   cassaforti e 74.347 contenuti, 576.836 registri e 366.716 elenchi di voci, 288.369 password. Nessun guasto.
+- 2026-11-03 - K-011 aggiunta 2 (programma, ultima aggiunta, nella proposta "K-011: orari di lavoro", dopo il
+  controllo dell'arbitro dell'aggiunta 1 a c8aea44). **Blocco con i soli dati particolari** (bloccante): con il
+  pacchetto di prova chiuso, chi aveva solo i dati particolari (SAL) finiva kzero controlla, giornata e ore con
+  K-ERR-009 ("key 'motivo' not found"): motivo e chi della forzatura e della dichiarazione ora si leggono come gli
+  altri campi che possono mancare. Comandi divisi in lettura e lavoro su un pacchetto gia' letto; prova nuova che
+  legge ogni pacchetto delle prove come lo ricevono chi ha solo i personali, chi ha solo i particolari e chi li ha
+  tutti e lancia i tre comandi (mai un errore interno), con la copertura dei campi riservati degli schemi (il
+  pacchetto di prova ora li ha tutti: forzatura su un servizio, dichiarazione su una corsa, nota di una persona,
+  codici esterni e nota di un luogo privato, assenza di qualche ora); prova con la cassaforte vera (TIT, UFF, SAL).
+  **Dichiarazione dato particolare** (decisione dell'arbitro), con la regola generale "campo personale dentro un dato
+  particolare = legati" (motivo e chi: tutti e due i permessi). **Modo delle corse e tipo di servizio**: senza i dati
+  particolari ogni corsa senza una scelta propria o del suo servizio ha la stessa riga "per un dato particolare"
+  (prima la corsa per disabili del demo non aveva riga); con i dati particolari anche "nessuna scelta, decide la
+  legge"; K-CTR-132 variante 4. **Regimi per scelta riservati tutti** dove ci sono scelte del tachigrafo per tipo
+  (domanda fatta prima di scrivere codice; risposta dell'arbitro: riga fissa "Regimi seguiti per scelta dell'azienda:
+  riservati", niente casi a meta'; K-CTR-127/128 varianti particolari). **Testi veri**: K-CTR-129 e 131 senza
+  affermazioni false; K-CTR-134 e 135 quando forzatura o dichiarazione non cambiano niente. **Prova mancante** del
+  tachigrafo come limite nella settimana estesa (sabotaggio dell'arbitro, chosen_weeks). Trovato strada facendo:
+  K-CTR-129 era nascosto a chi aveva solo i particolari (segnato "personale" per il motivo): ora la forzatura si vede
+  a tutti, con motivo e chi riservati. Semi della cassaforte per il fuzzing dal pacchetto di prova degli orari (legati
+  anche dalle dichiarazioni). Demo: 0 errori, 31 avvisi (invariato). Pacchetto di prova: 11 errori, 107 avvisi (prima
+  103). Prove di prima cambiate: tre giornate attese e giornata_mezzo_dati_personali (righe del modo),
+  ore_tachigrafo_per_scelta_beta e ore_dichiarazione_con_una_nota (ora con --includi-dati-particolari),
+  ore_forzatura_motivo_riservato, testi di K-CTR-129 in due prove, controlla_orari (K-CTR-131 non piu' di base; 129,
+  134 in piu'), 103 -> 107 avvisi, catalogo 133 -> 135, Api.classi_marcate_negli_schemi,
+  Orari.tachigrafo_su_una_linea_fino_a_50_km (variante 13 -> 43). Prove: 867 su 867 (prima dell'aggiunta 2: 834).
 
 ## Bug e limiti noti
 - I pesi del calcolo (ObjectiveWeights) hanno ancora valori provvisori nel codice, non usati: andranno nei dati con il
@@ -411,6 +437,9 @@
   oggi un avviso (K-CTR-107) e quegli orari non si giudicano. Il contratto collettivo vero (es. IC35) arrivera' dal
   consulente del lavoro, come regime nei dati. Il registro di servizio (art. 16 del Reg. 561, per le linee fino a 50 km)
   arrivera' con le stampe. Le letture "da confermare" sono in REGOLE.md, da portare al consulente.
+- Orari di lavoro (K-011 aggiunta 2), nota dell'arbitro per dopo: le righe dei regimi di legge di kzero ore ("vale da
+  confermare (per un dato particolare)", e "Non valgono: R-561" quando una dichiarazione rende certa l'esclusione) dipendono
+  dal tipo di servizio delle corse e restano come sono: dipendono dalla legge, non dalle scelte dell'azienda.
 - kzero ore e kzero controlla rifanno tutti i controlli a ogni richiesta. Con la prova di scala (1.320 persone, un anno):
   kzero controlla circa 11 secondi; kzero ore di una persona per l'anno o di tutti per una settimana circa 12 secondi; di
   tutti per un mese 16 secondi; di tutti per l'anno 38 secondi in testo (192 MB, 1,4 GB di memoria) e circa 1 minuto in
