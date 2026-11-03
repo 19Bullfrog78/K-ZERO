@@ -378,20 +378,18 @@ void aggiungi_orari(std::vector<DefinizioneControllo>& c) {
         const std::string dopo = " Se con i dati scritti vale il regime, il programma pianifica comunque OUT, come ha scelto l'azienda, ma "
                                  "non vuol dire \"regolare\": nella lettura prudente vale la legge come la calcolano i dati, e le violazioni che "
                                  "ne nascono sono avvisi con il motivo della forzatura.";
-        const std::string chi = " Motivo: \"{motivo}\"; scritta da {chi} il {quando}";
-        const std::string chi_r = " Il motivo e chi l'ha scritta sono dati personali (riservati); scritta il {quando}";
+        // La forzatura e' un dato comune, sempre visibile (decisione di Mauro): anche a chi ha solo i dati particolari
+        // (K-011 aggiunta 2). Motivo e chi sono valori personali: senza i dati personali diventano "riservato".
+        const std::string chi = " Motivo: {motivo}; scritta da {chi} il {quando}";
         std::vector<std::string> m;
-        std::map<int, std::string> r;
         for (int fino = 0; fino < 2; ++fino)
             for (const char* dove : {"la corsa {corsa}", "il servizio {servizio}"}) {
                 const std::string testa = std::string("Forzatura dell'azienda {azienda}: ") + dove +
                                           " si fa OUT per scelta cosciente dell'azienda, qualunque cosa dicano i dati scritti sul regime {regime}.";
                 const std::string fine = fino ? ". Vale fino al {fino_al}." : ".";
-                r[static_cast<int>(m.size())] = testa + chi_r + fine + dopo;
                 m.push_back(testa + chi + fine + dopo);
             }
-        DefinizioneControllo d(Check::ModeForced, "K-CTR-129", A, PE, "Forzatura dell'azienda: OUT per scelta cosciente", m, {}, r);
-        d.personali_se_nascosti = true;
+        DefinizioneControllo d(Check::ModeForced, "K-CTR-129", A, N, "Forzatura dell'azienda: OUT per scelta cosciente", m);
         c.push_back(d);
     }
     {

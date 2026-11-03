@@ -258,18 +258,19 @@ private:
                 add(Check::UnknownReference, e.trip->src, {text_param("codice", e.trip->code), elements_param("elementi", Element::Trip)});
         for (const std::vector<ModeEntry>* v : {&m.by_service, &m.by_trip})
             for (const ModeEntry& e : *v) {
-                const auto params = [&](const ModeJustification& j) {
+                // virgolette: il motivo (testo libero) tra virgolette nel valore, cosi' "riservato" resta senza (K-CTR-129).
+                const auto params = [&](const ModeJustification& j, bool virgolette) {
                     std::vector<Param> x = {ref_param("azienda", Element::Company, s.company.code),
                                             e.trip ? ref_param("corsa", Element::Trip, e.trip->code)
                                                    : ref_param("servizio", Element::Service, e.service ? e.service->code : Code()),
-                                            text_param("regime", m.regime.code), orari::personal(text_param("motivo", j.reason), "riservato"),
+                                            text_param("regime", m.regime.code), orari::personal(text_param("motivo", virgolette ? "\"" + j.reason + "\"" : j.reason), "riservato"),
                                             orari::personal(text_param("chi", j.who), "riservato"), date_param("quando", j.when)};
                     if (j.until) x.push_back(date_param("fino_al", *j.until));
                     return x;
                 };
                 // Varianti: per la corsa 0, per il servizio 1; con la data fino a cui vale +2.
-                if (e.forcing) add(Check::ModeForced, e.forcing->src, params(*e.forcing), (e.trip ? 0 : 1) + (e.forcing->until ? 2 : 0));
-                if (e.declaration) add(Check::ModeDeclared, e.declaration->src, params(*e.declaration), e.trip ? 0 : 1);
+                if (e.forcing) add(Check::ModeForced, e.forcing->src, params(*e.forcing, true), (e.trip ? 0 : 1) + (e.forcing->until ? 2 : 0));
+                if (e.declaration) add(Check::ModeDeclared, e.declaration->src, params(*e.declaration, false), e.trip ? 0 : 1);
             }
     }
 

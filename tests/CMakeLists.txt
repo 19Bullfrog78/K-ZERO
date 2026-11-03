@@ -797,7 +797,7 @@ kzero_prova(ore_forzatura_con_avviso_e_rischio USCITA 0 FORMATO testo
             ARGOMENTI ore ${ORE_K011} --data 2026-11-24 --persona P-FORZATA --includi-dati-personali)
 kzero_prova(ore_forzatura_motivo_riservato USCITA 0 FORMATO testo
             CONTIENE "forzatura dell'azienda (motivo: riservato; scritta da riservato il 2026-10-28; vale fino al 2027-06-30)"
-                     "Il motivo e chi l'ha scritta sono dati personali (riservati); scritta il 2026-10-28."
+                     "Motivo: riservato; scritta da riservato il 2026-10-28. Vale fino al 2027-06-30."
                      "ci sarebbero violazioni della legge (quali e per chi: dati personali, riservati)"
             NON_CONTIENE "Ufficio turni Alfa" "Il percorso vero" "Forzatura Prova"
             ARGOMENTI ore ${ORE_K011} --data 2026-11-24 --persona P-FORZATA)
@@ -1531,6 +1531,8 @@ kzero_k011_chiuso(k011_chiuso_uff_ore UFF "${PW_K011_UFF}" USCITA 0 FORMATO test
                             --includi-dati-personali)
 kzero_k011_chiuso(k011_chiuso_sal_controlla SAL "${PW_K011_SAL}" USCITA 0 FORMATO testo RESOCONTO
                   CONTIENE "Cassaforte aperta dall'utente SAL (dati particolari)"
+                           "Avviso K-CTR-129 (aziende.json, /aziende/0/modo_corse/corse/0/forzatura): Forzatura dell'azienda ALFA"
+                           "Motivo: riservato; scritta da riservato il 2026-10-28. Vale fino al 2027-06-30."
                   NON_CONTIENE ${K011_PERSONALI} "K-ERR-009"
                   ARGOMENTI controlla @PACCHETTO@ --utente SAL --password-da-ingresso --includi-dati-particolari)
 kzero_k011_chiuso(k011_chiuso_sal_giornata SAL "${PW_K011_SAL}" USCITA 0 FORMATO testo
