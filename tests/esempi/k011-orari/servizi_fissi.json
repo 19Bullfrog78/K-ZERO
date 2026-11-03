@@ -235,6 +235,12 @@
       "turno": "T-FORZATA",
       "persona": "P-FORZATA",
       "calendario": "CAL-T-FORZATA"
+    },
+    {
+      "codice": "SF-T-NONSERVE",
+      "turno": "T-NONSERVE",
+      "persona": "P-NONSERVE",
+      "calendario": "CAL-T-NONSERVE"
     }
   ]
 }

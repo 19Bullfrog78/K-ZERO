@@ -729,7 +729,11 @@ Risultato esegui_giornata(const DefinizioneComando& comando, const Parametri& pa
     std::string nota = "giornata del " + kzero::text_from_day(*parametri.data);
     if (!parametri.persona.empty()) nota += ", persona " + parametri.persona;
     if (!parametri.mezzo.empty()) nota += ", mezzo " + parametri.mezzo;
-    accesso::LetturaPerComando lc = accesso::leggi_per_comando(cartella, parametri, comando.nome, nota);
+    return giornata_su(comando, parametri, accesso::leggi_per_comando(cartella, parametri, comando.nome, nota));
+}
+
+Risultato giornata_su(const DefinizioneComando& comando, const Parametri& parametri, accesso::LetturaPerComando lc) {
+    const std::string& cartella = parametri.argomenti.at(0);
     const Visibilita visibilita = lc.visibilita;
     const Resoconto r = controlla_lettura(std::move(lc.lettura), visibilita);
     // Solo gli errori nei dati bloccano: gli errori del piano (K-011, le regole sugli orari) no, perche' la giornata serve

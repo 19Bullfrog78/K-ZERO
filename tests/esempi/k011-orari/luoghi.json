@@ -272,7 +272,15 @@
       "coordinate": {
         "lat": 46.4433,
         "lon": 11.073
-      }
+      },
+      "codici_esterni": [
+        {
+          "sistema": "Consorzio Valle Alta",
+          "tipo": "scheda",
+          "codice": "PP-0001"
+        }
+      ],
+      "nota": "Campanello a sinistra del portone (prova inventata)."
     },
     {
       "codice": "PP-02",

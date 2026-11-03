@@ -817,6 +817,21 @@
         "sabato",
         "domenica"
       ]
+    },
+    {
+      "codice": "CAL-T-NONSERVE",
+      "nome": "Solo il 2026-11-23",
+      "dal": "2026-11-23",
+      "al": "2026-11-23",
+      "giorni": [
+        "lunedi",
+        "martedi",
+        "mercoledi",
+        "giovedi",
+        "venerdi",
+        "sabato",
+        "domenica"
+      ]
     }
   ]
 }

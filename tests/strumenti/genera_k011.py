@@ -26,6 +26,10 @@ for i, (codice, nome, dlat) in enumerate([('F-PAUSA-A', 'Valfonda, Ponte Vecchio
     x = {"codice": codice, "tipo": "fermata", "nome": nome, "comune": "Valfonda",
          "coordinate": {"lat": round(base['coordinate']['lat'] + dlat, 4), "lon": base['coordinate']['lon']}}
     lu['luoghi'].append(x)
+# K-011 aggiunta 2: tutti i campi personali e particolari degli schemi compaiono in almeno un pacchetto delle prove (la prova
+# Unione.ComandiConPermessiParziali lo controlla): qui i codici esterni e la nota di un luogo privato.
+lu['luoghi_privati'][0]['codici_esterni'] = [{"sistema": "Consorzio Valle Alta", "tipo": "scheda", "codice": "PP-0001"}]
+lu['luoghi_privati'][0]['nota'] = "Campanello a sinistra del portone (prova inventata)."
 save('luoghi', lu)
 
 # Mezzi della regola dei 50 km: 17 posti, 8 posti (9 persone con il conducente: niente 561), 9 posti (10 persone: 561).
@@ -84,7 +88,25 @@ for sigla, servizio in [('DIS', 'S-DIS'), ('DICH', 'S-DIS-GIO')]:
 # Forzatura: una linea di 55 km con i km scritti, che per Alfa e' di 48 km (il percorso vero): OUT forzato.
 co['corse'].append(corsa('C-FORZATA', 'S-LIN-B610', 'CAL-T-FORZATA', 'F-STAZIONE', '06:00', 'F-MONTEBRINO', '10:20', 55.0,
                          "Linea lunga, OUT forzato dall'azienda"))
+# K-011 aggiunta 2: una forzatura su un servizio e una dichiarazione su una corsa che non servono (linee fino a 50 km, gia' fuori
+# dal Reg. 561), una giornata sola.
+co['corse'] += [
+    corsa('C-NONSERVE-1', 'S-LIN-PROVA', 'CAL-T-NONSERVE', 'F-STAZIONE', '08:00', 'F-PRADELLO', '08:30', 10.0, "Linea di prova, andata"),
+    corsa('C-NONSERVE-2', 'S-LIN-B610', 'CAL-T-NONSERVE', 'F-PRADELLO', '08:40', 'F-STAZIONE', '09:10', 10.0, "Linea, ritorno"),
+]
 save('corse', co)
+se = load('servizi')
+lin = copy.deepcopy([x for x in se['servizi'] if x['codice'] == 'S-LIN-B610'][0])
+lin.update({"codice": "S-LIN-PROVA", "nome": "Linea di prova della forzatura che non serve"})
+lin.pop('codici_esterni', None)
+lin['domanda']['gruppi'][0]['codice'] = 'G-LIN-PROVA'
+# Il servizio in fondo all'elenco, senza riscrivere il resto del file (resta come nel demo).
+testo = open(f'{DST}/servizi.json', encoding='utf-8').read()
+coda = testo.rstrip().rsplit(']', 1)
+assert len(coda) == 2 and coda[1].strip() == '}'
+nuovo = json.dumps(lin, ensure_ascii=False, indent=2).replace('\n', '\n    ')
+with open(f'{DST}/servizi.json', 'w', encoding='utf-8') as f:
+    f.write(coda[0].rstrip() + ',\n    ' + nuovo + '\n  ]\n}\n')
 
 ca = load('calendari')
 tu = {"schema": "turni", "schema_versione": 1, "turni": []}
@@ -214,13 +236,20 @@ turno('T-FORZATA', "Linea lunga in OUT forzato", 'P-FORZATA', '2026-11-24',
       apertura('05:30', '05:45', 'F-STAZIONE', '06:00') + [c('C-FORZATA'), att('FINE', 'F-MONTEBRINO', '10:20', '10:30')], mezzo='V-17',
       fine='F-MONTEBRINO')
 
+# K-011 aggiunta 2: la forzatura e la dichiarazione che non servono.
+turno('T-NONSERVE', "Linea con forzatura e dichiarazione che non servono", 'P-NONSERVE', '2026-11-23',
+      apertura('07:30', '07:45', 'F-STAZIONE', '08:00') + [c('C-NONSERVE-1'), c('C-NONSERVE-2')] +
+      chiusura('F-STAZIONE', '09:10', '09:20'), mezzo='V-17')
+
 save('calendari', ca)
 save('turni', tu)
 save('servizi_fissi', sf)
 save('rotazioni', {"schema": "rotazioni", "schema_versione": 1, "rotazioni": []})
 save('assegnazioni', {"schema": "assegnazioni", "schema_versione": 1, "assegnazioni": []})
 save('blocchi', {"schema": "blocchi", "schema_versione": 1, "blocchi": []})
-save('assenze', {"schema": "assenze", "schema_versione": 1, "assenze": []})
+# K-011 aggiunta 2: un'assenza di qualche ora (dalle, alle), in un giorno senza turni.
+save('assenze', {"schema": "assenze", "schema_versione": 1, "assenze": [
+    {"persona": "P-NONSERVE", "tipo": "PERMESSO", "dal": "2026-11-30", "al": "2026-11-30", "dalle": "10:00", "alle": "12:00"}]})
 save('fermi', {"schema": "fermi", "schema_versione": 1, "fermi": []})
 
 pe = load('persone')
@@ -253,6 +282,7 @@ pe['persone'] += [
     persona('P-DISABILI', "Disabili Lunga", 'dipendente_tempo_pieno'),
     persona('P-DICHIARA', "Dichiarazione Prova", 'dipendente_tempo_pieno'),
     persona('P-FORZATA', "Forzatura Prova", 'dipendente_tempo_pieno'),
+    persona('P-NONSERVE', "Nonserve Prova", 'dipendente_tempo_pieno', nota="Preferisce i turni del mattino (prova inventata)."),
 ]
 save('persone', pe)
 
@@ -266,5 +296,14 @@ alfa['modo_corse']['servizi'] = [
 alfa['modo_corse']['corse'] = [
     {"corsa": "C-FORZATA", "modo": "out",
      "forzatura": {"motivo": "Il percorso vero e' di 48 km: i km scritti contano un tratto che la linea non fa piu' (prova inventata).",
-                   "chi": "Ufficio turni Alfa", "quando": "2026-10-28", "fino_al": "2027-06-30"}}]
+                   "chi": "Ufficio turni Alfa", "quando": "2026-10-28", "fino_al": "2027-06-30"}},
+    # K-011 aggiunta 2: una dichiarazione su una corsa di linea, dove l'esclusione e' gia' certa (non serve).
+    {"corsa": "C-NONSERVE-2", "modo": "out",
+     "dichiarazione": {"motivo": "Dichiarazione scritta per prova su una linea corta (prova inventata).",
+                       "chi": "Ufficio turni Alfa", "quando": "2026-10-28"}}]
+# K-011 aggiunta 2: una forzatura su un servizio di linea fino a 50 km, gia' fuori dal Reg. 561 (non serve).
+alfa['modo_corse']['servizi'].append(
+    {"servizio": "S-LIN-PROVA", "modo": "out",
+     "forzatura": {"motivo": "Forzatura scritta per prova su una linea corta (prova inventata).",
+                   "chi": "Ufficio turni Alfa", "quando": "2026-10-28"}})
 save('aziende', az)

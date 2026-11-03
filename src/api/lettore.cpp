@@ -765,10 +765,12 @@ TripModes modo_corse(const JsonDati& o, const std::string& p, const Conversione&
     if (o.contains("forza")) m.strength = forza(o.at("forza"));
     m.note = c.testo(o, "nota");
     m.src = c.src(p);
+    // Motivo e chi sono dati personali (nella dichiarazione, dato particolare, anche legati): chi non li riceve dalla
+    // cassaforte li ha mancanti, e si mostrano come "riservato" (K-011 aggiunta 2).
     const auto giustificazione = [&](const JsonDati& g, const std::string& pg) {
         ModeJustification j;
-        j.reason = g.at("motivo").get<std::string>();
-        j.who = g.at("chi").get<std::string>();
+        j.reason = c.testo(g, "motivo");
+        j.who = c.testo(g, "chi");
         j.when = c.data(g.at("quando"));
         j.until = c.data_opz(g, "fino_al");
         j.src = c.src(pg);

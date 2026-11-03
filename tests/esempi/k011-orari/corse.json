@@ -2337,6 +2337,48 @@
           }
         }
       ]
+    },
+    {
+      "codice": "C-NONSERVE-1",
+      "nome": "Linea di prova, andata",
+      "servizi": [
+        "S-LIN-PROVA"
+      ],
+      "calendario": "CAL-T-NONSERVE",
+      "passaggi": [
+        {
+          "luogo": "F-STAZIONE",
+          "orario": "08:00"
+        },
+        {
+          "luogo": "F-PRADELLO",
+          "orario": "08:30",
+          "km": {
+            "pieni": 10.0
+          }
+        }
+      ]
+    },
+    {
+      "codice": "C-NONSERVE-2",
+      "nome": "Linea, ritorno",
+      "servizi": [
+        "S-LIN-B610"
+      ],
+      "calendario": "CAL-T-NONSERVE",
+      "passaggi": [
+        {
+          "luogo": "F-PRADELLO",
+          "orario": "08:40"
+        },
+        {
+          "luogo": "F-STAZIONE",
+          "orario": "09:10",
+          "km": {
+            "pieni": 10.0
+          }
+        }
+      ]
     }
   ]
 }

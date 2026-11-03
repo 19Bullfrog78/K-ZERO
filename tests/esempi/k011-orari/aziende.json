@@ -166,6 +166,15 @@
               "chi": "Ufficio turni Alfa",
               "quando": "2026-10-28"
             }
+          },
+          {
+            "servizio": "S-LIN-PROVA",
+            "modo": "out",
+            "forzatura": {
+              "motivo": "Forzatura scritta per prova su una linea corta (prova inventata).",
+              "chi": "Ufficio turni Alfa",
+              "quando": "2026-10-28"
+            }
           }
         ],
         "corse": [
@@ -177,6 +186,15 @@
               "chi": "Ufficio turni Alfa",
               "quando": "2026-10-28",
               "fino_al": "2027-06-30"
+            }
+          },
+          {
+            "corsa": "C-NONSERVE-2",
+            "modo": "out",
+            "dichiarazione": {
+              "motivo": "Dichiarazione scritta per prova su una linea corta (prova inventata).",
+              "chi": "Ufficio turni Alfa",
+              "quando": "2026-10-28"
             }
           }
         ]

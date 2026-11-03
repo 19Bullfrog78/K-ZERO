@@ -1829,6 +1829,55 @@
           "alle": "10:30"
         }
       ]
+    },
+    {
+      "codice": "T-NONSERVE",
+      "nome": "Linea con forzatura e dichiarazione che non servono",
+      "azienda": "ALFA",
+      "ruolo": "autista",
+      "calendario": "CAL-T-NONSERVE",
+      "mezzo": {
+        "modo": "preciso",
+        "codice": "V-17"
+      },
+      "inizio": "L-RIMESSA-ALFA",
+      "fine": "L-RIMESSA-ALFA",
+      "elementi": [
+        {
+          "attivita": "PRESA",
+          "luogo": "L-RIMESSA-ALFA",
+          "dalle": "07:30",
+          "alle": "07:45"
+        },
+        {
+          "attivita": "VUOTO",
+          "luogo": "L-RIMESSA-ALFA",
+          "dalle": "07:45",
+          "alle": "08:00",
+          "verso": "F-STAZIONE",
+          "km_vuoti": 1.0
+        },
+        {
+          "corsa": "C-NONSERVE-1"
+        },
+        {
+          "corsa": "C-NONSERVE-2"
+        },
+        {
+          "attivita": "VUOTO",
+          "luogo": "F-STAZIONE",
+          "dalle": "09:10",
+          "alle": "09:20",
+          "verso": "L-RIMESSA-ALFA",
+          "km_vuoti": 1.0
+        },
+        {
+          "attivita": "FINE",
+          "luogo": "L-RIMESSA-ALFA",
+          "dalle": "09:20",
+          "alle": "09:30"
+        }
+      ]
     }
   ]
 }

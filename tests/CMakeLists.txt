@@ -660,7 +660,7 @@ kzero_prova(ore_cartella_inesistente USCITA 1 FORMATO testo ERRORE K-ERR-012
             ARGOMENTI ore ${CMAKE_CURRENT_BINARY_DIR}/cartella-che-non-esiste --data 2026-10-22)
 # Gli errori del piano (le regole sugli orari) non bloccano kzero ore ne' kzero giornata: servono proprio a correggerli.
 kzero_prova(ore_errori_del_piano_non_bloccano USCITA 0 FORMATO testo
-            CONTIENE "Controllo del pacchetto: 11 errori (11 del piano degli orari, che non bloccano), 103 avvisi"
+            CONTIENE "Controllo del pacchetto: 11 errori (11 del piano degli orari, che non bloccano), 105 avvisi"
                      "Errore K-CTR-110: La persona P-L138 supera una regola sugli orari (dati personali: riservati), il 2026-11-05."
             ARGOMENTI ore ${ORE_K011} --dal 2026-11-05 --al 2026-11-06 --persona P-L138)
 kzero_prova(giornata_errori_del_piano_non_bloccano USCITA 0 FORMATO testo
@@ -670,7 +670,7 @@ kzero_prova(giornata_errori_del_piano_non_bloccano_json USCITA 0 FORMATO json SC
             ARGOMENTI giornata ${ORE_K011} --data 2026-11-05 --formato json)
 # Il pacchetto di prova degli orari (dati inventati): un problema per ogni tipo di regola e di controllo nuovo.
 kzero_prova(controlla_orari USCITA 1 FORMATO testo RESOCONTO
-            CONTIENE "11 errori (11 del piano degli orari), 103 avvisi."
+            CONTIENE "11 errori (11 del piano degli orari), 105 avvisi."
             PROBLEMI "K-CTR-102|corse.json|/corse/34" "K-CTR-104|norme.json|/norme/0/regimi/2/regole/2"
                      "K-CTR-105|aziende.json|/aziende/0/rientro" "K-CTR-108|turni.json|/turni/31"
                      "K-CTR-109|persone.json|/persone/19" "K-CTR-110|persone.json|/persone/13" "K-CTR-110|persone.json|/persone/20"
@@ -682,6 +682,8 @@ kzero_prova(controlla_orari USCITA 1 FORMATO testo RESOCONTO
                      "K-CTR-129|aziende.json|/aziende/0/modo_corse/corse/0/forzatura"
                      "K-CTR-130|aziende.json|/aziende/0/modo_corse/corse/0/forzatura"
                      "K-CTR-131|aziende.json|/aziende/0/modo_corse/servizi/0/dichiarazione"
+                     "K-CTR-129|aziende.json|/aziende/0/modo_corse/servizi/1/forzatura"
+                     "K-CTR-131|aziende.json|/aziende/0/modo_corse/corse/1/dichiarazione"
             NON_CONTIENE ${DATI_PERSONALI_ORE} "Linea Lunga" "Esempi Pausa"
             ARGOMENTI controlla ${ORE_K011})
 kzero_prova(controlla_orari_json USCITA 1 FORMATO json SCHEMA controlla RESOCONTO
@@ -1402,6 +1404,66 @@ kzero_prova(dati_in_chiaro_senza_dati_inventati BASE ${KZERO_DEMO} USCITA 0 FORM
             MODIFICA TOGLI pacchetto.json /dati_inventati
             CONTIENE "Avviso K-CTR-096: Il pacchetto contiene 257 valori personali e 37 particolari in chiaro"
             ARGOMENTI controlla @PACCHETTO@)
+
+# K-011 aggiunta 2: il pacchetto di prova degli orari chiuso nella cassaforte vera con tre utenti (TIT tutti i permessi,
+# UFF solo i dati personali, SAL solo i particolari); kzero controlla, giornata e ore per ciascuno: mai un errore interno
+# (prima: K-ERR-009 per chi aveva solo i dati particolari) e niente fuori dai suoi permessi.
+set(PW_K011_TIT "titolare delle prove degli orari")
+set(PW_K011_UFF "ufficio delle prove degli orari")
+set(PW_K011_SAL "salute delle prove degli orari")
+set(K011_CHIUSO ${CMAKE_CURRENT_BINARY_DIR}/k011-chiuso)
+add_test(NAME cassaforte.k011_chiudi
+         COMMAND ${CMAKE_COMMAND} -DKZERO=$<TARGET_FILE:kzero> -DORIGINE=${ORE_K011} -DDESTINAZIONE=${K011_CHIUSO}
+                 -DPW_TIT=${PW_K011_TIT} -DPW_UFF=${PW_K011_UFF} -DPW_SAL=${PW_K011_SAL}
+                 -P ${CMAKE_CURRENT_SOURCE_DIR}/programma/chiudi_k011.cmake)
+set_tests_properties(cassaforte.k011_chiudi PROPERTIES FIXTURES_SETUP k011_chiuso LABELS "programma;sicurezza")
+# Dati che ognuno non deve vedere: SAL (solo particolari) mai nomi, motivi e chi; UFF (solo personali) mai i tipi di servizio
+# e le esigenze.
+set(K011_PERSONALI "Dichiarazione Prova" "Forzatura Prova" "Ufficio turni Alfa" "servizio scolastico speciale" "Il percorso vero")
+set(K011_PARTICOLARI "servizio disabili" "tipo disabili" "scelta per il tipo di servizio" "tipo scolastico")
+function(kzero_k011_chiuso nome utente password)
+  kzero_prova(${nome} BASE ${K011_CHIUSO} INGRESSO "${password}" ${ARGN})
+  set_tests_properties(programma.${nome} PROPERTIES FIXTURES_REQUIRED k011_chiuso LABELS "programma;sicurezza")
+endfunction()
+kzero_k011_chiuso(k011_chiuso_tit_controlla TIT "${PW_K011_TIT}" USCITA 1 FORMATO testo RESOCONTO
+                  CONTIENE "Cassaforte aperta dall'utente TIT (dati personali e particolari)"
+                           "11 errori (11 del piano degli orari), 105 avvisi."
+                  ARGOMENTI controlla @PACCHETTO@ --utente TIT --password-da-ingresso --includi-dati-personali --includi-dati-particolari)
+kzero_k011_chiuso(k011_chiuso_tit_giornata TIT "${PW_K011_TIT}" USCITA 0 FORMATO testo
+                  CONTIENE "dichiarazione dell'azienda (motivo: \"Il centro diurno del giovedi' e' per l'azienda un servizio scolastico speciale"
+                           "C-DIS-LUNGA-1"
+                  ARGOMENTI giornata @PACCHETTO@ --data 2026-11-26 --utente TIT --password-da-ingresso --includi-dati-personali
+                            --includi-dati-particolari)
+kzero_k011_chiuso(k011_chiuso_tit_ore TIT "${PW_K011_TIT}" USCITA 0 FORMATO testo
+                  CONTIENE "Persona P-DICHIARA (Dichiarazione Prova)" "Avviso K-CTR-131"
+                  ARGOMENTI ore @PACCHETTO@ --data 2026-11-26 --persona P-DICHIARA --utente TIT --password-da-ingresso
+                            --includi-dati-personali --includi-dati-particolari)
+kzero_k011_chiuso(k011_chiuso_uff_controlla UFF "${PW_K011_UFF}" USCITA 0 FORMATO testo RESOCONTO
+                  CONTIENE "Cassaforte aperta dall'utente UFF (dati personali)"
+                  NON_CONTIENE ${K011_PARTICOLARI} "K-ERR-009"
+                  ARGOMENTI controlla @PACCHETTO@ --utente UFF --password-da-ingresso --includi-dati-personali)
+kzero_k011_chiuso(k011_chiuso_uff_giornata UFF "${PW_K011_UFF}" USCITA 0 FORMATO testo
+                  CONTIENE "Cassaforte aperta dall'utente UFF (dati personali)" "C-DIS-LUNGA-1"
+                  NON_CONTIENE ${K011_PARTICOLARI}
+                  ARGOMENTI giornata @PACCHETTO@ --data 2026-11-26 --utente UFF --password-da-ingresso --includi-dati-personali)
+kzero_k011_chiuso(k011_chiuso_uff_ore UFF "${PW_K011_UFF}" USCITA 0 FORMATO testo
+                  CONTIENE "Persona P-DICHIARA (Dichiarazione Prova)" "Leggi, lavoro e rientri: non verificati"
+                  NON_CONTIENE ${K011_PARTICOLARI}
+                  ARGOMENTI ore @PACCHETTO@ --data 2026-11-26 --persona P-DICHIARA --utente UFF --password-da-ingresso
+                            --includi-dati-personali)
+kzero_k011_chiuso(k011_chiuso_sal_controlla SAL "${PW_K011_SAL}" USCITA 0 FORMATO testo RESOCONTO
+                  CONTIENE "Cassaforte aperta dall'utente SAL (dati particolari)"
+                  NON_CONTIENE ${K011_PERSONALI} "K-ERR-009"
+                  ARGOMENTI controlla @PACCHETTO@ --utente SAL --password-da-ingresso --includi-dati-particolari)
+kzero_k011_chiuso(k011_chiuso_sal_giornata SAL "${PW_K011_SAL}" USCITA 0 FORMATO testo
+                  CONTIENE "Cassaforte aperta dall'utente SAL (dati particolari)" "C-DIS-LUNGA-1"
+                  NON_CONTIENE ${K011_PERSONALI}
+                  ARGOMENTI giornata @PACCHETTO@ --data 2026-11-26 --utente SAL --password-da-ingresso --includi-dati-particolari)
+kzero_k011_chiuso(k011_chiuso_sal_ore SAL "${PW_K011_SAL}" USCITA 0 FORMATO testo
+                  CONTIENE "Persona P-DICHIARA, azienda ALFA" "Leggi, lavoro e rientri: non verificati"
+                  NON_CONTIENE ${K011_PERSONALI}
+                  ARGOMENTI ore @PACCHETTO@ --data 2026-11-26 --persona P-DICHIARA --utente SAL --password-da-ingresso
+                            --includi-dati-particolari)
 
 # --- Documentazione e architettura --------------------------------------------------
 add_test(NAME documentazione.errori_e_schemi

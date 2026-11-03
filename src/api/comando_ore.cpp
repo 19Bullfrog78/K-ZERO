@@ -994,9 +994,10 @@ std::string coda_testo(const Json& j) {
 
 }  // namespace
 
-Risultato esegui_ore(const DefinizioneComando& comando, const Parametri& parametri) {
-    const std::string& cartella = parametri.argomenti.at(0);
-    // Il giorno o il periodo: --data, oppure --dal e --al insieme (--data con --dal o --al: K-ERR-015, dalla tabella).
+namespace {
+
+// Il giorno o il periodo: --data, oppure --dal e --al insieme (--data con --dal o --al: K-ERR-015, dalla tabella).
+std::pair<kzero::Day, kzero::Day> periodo(const Parametri& parametri) {
     if (!parametri.data && (!parametri.dal || !parametri.al))
         throw ErroreKZero(Errore::PeriodoIncompleto,
                           !parametri.dal && !parametri.al
@@ -1008,9 +1009,22 @@ Risultato esegui_ore(const DefinizioneComando& comando, const Parametri& paramet
     if (al < dal)
         throw ErroreKZero(Errore::PeriodoRovesciato, "Il periodo finisce (--al " + data(al) + ") prima di cominciare (--dal " + data(dal) +
                                                          "): scrivere prima il primo giorno, poi l'ultimo.");
+    return {dal, al};
+}
+
+}  // namespace
+
+Risultato esegui_ore(const DefinizioneComando& comando, const Parametri& parametri) {
+    // Prima i parametri (senza chiedere la password), poi la lettura.
+    const auto [dal, al] = periodo(parametri);
     std::string nota = "ore " + (dal == al ? "del " + data(dal) : "dal " + data(dal) + " al " + data(al));
     if (!parametri.persona.empty()) nota += ", persona " + parametri.persona;
-    accesso::LetturaPerComando lc = accesso::leggi_per_comando(cartella, parametri, comando.nome, nota);
+    return ore_su(comando, parametri, accesso::leggi_per_comando(parametri.argomenti.at(0), parametri, comando.nome, nota));
+}
+
+Risultato ore_su(const DefinizioneComando& comando, const Parametri& parametri, accesso::LetturaPerComando lc) {
+    const std::string& cartella = parametri.argomenti.at(0);
+    const auto [dal, al] = periodo(parametri);
     const Visibilita visibilita = lc.visibilita;
     // Prima la forma e il periodo, senza calcolare: poi il controllo completo con il resoconto degli orari, in una passata.
     if (lc.lettura.forma_valida()) {

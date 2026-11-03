@@ -378,6 +378,41 @@
           }
         ]
       }
+    },
+    {
+      "codice": "S-LIN-PROVA",
+      "nome": "Linea di prova della forzatura che non serve",
+      "tipo": "linea",
+      "contratto": "CT-LIN",
+      "calendario": "CAL-FERIALI",
+      "liberta_oraria": {
+        "tipo": "fissa"
+      },
+      "domanda": {
+        "gruppi": [
+          {
+            "codice": "G-LIN-PROVA",
+            "nome": "Utenti della linea B610",
+            "tipo": "utenti_linea",
+            "verso": "andata",
+            "conteggi": "non_noti",
+            "fermate": [
+              {
+                "luogo": "F-STAZIONE"
+              },
+              {
+                "luogo": "F-VALFONDA-PIAZZA"
+              },
+              {
+                "luogo": "F-CASTELROVO-ALTO"
+              },
+              {
+                "luogo": "F-PRADELLO"
+              }
+            ]
+          }
+        ]
+      }
     }
   ]
 }

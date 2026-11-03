@@ -233,8 +233,10 @@ std::string in_json(const DefinizioneComando& comando, const Resoconto& r, const
 }  // namespace
 
 Risultato esegui_controlla(const DefinizioneComando& comando, const Parametri& parametri) {
-    const std::string& cartella = parametri.argomenti.at(0);
-    accesso::LetturaPerComando lc = accesso::leggi_per_comando(cartella, parametri, comando.nome, "");
+    return controlla_su(comando, parametri, accesso::leggi_per_comando(parametri.argomenti.at(0), parametri, comando.nome, ""));
+}
+
+Risultato controlla_su(const DefinizioneComando& comando, const Parametri& parametri, accesso::LetturaPerComando lc) {
     const Visibilita visibilita = lc.visibilita;
     const Resoconto r = controlla_lettura(std::move(lc.lettura), visibilita);
     Risultato risultato;
