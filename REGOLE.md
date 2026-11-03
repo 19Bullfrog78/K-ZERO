@@ -196,14 +196,36 @@ conducente e' libero si scrive una pausa); RICARICA e RISERVA disponibilita'; RE
   non giustificato (servono 80 minuti); (b) 15 minuti fermo: non giustificato (sotto i 30); (c) 2 ore e 16 fermo
   contro 36 minuti di guida in piu' (ne servono 72): giustificato.
 
+### OUT o tachigrafo (Mauro 28/10)
+- Dove la legge lo permette (linee e scolastico fino a 50 km, fuori dal Reg. 561) l'azienda sceglie: **OUT** (regole
+  nazionali, la L. 138) oppure il **tachigrafo** (segue per scelta il Reg. 561 e il D.Lgs. 234). E' una scelta
+  dell'azienda, per tipo di servizio, per servizio o per corsa: vince la piu' precisa.
+- Il tachigrafo e' una scelta con la sua forza, come le altre scelte dell'azienda: preferenza (avviso) o limite
+  (errore su un turno ricorrente, avviso su un'assegnazione del singolo giorno); vale anche l'estensione alla
+  settimana. La L. 138 resta sopra comunque.
+- OUT dove la legge vuole il 561 (es. una linea di 50,1 km): vince la legge, con un avviso.
+- Una corsa con servizi di tipi diversi e scelte diverse: decide l'impostazione dell'azienda (di base la piu' prudente,
+  il tachigrafo), con un avviso che suggerisce di scrivere la scelta per la corsa.
+- **Dichiarazione**: dove l'esclusione dal 561 e' da confermare (oggi: il servizio solo per disabili), l'azienda puo'
+  dichiararlo escluso, con motivo, chi e quando: da li' e' escluso con certezza, con una nota sola.
+- **Forzatura cosciente**: l'azienda puo' scegliere OUT anche dove, con i dati scritti, vale il 561 (es. i km scritti
+  sono sbagliati), con motivo, chi, quando ed eventualmente fino a quando. Il programma pianifica come ha scelto
+  l'azienda, ma la forzatura si vede sempre (kzero controlla, giornata e ore) e il rischio e' un avviso "forzatura
+  dell'azienda" con le violazioni che ci sarebbero se fosse sbagliata.
+- Il consulente (riferito da Mauro il 28/10): lo scolastico fino a 50 km e' OUT con certezza, anche con passeggeri
+  disabili sulla stessa corsa; il servizio solo per disabili resta da confermare.
+- Demo: Alfa linee e scolastico OUT, gite (tipo "altro") con il tachigrafo; Beta linee con il tachigrafo, come
+  preferenza. Nel pacchetto di prova una forzatura (corsa C-FORZATA di 55 km, "il percorso vero e' di 48 km") e una
+  dichiarazione (servizio S-DIS-GIO, solo disabili).
+
 ### Le leggi del demo (norme N-IT, regole pubbliche con la fonte)
 Riassunti per il pacchetto dimostrativo (letture dell'arbitro del 20/10). "dc" = da confermare (vedi l'elenco sotto).
 
 | Regime | Fonte | Quando vale | Regole |
 |---|---|---|---|
 | R-L138 | L. 14 febbraio 1958, n. 138 | autisti; dipendenti (tempo pieno, part-time, determinato, stagionale, a chiamata); servizi di linea. Dc: titolare, socio, collaboratore familiare, autonomo, volontario, altro; scolastico e disabili; assistente. Nelle settimane del 561 non vale per guida e riposi; per il lavoro resta (dc) | art. 6 lavoro effettivo (guida, altre mansioni, disponibilita', soste fino a 30 minuti, 12% dell'inoperoso fuori residenza); artt. 2-3: 8 ore al giorno e 48 a settimana, con lo straordinario al massimo 10 e 60; art. 4 notte 22-5 (solo conteggio); art. 5 guida di fila al massimo 5 ore; art. 7 riposo di 9 ore nelle 24 ore dall'inizio della giornata; art. 8 riposo settimanale di 24 ore |
-| R-561 | Reg. (CE) n. 561/2006, testo consolidato al 31/12/2024; nota INL n. 61 del 14/01/2021 | chi guida un mezzo che porta piu' di 9 persone compreso il conducente; esclusi i servizi di linea fino a 50 km (art. 3 a); scolastico e disabili fino a 50 km esclusi solo dc (art. 4 n); servizi occasionali (nel demo il tipo "altro", dc) mai esclusi. Una corsa che lo fa valere lo porta su tutta la settimana per guida e riposi (nota INL) | art. 6 guida 9 ore tra due riposi (10 due volte a settimana), 56 a settimana, 90 in due settimane; art. 7 dopo 4 ore e 30 di guida 45 minuti di interruzione (o 15 + 30; 15 + 15 per i servizi occasionali); art. 8 riposo giornaliero 11 ore (3 + 9; ridotto 9, al massimo 3 volte), riposo settimanale 45 ore (ridotto 24) entro 6 periodi di 24 ore, compensazione entro la terza settimana |
-| R-234 | D.Lgs. 19 novembre 2007, n. 234 | dove vale il 561, per dipendenti e autonomi; dc: titolare, socio, collaboratore familiare, volontario, altro, assistente | art. 3 orario di lavoro = guida e altre mansioni; art. 4 al massimo 60 ore a settimana e media 48 su 4 mesi; art. 5 mai piu' di 6 ore di fila senza pausa, 30 minuti tra 6 e 9 ore, 45 oltre; art. 7 con lavoro notturno al massimo 10 ore in 24 |
+| R-561 | Reg. (CE) n. 561/2006, testo consolidato al 31/12/2024; nota INL n. 61 del 14/01/2021 | chi guida un mezzo che porta piu' di 9 persone compreso il conducente; esclusi i servizi di linea fino a 50 km (art. 3 a); scolastico fino a 50 km escluso, anche con disabili sulla stessa corsa (il consulente, Mauro 28/10); solo disabili fino a 50 km escluso solo dc (art. 4 n); servizi occasionali (nel demo il tipo "altro", dc) mai esclusi. Una corsa che lo fa valere lo porta su tutta la settimana per guida e riposi (nota INL). La guida delle corse escluse conta come altre mansioni per le sue regole di guida (art. 6 c. 5; dc, prudente: guida) | art. 6 guida 9 ore tra due riposi (10 due volte a settimana), 56 a settimana, 90 in due settimane; art. 7 dopo 4 ore e 30 di guida 45 minuti di interruzione (o 15 + 30; 15 + 15 per i servizi occasionali); art. 8 riposo giornaliero 11 ore (3 + 9; ridotto 9, al massimo 3 volte), riposo settimanale 45 ore (ridotto 24) entro 6 periodi di 24 ore, compensazione entro la terza settimana |
+| R-234 | D.Lgs. 19 novembre 2007, n. 234 | dove vale il 561, per dipendenti e autonomi (nelle settimane in cui il 561 vale per estensione, nei giorni senza le sue corse dc); dc: titolare, socio, collaboratore familiare, volontario, altro, assistente | art. 3 orario di lavoro = guida e altre mansioni; art. 4 al massimo 60 ore a settimana e media 48 su 4 mesi; art. 5 mai piu' di 6 ore di fila senza pausa, 30 minuti tra 6 e 9 ore, 45 oltre; art. 7 con lavoro notturno al massimo 10 ore in 24 |
 | R-CHIAMATA | D.Lgs. 15 giugno 2015, n. 81, art. 13 c. 3 | rapporto a chiamata | al massimo 400 giornate in tre anni con lo stesso datore (solo avvisi: oltre e vicino al limite) |
 | ESEMPIO-01 | contratto collettivo inventato | chi ha quel contratto (P-A, e P-CONTRATTO nel pacchetto di prova) | regole inventate per provare i contratti collettivi: ampiezza 14 ore, riposo 10 ore tra due giornate, 7 giorni di fila |
 
@@ -227,8 +249,10 @@ Il programma le tratta oggi con prudenza: con la lettura certa da' errori, con q
 8. L. 138 art. 8: il riposo settimanale e' 24 ore piu' il riposo giornaliero (33 ore)? Il cumulo di due riposi in
    due settimane e' ammesso da noi (esigenze di servizio o accordo)?
 9. L. 138 nelle settimane in cui vale il 561: i limiti del lavoro effettivo (artt. 2-3) restano?
-10. Reg. 561: i servizi scolastici e per disabili fino a 50 km sono "servizi regolari specializzati" esclusi come le
-    linee (art. 4 n, dal Reg. 2024/1258)?
+10. Reg. 561: lo scolastico fino a 50 km e' escluso come le linee (art. 4 n, dal Reg. 2024/1258), anche con passeggeri
+    disabili sulla stessa corsa: confermato dal consulente (riferito da Mauro il 28/10). Resta da confermare: un servizio
+    solo per disabili fino a 50 km e' un "servizio regolare specializzato" escluso? Fino alla risposta l'azienda puo'
+    dichiararlo escluso nei dati (dichiarazione, "OUT o tachigrafo").
 11. Reg. 561: quali nostri servizi sono "servizi occasionali" (gite, noleggi; nel demo il tipo "altro")?
 12. D.Lgs. 234: titolare, socio e collaboratore familiare sono "autotrasportatori autonomi"? L'assistente e' un
     "lavoratore mobile"? E il volontario?
@@ -243,6 +267,13 @@ Il programma le tratta oggi con prudenza: con la lettura certa da' errori, con q
     applica? Oggi il programma lo dice con un avviso e non giudica quegli orari.
 18. Il contratto collettivo vero dell'azienda (es. quello applicato da Alpinabus): va scritto nei dati come regime,
     con le sue regole, quando arriva dal consulente.
+19. Nelle settimane in cui il Reg. 561 vale per estensione (una corsa sopra i 50 km o una gita), il D.Lgs. 234 vale per
+    tutta la settimana o solo nei giorni di quelle corse? (Oggi: negli altri giorni da confermare.)
+20. Nelle settimane in cui vale il Reg. 561, la guida delle corse di linea fino a 50 km conta nei limiti di guida del 561
+    o e' "altre mansioni" (art. 6 c. 5)? (Oggi: altre mansioni nella lettura certa, guida in quella prudente, con un
+    avviso.)
+21. Se l'azienda registra con il tachigrafo corse che potrebbe fare in OUT, in un controllo vale il Reg. 561 o la L. 138?
+    (Oggi: per il programma e' una scelta dell'azienda, con la sua forza; la L. 138 resta sopra.)
 
 ## Dati personali nel lavoro
 - Chi pianifica vede tutto, nell'interfaccia per persone.

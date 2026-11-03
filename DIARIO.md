@@ -315,6 +315,42 @@
   cassaforti e 29.262 contenuti, 271.992 registri e 192.037 elenchi di voci, 166.562 password. Nessun guasto. Prove: 798
   su 798 sul programma finale (prima del K-011 701); quelle cambiate e il perche' sono elencate nella proposta. Tempi
   della prova di scala: in "Bug e limiti noti".
+- 2026-10-28 - K-011 aggiunta 1 (programma, nella proposta "K-011: orari di lavoro", dopo il controllo dell'arbitro e
+  la decisione di Mauro del 28/10 su OUT e tachigrafo). **Ore del contratto e scelte sul lavoro**: i conteggi
+  possibili sono quelli dei regimi certi, di quelli da confermare e, se nessuno e' certo, quello senza regime; nella
+  lettura certa il piu' basso, nella prudente il piu' alto: errore solo se tutti superano (caso dell'arbitro: P-A con
+  2,1 ore il 14 ottobre, prima errore K-CTR-119, ora avviso K-CTR-120 con il motivo). **D.Lgs. 234 nei giorni estesi
+  del 561**: da confermare, con il motivo (`estensione_come_regime`, di base "da_confermare"). **Guida delle corse
+  escluse** = altre mansioni per le regole di guida del 561 nella lettura certa, guida in quella prudente con un
+  avviso (`guida_delle_corse_escluse`; Reg. 561 art. 6 c. 5, TRACE II, ANAV n. 5); i trasferimenti a vuoto seguono la
+  corsa a cui servono. **OUT o tachigrafo** (aziende.json versione 2, `modo_corse`): scelta per tipo di servizio,
+  servizio o corsa (vince la piu' precisa); tachigrafo = il 561 (e il 234) per scelta, con la sua forza e i suoi
+  codici (K-CTR-127, 128), anche per l'estensione; OUT dove la legge vuole il 561 non vale (K-CTR-132); scelte diverse
+  sulla stessa corsa (K-CTR-133); dichiarazione (K-CTR-131) e forzatura cosciente (K-CTR-129, rischio K-CTR-130,
+  avvisi "forzatura dell'azienda"), sempre visibili in controlla, giornata e ore. Esclusioni con `insieme_a`: dal
+  consulente lo scolastico fino a 50 km e' escluso con certezza, anche con disabili a bordo; il solo disabili resta da
+  confermare. **Persona in prestito**: scelte della sua azienda, soste e rientro dell'azienda del turno (documentato,
+  con una prova). Demo: Alfa linee e scolastico OUT, gite con il tachigrafo; Beta linee con il tachigrafo
+  (preferenza). Controllo del demo: 0 errori, 31 avvisi come prima; cambia solo il conteggio della media di 4 mesi del
+  D.Lgs. 234 (K-CTR-104, persone 11 -> 5), perche' lo scolastico ora e' escluso con certezza. Pacchetto di prova: 11
+  errori e 103 avvisi (prima 15 e 89): 4 errori di guida di P-561-17 diventano avvisi (guida delle corse escluse);
+  avvisi nuovi per il 234 nei giorni estesi (3), forzatura, rischio e dichiarazione (3), OUT che non vale (3),
+  P-DISABILI (solo disabili, da confermare) e P-FORZATA; sparisce quello di P-GUIDA (scolastico ora escluso). Prova di
+  scala: 0 errori, 0 avvisi (prima 1: la media del 234, che ora non vale per nessuno: la scala ha solo servizi
+  scolastici). Sabotaggi dell'arbitro che non erano scoperti, ora con le loro prove (rosse con il codice rotto): 50 km
+  esatti con ">=" (programma.ore_50_km_esatti_esclusi); due settimane senza il regolare tolto
+  (Orari.due_riposi_settimanali_ridotti_di_fila); soste non scritte al limite 30/31 con ">="
+  (Orari.soste_non_scritte_di_30_e_di_31_minuti); due regimi certi, il piu' alto invece del piu' basso
+  (Orari.contratto_con_due_regimi_certi_il_conteggio_piu_basso). Sabotaggi nuovi (prove rosse): ore del contratto
+  senza i regimi da confermare 4; il piu' alto tra i regimi certi 2; 234 che non segue l'estensione 5; estensione del
+  234 sempre certa 7; guida esclusa come guida nella lettura certa 10; trasferimenti non legati alle corse 3; scelta
+  del singolo servizio ignorata 5; OUT accettato dove la legge vuole il 561 senza forzatura 14; OUT senza forzatura
+  trattato come forzato 13; forzatura senza avviso 6; dichiarazione senza nota 4; rischio della forzatura non
+  registrato 5; forzatura come esclusione certa 5; tachigrafo per scelta ignorato 4. Tutti scoperti. Prove di prima
+  cambiate: controlla_orari, ore/giornata_errori_del_piano_non_bloccano (numeri), ore_52_km_tutta_la_settimana
+  ("Errore K-CTR-113" -> "Avviso K-CTR-114", resta "Errore K-CTR-117"), scala_controlla (1 avviso -> 0), il numero dei
+  controlli del catalogo (126 -> 133), tre giornate attese (solo la riga nuova "modo" delle corse). Prove: 834 su 834
+  (prima dell'aggiunta 798).
 
 ## Bug e limiti noti
 - I pesi del calcolo (ObjectiveWeights) hanno ancora valori provvisori nel codice, non usati: andranno nei dati con il

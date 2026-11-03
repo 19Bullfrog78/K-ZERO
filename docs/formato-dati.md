@@ -206,7 +206,24 @@ numeri e le fonti stanno nei dati. Un regime si applica a una persona in un gior
   una giornata senza corse vale da confermare;
 - l'**estensione**: una sola corsa che fa scattare il regime vale per tutta la settimana (lunedi' 00:00 - domenica 24:00)
   della persona, per alcune famiglie di regole (nota INL 61/2021: guida e riposi), e puo' **escludere** un altro regime
-  per quelle famiglie (o lasciarlo solo da confermare).
+  per quelle famiglie (o lasciarlo solo da confermare). Un regime che prende le condizioni sulla corsa da un altro
+  (`come_regime`, es. il D.Lgs. 234 dal Reg. 561) nei giorni in cui l'altro vale solo per l'estensione vale come dice
+  `estensione_come_regime`: `da_confermare` (di base: che la segua non e' scritto nella legge, REGOLE.md) oppure `vale`.
+  Con "da confermare" le sue violazioni in quei giorni sono avvisi con il motivo (K-011 aggiunta 1);
+- le **esclusioni** delle corse: una voce esclude una corsa se ogni tipo di servizio della corsa e' tra i suoi tipi.
+  Con `insieme_a` (K-011 aggiunta 1) la voce vale per i suoi tipi solo se la corsa ha anche uno di quei tipi (es. i
+  disabili sulla stessa corsa dello scolastico: chi sale in piu' non cambia il tipo di servizio); le voci si sommano
+  (es. "scolastico fino a 50 km" certa, "disabili insieme allo scolastico" certa, "disabili" da sola da confermare).
+
+**Guida delle corse escluse** (`guida_delle_corse_escluse` del regime, K-011 aggiunta 1). Per le regole di guida e di
+interruzione di un regime (guida di fila, guida massima) i minuti di guida delle corse che il regime esclude possono
+contare come altre mansioni invece che come guida: nel Reg. 561/2006 la guida fuori dal suo campo e' "altre mansioni"
+(art. 6 c. 5; guida TRACE II della Commissione; chiarimento n. 5 ad ANAV). `conta_come` e' la lettura certa,
+`prudente` quella prudente (nel demo: altre mansioni nella certa, guida nella prudente, con un avviso); le corse escluse
+solo "da confermare" nella lettura prudente sono sempre guida. Per il conteggio del lavoro restano lavoro. Un
+trasferimento a vuoto segue la corsa a cui serve: quella dopo se arriva dove la corsa comincia, altrimenti quella prima se
+parte da dove la corsa finisce; se non si capisce, conta da confermare (guida nella lettura prudente). Senza il campo la
+guida e' guida per tutte le regole.
 
 I regimi si **sommano**: una persona in un giorno puo' averne piu' di uno (es. il 561 per guida e riposi e il 234 per
 l'orario di lavoro) e deve rispettarli tutti. Un giorno senza nessun regime non e' mai "regolare": `kzero ore` lo dice e,
@@ -239,18 +256,54 @@ lettura piu' comoda per dire "regolare", e una finestra che esce dal periodo del
 sono: "verifica parziale" (K-CTR-104).
 
 **Che cosa conta come "ora" per il contratto della persona** (`persone[].ore[]`): il lavoro contato dal regime che vale
-quel giorno per la persona (es. il lavoro effettivo della L. 138, l'orario di lavoro del D.Lgs. 234); con piu' regimi,
-nella lettura certa il conteggio piu' basso tra quelli certi e in quella prudente il piu' alto; senza regime guida, altre
-mansioni e disponibilita' sul posto. Le ore `massime` sono limiti rigidi (errore K-CTR-119); le `previste` si mostrano in
-`kzero ore` con la differenza.
+quel giorno per la persona (es. il lavoro effettivo della L. 138, l'orario di lavoro del D.Lgs. 234); senza regime guida,
+altre mansioni e disponibilita' sul posto. I conteggi possibili (K-011 aggiunta 1) sono quelli dei regimi che valgono con
+certezza, quelli dei regimi da confermare e, se nessun regime vale con certezza, quello senza regime: nella lettura certa
+conta il **piu' basso**, in quella prudente il **piu' alto**. Le ore `massime` sono limiti rigidi: errore K-CTR-119 solo
+se tutti i conteggi superano il limite, altrimenti un avviso con il motivo (K-CTR-120). Le `previste` si mostrano in
+`kzero ore` con la differenza. Le scelte sul lavoro massimo dell'azienda e della persona si contano allo stesso modo.
 
 **Scelte dell'azienda e della persona** (aziende.json e persone.json versione 2, `scelte_orari`): facoltative, con la
 forza `preferenza` (avviso) oppure `limite` (rigido: errore su un turno ricorrente, avviso su un'assegnazione del singolo
 giorno, perche' la scelta dell'utente vince). Tipi: `lavoro_massimo` (giornata, settimana, mese), `guida_massima`
 (giornata, settimana), `ampiezza_massima`, `riposo_giornaliero` (riposo minimo tra due giornate), `giorni_consecutivi`.
 Una scelta della persona vince su quella dell'azienda dello stesso tipo e periodo. La legge resta sempre sopra: una
-scelta piu' larga della legge si accetta con un avviso (K-CTR-106). Le preferenze del K-008 (`fascia_oraria`,
+scelta piu' larga della legge si accetta con un avviso (K-CTR-106).
+
+**Persona in prestito** (un turno di un'altra azienda, K-011 aggiunta 1). Le scelte sugli orari (`scelte_orari`) sono
+quelle dell'azienda della persona (e le sue), anche nei turni che fa per un'altra azienda: sono un patto tra la persona e
+chi la impiega. Le soste non scritte e la chiave del rientro sono invece quelle dell'azienda del turno: dicono come
+quell'azienda organizza il suo turno. Le leggi si sommano su tutta la giornata, di qualunque azienda (D.Lgs. 234/2007 art.
+4 c. 4). Le preferenze del K-008 (`fascia_oraria`,
 `giorni_liberi`, `evita_turni`, `pausa_massima`) restano dove sono: le scelte nuove non le ripetono.
+
+**Modo delle corse: OUT o tachigrafo** (aziende.json versione 2, `modo_corse`; decisione di Mauro del 28/10, K-011
+aggiunta 1). Dove la legge lo permette (es. linee e scolastico fino a 50 km, fuori dal Reg. 561/2006) un'azienda puo'
+lavorare **OUT** (con le regole nazionali, es. la L. 138) oppure registrare le corse con il **tachigrafo** e seguire per
+scelta il regime (`regime`, es. R-561, e chi ne prende le condizioni con `come_regime`, es. il D.Lgs. 234). La scelta
+si scrive per tipo di servizio (`per_tipo_servizio`), per servizio (`servizi`) o per corsa (`corse`): vince la piu'
+precisa (corsa, poi servizio, poi tipo). Senza scelta decide la legge.
+- **Tachigrafo**: il regime vale "per scelta dell'azienda" anche dove la legge lo esclude, con la sua `forza`
+  (`preferenza`, di base: avvisi; `limite`: errore su un turno ricorrente, avviso su un'assegnazione del singolo giorno),
+  anche con l'estensione alla settimana. Le violazioni hanno codici loro (K-CTR-127 e 128), separati da quelli della
+  legge; dove vale la legge, vale la legge. La L. 138 resta sopra comunque (non la toglie una scelta).
+- **OUT dove la legge vuole il regime** (es. una linea di 50,1 km): la scelta non vale, vale la legge, con un avviso
+  (K-CTR-132) che suggerisce la forzatura se l'azienda e' sicura.
+- **Scelte diverse sulla stessa corsa** (servizi o tipi diversi, il tachigrafo da una parte sola): decide l'impostazione
+  `tipi_diversi` (`piu_prudente`, di base: il tachigrafo; oppure `out`, `tachigrafo`), con un avviso che suggerisce di
+  scrivere la scelta per la corsa (K-CTR-133).
+- **Dichiarazione** (`dichiarazione`, solo con `out`, per un servizio o una corsa): dove l'esclusione e' da confermare
+  (es. un servizio solo per disabili che per l'azienda e' un servizio scolastico speciale), l'azienda lo dichiara
+  escluso; da li' l'esclusione e' certa, con una sola nota (K-CTR-131) invece degli avvisi da confermare su ogni corsa.
+- **Forzatura cosciente** (`forzatura`, solo con `out`, per un servizio o una corsa): dove con i dati scritti vale il
+  regime (es. i km scritti sono sbagliati), l'azienda sceglie comunque OUT. Il programma pianifica come ha scelto
+  l'azienda (nella lettura certa il regime non vale), ma la forzatura si vede sempre (`kzero controlla` K-CTR-129, il
+  modo della corsa in `kzero giornata` e `kzero ore`) e il rischio e' un avviso: le violazioni che ci sarebbero con la
+  legge come la calcolano i dati sono avvisi con il motivo "forzatura dell'azienda" e K-CTR-130 le riassume per corsa o
+  servizio.
+Dichiarazione e forzatura hanno `motivo` e `chi` (dati personali), `quando` e, per la forzatura, `fino_al` (facoltativo:
+dopo quel giorno non vale piu'). La scelta per tipo di servizio, vista su una corsa, rivela il tipo: nel modo della
+corsa "da dove viene" e' un dato particolare.
 
 **Chiave della pausa fuori dal posto (rientro)** (decisa da Mauro il 20/10). Rientro = tra due corse della giornata la
 persona (con o senza il mezzo) va in una rimessa (`rimesse.json`) o nel suo luogo di presa servizio, resta li' e torna;
@@ -334,6 +387,8 @@ di tempo: avviso K-CTR-101), [docs/schema/aziende.v1.schema.json](schema/aziende
 | `aziende[].impostazioni.soste_non_scritte` | si' (v2) | comune | Versione 2: `categoria` dei minuti non scritti tra due elementi della giornata; con `oltre_minuti` e `categoria_oltre` le soste piu' lunghe hanno un'altra categoria |
 | `aziende[].impostazioni.margine_giornate_massime` | no | comune | Versione 2: avviso quando mancano tante giornate al limite delle giornate massime (es. lavoro a chiamata, K-CTR-109) |
 | `aziende[].scelte_orari[]` | no | comune | Versione 2: scelte dell'azienda sugli orari (`tipo`, `periodo`, `massimo_minuti`, `minimo_minuti` o `massimo_giorni`, `forza`, `nota`), vedi sopra |
+| `aziende[].modo_corse` | no | comune | Versione 2 (K-011 aggiunta 1): OUT o tachigrafo (sopra, "Modo delle corse"): `regime`, `forza`, `tipi_diversi`, `per_tipo_servizio[]` (`tipo_servizio`, `modo`, `forza`, `nota`), `servizi[]` (`servizio`, ...) e `corse[]` (`corsa`, ...) con `modo` (`out`, `tachigrafo`), `forza`, `forzatura` o `dichiarazione` (solo con `out`), `nota`; `nota` |
+| `modo_corse.*.forzatura`, `.dichiarazione` | no | personale (`motivo`, `chi`), comune (`quando`, `fino_al`) | Chi l'ha scritta, quando e perche'; `fino_al` solo per la forzatura |
 | `aziende[].rientro` | no | comune | Versione 2: chiave del rientro: `fermo_minimo_minuti`, `fattore_guida`, `km_vuoti_massimi` (facoltativo), `forza` |
 | `aziende[].speciali_esigenze[]` | no | comune | Versione 2: speciali esigenze dell'azienda per una regola di legge (`regola`, `riferimento`, `nota`), es. per lo straordinario non saltuario della L. 138 |
 | `aziende[].tipi_assenza[]` | no | comune | Tipi di assenza delle persone (es. ferie, permesso, formazione): `codice`, `nome`, `nota`. Mai la causa |
@@ -368,8 +423,9 @@ Schemi: versione 2 [docs/schema/norme.v2.schema.json](schema/norme.v2.schema.jso
 | `requisiti_guida[].alternative[]` | si' | comune | Modi di soddisfare il requisito (ne basta uno): `abilitazioni[]` da avere tutte insieme; facoltativi `posti_fino_a` e `lunghezza_fino_a_m` (es. la patente D1 fino a 16 posti e 8 m) |
 | `norme[].usi_per_servizio[]` | no | comune | Usi dei mezzi ammessi per tipo di servizio: `tipi_servizio`, `usi` (ne basta uno), `fonte`, `da_confermare`, `nota` |
 | `norme[].regimi[]` | no | comune | Versione 2: leggi e contratti collettivi sugli orari (sopra, "Orari di lavoro"): `codice`, `nome`, `tipo` (`legge`, `contratto_collettivo`), `fonte`, `valido_dal`, `valido_al`, `da_confermare`, `nota`, `si_applica`, `esclusioni`, `servizi_occasionali`, `estensione`, `esclude`, `casi_non_trattati`, `regole` |
-| `regimi[].si_applica` | no | comune | `ruoli`, `rapporti`, `contratti_collettivi`, `tipi_servizio` (ognuno con i valori `certi` e quelli `da_confermare`), `mezzi` (`persone_trasportabili_oltre`), `percorso` (`fino_a_km`, `oltre_km`), `come_regime` (le condizioni sulla corsa di un altro regime); senza una condizione vale per tutti |
-| `regimi[].esclusioni[]` | no | comune | Corse escluse: `tipi_servizio` (ogni tipo della corsa deve essere escluso), `percorso_fino_a_km`, `da_confermare`, `fonte`, `nota` |
+| `regimi[].si_applica` | no | comune | `ruoli`, `rapporti`, `contratti_collettivi`, `tipi_servizio` (ognuno con i valori `certi` e quelli `da_confermare`), `mezzi` (`persone_trasportabili_oltre`), `percorso` (`fino_a_km`, `oltre_km`), `come_regime` (le condizioni sulla corsa di un altro regime) con `estensione_come_regime` (`vale` o `da_confermare`, di base); senza una condizione vale per tutti |
+| `regimi[].esclusioni[]` | no | comune | Corse escluse: `tipi_servizio` (ogni tipo della corsa deve essere escluso), `insieme_a` (la voce vale solo se la corsa ha anche uno di questi tipi), `percorso_fino_a_km`, `da_confermare`, `fonte`, `nota` |
+| `regimi[].guida_delle_corse_escluse` | no | comune | Versione 2 (K-011 aggiunta 1): come contano per le regole di guida del regime i minuti di guida delle corse escluse: `conta_come` (lettura certa) e `prudente` (`guida`, `altre_mansioni`), `fonte`, `nota` |
 | `regimi[].estensione` | no | comune | `ambito` `settimana` e le `famiglie` di regole (`guida`, `riposi`, `lavoro`, `notturno`, `giornate`) per cui una corsa vale tutta la settimana |
 | `regimi[].esclude[]` | no | comune | Altri regimi esclusi (o lasciati da confermare) per alcune famiglie nei giorni o nelle settimane in cui questo vale con certezza: `regime`, `famiglie`, `effetto` (`esclude`, `da_confermare`) |
 | `regimi[].regole[]` | si' | comune | Regole: `codice` (unico nelle norme), `tipo`, `famiglia`, `fonte`, `periodo`, `misura`, i campi del tipo, `prudente`, `da_confermare`, `nota` |
