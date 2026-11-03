@@ -1313,7 +1313,15 @@
               "$ref": "#/definitions/giustificazione_modo"
             },
             "dichiarazione": {
-              "$ref": "#/definitions/giustificazione_modo"
+              "description": "K-011 aggiunta 2: dato particolare; senza i dati particolari 'riservato' su ogni corsa, che ci sia o no.",
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/giustificazione_modo"
+                },
+                {
+                  "const": "riservato"
+                }
+              ]
             }
           }
         }

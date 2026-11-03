@@ -909,6 +909,12 @@ TEST(Api, classi_marcate_negli_schemi) {
         "servizi/servizi/*/domanda/gruppi/*/passeggeri/*/esigenze/assistente",
         "servizi/servizi/*/domanda/gruppi/*/passeggeri/*/esigenze/altro",
         "turni/turni/*/competenze_richieste/*",   // come per i servizi: una competenza puo' far capire chi viaggia
+        // K-011 aggiunta 2: la dichiarazione del modo delle corse (c'e' solo dove l'esclusione e' da confermare: dice il tipo
+        // di servizio); motivo e chi, personali, stanno dentro (legati).
+        "aziende/aziende/*/modo_corse/servizi/*/dichiarazione/quando",
+        "aziende/aziende/*/modo_corse/servizi/*/dichiarazione/fino_al",
+        "aziende/aziende/*/modo_corse/corse/*/dichiarazione/quando",
+        "aziende/aziende/*/modo_corse/corse/*/dichiarazione/fino_al",
     };
     EXPECT_EQ(particolari, attesi);
 }

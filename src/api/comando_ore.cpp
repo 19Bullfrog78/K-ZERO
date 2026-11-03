@@ -206,12 +206,14 @@ private:
                 d["percorso"] = nome_certezza(w.route_level);
                 j["condizioni"] = std::move(d);
                 // K-011 aggiunta 1: il modo dell'azienda (forzatura, dichiarazione, tachigrafo per scelta).
-                j["modo"] = w.forced ? Json("forzatura") : w.declared ? Json("dichiarazione") : w.chosen ? Json("tachigrafo_per_scelta") : Json(nullptr);
+                // La dichiarazione e' un dato particolare (K-011 aggiunta 2): senza, il motivo e' "un dato particolare".
+                const bool dichiarazione = w.declared && particolari();
+                j["modo"] = w.forced ? Json("forzatura") : dichiarazione ? Json("dichiarazione") : w.chosen ? Json("tachigrafo_per_scelta") : Json(nullptr);
                 t = (corse.size() == 1 ? "corsa " : "corse ") + codici + ": " +
                     (w.chosen ? std::string("vale per scelta dell'azienda (tachigrafo)") : livello);
                 std::vector<std::string> dc;
                 if (w.forced) dc.push_back("la forzatura dell'azienda (OUT): nella lettura prudente vale la legge come la calcolano i dati");
-                if (w.declared && w.level == Certainty::No) dc.push_back("la dichiarazione dell'azienda");
+                if (w.declared && w.level == Certainty::No) dc.push_back(dichiarazione ? "la dichiarazione dell'azienda" : "un dato particolare");
                 if (w.level == Certainty::ToConfirm) {
                     if (w.role_level == Certainty::ToConfirm) dc.push_back("il ruolo");
                     if (w.employment_level == Certainty::ToConfirm) dc.push_back(personali() ? "il rapporto" : "un dato personale");

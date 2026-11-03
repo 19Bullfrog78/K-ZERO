@@ -39,18 +39,25 @@ Json Vista::modo_corsa(const kzero::TripMode& m) const {
     j["da"] = filtra(c, m.from == F::Trip ? "corsa" : m.from == F::Service ? "servizio" : m.from == F::Kind ? "tipo_di_servizio" : "impostazione", "");
     j["regime"] = m.modes ? Json(m.modes->regime.code) : Json(nullptr);
     j["forza"] = m.mode == kzero::TripModeKind::Tachograph ? Json(m.strength == kzero::ChoiceStrength::Limit ? "limite" : "preferenza") : Json(nullptr);
+    // Motivo e chi: personali. Nella dichiarazione (dato particolare, K-011 aggiunta 2) stanno dentro un dato particolare:
+    // si vedono solo con tutti e due i permessi, come nome e casa di chi va in un luogo sensibile. Un testo vuoto: non
+    // arrivato dalla cassaforte (permessi), quindi riservato.
+    const bool legati = visibile(Classe::Personale, visibilita_) && visibile(Classe::Particolare, visibilita_);
     const auto giustificazione = [&](const kzero::ModeEntry* e, bool forzatura) -> Json {
         if (!e) return Json(nullptr);
         const kzero::ModeJustification& g = forzatura ? *e->forcing : *e->declaration;
+        const bool vede = forzatura ? visibile(Classe::Personale, visibilita_) : legati;
         Json x = Json::object();
-        x["motivo"] = filtra(Classe::Personale, g.reason, kRiservato);
-        x["chi"] = filtra(Classe::Personale, g.who, kRiservato);
+        x["motivo"] = vede && !g.reason.empty() ? Json(g.reason) : Json(kRiservato);
+        x["chi"] = vede && !g.who.empty() ? Json(g.who) : Json(kRiservato);
         x["quando"] = kzero::text_from_day(g.when);
         x["fino_al"] = g.until ? Json(kzero::text_from_day(*g.until)) : Json(nullptr);
         return x;
     };
     j["forzatura"] = giustificazione(m.forcing, true);
-    j["dichiarazione"] = giustificazione(m.declaration, false);
+    // La dichiarazione c'e' solo dove l'esclusione e' da confermare (dice il tipo di servizio): senza i dati particolari
+    // "riservato" su ogni corsa, che ci sia o no, e la riga di testo non la nomina.
+    j["dichiarazione"] = visibile(Classe::Particolare, visibilita_) ? giustificazione(m.declaration, false) : Json(kRiservato);
     return j;
 }
 
@@ -66,7 +73,7 @@ std::string testo_modo_corsa(const Json& m) {
                                     : ", per un dato particolare";
     const auto giustificazione = [&](const char* campo, const char* nome) {
         const Json& g = m.at(campo);
-        if (g.is_null()) return;
+        if (!g.is_object()) return;   // nessuna, oppure riservata (la dichiarazione senza i dati particolari)
         // Il motivo e' un testo libero: tra virgolette, perche' puo' finire con il suo punto.
         const std::string motivo = g.at("motivo") == kRiservato ? txt(g.at("motivo")) : "\"" + txt(g.at("motivo")) + "\"";
         x += std::string(", ") + nome + " (motivo: " + motivo + "; scritta da " + txt(g.at("chi")) + " il " +

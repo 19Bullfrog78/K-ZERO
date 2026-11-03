@@ -665,6 +665,95 @@ bool senza_errore_interno(const std::function<Risultato()>& comando, const std::
 
 }  // namespace
 
+// Un elemento marcato intero (es. un'assenza) va nella cassaforte tutto nella sua classe: non puo' contenere campi marcati con
+// l'altra classe riservata, che finirebbero a chi non ha il loro permesso (K-011 aggiunta 2). Un campo personale dentro un
+// campo particolare invece si separa e va tra i legati (classi.hpp).
+namespace {
+void elementi_interi(const JsonDati& radice, const JsonDati& nodo, const std::string& percorso, const std::string& intero,
+                     const std::string& classe_intero, std::string& errori, int prof) {
+    if (prof > 40 || !nodo.is_object()) return;
+    const JsonDati& def = SchemiDati::risolvi(radice, nodo);
+    std::string classe;
+    for (const JsonDati* x : {&def, &nodo}) {
+        const auto c = x->find("x-kzero-classe");
+        if (c != x->end() && c->is_string()) classe = c->get<std::string>();
+    }
+    if (!intero.empty() && !classe.empty() && classe != "comune" && classe != classe_intero)
+        errori += percorso + " (" + classe + ") dentro l'elemento intero " + intero + " (" + classe_intero + ")\n";
+    if (!def.is_object()) return;
+    if (const auto props = def.find("properties"); props != def.end() && props->is_object())
+        for (const auto& [k, v] : props->items()) elementi_interi(radice, v, percorso + "/" + k, intero, classe_intero, errori, prof + 1);
+    if (const auto items = def.find("items"); items != def.end() && items->is_object()) {
+        std::string ci;
+        const JsonDati& di = SchemiDati::risolvi(radice, *items);
+        for (const JsonDati* x : {&di, &*items}) {
+            const auto c = x->find("x-kzero-classe");
+            if (c != x->end() && c->is_string()) ci = c->get<std::string>();
+        }
+        const bool marcato_intero = intero.empty() && !ci.empty() && ci != "comune";
+        elementi_interi(radice, *items, percorso + "/[]", marcato_intero ? percorso + "/[]" : intero, marcato_intero ? ci : classe_intero,
+                        errori, prof + 1);
+    }
+    for (const char* k : {"oneOf", "anyOf", "allOf"})
+        if (const auto alt = def.find(k); alt != def.end() && alt->is_array())
+            for (const JsonDati& a : *alt) elementi_interi(radice, a, percorso, intero, classe_intero, errori, prof + 1);
+}
+}  // namespace
+
+TEST(Unione, ElementiInteriSenzaCampiDiUnAltraClasse) {
+    std::string errori;
+    for (const FileDati& f : file_dati())
+        for (const int v : f.versioni) {
+            const JsonDati* radice = SchemiDati::incorporati().schema(f.schema, v);
+            ASSERT_NE(radice, nullptr) << f.schema;
+            elementi_interi(*radice, *radice, f.schema + ".v" + std::to_string(v), "", "", errori, 0);
+        }
+    EXPECT_TRUE(errori.empty()) << errori;
+}
+
+// K-011 aggiunta 2: la dichiarazione del modo delle corse e' un dato particolare; motivo e chi, personali dentro un dato
+// particolare, stanno tra i legati (tutti e due i permessi). La forzatura resta comune: motivo e chi solo personali.
+TEST(Unione, DichiarazioneParticolareConMotivoLegato) {
+    const std::string prove = KZERO_CARTELLA_PROVE;
+    const Chiuso c = chiudi(da_cartella(prove + "/esempi/k011-orari"));
+    std::map<std::string, std::string> trovate;   // "<cosa>/<campo>" -> classe e legato
+    for (const Voce& v : c.voci) {
+        if (v.file != "aziende.json") continue;
+        std::string cosa;
+        for (const JsonDati& p : v.percorso)
+            if (p.is_string() && (p == "dichiarazione" || p == "forzatura")) cosa = p.get<std::string>();
+        if (cosa.empty()) continue;
+        const std::string chiave = cosa + "/" + v.campo;
+        const std::string valore = std::string(v.classe == Classe::Particolare ? "particolare" : "personale") + (v.legato ? " legato" : "");
+        EXPECT_TRUE(!trovate.count(chiave) || trovate[chiave] == valore) << chiave;
+        trovate[chiave] = valore;
+    }
+    EXPECT_EQ(trovate["dichiarazione/motivo"], "particolare legato");
+    EXPECT_EQ(trovate["dichiarazione/chi"], "particolare legato");
+    EXPECT_EQ(trovate["dichiarazione/quando"], "particolare");
+    EXPECT_EQ(trovate["forzatura/motivo"], "personale");
+    EXPECT_EQ(trovate["forzatura/chi"], "personale");
+    EXPECT_FALSE(trovate.count("forzatura/quando"));   // comune: resta nel file normale
+    // Chi ha solo i dati particolari riceve la dichiarazione senza motivo e chi; chi ha solo i personali non la riceve.
+    for (const Visibilita v : {Visibilita{false, true}, Visibilita{true, false}}) {
+        const ValoriCassaforte x = valori(c, v);
+        const Lettura l = leggi_pacchetto(c.normali, &x);
+        ASSERT_TRUE(l.forma_valida()) << elenco(l.problemi);
+        const kzero::CompanySettings* alfa = nullptr;
+        for (const kzero::CompanySettings& a : l.pacchetto.company_settings)
+            if (a.company.code == "ALFA") alfa = &a;
+        ASSERT_TRUE(alfa && alfa->trip_modes);
+        std::size_t dichiarazioni = 0;
+        for (const auto* elenco_voci : {&alfa->trip_modes->by_service, &alfa->trip_modes->by_trip})
+            for (const kzero::ModeEntry& e : *elenco_voci)
+                if (e.declaration) {
+                    ++dichiarazioni;
+                    EXPECT_TRUE(e.declaration->reason.empty() && e.declaration->who.empty());
+                }
+        EXPECT_EQ(dichiarazioni, v.particolari ? 2u : 0u);
+    }
+}
+
 TEST(Unione, OgniCampoRiservatoDegliSchemiCompareNeiPacchettiDelleProve) {
     std::map<std::string, std::set<std::string>> usati;   // schema -> percorsi usati nei file dell'ultima versione
     for (const PacchettoDiProva& p : pacchetti_delle_prove())

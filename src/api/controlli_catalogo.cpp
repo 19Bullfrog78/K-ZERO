@@ -391,7 +391,9 @@ void aggiungi_orari(std::vector<DefinizioneControllo>& c) {
     }
     {
         const std::string dopo = " Da qui il programma lo tratta come escluso con certezza, senza ripetere gli avvisi da confermare su ogni corsa.";
-        DefinizioneControllo d(Check::ModeDeclared, "K-CTR-131", A, PE, "Dichiarazione dell'azienda: escluso dal regime",
+        // K-011 aggiunta 2: la dichiarazione e' un dato particolare (c'e' solo dove l'esclusione e' da confermare, quindi dice
+        // il tipo di servizio): di base si conta soltanto; motivo e chi solo con tutti e due i permessi.
+        DefinizioneControllo d(Check::ModeDeclared, "K-CTR-131", A, Classe::Particolare, "Dichiarazione dell'azienda: escluso dal regime",
                                {"Dichiarazione dell'azienda {azienda}: la corsa {corsa} e' esclusa dal regime {regime} dove l'esclusione e' da "
                                 "confermare. Motivo: \"{motivo}\"; scritta da {chi} il {quando}." + dopo,
                                 "Dichiarazione dell'azienda {azienda}: il servizio {servizio} e' escluso dal regime {regime} dove l'esclusione e' "

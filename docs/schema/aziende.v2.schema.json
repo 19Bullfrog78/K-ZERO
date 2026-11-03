@@ -577,8 +577,9 @@
                 "$ref": "#/definitions/giustificazione_modo"
               },
               "dichiarazione": {
-                "description": "Solo con 'out': dove l'esclusione e' da confermare (es. un servizio solo per disabili che per l'azienda e' un servizio scolastico speciale), l'azienda lo dichiara escluso: da li' escluso con certezza, con una nota.",
-                "$ref": "#/definitions/giustificazione_modo"
+                "description": "Solo con 'out': dove l'esclusione e' da confermare (es. un servizio solo per disabili che per l'azienda e' un servizio scolastico speciale), l'azienda lo dichiara escluso: da li' escluso con certezza, con una nota. K-011 aggiunta 2: dato particolare (che ci sia dice il tipo di servizio); motivo e chi, personali dentro un dato particolare, si vedono solo con tutti e due i permessi (nella cassaforte: legati).",
+                "$ref": "#/definitions/giustificazione_modo",
+                "x-kzero-classe": "particolare"
               },
               "nota": {
                 "$ref": "#/definitions/nota"
@@ -645,7 +646,8 @@
                 "$ref": "#/definitions/giustificazione_modo"
               },
               "dichiarazione": {
-                "$ref": "#/definitions/giustificazione_modo"
+                "$ref": "#/definitions/giustificazione_modo",
+                "x-kzero-classe": "particolare"
               },
               "nota": {
                 "$ref": "#/definitions/nota"

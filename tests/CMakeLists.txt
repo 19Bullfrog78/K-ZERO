@@ -681,9 +681,7 @@ kzero_prova(controlla_orari USCITA 1 FORMATO testo RESOCONTO
                      "K-CTR-124|persone.json|/persone/12"
                      "K-CTR-129|aziende.json|/aziende/0/modo_corse/corse/0/forzatura"
                      "K-CTR-130|aziende.json|/aziende/0/modo_corse/corse/0/forzatura"
-                     "K-CTR-131|aziende.json|/aziende/0/modo_corse/servizi/0/dichiarazione"
                      "K-CTR-129|aziende.json|/aziende/0/modo_corse/servizi/1/forzatura"
-                     "K-CTR-131|aziende.json|/aziende/0/modo_corse/corse/1/dichiarazione"
             NON_CONTIENE ${DATI_PERSONALI_ORE} "Linea Lunga" "Esempi Pausa"
             ARGOMENTI controlla ${ORE_K011})
 kzero_prova(controlla_orari_json USCITA 1 FORMATO json SCHEMA controlla RESOCONTO
@@ -815,16 +813,32 @@ kzero_prova(controlla_forzatura_visibile USCITA 1 FORMATO testo RESOCONTO
             ARGOMENTI controlla ${ORE_K011} --includi-dati-personali)
 # La dichiarazione di Alfa sul servizio S-DIS-GIO (solo disabili, dove l'esclusione dal 561 e' da confermare): da li' il
 # servizio e' escluso con certezza, con una sola nota (K-CTR-131) invece degli avvisi da confermare su ogni corsa.
+# K-011 aggiunta 2: la dichiarazione e' un dato particolare (c'e' solo dove l'esclusione e' da confermare: dice il tipo di
+# servizio). Di base la riga del modo non la nomina e K-CTR-131 si conta soltanto; con i dati particolari si vede, con motivo e
+# chi riservati; motivo e chi solo con tutti e due i permessi.
 kzero_prova(ore_dichiarazione_con_una_nota USCITA 0 FORMATO testo
             CONTIENE "OUT, scelta per il servizio, dichiarazione dell'azienda (motivo: riservato; scritta da riservato il 2026-10-28) (regime R-561)."
                      "Non valgono: R-561."
                      "Avviso K-CTR-131: Dichiarazione dell'azienda ALFA (Autoservizi Alfa): il servizio S-DIS-GIO"
-            NON_CONTIENE "K-CTR-114" "K-CTR-118" "vale da confermare"
-            ARGOMENTI ore ${ORE_K011} --data 2026-11-26 --persona P-DICHIARA)
+            NON_CONTIENE "K-CTR-114" "K-CTR-118" "vale da confermare" "servizio scolastico speciale"
+            ARGOMENTI ore ${ORE_K011} --data 2026-11-26 --persona P-DICHIARA --includi-dati-particolari)
+kzero_prova(ore_dichiarazione_riservata USCITA 0 FORMATO testo
+            CONTIENE "C-DICH-LUNGA-6: OUT, scelta per il servizio (regime R-561)."
+            NON_CONTIENE "dichiarazione" "K-CTR-131"
+            ARGOMENTI ore ${ORE_K011} --data 2026-11-26 --persona P-DICHIARA --includi-dati-personali)
+kzero_prova(ore_dichiarazione_riservata_json USCITA 0 FORMATO json SCHEMA ore
+            CONTIENE "\"dichiarazione\": \"riservato\""
+            NON_CONTIENE "servizio scolastico speciale" "K-CTR-131"
+            ARGOMENTI ore ${ORE_K011} --data 2026-11-26 --persona P-DICHIARA --includi-dati-personali --formato json)
+kzero_prova(ore_dichiarazione_con_tutti_i_dati USCITA 0 FORMATO testo
+            CONTIENE "dichiarazione dell'azienda (motivo: \"Il centro diurno del giovedi' e' per l'azienda un servizio scolastico speciale (prova inventata).\"; scritta da Ufficio turni Alfa il 2026-10-28)"
+            ARGOMENTI ore ${ORE_K011} --data 2026-11-26 --persona P-DICHIARA --includi-dati-personali --includi-dati-particolari)
 # La scelta OUT per tipo di servizio dove con i dati scritti vale la legge (la linea di 50,1 km): vale la legge, con un
 # avviso. La scelta per tipo rivela il tipo di servizio: dato particolare, si vede solo con --includi-dati-particolari.
 kzero_prova(controlla_out_dove_vale_la_legge USCITA 1 FORMATO testo RESOCONTO
-            CONTIENE "Avviso K-CTR-132 (aziende.json, /aziende/0/modo_corse/per_tipo_servizio/0): La scelta OUT dell'azienda ALFA (Autoservizi Alfa) per il tipo di servizio della corsa C-50KM1 (Linea di 50,1 km) non vale: con i dati scritti vale il regime R-561"
+            CONTIENE "Avviso K-CTR-131 (aziende.json, /aziende/0/modo_corse/servizi/0/dichiarazione): Dichiarazione dell'azienda ALFA"
+                     "Avviso K-CTR-131 (aziende.json, /aziende/0/modo_corse/corse/1/dichiarazione): Dichiarazione dell'azienda ALFA"
+                     "Avviso K-CTR-132 (aziende.json, /aziende/0/modo_corse/per_tipo_servizio/0): La scelta OUT dell'azienda ALFA (Autoservizi Alfa) per il tipo di servizio della corsa C-50KM1 (Linea di 50,1 km) non vale: con i dati scritti vale il regime R-561"
             ARGOMENTI controlla ${ORE_K011} --includi-dati-personali --includi-dati-particolari)
 kzero_prova(controlla_out_dove_vale_la_legge_riservato USCITA 1 FORMATO testo RESOCONTO
             NON_CONTIENE "K-CTR-132 (aziende.json"
@@ -1420,7 +1434,9 @@ set_tests_properties(cassaforte.k011_chiudi PROPERTIES FIXTURES_SETUP k011_chius
 # Dati che ognuno non deve vedere: SAL (solo particolari) mai nomi, motivi e chi; UFF (solo personali) mai i tipi di servizio
 # e le esigenze.
 set(K011_PERSONALI "Dichiarazione Prova" "Forzatura Prova" "Ufficio turni Alfa" "servizio scolastico speciale" "Il percorso vero")
-set(K011_PARTICOLARI "servizio disabili" "tipo disabili" "scelta per il tipo di servizio" "tipo scolastico")
+# La dichiarazione (K-011 aggiunta 2) e' un dato particolare; il suo motivo, personale, solo con tutti e due i permessi.
+set(K011_PARTICOLARI "servizio disabili" "tipo disabili" "scelta per il tipo di servizio" "tipo scolastico" "dichiarazione dell'azienda"
+    "servizio scolastico speciale" "K-CTR-131")
 function(kzero_k011_chiuso nome utente password)
   kzero_prova(${nome} BASE ${K011_CHIUSO} INGRESSO "${password}" ${ARGN})
   set_tests_properties(programma.${nome} PROPERTIES FIXTURES_REQUIRED k011_chiuso LABELS "programma;sicurezza")
@@ -1457,6 +1473,7 @@ kzero_k011_chiuso(k011_chiuso_sal_controlla SAL "${PW_K011_SAL}" USCITA 0 FORMAT
                   ARGOMENTI controlla @PACCHETTO@ --utente SAL --password-da-ingresso --includi-dati-particolari)
 kzero_k011_chiuso(k011_chiuso_sal_giornata SAL "${PW_K011_SAL}" USCITA 0 FORMATO testo
                   CONTIENE "Cassaforte aperta dall'utente SAL (dati particolari)" "C-DIS-LUNGA-1"
+                           "dichiarazione dell'azienda (motivo: riservato; scritta da riservato il 2026-10-28)"
                   NON_CONTIENE ${K011_PERSONALI}
                   ARGOMENTI giornata @PACCHETTO@ --data 2026-11-26 --utente SAL --password-da-ingresso --includi-dati-particolari)
 kzero_k011_chiuso(k011_chiuso_sal_ore SAL "${PW_K011_SAL}" USCITA 0 FORMATO testo
