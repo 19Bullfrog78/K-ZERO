@@ -15,6 +15,7 @@ T-DIS "Centro diurno"  07:25-09:35 (2 ore e 10 minuti)  azienda ALFA, autista
                 (fermo 2 minuti)
    07:40-08:52  corsa C-DIS-1 "Centro diurno, giro principale"
                 servizi S-DIS (tipo riservato, contratto CT-SCU, committente CVA)
+                modo per un dato particolare
                 calendario CAL-CENTRO "Centro diurno: lunedi', mercoledi' e giovedi'", 139 giorni nel periodo; km a pieno 20,3, a vuoto 5,5; assistente fornito dal committente
       07:40  L-RIMESSA-ALFA  Valfonda, rimessa Autoservizi Alfa  sale l'assistente  a bordo 0
       07:52  PP-01  salgono 1  km a vuoto 5,5  a bordo 1
@@ -36,7 +37,7 @@ T-SECONDO "Secondo"  16:50-20:30 (3 ore e 40 minuti)  azienda ALFA, autista
                 (fermo 4 minuti)
    17:04-17:11  corsa C-LIN-549 "Linea B610, corsa delle 16:40 (cambio dell'autista a Valfonda, Piazza)", solo un pezzo (cambio dell'autista)
                 servizi S-LIN-B610 (tipo riservato, contratto CT-LIN, committente TPV)
-                modo OUT, per un dato particolare (regime R-561)
+                modo per un dato particolare
                 calendario CAL-FERIALI "Giorni feriali (da lunedi' a sabato, festivi esclusi)", 305 giorni nel periodo; km a pieno 1,2, a vuoto 0
       17:04  F-VALFONDA-PIAZZA  Valfonda, Piazza Grande  a bordo non noto
       17:11  F-STAZIONE  Valfonda, Stazione FVV  km a pieno 1,2  a bordo non noto
@@ -50,7 +51,7 @@ T-SECONDO "Secondo"  16:50-20:30 (3 ore e 40 minuti)  azienda ALFA, autista
                 (fermo 5 minuti)
    19:45-20:08  corsa C-LIN-553 "Linea B610, corsa delle 19:45"
                 servizi S-LIN-B610 (tipo riservato, contratto CT-LIN, committente TPV)
-                modo OUT, per un dato particolare (regime R-561)
+                modo per un dato particolare
                 calendario CAL-FERIALI "Giorni feriali (da lunedi' a sabato, festivi esclusi)", 305 giorni nel periodo; km a pieno 15,1, a vuoto 0
       19:45  F-STAZIONE  Valfonda, Stazione FVV  a bordo non noto
       19:49  F-VALFONDA-PIAZZA  Valfonda, Piazza Grande  km a pieno 1,2  a bordo non noto

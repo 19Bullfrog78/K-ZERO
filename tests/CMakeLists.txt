@@ -844,15 +844,49 @@ kzero_prova(controlla_out_dove_vale_la_legge_riservato USCITA 1 FORMATO testo RE
             NON_CONTIENE "K-CTR-132 (aziende.json"
             ARGOMENTI controlla ${ORE_K011})
 # Trasporti Beta registra le linee con il tachigrafo: per sua scelta segue il Reg. 561 (come preferenza), anche se per
-# legge le linee fino a 50 km ne sono escluse.
+# legge le linee fino a 50 km ne sono escluse. K-011 aggiunta 2 (decisione dell'arbitro): la scelta e' per tipo di servizio,
+# quindi senza i dati particolari il regime per scelta e' riservato tutto, con una riga fissa per la persona (sempre, che
+# valga o no): niente riga del regime, "Non valgono" senza "per legge", modo "per un dato particolare". Con i dati
+# particolari si vede tutto.
 kzero_prova(ore_tachigrafo_per_scelta_beta USCITA 0 FORMATO testo
-            CONTIENE "Modo delle corse: C-B620-01, C-B620-02, C-B620-03, C-B620-04: tachigrafo come preferenza, per un dato particolare (regime R-561)."
+            CONTIENE "Modo delle corse: C-B620-01, C-B620-02, C-B620-03, C-B620-04: tachigrafo come preferenza, scelta per il tipo di servizio (regime R-561)."
                      "Regime R-561 per scelta dell'azienda (tachigrafo, non per legge) per guida e riposi: vale per scelta dell'azienda (tachigrafo) per tutte le corse."
                      "Non valgono per legge: R-561."
-            ARGOMENTI ore ${KZERO_DEMO} --data 2026-10-19 --persona P-B1)
+            NON_CONTIENE "Regimi seguiti per scelta dell'azienda: riservati"
+            ARGOMENTI ore ${KZERO_DEMO} --data 2026-10-19 --persona P-B1 --includi-dati-particolari)
 kzero_prova(ore_tachigrafo_per_scelta_beta_json USCITA 0 FORMATO json SCHEMA ore
-            CONTIENE "\"per_scelta\": true" "\"modo\": \"tachigrafo_per_scelta\"" "\"forza\": \"preferenza\""
+            CONTIENE "\"per_scelta\": true" "\"modo\": \"tachigrafo_per_scelta\"" "\"forza\": \"preferenza\"" "\"regimi_per_scelta\": null"
+            ARGOMENTI ore ${KZERO_DEMO} --data 2026-10-19 --persona P-B1 --includi-dati-particolari --formato json)
+kzero_prova(ore_tachigrafo_per_tipo_riservato USCITA 0 FORMATO testo
+            CONTIENE "Persona P-B1, azienda BETA, rapporto riservato\n  Regimi seguiti per scelta dell'azienda: riservati (dato particolare; --includi-dati-particolari)."
+                     "Modo delle corse: C-B620-01, C-B620-02, C-B620-03, C-B620-04: per un dato particolare."
+                     "Non valgono: R-561."
+            NON_CONTIENE "per scelta dell'azienda (tachigrafo" "Non valgono per legge" "tachigrafo come" "settimanale regolare"
+            ARGOMENTI ore ${KZERO_DEMO} --data 2026-10-19 --persona P-B1)
+kzero_prova(ore_tachigrafo_per_tipo_riservato_json USCITA 0 FORMATO json SCHEMA ore
+            CONTIENE "\"regimi_per_scelta\": \"riservato\"" "\"modo\": \"riservato\""
+            NON_CONTIENE "\"per_scelta\": true" "tachigrafo_per_scelta" "\"tachigrafo\""
             ARGOMENTI ore ${KZERO_DEMO} --data 2026-10-19 --persona P-B1 --formato json)
+# K-011 aggiunta 2, caso dell'arbitro: nel demo Alfa ha scelte per linea, scolastico e altro (come Mauro: gita, linea e
+# scolastico), nessuna per i disabili. Di base la corsa per disabili C-DIS-1 ha la stessa riga del modo delle linee ("per un
+# dato particolare"), cosi' la riga non dice il tipo; con i dati particolari si vede tutto, anche "nessuna scelta".
+kzero_prova(giornata_modo_uguale_senza_dati_particolari USCITA 0 FORMATO testo
+            CONTIENE "corsa C-DIS-1 \"Centro diurno, giro principale\"\n                servizi S-DIS (tipo riservato, contratto CT-SCU, committente CVA)\n                modo per un dato particolare\n"
+                     "corsa C-LIN-533 \"Linea B610, corsa delle 07:52\"\n                servizi S-LIN-B610 (tipo riservato, contratto CT-LIN, committente TPV)\n                modo per un dato particolare\n"
+            NON_CONTIENE "modo OUT" "modo tachigrafo" "nessuna scelta" "scelta per il tipo"
+            ARGOMENTI ${GIORNATA_DEMO} --data 2026-11-11)
+kzero_prova(giornata_modo_uguale_senza_dati_particolari_json USCITA 0 FORMATO json SCHEMA giornata
+            CONTIENE "\"modo\": \"riservato\""
+            NON_CONTIENE "\"modo\": \"out\"" "\"modo\": \"nessuna\"" "\"modo\": \"tachigrafo\""
+            ARGOMENTI ${GIORNATA_DEMO} --data 2026-11-11 --formato json)
+kzero_prova(giornata_modo_con_dati_particolari USCITA 0 FORMATO testo
+            CONTIENE "servizi S-DIS (tipo disabili, contratto CT-SCU, committente CVA)\n                modo nessuna scelta, decide la legge (regime R-561)\n"
+                     "servizi S-LIN-B610 (tipo linea, contratto CT-LIN, committente TPV)\n                modo OUT, scelta per il tipo di servizio (regime R-561)\n"
+            ARGOMENTI ${GIORNATA_DEMO} --data 2026-11-11 --includi-dati-particolari)
+# La riga fissa c'e' anche nei giorni senza tachigrafo e per chi non lavora (Beta ha scelte del tachigrafo per tipo).
+kzero_prova(ore_tachigrafo_per_tipo_riga_fissa USCITA 0 FORMATO testo
+            CONTIENE "Persona P-B4, azienda BETA, rapporto riservato\n  Regimi seguiti per scelta dell'azienda: riservati (dato particolare; --includi-dati-particolari).\n  Nessuna giornata di lavoro nel periodo."
+            ARGOMENTI ore ${KZERO_DEMO} --data 2026-10-25 --persona P-B4)
 
 # Turni (K-008), i due pacchetti rotti chiesti dal mandato. La reperibilita' notturna di P-C del mercoledi' finisce
 # alle 07:30 invece che alle 06:30: il giovedi' della sostituzione P-C comincia il centro diurno alle 07:25.

@@ -108,6 +108,7 @@ struct PersonCtx {
     const Person* person = nullptr;
     const PersonPlan* plan = nullptr;
     const Norms* norms = nullptr;
+    bool chosen_by_kind = false;       // regimi per scelta da scelte per tipo di servizio (K-011 aggiunta 2)
     std::vector<Seg> segs;
     long long h0 = 0, h1 = 0;          // periodo noto: dall'inizio del primo giorno alla fine dell'ultimo del pacchetto
     Day d0 = 0, d1 = 0;                // periodo del pacchetto

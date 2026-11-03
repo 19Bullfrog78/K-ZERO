@@ -103,6 +103,12 @@ struct TripMode {
     bool by_kinds = false;                  // la scelta viene dai tipi di servizio (rivela il tipo: dato particolare)
 };
 TripMode trip_mode(const Trip& t, const CompanySettings* s, const Index& idx, Day d);
+// K-011 aggiunta 2: l'azienda ha almeno una scelta del tachigrafo per tipo di servizio.
+bool kind_tachograph(const CompanySettings* s);
+// I regimi seguiti per scelta dell'azienda (tachigrafo) di una persona dipendono anche da scelte per tipo di servizio (dato
+// particolare): la sua azienda, o quella di un turno che fa nel periodo del pacchetto (plan, puo' mancare), ha una scelta del
+// tachigrafo per tipo. Allora, senza i dati particolari, quei regimi sono riservati tutti, sempre (decisione dell'arbitro).
+bool chosen_by_kind(const Person& p, const PersonPlan* plan, const Index& idx);
 
 // Perche' un regime vale (o vale solo da confermare, o non vale) in un giorno per la persona. Dati strutturati: l'API li
 // scrive seguendo le classi dei dati (il tipo di servizio e' un dato particolare, il rapporto e il contratto personali).

@@ -1260,10 +1260,13 @@
       }
     },
     "modo_corsa": {
-      "description": "K-011 aggiunta 1: il modo della corsa per l'azienda del turno (out o tachigrafo), da dove viene la scelta (il tipo di servizio e' un dato particolare: 'riservato'), la forza del tachigrafo, la forzatura o la dichiarazione (motivo e chi sono dati personali); null senza una scelta.",
+      "description": "K-011 aggiunte 1 e 2: il modo della corsa per l'azienda del turno: out, tachigrafo o nessuna scelta (decide la legge), da dove viene la scelta, la forza del tachigrafo, la forzatura (motivo e chi personali) e la dichiarazione (dato particolare). null se l'azienda non ha il modo delle corse; 'riservato' (dato particolare) se dipende dalle scelte per tipo di servizio (che ci siano, che manchino, cosa dicono) e mancano i dati particolari.",
       "anyOf": [
         {
           "type": "null"
+        },
+        {
+          "const": "riservato"
         },
         {
           "type": "object",
@@ -1280,16 +1283,23 @@
             "modo": {
               "enum": [
                 "out",
-                "tachigrafo"
+                "tachigrafo",
+                "nessuna"
               ]
             },
             "da": {
-              "enum": [
-                "corsa",
-                "servizio",
-                "tipo_di_servizio",
-                "impostazione",
-                "riservato"
+              "anyOf": [
+                {
+                  "enum": [
+                    "corsa",
+                    "servizio",
+                    "tipo_di_servizio",
+                    "impostazione"
+                  ]
+                },
+                {
+                  "type": "null"
+                }
               ]
             },
             "regime": {

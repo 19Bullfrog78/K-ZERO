@@ -137,12 +137,14 @@ comunque la regola qui sopra):
 | K-CTR-123 | personale | tutti i casi | la chiave del rientro (anche della persona) e la giornata della persona |
 | K-CTR-124 | personale | tutti i casi | la chiave del rientro (anche della persona) e la giornata della persona |
 | K-CTR-125 | personale | tutti i casi | la chiave del rientro (anche della persona) e la giornata della persona |
-| K-CTR-127 | personale | tutti i casi | quale regola sugli orari vale per la persona e i suoi orari |
-| K-CTR-128 | personale | tutti i casi | quale regola sugli orari vale per la persona e i suoi orari |
+| K-CTR-127 | personale | alcuni casi | quale regola sugli orari vale per la persona e i suoi orari |
+| K-CTR-127 | particolare | alcuni casi | che il regime per scelta dipenda da scelte del tachigrafo per tipo di servizio (la sua azienda o quella di un suo turno ne ha una): allora e' riservato tutto (K-011 aggiunta 2, decisione dell'arbitro) |
+| K-CTR-128 | personale | alcuni casi | quale regola sugli orari vale per la persona e i suoi orari |
+| K-CTR-128 | particolare | alcuni casi | che il regime per scelta dipenda da scelte del tachigrafo per tipo di servizio (la sua azienda o quella di un suo turno ne ha una): allora e' riservato tutto (K-011 aggiunta 2, decisione dell'arbitro) |
 | K-CTR-129 | personale | tutti i casi | il motivo della forzatura (scritto a mano) e chi l'ha scritta |
 | K-CTR-130 | personale | tutti i casi | quali regole varrebbero e per quante persone (dipende anche dal loro rapporto) |
 | K-CTR-131 | particolare | tutti i casi | che la dichiarazione ci sia (c'e' solo dove l'esclusione e' da confermare: dice il tipo di servizio; K-011 aggiunta 2); il motivo e chi l'ha scritta solo con tutti e due i permessi |
-| K-CTR-132 | particolare | alcuni casi | la scelta per il tipo di servizio della corsa |
+| K-CTR-132 | particolare | alcuni casi | la scelta per il tipo di servizio della corsa; le scelte diverse tra i tipi di servizio della corsa (K-011 aggiunta 2) |
 | K-CTR-133 | particolare | alcuni casi | i tipi di servizio della corsa |
 
 Nei problemi degli orari (K-CTR-107 ... K-CTR-125) quale legge vale per la persona e' un dato personale quando la legge

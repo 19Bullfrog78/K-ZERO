@@ -338,15 +338,35 @@ void aggiungi_orari(std::vector<DefinizioneControllo>& c) {
         std::vector<Pezzo> pezzi;
         for (const std::vector<Pezzo>* v : {&kLavoro, &kGuida, &kRiposoGiornaliero, &kRiposoSettimanale}) pezzi.insert(pezzi.end(), v->begin(), v->end());
         const std::string scelta = ", che l'azienda segue per scelta con il tachigrafo";
+        // K-011 aggiunta 2 (decisione dell'arbitro): per chi lavora per un'azienda con scelte del tachigrafo per tipo di servizio
+        // le stesse varianti +30 rivelano un dato particolare (il regime per scelta e' riservato tutto, sempre).
+        const auto doppie = [](std::vector<std::string> v) {
+            const std::size_t n = v.size();
+            for (std::size_t i = 0; i < n; ++i) v.push_back(v[i]);
+            return v;
+        };
+        const auto doppie_personali = [](std::map<int, std::string> m, int n) {
+            std::map<int, std::string> out = m;
+            for (const auto& [k, t] : m) out[k + n] = t;
+            return out;
+        };
+        const int n = static_cast<int>(componi("", pezzi, "").size());
+        std::map<int, Classe> particolari;
+        for (int k = n; k < 2 * n; ++k) particolari[k] = Classe::Particolare;
         DefinizioneControllo e(Check::ChosenRegimeLimit, "K-CTR-127", E, PE, "Regola seguita per scelta (tachigrafo) superata: limite rigido",
-                               componi("La persona {persona} non rispetta la regola {regola} ({fonte})" + scelta + " (limite rigido): ", pezzi, ""), {},
-                               componi_personali("La persona {persona} non rispetta una regola sugli orari" + scelta +
-                                                     " (limite rigido; dati personali: riservati)",
-                                                 pezzi, ""));
+                               doppie(componi("La persona {persona} non rispetta la regola {regola} ({fonte})" + scelta + " (limite rigido): ", pezzi, "")),
+                               particolari,
+                               doppie_personali(componi_personali("La persona {persona} non rispetta una regola sugli orari" + scelta +
+                                                                      " (limite rigido; dati personali: riservati)",
+                                                                  pezzi, ""),
+                                                n));
         DefinizioneControllo a(Check::ChosenRegimeNotRespected, "K-CTR-128", A, PE, "Regola seguita per scelta (tachigrafo) non rispettata",
-                               componi("La persona {persona} non rispetta la regola {regola} ({fonte})" + scelta + ": ", pezzi, motivi), {},
-                               componi_personali("La persona {persona} non rispetta una regola sugli orari" + scelta + " (dati personali: riservati)",
-                                                 pezzi, motivi));
+                               doppie(componi("La persona {persona} non rispetta la regola {regola} ({fonte})" + scelta + ": ", pezzi, motivi)),
+                               particolari,
+                               doppie_personali(componi_personali("La persona {persona} non rispetta una regola sugli orari" + scelta +
+                                                                      " (dati personali: riservati)",
+                                                                  pezzi, motivi),
+                                                n));
         for (DefinizioneControllo* d : {&e, &a}) {
             d->piano = true;
             d->personali_se_nascosti = true;
@@ -415,8 +435,9 @@ void aggiungi_orari(std::vector<DefinizioneControllo>& c) {
                                {"La scelta OUT dell'azienda {azienda} per il tipo di servizio della corsa {corsa}" + vince,
                                 "La scelta OUT dell'azienda {azienda} per il servizio {servizio} sulla corsa {corsa}" + vince,
                                 "La scelta OUT dell'azienda {azienda} per la corsa {corsa}" + vince,
-                                "Il modo OUT della corsa {corsa} (servizi con scelte diverse, impostazione dell'azienda {azienda})" + vince},
-                               {{0, Classe::Particolare}});
+                                "Il modo OUT della corsa {corsa} (servizi con scelte diverse, impostazione dell'azienda {azienda})" + vince,
+                                "Il modo OUT della corsa {corsa} (tipi di servizio con scelte diverse, impostazione dell'azienda {azienda})" + vince},
+                               {{0, Classe::Particolare}, {4, Classe::Particolare}});   // 4: K-011 aggiunta 2
         d.piano = true;
         c.push_back(d);
     }

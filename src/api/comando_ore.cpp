@@ -352,9 +352,10 @@ private:
     }
 
     // Il tipo del riposo prima della giornata per ogni regime che vale per i riposi, con le sue soglie (lettura certa).
-    Json tipi_riposo(const kzero::DayHours& dh) const {
+    Json tipi_riposo(const kzero::DayHours& dh, bool scelte_riservate) const {
         Json v = Json::array();
         for (const kzero::RegimeOnDay& ro : dh.regimes) {
+            if (ro.chosen && scelte_riservate) continue;   // il regime per scelta riservato tutto (K-011 aggiunta 2)
             if (ro.family[static_cast<std::size_t>(RuleFamily::Rest)] == Certainty::No) continue;
             const kzero::WorkRule *giornaliero = nullptr, *settimanale = nullptr;
             for (const kzero::WorkRule& w : ro.regime->rules) {
@@ -480,7 +481,9 @@ private:
         return v;
     }
 
-    Json giornata(const kzero::DayHours& dh) const {
+    // scelte_riservate: i regimi seguiti per scelta dell'azienda (tachigrafo) della persona sono riservati tutti (dipendono da
+    // scelte per tipo di servizio e mancano i dati particolari, K-011 aggiunta 2).
+    Json giornata(const kzero::DayHours& dh, bool scelte_riservate) const {
         const kzero::PersonDay& pd = *dh.pd;
         Json j = Json::object();
         j["data"] = data(pd.day);
@@ -519,7 +522,8 @@ private:
         }
         j["corse"] = corse(dh);
         Json regimi = Json::array();
-        for (const kzero::RegimeOnDay& ro : dh.regimes) regimi.push_back(regime(ro));
+        for (const kzero::RegimeOnDay& ro : dh.regimes)
+            if (!(ro.chosen && scelte_riservate)) regimi.push_back(regime(ro));
         j["regimi"] = std::move(regimi);
         // Che nessuna legge valga dice qualcosa del rapporto, se una delle leggi dipende dalla persona.
         const bool dipende = std::any_of(dh.regimes.begin(), dh.regimes.end(), [](const kzero::RegimeOnDay& ro) { return regime_personale(*ro.regime); });
@@ -537,7 +541,7 @@ private:
                              {"minuti_lettura_prudente", vedi ? Json(n.prudent) : Json(kRiservato)}});
         }
         j["notturno"] = std::move(notte);
-        riposo["tipi"] = tipi_riposo(dh);
+        riposo["tipi"] = tipi_riposo(dh, scelte_riservate);
         j["riposo_prima"] = std::move(riposo);
         Json rientri = Json::array();
         for (const kzero::ReturnJudgment& r : dh.returns) rientri.push_back(rientro(r));
@@ -588,8 +592,16 @@ public:
         j["contratto_collettivo"] =
             r_.lettura.leggibili.personali ? (x.agreement_code.empty() ? Json(nullptr) : personale(x.agreement_code)) : Json(nullptr);
         j["ore_previste_settimana_minuti"] = ph.planned_week ? personale(*ph.planned_week) : Json(nullptr);
+        // K-011 aggiunta 2 (decisione dell'arbitro): se i regimi seguiti per scelta dell'azienda (tachigrafo) della persona
+        // dipendono anche da scelte per tipo di servizio, senza i dati particolari sono riservati tutti, e lo si dice sempre,
+        // che valgano o no nel periodo: cosi' la riga non rivela niente.
+        const kzero::PersonPlan* piano = nullptr;
+        for (const kzero::PersonPlan& pp : rep_.plan.persons)
+            if (pp.person == ph.person) piano = &pp;
+        const bool scelte_riservate = !particolari() && kzero::chosen_by_kind(x, piano, idx_);
+        j["regimi_per_scelta"] = scelte_riservate ? Json(kRiservato) : Json(nullptr);
         Json g = Json::array();
-        for (const kzero::DayHours& dh : ph.days) g.push_back(giornata(dh));
+        for (const kzero::DayHours& dh : ph.days) g.push_back(giornata(dh, scelte_riservate));
         j["giornate"] = std::move(g);
         Json s = Json::array();
         for (const kzero::WeekHours& w : ph.weeks) s.push_back(settimana(w));
@@ -941,6 +953,8 @@ void persona_testo(std::string& t, const Json& p) {
                      ? ", ore previste " + min_testo(p.at("ore_previste_settimana_minuti")) + " a settimana"
                      : std::string(", ore previste riservate");
         t += "\n";
+        if (p.at("regimi_per_scelta") == kRiservato)
+            t += "  Regimi seguiti per scelta dell'azienda: riservati (dato particolare; --includi-dati-particolari).\n";
         if (p.at("giornate").empty()) t += "  Nessuna giornata di lavoro nel periodo.\n";
         for (const auto& g : p.at("giornate")) giornata_testo(t, g);
         for (const auto& s : p.at("settimane")) {

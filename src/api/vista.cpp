@@ -30,15 +30,25 @@ Json Vista::filtra(Classe c, Json valore, const std::string& codice) const {
 }
 
 Json Vista::modo_corsa(const kzero::TripMode& m) const {
-    if (!m.any) return Json(nullptr);
+    // Nessuna riga per l'azienda senza il modo delle corse (non ha niente da dire).
+    if (!m.modes) return Json(nullptr);
     using F = kzero::TripMode::From;
-    const Classe c = m.by_kinds || m.mixed_kinds ? Classe::Particolare : Classe::Comune;
+    // K-011 aggiunta 2: tutto quello che dipende dalle scelte per tipo di servizio (che ci siano, che manchino, cosa dicono) e'
+    // un dato particolare. Senza i dati particolari, ogni corsa senza una scelta propria o del suo servizio mostra la stessa
+    // cosa ("riservato") se l'azienda ha almeno una scelta per tipo, anche quando per il suo tipo non c'e' nessuna scelta.
+    const bool dai_tipi = m.by_kinds || (!m.any && !m.modes->by_kind.empty());
+    if (dai_tipi && !visibile(Classe::Particolare, visibilita_)) return Json(kRiservato);
     Json j = Json::object();
-    // Il modo si vede (e' l'esito, come "vale" o "non vale" di un regime); da dove viene, se e' il tipo di servizio, no.
-    j["modo"] = m.mode == kzero::TripModeKind::Out ? "out" : "tachigrafo";
-    j["da"] = filtra(c, m.from == F::Trip ? "corsa" : m.from == F::Service ? "servizio" : m.from == F::Kind ? "tipo_di_servizio" : "impostazione", "");
-    j["regime"] = m.modes ? Json(m.modes->regime.code) : Json(nullptr);
-    j["forza"] = m.mode == kzero::TripModeKind::Tachograph ? Json(m.strength == kzero::ChoiceStrength::Limit ? "limite" : "preferenza") : Json(nullptr);
+    if (!m.any) {   // nessuna scelta: decide la legge
+        j["modo"] = "nessuna";
+        j["da"] = nullptr;
+    } else {
+        j["modo"] = m.mode == kzero::TripModeKind::Out ? "out" : "tachigrafo";
+        j["da"] = m.from == F::Trip ? "corsa" : m.from == F::Service ? "servizio" : m.from == F::Kind ? "tipo_di_servizio" : "impostazione";
+    }
+    j["regime"] = m.modes->regime.code;
+    j["forza"] = m.any && m.mode == kzero::TripModeKind::Tachograph ? Json(m.strength == kzero::ChoiceStrength::Limit ? "limite" : "preferenza")
+                                                                    : Json(nullptr);
     // Motivo e chi: personali. Nella dichiarazione (dato particolare, K-011 aggiunta 2) stanno dentro un dato particolare:
     // si vedono solo con tutti e due i permessi, come nome e casa di chi va in un luogo sensibile. Un testo vuoto: non
     // arrivato dalla cassaforte (permessi), quindi riservato.
@@ -63,14 +73,15 @@ Json Vista::modo_corsa(const kzero::TripMode& m) const {
 
 std::string testo_modo_corsa(const Json& m) {
     const auto txt = [](const Json& v) { return v.is_string() ? v.get<std::string>() : v.dump(); };
+    if (m.is_string()) return "per un dato particolare";   // riservato: dipende dalle scelte per tipo di servizio
+    if (m.at("modo") == "nessuna") return "nessuna scelta, decide la legge (regime " + txt(m.at("regime")) + ")";
     const std::string da = txt(m.at("da"));
     std::string x = m.at("modo") == "out" ? std::string("OUT") : std::string("tachigrafo");
     if (m.at("forza").is_string()) x += " come " + m.at("forza").get<std::string>();
     x += da == "corsa"              ? ", scelta per la corsa"
          : da == "servizio"         ? ", scelta per il servizio"
          : da == "tipo_di_servizio" ? ", scelta per il tipo di servizio"
-         : da == "impostazione"     ? ", per l'impostazione dell'azienda sulle scelte diverse"
-                                    : ", per un dato particolare";
+                                    : ", per l'impostazione dell'azienda sulle scelte diverse";
     const auto giustificazione = [&](const char* campo, const char* nome) {
         const Json& g = m.at(campo);
         if (!g.is_object()) return;   // nessuna, oppure riservata (la dichiarazione senza i dati particolari)

@@ -1225,6 +1225,21 @@ TEST(Orari, asilo_piu_disabili_scelte_uguali_e_diverse) {
     EXPECT_TRUE(b.p.problemi(Check::ChosenRegimeNotRespected).empty());
 }
 
+// K-011 aggiunta 2: OUT per l'impostazione delle scelte diverse, dove la legge vuole il regime (60 km). Scelte diverse tra i
+// tipi di servizio: K-CTR-132 variante 4 (dato particolare); tra i servizi: variante 3 (comune).
+TEST(Orari, out_dalle_scelte_diverse_tipi_particolare_servizi_comune) {
+    for (const bool tipi : {true, false}) {
+        Prova561 a;
+        alfa(a.p.p).trip_modes = tipi ? modi({per_tipo(ServiceKind::School, TripModeKind::Out), per_tipo(ServiceKind::Disability, TripModeKind::Tachograph)})
+                                      : modi({}, {per_servizio("S-ASILO", TripModeKind::Out), per_servizio("S-DIS", TripModeKind::Tachograph)});
+        alfa(a.p.p).trip_modes->mixed = MixedModes::Out;
+        a.lunga("C-MISTA", {"S-ASILO", "S-DIS"}, 60.0);
+        const auto v = a.p.problemi(Check::ModeOutNotValid);
+        ASSERT_EQ(v.size(), 1u) << elenco(a.p.tutti());
+        EXPECT_EQ(v[0].variant, tipi ? 4 : 3);
+    }
+}
+
 // Scolastico e scolastico + disabili fino a 50 km esclusi con certezza (consulente, 28/10); solo disabili da confermare.
 TEST(Orari, scolastico_escluso_solo_disabili_da_confermare) {
     for (const auto& [servizi, da_confermare] :
@@ -1283,11 +1298,11 @@ TEST(Orari, out_dove_la_legge_vuole_il_561_senza_e_con_forzatura) {
 // Preferenza: avviso; limite su un turno ricorrente: errore; limite su un'assegnazione del singolo giorno: avviso. La guida
 // della linea e' guida.
 TEST(Orari, tachigrafo_su_una_linea_fino_a_50_km) {
-    const auto prova = [](ChoiceStrength forza, bool ricorrente) {
+    const auto prova = [](ChoiceStrength forza, bool ricorrente, bool tipo = true) {
         Prova561 a;
-        ModeEntry t = per_tipo(ServiceKind::Line, TripModeKind::Tachograph);
+        ModeEntry t = tipo ? per_tipo(ServiceKind::Line, TripModeKind::Tachograph) : per_servizio("S-LIN-B610", TripModeKind::Tachograph);
         t.strength = forza;
-        alfa(a.p.p).trip_modes = modi({t});
+        alfa(a.p.p).trip_modes = tipo ? modi({t}) : modi({}, {t});
         a.lunga("C-10", {"S-LIN-B610"}, 10.0, ricorrente);
         EXPECT_TRUE(a.p.problemi(Check::LawDrivingViolated).empty());
         EXPECT_TRUE(a.p.problemi(Check::LawDrivingToConfirm).empty()) << elenco(a.p.problemi(Check::LawDrivingToConfirm));
@@ -1296,8 +1311,13 @@ TEST(Orari, tachigrafo_su_una_linea_fino_a_50_km) {
     const auto pref = prova(ChoiceStrength::Preference, true);
     EXPECT_TRUE(pref.first.empty());
     ASSERT_EQ(pref.second.size(), 1u);
-    EXPECT_EQ(pref.second[0].variant, 13);   // guida di fila (variante 0 della guida)
+    // Guida di fila (variante 0 della guida, 13); +30: la scelta e' per tipo di servizio, il problema rivela un dato particolare
+    // (K-011 aggiunta 2). Con la scelta per il servizio, la variante comune.
+    EXPECT_EQ(pref.second[0].variant, 13 + 30);
     EXPECT_TRUE(con_motivo(pref.second[0], "preferenza"));
+    const auto servizio = prova(ChoiceStrength::Preference, true, false);
+    ASSERT_EQ(servizio.second.size(), 1u);
+    EXPECT_EQ(servizio.second[0].variant, 13);
     const auto lim = prova(ChoiceStrength::Limit, true);
     ASSERT_EQ(lim.first.size(), 1u);
     EXPECT_TRUE(lim.second.empty());

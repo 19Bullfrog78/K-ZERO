@@ -106,6 +106,21 @@ TripMode trip_mode(const Trip& t, const CompanySettings* s, const Index& idx, Da
     return m;
 }
 
+bool kind_tachograph(const CompanySettings* s) {
+    if (!s || !s->trip_modes) return false;
+    return std::any_of(s->trip_modes->by_kind.begin(), s->trip_modes->by_kind.end(),
+                       [](const ModeEntry& e) { return e.mode == TripModeKind::Tachograph; });
+}
+
+bool chosen_by_kind(const Person& p, const PersonPlan* plan, const Index& idx) {
+    if (kind_tachograph(idx.settings(p.company.code))) return true;
+    if (plan)
+        for (const PersonDay& pd : plan->days)
+            for (const Shift* s : pd.shifts)
+                if (s && kind_tachograph(idx.settings(s->company.code))) return true;
+    return false;
+}
+
 void judge_return(ReturnJudgment& r) {
     using O = ReturnJudgment::Outcome;
     using W = ReturnJudgment::Why;
@@ -1012,6 +1027,7 @@ private:
         c.person = pp.person;
         c.plan = &pp;
         c.norms = idx_.norms_of(pp.person->company.code);
+        c.chosen_by_kind = chosen_by_kind(*pp.person, &pp, idx_);
         c.d0 = p_.manifest.period.from;
         c.d1 = p_.manifest.period.to;
         c.h0 = abs_min(c.d0, 0);
@@ -1246,7 +1262,8 @@ private:
                 std::sort(motives.begin(), motives.end());
                 motives.erase(std::unique(motives.begin(), motives.end()), motives.end());
             }
-            b.variant += offset(b.certain_check);
+            // K-011 aggiunta 2: con scelte del tachigrafo per tipo di servizio le varianti +30 rivelano un dato particolare.
+            b.variant += offset(b.certain_check) + (c.chosen_by_kind ? 30 : 0);
             add(c, b, error ? Check::ChosenRegimeLimit : Check::ChosenRegimeNotRespected, motives);
         };
         for (int w = 0; w < 2; ++w) {   // il mondo 2 non da' problemi
@@ -1671,13 +1688,14 @@ private:
     void mode_problems() {
         // "out" dove la legge, con i dati scritti, vuole il regime e senza forzatura: vale la legge. Varianti: la scelta del
         // tipo di servizio (0: rivela il tipo, dato particolare), del servizio (1), della corsa (2), dell'impostazione per le
-        // scelte diverse (3).
+        // scelte diverse tra i servizi (3) o tra i tipi di servizio (4: dato particolare, K-011 aggiunta 2).
         for (const auto& [k, days] : out_not_valid_) {
             const TripModes* modes = std::get<0>(k);
             const ModeEntry* entry = std::get<1>(k);
             const Trip* trip = std::get<2>(k);
             const CompanySettings* s = owner_of(modes);
-            const int variant = !entry ? 3 : entry->trip ? 2 : entry->service ? 1 : 0;
+            const int variant = entry ? (entry->trip ? 2 : entry->service ? 1 : 0)
+                                      : trip_mode(*trip, s, idx_, *days.begin()).by_kinds ? 4 : 3;
             std::vector<Param> params = {ref_param("azienda", Element::Company, s ? s->company.code : Code()),
                                          ref_param("corsa", Element::Trip, trip->code), text_param("regime", modes->regime.code),
                                          days_of(days)};
