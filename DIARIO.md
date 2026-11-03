@@ -341,16 +341,19 @@
   esatti con ">=" (programma.ore_50_km_esatti_esclusi); due settimane senza il regolare tolto
   (Orari.due_riposi_settimanali_ridotti_di_fila); soste non scritte al limite 30/31 con ">="
   (Orari.soste_non_scritte_di_30_e_di_31_minuti); due regimi certi, il piu' alto invece del piu' basso
-  (Orari.contratto_con_due_regimi_certi_il_conteggio_piu_basso). Sabotaggi nuovi (prove rosse): ore del contratto
-  senza i regimi da confermare 4; il piu' alto tra i regimi certi 2; 234 che non segue l'estensione 5; estensione del
-  234 sempre certa 7; guida esclusa come guida nella lettura certa 10; trasferimenti non legati alle corse 3; scelta
-  del singolo servizio ignorata 5; OUT accettato dove la legge vuole il 561 senza forzatura 14; OUT senza forzatura
-  trattato come forzato 13; forzatura senza avviso 6; dichiarazione senza nota 4; rischio della forzatura non
-  registrato 5; forzatura come esclusione certa 5; tachigrafo per scelta ignorato 4. Tutti scoperti. Prove di prima
-  cambiate: controlla_orari, ore/giornata_errori_del_piano_non_bloccano (numeri), ore_52_km_tutta_la_settimana
-  ("Errore K-CTR-113" -> "Avviso K-CTR-114", resta "Errore K-CTR-117"), scala_controlla (1 avviso -> 0), il numero dei
-  controlli del catalogo (126 -> 133), tre giornate attese (solo la riga nuova "modo" delle corse). Prove: 834 su 834
-  (prima dell'aggiunta 798).
+  (Orari.contratto_con_due_regimi_certi_il_conteggio_piu_basso). Sabotaggi nuovi (prove rosse; tutti, anche quelli
+  dell'arbitro, rifatti sul codice finale): ore del contratto senza i regimi da confermare 2; il piu' alto tra i
+  regimi certi 1; 234 che non segue l'estensione 5; estensione del 234 sempre certa 7; guida esclusa come guida nella
+  lettura certa 10; trasferimenti non legati alle corse 3; scelta del singolo servizio ignorata 5; OUT accettato dove
+  la legge vuole il 561 senza forzatura 14; OUT senza forzatura trattato come forzato 13; forzatura senza avviso 6;
+  dichiarazione senza nota 4; rischio della forzatura non registrato 5; forzatura come esclusione certa 5; tachigrafo
+  per scelta ignorato 4. Tutti scoperti. Prove di prima cambiate: controlla_orari,
+  ore/giornata_errori_del_piano_non_bloccano (numeri), ore_52_km_tutta_la_settimana ("Errore K-CTR-113" -> "Avviso
+  K-CTR-114", resta "Errore K-CTR-117"), scala_controlla (1 avviso -> 0), il numero dei controlli del catalogo (126 ->
+  133), tre giornate attese (solo la riga nuova "modo" delle corse). Prove: 834 su 834 (prima dell'aggiunta 798); con
+  i sanitizer 832 su 832 (29 minuti, 3 prove insieme). Fuzzing in locale sul codice finale, i 32 bersagli 60 secondi
+  ciascuno, uno alla volta: 22.761 file del pacchetto, 16.911 righe di comando, 2.215.593 date e orari, 77.156
+  cassaforti e 74.347 contenuti, 576.836 registri e 366.716 elenchi di voci, 288.369 password. Nessun guasto.
 
 ## Bug e limiti noti
 - I pesi del calcolo (ObjectiveWeights) hanno ancora valori provvisori nel codice, non usati: andranno nei dati con il
