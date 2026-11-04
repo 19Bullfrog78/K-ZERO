@@ -828,6 +828,34 @@ TEST(Unione, ServiziOccasionaliNelleVersioni) {
     EXPECT_EQ(k011.to_confirm, std::vector<kzero::ServiceKind>{kzero::ServiceKind::Other});
 }
 
+// K-013 (controllo del K-012): nelle norme versione 2 "da_confermare" dei servizi occasionali e' facoltativo. Senza, oppure
+// false, i tipi dell'elenco sono servizi occasionali certi (mai da confermare per un valore che manca).
+TEST(Unione, ServiziOccasionaliVersione2Certi) {
+    const std::string prove = KZERO_CARTELLA_PROVE;
+    const std::string scritto = "\"servizi_occasionali\": { \"tipi_servizio\": [\"altro\"], \"da_confermare\": true }";
+    for (const std::string nuovo : {"\"servizi_occasionali\": { \"tipi_servizio\": [\"altro\"] }",
+                                    "\"servizi_occasionali\": { \"tipi_servizio\": [\"altro\"], \"da_confermare\": false }"}) {
+        InMemoria m = da_cartella(prove + "/esempi/k011-orari");
+        std::string& norme = m.file.at("norme.json");
+        const std::size_t pos = norme.find(scritto);
+        ASSERT_NE(pos, std::string::npos);
+        norme.replace(pos, scritto.size(), nuovo);
+        const Lettura l = leggi_pacchetto(m);
+        ASSERT_TRUE(l.forma_valida()) << nuovo;
+        EXPECT_EQ(l.versioni.at("norme.json"), 2);
+        bool trovato = false;
+        for (const kzero::Norms& n : l.pacchetto.norms)
+            for (const kzero::Regime& r : n.regimes)
+                if (r.code == "R-561") {
+                    trovato = true;
+                    EXPECT_TRUE(r.occasional.present) << nuovo;
+                    EXPECT_EQ(r.occasional.certain, std::vector<kzero::ServiceKind>{kzero::ServiceKind::Other}) << nuovo;
+                    EXPECT_TRUE(r.occasional.to_confirm.empty()) << nuovo;
+                }
+        EXPECT_TRUE(trovato);
+    }
+}
+
 TEST(Unione, OgniCampoRiservatoDegliSchemiCompareNeiPacchettiDelleProve) {
     std::map<std::string, std::set<std::string>> usati;   // schema -> percorsi usati nei file dell'ultima versione
     for (const PacchettoDiProva& p : pacchetti_delle_prove())

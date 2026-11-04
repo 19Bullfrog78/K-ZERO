@@ -331,8 +331,12 @@ TEST(Orari, guida_continua_interruzioni_in_parti) {
 // azzera in tutte e due le letture (nessun errore, nessun avviso); senza la voce un errore. Lo stesso servizio "altro" con
 // "altro" occasionale da confermare: nessun errore, ma un avviso con il motivo (nella lettura prudente il 15 + 15 non vale).
 namespace {
+// servizi: i servizi delle corse (di base la sola gita). trasferimento: al posto della corsa di mezzo, un trasferimento a vuoto
+// (guida senza passeggeri) da un luogo a un altro, negli stessi orari.
 std::pair<std::vector<Problem>, std::vector<Problem>> gita_con_15_piu_15(std::optional<Applies<ServiceKind>> occasionali,
-                                                                         ServiceKind tipo = ServiceKind::Ncc) {
+                                                                         ServiceKind tipo = ServiceKind::Ncc,
+                                                                         std::vector<std::string> servizi = {"S-GITA"},
+                                                                         std::optional<std::pair<std::string, std::string>> trasferito = {}) {
     Prova p({guida_continua_561()});
     if (occasionali) p.regime().occasional = *occasionali;
     per_codice(p.p.services, "S-GITA").kind = tipo;
@@ -340,7 +344,7 @@ std::pair<std::vector<Problem>, std::vector<Problem>> gita_con_15_piu_15(std::op
                             const std::string& alle) {
         Trip t;
         t.code = codice;
-        t.services = {Ref{"S-GITA", {}}};
+        for (const std::string& s : servizi) t.services.push_back(Ref{s, {}});
         t.calendar = Ref{"CAL-SEMPRE", {}};
         t.passages.resize(2);
         t.passages[0].place = Ref{da, {}};
@@ -354,11 +358,44 @@ std::pair<std::vector<Problem>, std::vector<Problem>> gita_con_15_piu_15(std::op
     tratta("C-PROVA-1", "L-RIMESSA-ALFA", "06:00", "F-LAGOBELLO", "08:30");
     tratta("C-PROVA-2", "F-LAGOBELLO", "08:45", "F-PRADELLO", "09:15");
     tratta("C-PROVA-3", "F-PRADELLO", "09:30", "L-RIMESSA-ALFA", "11:15");
-    p.giornata("2026-10-05", {corsa("C-PROVA-1"), el("P", "08:30", "08:45", "F-LAGOBELLO"), corsa("C-PROVA-2"),
+    const Elemento mezzo = trasferito ? trasferimento(trasferito->first, "08:45", "09:15", trasferito->second) : corsa("C-PROVA-2");
+    p.giornata("2026-10-05", {corsa("C-PROVA-1"), el("P", "08:30", "08:45", "F-LAGOBELLO"), mezzo,
                               el("P", "09:15", "09:30", "F-PRADELLO"), corsa("C-PROVA-3")});
     return {p.problemi(Check::LawDrivingViolated), p.problemi(Check::LawDrivingToConfirm)};
 }
+
+const Applies<ServiceKind> kNccCertoAltroDaConfermare{true, {ServiceKind::Ncc}, {ServiceKind::Other}};
 }  // namespace
+
+// K-013 (controllo del K-012): una corsa promiscua con un servizio NCC (occasionale certo) e uno scolastico (non occasionale)
+// non e' un servizio occasionale: la certezza e' la piu' bassa tra i servizi della corsa, in tutti e due gli ordini. Quindi
+// niente 15 + 15: un errore, come senza servizi occasionali.
+TEST(Orari, corsa_promiscua_ncc_e_scolastico_niente_15_piu_15) {
+    for (const std::vector<std::string>& servizi : {std::vector<std::string>{"S-GITA", "S-SCU-AM"}, std::vector<std::string>{"S-SCU-AM", "S-GITA"}}) {
+        const auto v = gita_con_15_piu_15(kNccCertoAltroDaConfermare, ServiceKind::Ncc, servizi);
+        EXPECT_EQ(v.first.size(), 1u) << servizi.front() << elenco(v.first);
+        EXPECT_TRUE(v.second.empty()) << servizi.front() << elenco(v.second);
+    }
+    // Con il solo servizio NCC il 15 + 15 vale (stessa giornata): la differenza viene proprio dal servizio scolastico.
+    const auto sola_gita = gita_con_15_piu_15(kNccCertoAltroDaConfermare);
+    EXPECT_TRUE(sola_gita.first.empty() && sola_gita.second.empty()) << elenco(sola_gita.first) << elenco(sola_gita.second);
+}
+
+// K-013 (controllo del K-012): un trasferimento a vuoto tra due corse NCC segue la corsa a cui serve (served_trip). Se arriva
+// dove comincia la corsa dopo, e' NCC con certezza: 15 + 15 in tutte e due le letture. Se non arriva dove comincia la corsa
+// dopo e non parte da dove finisce quella prima, non si sa a quale corsa serve: 15 + 15 solo da confermare (nella lettura
+// certa vale, in quella prudente no), quindi un avviso con il motivo, mai un errore e mai certo.
+TEST(Orari, trasferimento_vicino_a_una_corsa_ncc) {
+    const auto legato = gita_con_15_piu_15(kNccCertoAltroDaConfermare, ServiceKind::Ncc, {"S-GITA"},
+                                           std::make_pair(std::string("F-LAGOBELLO"), std::string("F-PRADELLO")));
+    EXPECT_TRUE(legato.first.empty()) << elenco(legato.first);
+    EXPECT_TRUE(legato.second.empty()) << elenco(legato.second);
+    const auto non_si_sa = gita_con_15_piu_15(kNccCertoAltroDaConfermare, ServiceKind::Ncc, {"S-GITA"},
+                                              std::make_pair(std::string("L-RIMESSA-ALFA"), std::string("L-RIMESSA-ALFA")));
+    EXPECT_TRUE(non_si_sa.first.empty()) << elenco(non_si_sa.first);
+    ASSERT_EQ(non_si_sa.second.size(), 1u) << elenco(non_si_sa.second);
+    EXPECT_TRUE(con_motivo(non_si_sa.second.front(), "servizi_occasionali")) << elenco(non_si_sa.second);
+}
 
 TEST(Orari, guida_continua_15_piu_15_nei_servizi_occasionali) {
     const auto certi = gita_con_15_piu_15(Applies<ServiceKind>{true, {ServiceKind::Ncc}, {ServiceKind::Other}});
