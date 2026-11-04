@@ -925,10 +925,12 @@ kzero_prova(controlla_out_dove_vale_la_legge_riservato USCITA 1 FORMATO testo RE
 # E' il pacchetto degli orari del K-011 rifatto sul demo di oggi (versioni nuove) piu' i casi del K-012. Rispetto a
 # tests/esempi/k011-orari (versioni 2, stesso esito di prima: 11 errori, 107 avvisi) due avvisi in piu': l'auto NCC da 8 posti
 # di Beta (nessuna legge sugli orari per il dipendente, K-CTR-107) e la navetta "altro" (15 + 15 da confermare, K-CTR-114); e
-# due in meno: P-G e il suo minibus ALFA-06 fanno i turni dei committenti privati del demo (prima K-CTR-084 e 085).
+# due in meno: P-G e il suo minibus ALFA-06 fanno i turni dei committenti privati del demo (prima K-CTR-084 e 085). K-013: un
+# avviso in piu', l'azienda Gamma della persona in prestito non ha mezzi (K-CTR-045).
 set(K012 ${CMAKE_CURRENT_SOURCE_DIR}/esempi/k012-servizi)
 kzero_prova(k012_controlla USCITA 1 FORMATO testo RESOCONTO
-            CONTIENE "Controllo del pacchetto K012-SERVIZI" "11 errori (11 del piano degli orari), 107 avvisi."
+            CONTIENE "Controllo del pacchetto K012-SERVIZI" "11 errori (11 del piano degli orari), 108 avvisi."
+                     "Avviso K-CTR-045 (pacchetto.json, /aziende/2): L'azienda GAMMA (Autolinee Gamma (inventata)) non ha mezzi nel pacchetto."
                      "Avviso K-CTR-107 (persone.json, /persone/32): La persona P-NCC-AUTO lavora il 2026-11-07 senza nessuna legge sugli orari dei dati"
                      "Avviso K-CTR-114 (persone.json, /persone/34): La persona P-NAVETTA potrebbe superare la regola R-561 561-GUIDA-CONTINUA"
             NON_CONTIENE "P-NCC-BUS" "P-GITA-SCUOLA"
@@ -936,7 +938,7 @@ kzero_prova(k012_controlla USCITA 1 FORMATO testo RESOCONTO
 # K-013: di base K-CTR-107 (nessuna legge vale: una legge sugli orari dipende dal tipo di servizio) e K-CTR-114 (R-561) si
 # contano soltanto.
 kzero_prova(k012_controlla_di_base USCITA 1 FORMATO testo RESOCONTO
-            CONTIENE "11 errori (11 del piano degli orari), 107 avvisi."
+            CONTIENE "11 errori (11 del piano degli orari), 108 avvisi."
                      "Problemi sui dati particolari (salute), non elencati uno per uno: 8 errori e 29 avvisi."
             NON_CONTIENE "K-CTR-107" "K-CTR-114"
             ARGOMENTI controlla ${K012})
@@ -1024,6 +1026,33 @@ kzero_prova(giornata_modo_con_dati_particolari USCITA 0 FORMATO testo
             CONTIENE "servizi S-DIS (tipo disabili, contratto CT-SCU, committente CVA \"Consorzio Valle Alta (inventato)\")\n                modo nessuna scelta, decide la legge (regime R-561)\n"
                      "servizi S-LIN-B610 (tipo linea, contratto CT-LIN, committente TPV \"Trasporti Provinciali Valfonda (inventato)\")\n                modo OUT, scelta per il tipo di servizio (regime R-561)\n"
             ARGOMENTI ${GIORNATA_DEMO} --data 2026-11-11 --includi-dati-particolari)
+# K-013, persona in prestito (sabotaggio M4 del K-011): Gamma (pacchetto dei servizi) non ha scelte del tachigrafo per tipo.
+# P-GAMMA-PRESTITO e' in prestito a Beta, che registra le linee con il tachigrafo per tipo: senza i dati particolari la riga fissa
+# dei regimi per scelta c'e' per lei (la scelta per tipo e' dell'azienda di un suo turno) e il regime per scelta non compare; con
+# i dati particolari si vede tutto. P-GAMMA, della stessa azienda e senza prestito, non ha la riga.
+kzero_prova(ore_prestito_riga_dei_regimi_per_scelta USCITA 0 FORMATO testo
+            CONTIENE "Persona P-GAMMA-PRESTITO, azienda GAMMA, rapporto riservato\n  Regimi seguiti per scelta dell'azienda: riservati (dato particolare; --includi-dati-particolari).\n"
+                     "Modo delle corse: C-PRESTITO-1, C-PRESTITO-2: per un dato particolare."
+            NON_CONTIENE "per scelta dell'azienda (tachigrafo" "Non valgono per legge" "tachigrafo come" "R-561"
+            ARGOMENTI ore ${K012} --data 2026-11-26 --persona P-GAMMA-PRESTITO)
+kzero_prova(ore_prestito_riga_dei_regimi_per_scelta_json USCITA 0 FORMATO json SCHEMA ore
+            CONTIENE "\"codice\": \"P-GAMMA-PRESTITO\"" "\"regimi_per_scelta\": \"riservato\""
+            NON_CONTIENE "\"per_scelta\": true" "tachigrafo_per_scelta"
+            ARGOMENTI ore ${K012} --data 2026-11-26 --persona P-GAMMA-PRESTITO --formato json)
+kzero_prova(ore_prestito_con_i_dati_particolari USCITA 0 FORMATO testo
+            CONTIENE "Modo delle corse: C-PRESTITO-1, C-PRESTITO-2: tachigrafo come preferenza, scelta per il tipo di servizio (regime R-561)."
+                     "Regime R-561 per scelta dell'azienda (tachigrafo, non per legge) per guida e riposi: vale per scelta dell'azienda (tachigrafo) per tutte le corse."
+                     "Non valgono per legge: R-561."
+            NON_CONTIENE "Regimi seguiti per scelta dell'azienda: riservati" "Regimi che dipendono dal tipo"
+            ARGOMENTI ore ${K012} --data 2026-11-26 --persona P-GAMMA-PRESTITO --includi-dati-particolari)
+kzero_prova(ore_senza_prestito_nessuna_riga USCITA 0 FORMATO testo
+            CONTIENE "Persona P-GAMMA, azienda GAMMA, rapporto riservato\n  Regimi che dipendono dal tipo di servizio delle corse: riservati"
+                     "T-GAMMA (autista, servizio fisso), dalle 08:00 alle 12:00"
+            NON_CONTIENE "Regimi seguiti per scelta"
+            ARGOMENTI ore ${K012} --data 2026-11-26 --persona P-GAMMA)
+kzero_prova(ore_senza_prestito_nessuna_riga_json USCITA 0 FORMATO json SCHEMA ore
+            CONTIENE "\"codice\": \"P-GAMMA\"" "\"regimi_per_scelta\": null"
+            ARGOMENTI ore ${K012} --data 2026-11-26 --persona P-GAMMA --formato json)
 # La riga fissa c'e' anche nei giorni senza tachigrafo e per chi non lavora (Beta ha scelte del tachigrafo per tipo).
 kzero_prova(ore_tachigrafo_per_tipo_riga_fissa USCITA 0 FORMATO testo
             CONTIENE "Persona P-B4, azienda BETA, rapporto riservato\n  Regimi seguiti per scelta dell'azienda: riservati (dato particolare; --includi-dati-particolari).\n  Regimi che dipendono dal tipo di servizio delle corse: riservati"

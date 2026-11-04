@@ -4,7 +4,8 @@
 # personale o particolare degli schemi delle ultime versioni compare in un pacchetto delle prove), poi aggiunge i casi del
 # K-012: una gita scolastica NCC con studenti, l'NCC con un'auto da 8 posti (niente Reg. 561) e con un pullman (561 certo,
 # interruzione di 15 + 15 minuti), un servizio "altro" (servizio occasionale da confermare), i committenti privati di un
-# servizio verso un luogo sensibile (nome legato) e verso un luogo normale (nome personale).
+# servizio verso un luogo sensibile (nome legato) e verso un luogo normale (nome personale); dal K-013 un'azienda senza scelte del
+# tachigrafo per tipo di servizio con una persona in prestito a un'azienda che le ha.
 # Il pacchetto generato e' nel repository: dopo un cambio del demo o di questo script si rigenera e si rivedono le prove
 # che lo usano (tests/CMakeLists.txt, sezione K-012). tests/esempi/k011-orari invece resta quello del K-011 (file delle
 # versioni 2): e' la prova che le versioni 2 si leggono ancora con lo stesso esito. Nessun dato vero.
@@ -154,6 +155,49 @@ for codice, data in [('T-MATRIMONIO', '2027-07-10'), ('T-PRIVATO-CENTRO', '2027-
     t = copy.deepcopy(uno(demo_turni, codice))
     tu['turni'].append(t)
     sf['servizi_fissi'].append({"codice": f'SF-{codice}', "turno": codice, "persona": 'P-G', "calendario": t['calendario']})
+
+# 6. K-013 (persona in prestito): Gamma (inventata) non ha scelte del tachigrafo per tipo di servizio. P-GAMMA-PRESTITO e' in
+# prestito a Beta, che registra le linee con il tachigrafo (scelta per tipo): giovedi' 26 novembre fa due corse della linea B620
+# (14,1 km: fuori dal Reg. 561 per legge, dentro per la scelta di Beta). P-GAMMA lavora solo per Gamma (una riserva lo stesso
+# giorno). Senza i dati particolari la prima ha la riga fissa dei regimi seguiti per scelta (la scelta per tipo e' dell'azienda
+# di un suo turno, chosen_by_kind), la seconda no.
+pk['aziende'].append({"codice": "GAMMA", "nome": "Autolinee Gamma (inventata)"})
+save('pacchetto', pk)
+az = load('aziende')
+gamma = copy.deepcopy(uno(az['aziende'], 'BETA', 'azienda'))
+for k in ['modo_corse', 'nota', 'rientro', 'scelte_orari']:
+    gamma.pop(k, None)
+gamma['azienda'] = 'GAMMA'
+gamma['attivita'].append({"codice": "RISERVA", "nome": "Riserva in rimessa", "usa_il_mezzo": False, "tempo": "disponibilita"})
+gamma['nota'] = "Autolinee Gamma (inventata) non ha scelte del tachigrafo per tipo di servizio (K-013, persona in prestito)."
+az['aziende'].append(gamma)
+save('aziende', az)
+for codice, nome, prestito in [('P-GAMMA-PRESTITO', "Gamma In Prestito", True), ('P-GAMMA', "Gamma Senza Prestito", False)]:
+    x = {"codice": codice, "azienda": "GAMMA", "ruoli": ["autista"], "nome": nome, "presa_servizio": "L-RIMESSA-BETA",
+         "rapporto": {"tipo": "dipendente_tempo_pieno"}, "abilitazioni": copy.deepcopy(pb['abilitazioni'])}
+    if prestito:
+        x["prestiti"] = [{"azienda": "BETA", "accordo": "Accordo di prestito n. 1/2026 tra Gamma e Beta (inventato)",
+                          "dal": "2026-09-01", "al": "2027-08-31"}]
+    pe['persone'].append(x)
+bus = copy.deepcopy(uno(me['mezzi'], 'BETA-02'))
+bus.update({"codice": "V-BETA-PRESTITO", "targa": "BB 926 BB"})
+me['mezzi'].append(bus)
+cal = turno('T-PRESTITO-GAMMA', "Linea B620 con una persona di Gamma", 'P-GAMMA-PRESTITO', '2026-11-26',
+            [att('PRESA-SERVIZIO', 'L-RIMESSA-BETA', '07:30', '07:45'), att('RIENTRO', 'L-RIMESSA-BETA', '07:45', '08:00', 'F-SORGENTA', 3.0),
+             c('C-PRESTITO-1'), c('C-PRESTITO-2'), att('RIENTRO', 'F-SORGENTA', '09:40', '09:55', 'L-RIMESSA-BETA', 3.0)],
+            'V-BETA-PRESTITO', 'BETA')
+for codice, ora, da, a in [('C-PRESTITO-1', ('08:00', '08:12', '08:30'), 'F-SORGENTA', 'F-MONTEBRINO'),
+                           ('C-PRESTITO-2', ('09:00', '09:18', '09:40'), 'F-MONTEBRINO', 'F-SORGENTA')]:
+    co['corse'].append({"codice": codice, "nome": "Linea B620, corsa con la persona di Gamma", "servizi": ["S-LIN-B620"], "calendario": cal,
+                        "passaggi": [{"luogo": da, "orario": ora[0]}, {"luogo": "F-LAGOBELLO", "orario": ora[1], "km": {"pieni": 6.2 if da == 'F-SORGENTA' else 7.9}},
+                                     {"luogo": a, "orario": ora[2], "km": {"pieni": 7.9 if da == 'F-SORGENTA' else 6.2}}],
+                        "km_totali": {"pieni": 14.1, "vuoti": 0}})
+cal = f'CAL-T-GAMMA'
+ca['calendari'].append({"codice": cal, "nome": "Solo il 2026-11-26", "dal": "2026-11-26", "al": "2026-11-26", "giorni": GIORNI})
+tu['turni'].append({"codice": "T-GAMMA", "nome": "Riserva di Gamma", "azienda": "GAMMA", "ruolo": "autista", "calendario": cal,
+                    "mezzo": {"modo": "nessuno"}, "inizio": "L-RIMESSA-BETA", "fine": "L-RIMESSA-BETA",
+                    "elementi": [att('RISERVA', 'L-RIMESSA-BETA', '08:00', '12:00')]})
+sf['servizi_fissi'].append({"codice": "SF-T-GAMMA", "turno": "T-GAMMA", "persona": "P-GAMMA", "calendario": cal})
 
 for n, d in [('calendari', ca), ('turni', tu), ('servizi_fissi', sf), ('corse', co), ('servizi', se), ('mezzi', me), ('persone', pe),
              ('committenti', cm), ('contratti', ct)]:

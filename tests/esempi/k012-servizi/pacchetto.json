@@ -12,6 +12,10 @@
     {
       "codice": "BETA",
       "nome": "Trasporti Beta"
+    },
+    {
+      "codice": "GAMMA",
+      "nome": "Autolinee Gamma (inventata)"
     }
   ],
   "periodo": {

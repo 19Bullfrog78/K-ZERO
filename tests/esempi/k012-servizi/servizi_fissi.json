@@ -277,6 +277,18 @@
       "turno": "T-PRIVATO-CENTRO",
       "persona": "P-G",
       "calendario": "CAL-PRIVATO-CENTRO"
+    },
+    {
+      "codice": "SF-T-PRESTITO-GAMMA",
+      "turno": "T-PRESTITO-GAMMA",
+      "persona": "P-GAMMA-PRESTITO",
+      "calendario": "CAL-T-PRESTITO-GAMMA"
+    },
+    {
+      "codice": "SF-T-GAMMA",
+      "turno": "T-GAMMA",
+      "persona": "P-GAMMA",
+      "calendario": "CAL-T-GAMMA"
     }
   ]
 }

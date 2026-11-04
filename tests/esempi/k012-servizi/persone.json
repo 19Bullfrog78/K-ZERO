@@ -1386,6 +1386,64 @@
           "tipo": "KB"
         }
       ]
+    },
+    {
+      "codice": "P-GAMMA-PRESTITO",
+      "azienda": "GAMMA",
+      "ruoli": [
+        "autista"
+      ],
+      "nome": "Gamma In Prestito",
+      "presa_servizio": "L-RIMESSA-BETA",
+      "rapporto": {
+        "tipo": "dipendente_tempo_pieno"
+      },
+      "abilitazioni": [
+        {
+          "tipo": "B"
+        },
+        {
+          "tipo": "D",
+          "scadenza": "2030-06-30"
+        },
+        {
+          "tipo": "CQC-P",
+          "scadenza": "2030-06-30"
+        }
+      ],
+      "prestiti": [
+        {
+          "azienda": "BETA",
+          "accordo": "Accordo di prestito n. 1/2026 tra Gamma e Beta (inventato)",
+          "dal": "2026-09-01",
+          "al": "2027-08-31"
+        }
+      ]
+    },
+    {
+      "codice": "P-GAMMA",
+      "azienda": "GAMMA",
+      "ruoli": [
+        "autista"
+      ],
+      "nome": "Gamma Senza Prestito",
+      "presa_servizio": "L-RIMESSA-BETA",
+      "rapporto": {
+        "tipo": "dipendente_tempo_pieno"
+      },
+      "abilitazioni": [
+        {
+          "tipo": "B"
+        },
+        {
+          "tipo": "D",
+          "scadenza": "2030-06-30"
+        },
+        {
+          "tipo": "CQC-P",
+          "scadenza": "2030-06-30"
+        }
+      ]
     }
   ]
 }

@@ -2173,6 +2173,69 @@
           "alle": "09:20"
         }
       ]
+    },
+    {
+      "codice": "T-PRESTITO-GAMMA",
+      "nome": "Linea B620 con una persona di Gamma",
+      "azienda": "BETA",
+      "ruolo": "autista",
+      "calendario": "CAL-T-PRESTITO-GAMMA",
+      "mezzo": {
+        "modo": "preciso",
+        "codice": "V-BETA-PRESTITO"
+      },
+      "inizio": "L-RIMESSA-BETA",
+      "fine": "L-RIMESSA-BETA",
+      "elementi": [
+        {
+          "attivita": "PRESA-SERVIZIO",
+          "luogo": "L-RIMESSA-BETA",
+          "dalle": "07:30",
+          "alle": "07:45"
+        },
+        {
+          "attivita": "RIENTRO",
+          "luogo": "L-RIMESSA-BETA",
+          "dalle": "07:45",
+          "alle": "08:00",
+          "verso": "F-SORGENTA",
+          "km_vuoti": 3.0
+        },
+        {
+          "corsa": "C-PRESTITO-1"
+        },
+        {
+          "corsa": "C-PRESTITO-2"
+        },
+        {
+          "attivita": "RIENTRO",
+          "luogo": "F-SORGENTA",
+          "dalle": "09:40",
+          "alle": "09:55",
+          "verso": "L-RIMESSA-BETA",
+          "km_vuoti": 3.0
+        }
+      ]
+    },
+    {
+      "codice": "T-GAMMA",
+      "nome": "Riserva di Gamma",
+      "azienda": "GAMMA",
+      "ruolo": "autista",
+      "calendario": "CAL-T-GAMMA",
+      "mezzo": {
+        "modo": "nessuno"
+      },
+      "inizio": "L-RIMESSA-BETA",
+      "fine": "L-RIMESSA-BETA",
+      "elementi": [
+        {
+          "attivita": "RISERVA",
+          "luogo": "L-RIMESSA-BETA",
+          "dalle": "08:00",
+          "alle": "12:00"
+        }
+      ]
     }
   ]
 }

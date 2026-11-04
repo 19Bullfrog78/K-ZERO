@@ -912,6 +912,36 @@
         "sabato",
         "domenica"
       ]
+    },
+    {
+      "codice": "CAL-T-PRESTITO-GAMMA",
+      "nome": "Solo il 2026-11-26",
+      "dal": "2026-11-26",
+      "al": "2026-11-26",
+      "giorni": [
+        "lunedi",
+        "martedi",
+        "mercoledi",
+        "giovedi",
+        "venerdi",
+        "sabato",
+        "domenica"
+      ]
+    },
+    {
+      "codice": "CAL-T-GAMMA",
+      "nome": "Solo il 2026-11-26",
+      "dal": "2026-11-26",
+      "al": "2026-11-26",
+      "giorni": [
+        "lunedi",
+        "martedi",
+        "mercoledi",
+        "giovedi",
+        "venerdi",
+        "sabato",
+        "domenica"
+      ]
     }
   ]
 }

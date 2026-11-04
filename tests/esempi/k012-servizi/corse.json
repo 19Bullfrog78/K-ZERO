@@ -2848,6 +2848,70 @@
           }
         }
       ]
+    },
+    {
+      "codice": "C-PRESTITO-1",
+      "nome": "Linea B620, corsa con la persona di Gamma",
+      "servizi": [
+        "S-LIN-B620"
+      ],
+      "calendario": "CAL-T-PRESTITO-GAMMA",
+      "passaggi": [
+        {
+          "luogo": "F-SORGENTA",
+          "orario": "08:00"
+        },
+        {
+          "luogo": "F-LAGOBELLO",
+          "orario": "08:12",
+          "km": {
+            "pieni": 6.2
+          }
+        },
+        {
+          "luogo": "F-MONTEBRINO",
+          "orario": "08:30",
+          "km": {
+            "pieni": 7.9
+          }
+        }
+      ],
+      "km_totali": {
+        "pieni": 14.1,
+        "vuoti": 0
+      }
+    },
+    {
+      "codice": "C-PRESTITO-2",
+      "nome": "Linea B620, corsa con la persona di Gamma",
+      "servizi": [
+        "S-LIN-B620"
+      ],
+      "calendario": "CAL-T-PRESTITO-GAMMA",
+      "passaggi": [
+        {
+          "luogo": "F-MONTEBRINO",
+          "orario": "09:00"
+        },
+        {
+          "luogo": "F-LAGOBELLO",
+          "orario": "09:18",
+          "km": {
+            "pieni": 7.9
+          }
+        },
+        {
+          "luogo": "F-SORGENTA",
+          "orario": "09:40",
+          "km": {
+            "pieni": 6.2
+          }
+        }
+      ],
+      "km_totali": {
+        "pieni": 14.1,
+        "vuoti": 0
+      }
     }
   ]
 }

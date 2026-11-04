@@ -283,6 +283,65 @@
         "nota": "Trasporti Beta registra anche le linee con il tachigrafo: per scelta segue il Reg. 561 (come preferenza)."
       },
       "nota": "Trasporti Beta vuole i mezzi sempre in rimessa la notte."
+    },
+    {
+      "azienda": "GAMMA",
+      "norme": "N-IT",
+      "impostazioni": {
+        "ricovero_vicino_a_casa": "mai",
+        "abbinamento_autista_mezzo": "nessuno",
+        "soste_non_scritte": {
+          "categoria": "disponibilita",
+          "oltre_minuti": 15,
+          "categoria_oltre": "interruzione"
+        }
+      },
+      "attivita": [
+        {
+          "codice": "PRESA-SERVIZIO",
+          "nome": "Uscita dalla rimessa e controllo",
+          "usa_il_mezzo": true,
+          "tempo": "altre_mansioni"
+        },
+        {
+          "codice": "RIENTRO",
+          "nome": "Rientro in rimessa",
+          "usa_il_mezzo": true,
+          "tempo": "guida"
+        },
+        {
+          "codice": "SOSTA",
+          "nome": "Sosta al capolinea",
+          "usa_il_mezzo": true,
+          "tempo": "disponibilita",
+          "nota": "Sosta con il mezzo al capolinea, pronto a ripartire: disponibilita'. Una sosta in cui il conducente e' libero si scrive come pausa o resta non scritta (oltre 15 minuti e' interruzione)."
+        },
+        {
+          "codice": "RISERVA",
+          "nome": "Riserva in rimessa",
+          "usa_il_mezzo": false,
+          "tempo": "disponibilita"
+        }
+      ],
+      "tipi_assenza": [
+        {
+          "codice": "FERIE",
+          "nome": "Ferie"
+        }
+      ],
+      "tipi_fermo": [
+        {
+          "codice": "OFFICINA",
+          "nome": "In officina"
+        }
+      ],
+      "competenze": [
+        {
+          "codice": "INFANZIA",
+          "nome": "Formata per l'accompagnamento dei bambini"
+        }
+      ],
+      "nota": "Autolinee Gamma (inventata) non ha scelte del tachigrafo per tipo di servizio (K-013, persona in prestito)."
     }
   ]
 }
