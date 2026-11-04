@@ -803,6 +803,31 @@ TEST(Unione, CategorieDelPacchettoDeiServizi) {
     EXPECT_EQ(categoria("C-RM-1"), kzero::ServiceType::Mixed);
 }
 
+// K-012: i servizi occasionali del Reg. 561 nelle norme. Versione 3 (il demo): l'NCC certo, "altro" da confermare. Versione 2
+// (il pacchetto di prova del K-011, che resta alla versione 2): un solo "da confermare" per tutto l'elenco, letto tipo per tipo
+// come allora: "altro" da confermare, nessun NCC (mai trasformato da solo).
+TEST(Unione, ServiziOccasionaliNelleVersioni) {
+    const std::string prove = KZERO_CARTELLA_PROVE;
+    const auto occasionali = [&](const std::string& cartella) {
+        const Lettura l = leggi_pacchetto(da_cartella(prove + cartella));
+        EXPECT_TRUE(l.forma_valida()) << cartella;
+        for (const kzero::Norms& n : l.pacchetto.norms)
+            for (const kzero::Regime& r : n.regimes)
+                if (r.code == "R-561") return std::make_pair(l.versioni.at("norme.json"), r.occasional);
+        return std::make_pair(0, kzero::Applies<kzero::ServiceKind>{});
+    };
+    const auto [v3, demo] = occasionali("/../esempi/demo");
+    EXPECT_EQ(v3, 3);
+    EXPECT_TRUE(demo.present);
+    EXPECT_EQ(demo.certain, std::vector<kzero::ServiceKind>{kzero::ServiceKind::Ncc});
+    EXPECT_EQ(demo.to_confirm, std::vector<kzero::ServiceKind>{kzero::ServiceKind::Other});
+    const auto [v2, k011] = occasionali("/esempi/k011-orari");
+    EXPECT_EQ(v2, 2);
+    EXPECT_TRUE(k011.present);
+    EXPECT_TRUE(k011.certain.empty());
+    EXPECT_EQ(k011.to_confirm, std::vector<kzero::ServiceKind>{kzero::ServiceKind::Other});
+}
+
 TEST(Unione, OgniCampoRiservatoDegliSchemiCompareNeiPacchettiDelleProve) {
     std::map<std::string, std::set<std::string>> usati;   // schema -> percorsi usati nei file dell'ultima versione
     for (const PacchettoDiProva& p : pacchetti_delle_prove())

@@ -1226,6 +1226,27 @@ TEST(Api, legame_dei_committenti_privati) {
 
 // Nei messaggi di kzero controlla la casa di un passeggero legato a un luogo sensibile si vede solo con il codice, se non
 // si mostrano i dati particolari; il luogo sensibile si vede.
+// K-012: nei messaggi di kzero controlla il nome di un committente privato segue la stessa regola: personale (CP-01, il
+// matrimonio) con il permesso dei dati personali; legato (CP-02, il noleggio verso il centro diurno) solo con tutti e due;
+// un ente sempre. Il messaggio: K-CTR-019 sul nome del committente privato in un pacchetto "solo numeri".
+TEST(Api, committente_privato_nei_messaggi) {
+    const Memoria m;
+    const Lettura l = leggi_pacchetto(m);
+    const auto messaggio = [&l](const std::string& committente, Visibilita v) {
+        const Presentatore p(&l.pacchetto, &l.versioni, v);
+        return p.messaggio(kzero::Problem{Check::NumbersOnlyPersonalData, 8, kzero::Source{},
+                                          {kzero::ref_param("committente", kzero::Element::Client, committente)}});
+    };
+    EXPECT_NE(messaggio("CP-01", Visibilita{true, false}).find("il committente privato CP-01 (Galli Marta) ha il nome"), std::string::npos);
+    EXPECT_NE(messaggio("CP-01", Visibilita{}).find("il committente privato CP-01 ha il nome"), std::string::npos);
+    EXPECT_EQ(messaggio("CP-01", Visibilita{false, true}).find("Galli Marta"), std::string::npos);
+    EXPECT_NE(messaggio("CP-02", Visibilita{true, false}).find("il committente privato CP-02 ha il nome"), std::string::npos);
+    EXPECT_EQ(messaggio("CP-02", Visibilita{true, false}).find("Ferri Bruno"), std::string::npos);
+    EXPECT_EQ(messaggio("CP-02", Visibilita{false, true}).find("Ferri Bruno"), std::string::npos);
+    EXPECT_NE(messaggio("CP-02", Visibilita{true, true}).find("CP-02 (Ferri Bruno)"), std::string::npos);
+    EXPECT_NE(messaggio("CVA", Visibilita{}).find("CVA (Consorzio Valle Alta (inventato))"), std::string::npos);
+}
+
 TEST(Api, casa_e_luogo_sensibile_nei_messaggi) {
     const Memoria m;
     const Lettura l = leggi_pacchetto(m);
