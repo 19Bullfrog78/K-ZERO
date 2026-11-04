@@ -7,6 +7,7 @@
 // comando serve proprio a correggerli (DECISIONI.md).
 #include <algorithm>
 #include <cmath>
+#include <map>
 #include <set>
 #include <stdexcept>
 #include <string>
@@ -124,7 +125,9 @@ class Ore {
 public:
     Ore(const Resoconto& r, const kzero::HoursReport& rep, const Vista& vista)
         : r_(r), rep_(rep), vista_(vista), idx_(r.lettura.pacchetto),
-          verificabile_(r.lettura.leggibili.personali && r.lettura.leggibili.particolari) {}
+          verificabile_(r.lettura.leggibili.personali && r.lettura.leggibili.particolari) {
+        for (const kzero::Norms& n : r.lettura.pacchetto.norms) tipi_.emplace(&n, kzero::kind_dependence(n));
+    }
 
     // Media tra le persone (per l'equita', solo da vedere): giornate, guida e lavoro contato per il contratto.
     Json media() const {
@@ -140,11 +143,45 @@ public:
         j["persone"] = rep_.persons.size();
         j["giornate"] = arrotonda(static_cast<double>(giornate) / n, 1);
         j["guida_minuti"] = arrotonda(static_cast<double>(guida) / n, 1);
-        j["lavoro_minuti"] = verificabile_ ? Json(arrotonda(static_cast<double>(lavoro) / n, 1)) : Json(nullptr);
+        // K-013: il lavoro per il contratto di chi ha regimi che dipendono dal tipo di servizio e' riservato senza i dati
+        // particolari, quindi anche la media.
+        const bool riservata = std::any_of(rep_.persons.begin(), rep_.persons.end(), [&](const kzero::PersonHours& ph) {
+            return riservati(*ph.person, nullptr).lavoro();
+        });
+        j["lavoro_minuti"] = !verificabile_ ? Json(nullptr) : riservata ? Json(kRiservato) : Json(arrotonda(static_cast<double>(lavoro) / n, 1));
         return j;
     }
 
 private:
+    // Cosa e' riservato degli orari di una persona senza i dati particolari (per permesso o per parametro): i regimi seguiti per
+    // scelta dell'azienda, se la scelta viene anche dal tipo di servizio (K-011 aggiunta 2), e (K-013) i regimi che dipendono
+    // dal tipo di servizio delle corse, con tutto quello che ne viene. Niente casi a meta': vale per ogni giornata della persona,
+    // che il tipo conti o no quel giorno (la riga fissa della persona lo dice).
+    struct Riservati {
+        const kzero::KindDependence* tipo = nullptr;   // nullptr: niente di riservato per il tipo di servizio
+        bool scelte = false;
+        bool regime(const kzero::Regime* r, bool per_scelta) const { return (per_scelta && scelte) || (tipo && r && tipo->contains(r)); }
+        bool lavoro() const { return tipo && tipo->work; }   // il lavoro per il contratto e quello senza regime
+        bool legge() const { return tipo && tipo->law; }    // "nessuna legge vale"
+    };
+    Riservati riservati(const kzero::Person& x, const kzero::PersonPlan* piano) const {
+        Riservati n;
+        if (particolari()) return n;
+        n.scelte = kzero::chosen_by_kind(x, piano, idx_);
+        if (const kzero::Norms* norme = idx_.norms_of(x.company.code)) {
+            const auto it = tipi_.find(norme);
+            if (it != tipi_.end() && it->second.any()) n.tipo = &it->second;
+        }
+        return n;
+    }
+    // Il posto del lavoro riservato (K-013): una voce sola, sempre la stessa.
+    static Json lavoro_riservato(bool giornata) {
+        Json j = Json::object();
+        for (const char* k : {"regime", "misura", "minuti", "minuti_lettura_prudente"}) j[k] = kRiservato;
+        if (giornata) j["soste_contate_minuti"] = j["inoperoso_contato_minuti"] = kRiservato;
+        return j;
+    }
+
     bool personali() const { return vista_.visibilita().personali; }
     bool particolari() const { return vista_.visibilita().particolari; }
     Json personale(Json v) const { return personali() ? v : Json(kRiservato); }
@@ -352,10 +389,10 @@ private:
     }
 
     // Il tipo del riposo prima della giornata per ogni regime che vale per i riposi, con le sue soglie (lettura certa).
-    Json tipi_riposo(const kzero::DayHours& dh, bool scelte_riservate) const {
+    Json tipi_riposo(const kzero::DayHours& dh, const Riservati& n) const {
         Json v = Json::array();
         for (const kzero::RegimeOnDay& ro : dh.regimes) {
-            if (ro.chosen && scelte_riservate) continue;   // il regime per scelta riservato tutto (K-011 aggiunta 2)
+            if (n.regime(ro.regime, ro.chosen)) continue;   // riservato tutto (K-011 aggiunta 2, K-013)
             if (ro.family[static_cast<std::size_t>(RuleFamily::Rest)] == Certainty::No) continue;
             const kzero::WorkRule *giornaliero = nullptr, *settimanale = nullptr;
             for (const kzero::WorkRule& w : ro.regime->rules) {
@@ -481,9 +518,9 @@ private:
         return v;
     }
 
-    // scelte_riservate: i regimi seguiti per scelta dell'azienda (tachigrafo) della persona sono riservati tutti (dipendono da
-    // scelte per tipo di servizio e mancano i dati particolari, K-011 aggiunta 2).
-    Json giornata(const kzero::DayHours& dh, bool scelte_riservate) const {
+    // n: cosa e' riservato senza i dati particolari (i regimi per scelta, K-011 aggiunta 2; i regimi che dipendono dal tipo di
+    // servizio, K-013).
+    Json giornata(const kzero::DayHours& dh, const Riservati& n) const {
         const kzero::PersonDay& pd = *dh.pd;
         Json j = Json::object();
         j["data"] = data(pd.day);
@@ -523,25 +560,25 @@ private:
         j["corse"] = corse(dh);
         Json regimi = Json::array();
         for (const kzero::RegimeOnDay& ro : dh.regimes)
-            if (!(ro.chosen && scelte_riservate)) regimi.push_back(regime(ro));
+            if (!n.regime(ro.regime, ro.chosen)) regimi.push_back(regime(ro));
         j["regimi"] = std::move(regimi);
-        // Che nessuna legge valga dice qualcosa del rapporto, se una delle leggi dipende dalla persona.
+        // Che nessuna legge valga dice qualcosa del rapporto, se una delle leggi dipende dalla persona; dice il tipo di servizio,
+        // se una legge sugli orari ne dipende (K-013).
         const bool dipende = std::any_of(dh.regimes.begin(), dh.regimes.end(), [](const kzero::RegimeOnDay& ro) { return regime_personale(*ro.regime); });
-        j["nessuna_legge"] = dipende ? personale(dh.no_law) : Json(dh.no_law);
-        Json lav = Json::array();
-        for (const kzero::WorkMeasure& m : dh.work) lav.push_back(lavoro(m, true));
-        j["lavoro"] = std::move(lav);
-        j["lavoro_contratto_minuti"] = personale(minuti(dh.contract_x100));
+        j["nessuna_legge"] = n.legge() ? Json(kRiservato) : dipende ? personale(dh.no_law) : Json(dh.no_law);
+        j["lavoro"] = lavori(dh.work, n, true);
+        j["lavoro_contratto_minuti"] = n.lavoro() ? Json(kRiservato) : personale(minuti(dh.contract_x100));
         Json notte = Json::array();
-        for (const kzero::NightCount& n : dh.night) {
-            const bool vedi = mostra_regime(n.regime);
-            notte.push_back({{"regime", vedi ? Json(n.regime->code) : Json(kRiservato)},
-                             {"regola", vedi ? Json(n.rule->code) : Json(kRiservato)},
-                             {"minuti", vedi ? Json(n.certain) : Json(kRiservato)},
-                             {"minuti_lettura_prudente", vedi ? Json(n.prudent) : Json(kRiservato)}});
+        for (const kzero::NightCount& x : dh.night) {
+            if (n.regime(x.regime, false)) continue;
+            const bool vedi = mostra_regime(x.regime);
+            notte.push_back({{"regime", vedi ? Json(x.regime->code) : Json(kRiservato)},
+                             {"regola", vedi ? Json(x.rule->code) : Json(kRiservato)},
+                             {"minuti", vedi ? Json(x.certain) : Json(kRiservato)},
+                             {"minuti_lettura_prudente", vedi ? Json(x.prudent) : Json(kRiservato)}});
         }
         j["notturno"] = std::move(notte);
-        riposo["tipi"] = tipi_riposo(dh, scelte_riservate);
+        riposo["tipi"] = tipi_riposo(dh, n);
         j["riposo_prima"] = std::move(riposo);
         Json rientri = Json::array();
         for (const kzero::ReturnJudgment& r : dh.returns) rientri.push_back(rientro(r));
@@ -549,6 +586,7 @@ private:
         Json parz = Json::array();
         std::set<std::string> viste;
         for (const kzero::PartialCheck& pc : dh.partial) {
+            if (n.regime(pc.regime, false)) continue;
             const bool vedi = mostra_regime(pc.regime);
             const std::string chiave = vedi ? pc.regime->code + " " + pc.rule->code : "";
             if (!viste.insert(chiave).second) continue;
@@ -558,17 +596,28 @@ private:
         return j;
     }
 
-    Json settimana(const kzero::WeekHours& w) const {
+    // Il lavoro contato da ogni regime: senza quello dei regimi riservati per il tipo di servizio e, se uno di loro conta il
+    // lavoro, senza quello "senza regime" (c'e' solo quando nessun regime conta il lavoro, quindi dipende anche da loro): al
+    // loro posto una voce riservata, sempre (K-013).
+    Json lavori(const std::vector<kzero::WorkMeasure>& misure, const Riservati& n, bool giornata) const {
+        Json lav = Json::array();
+        for (const kzero::WorkMeasure& m : misure) {
+            if (n.regime(m.regime, false) || (!m.regime && n.lavoro())) continue;
+            lav.push_back(lavoro(m, giornata));
+        }
+        if (n.lavoro()) lav.push_back(lavoro_riservato(giornata));
+        return lav;
+    }
+
+    Json settimana(const kzero::WeekHours& w, const Riservati& n) const {
         Json j = Json::object();
         j["lunedi"] = data(w.monday);
         j["guida_minuti"] = w.driving;
         if (verificabile_) {
-            Json lav = Json::array();
-            for (const kzero::WorkMeasure& m : w.work) lav.push_back(lavoro(m, false));
-            j["lavoro"] = std::move(lav);
-            j["lavoro_contratto_minuti"] = personale(minuti(w.contract_x100));
+            j["lavoro"] = lavori(w.work, n, false);
+            j["lavoro_contratto_minuti"] = n.lavoro() ? Json(kRiservato) : personale(minuti(w.contract_x100));
             j["ore_previste_minuti"] = w.planned ? personale(*w.planned) : Json(nullptr);
-            j["differenza_minuti"] = w.planned ? personale(minuti(w.contract_x100) - *w.planned) : Json(nullptr);
+            j["differenza_minuti"] = !w.planned ? Json(nullptr) : n.lavoro() ? Json(kRiservato) : personale(minuti(w.contract_x100) - *w.planned);
         } else {
             j["lavoro"] = nullptr;
             j["lavoro_contratto_minuti"] = nullptr;
@@ -598,19 +647,31 @@ public:
         const kzero::PersonPlan* piano = nullptr;
         for (const kzero::PersonPlan& pp : rep_.plan.persons)
             if (pp.person == ph.person) piano = &pp;
-        const bool scelte_riservate = !particolari() && kzero::chosen_by_kind(x, piano, idx_);
-        j["regimi_per_scelta"] = scelte_riservate ? Json(kRiservato) : Json(nullptr);
+        const Riservati n = riservati(x, piano);
+        // Per chi non ha il permesso dei dati particolari non sono calcolati: "non_verificato" (K-013, come la riga qui sotto).
+        j["regimi_per_scelta"] = !n.scelte ? Json(nullptr) : verificabile_ ? Json(kRiservato) : Json("non_verificato");
+        // K-013: i regimi che dipendono dal tipo di servizio delle corse, riservati senza i dati particolari per ogni persona
+        // con quelle norme, sempre (che il tipo conti o no nel periodo): "riservato" per chi ha il permesso ma non il parametro,
+        // "non_verificato" per chi non ha il permesso (non sono calcolati).
+        // I codici di quei regimi non si scrivono: senza i dati personali anche quale legge puo' valere per la persona e' riservato
+        // (K-011), e la riga deve essere la stessa per tutti.
+        if (n.tipo) {
+            j["regimi_dal_tipo_di_servizio"] = {{"esito", verificabile_ ? "riservato" : "non_verificato"},
+                                                {"lavoro_per_il_contratto", n.lavoro()}};
+        } else {
+            j["regimi_dal_tipo_di_servizio"] = nullptr;
+        }
         Json g = Json::array();
-        for (const kzero::DayHours& dh : ph.days) g.push_back(giornata(dh, scelte_riservate));
+        for (const kzero::DayHours& dh : ph.days) g.push_back(giornata(dh, n));
         j["giornate"] = std::move(g);
         Json s = Json::array();
-        for (const kzero::WeekHours& w : ph.weeks) s.push_back(settimana(w));
+        for (const kzero::WeekHours& w : ph.weeks) s.push_back(settimana(w, n));
         j["settimane"] = std::move(s);
         Json t = Json::object();
         t["giornate"] = ph.workdays;
         t["guida_minuti"] = ph.total_driving;
         t["minuti"] = categorie(ph.total_minutes);
-        t["lavoro_contratto_minuti"] = verificabile_ ? personale(minuti(ph.total_work_x100)) : Json(nullptr);
+        t["lavoro_contratto_minuti"] = !verificabile_ ? Json(nullptr) : n.lavoro() ? Json(kRiservato) : personale(minuti(ph.total_work_x100));
         j["totali"] = std::move(t);
         j["problemi"] = verificabile_ ? problemi(x, ph) : Json(nullptr);
         return j;
@@ -622,6 +683,7 @@ private:
     const Vista& vista_;
     kzero::Index idx_;
     bool verificabile_;
+    std::map<const kzero::Norms*, kzero::KindDependence> tipi_;   // K-013: per le norme del pacchetto
 };
 
 // Cassaforte (K-010): cosa non e' verificato per chi non puo' aprire una classe.
@@ -874,7 +936,7 @@ void giornata_testo(std::string& t, const Json& g) {
             }
             lav += (lav.empty() ? "" : "; ") + x;
         }
-        if (lav_riservato) lav += (lav.empty() ? "" : "; ") + std::string("altro riservato");
+        if (lav_riservato) lav += lav.empty() ? std::string("riservato") : std::string("; altro riservato");
         t += "    Lavoro: " + lav + "; per il contratto " + min_testo(g.at("lavoro_contratto_minuti")) + ".\n";
         for (const auto& n : g.at("notturno")) {
             if (n.at("minuti") == kRiservato) continue;
@@ -941,7 +1003,9 @@ std::string testa_testo(const Json& j) {
     return t;
 }
 
-void persona_testo(std::string& t, const Json& p) {
+// particolari: i dati particolari si vedono. Senza, i problemi che li rivelano non si elencano (si contano soltanto, in kzero
+// controlla): "nessuno" sarebbe falso, quindi una frase sola, la stessa per tutti, che ci siano o no (K-013).
+void persona_testo(std::string& t, const Json& p, bool particolari) {
     {
         t += "\nPersona " + p.at("codice").get<std::string>();
         if (!p.at("nome").is_null() && p.at("nome") != p.at("codice")) t += " (" + p.at("nome").get<std::string>() + ")";
@@ -955,6 +1019,15 @@ void persona_testo(std::string& t, const Json& p) {
         t += "\n";
         if (p.at("regimi_per_scelta") == kRiservato)
             t += "  Regimi seguiti per scelta dell'azienda: riservati (dato particolare; --includi-dati-particolari).\n";
+        else if (p.at("regimi_per_scelta") == "non_verificato")
+            t += "  Regimi seguiti per scelta dell'azienda: non verificati (servono i dati particolari).\n";
+        if (const Json& k = p.at("regimi_dal_tipo_di_servizio"); k.is_object()) {
+            const bool riservati = k.at("esito") == kRiservato;
+            t += std::string("  Regimi che dipendono dal tipo di servizio delle corse: ") + (riservati ? "riservati" : "non verificati") +
+                 ", anche quando l'azienda li segue per scelta, con il lavoro che contano" +
+                 (k.at("lavoro_per_il_contratto").get<bool>() ? ", il lavoro per il contratto" : "") + ", i riposi e i problemi (" +
+                 (riservati ? "dato particolare; --includi-dati-particolari" : "servono i dati particolari") + ").\n";
+        }
         if (p.at("giornate").empty()) t += "  Nessuna giornata di lavoro nel periodo.\n";
         for (const auto& g : p.at("giornate")) giornata_testo(t, g);
         for (const auto& s : p.at("settimane")) {
@@ -988,10 +1061,14 @@ void persona_testo(std::string& t, const Json& p) {
         if (!tot.at("lavoro_contratto_minuti").is_null()) t += "; lavoro per il contratto " + min_testo(tot.at("lavoro_contratto_minuti"));
         t += ".\n";
         if (p.at("problemi").is_array()) {
-            if (p.at("problemi").empty()) t += "  Problemi degli orari: nessuno in questo periodo.\n";
+            const std::string riservati = "quelli che rivelano un dato particolare non si elencano (--includi-dati-particolari)";
+            if (p.at("problemi").empty())
+                t += particolari ? "  Problemi degli orari: nessuno in questo periodo.\n"
+                                 : "  Problemi degli orari: nessuno da mostrare in questo periodo; " + riservati + ".\n";
             for (const auto& q : p.at("problemi"))
                 t += std::string("  ") + (q.at("livello") == "errore" ? "Errore " : "Avviso ") + q.at("codice").get<std::string>() + ": " +
                      q.at("messaggio").get<std::string>() + "\n";
+            if (!p.at("problemi").empty() && !particolari) t += "  Altri problemi degli orari: " + riservati + ".\n";
         }
     }
 }
@@ -1002,7 +1079,8 @@ std::string coda_testo(const Json& j) {
         const Json& m = j.at("media_tra_le_persone");
         t += "\nMedia tra le " + std::to_string(m.at("persone").get<long long>()) + " persone (per l'equita', solo da vedere): " +
              numero(m.at("giornate").get<double>()) + " giornate; guida " + durata(std::llround(m.at("guida_minuti").get<double>()));
-        if (!m.at("lavoro_minuti").is_null()) t += "; lavoro per il contratto " + durata(std::llround(m.at("lavoro_minuti").get<double>()));
+        if (m.at("lavoro_minuti").is_number()) t += "; lavoro per il contratto " + durata(std::llround(m.at("lavoro_minuti").get<double>()));
+        else if (m.at("lavoro_minuti") == kRiservato) t += "; lavoro per il contratto riservato";
         t += ".\n";
     }
     return t;
@@ -1082,7 +1160,7 @@ Risultato ore_su(const DefinizioneComando& comando, const Parametri& parametri, 
     if (parametri.formato != Formato::Json) {
         std::string t = testa_testo(testa);
         if (orari.persons.empty()) t += "\nNessuna persona lavora in questo periodo.\n";
-        for (const kzero::PersonHours& ph : orari.persons) persona_testo(t, ore.persona(ph));
+        for (const kzero::PersonHours& ph : orari.persons) persona_testo(t, ore.persona(ph), visibilita.particolari);
         t += coda_testo(testa);
         return {std::move(t), 0};
     }

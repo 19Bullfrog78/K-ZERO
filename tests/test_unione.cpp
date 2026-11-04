@@ -233,7 +233,7 @@ std::vector<kzero::Problem> tutti_i_problemi(const Lettura& l) {
 std::set<std::string> problemi_di(const Lettura& l, const Visibilita& leggibili) {
     std::set<std::string> s;
     for (const auto& p : tutti_i_problemi(l)) {
-        if (!verificabile(definizione_controllo(p.check), p.variant, classe_della_posizione(p.where, l), in_trasportato(p.where, l),
+        if (!verificabile(definizione_controllo(p.check), p, classe_della_posizione(p.where, l), in_trasportato(p.where, l),
                           leggibili))
             continue;
         s.insert(come_testo(p));
@@ -954,4 +954,272 @@ TEST(Unione, ComandiConPermessiParziali) {
         }
     }
     EXPECT_TRUE(errori.empty()) << errori;
+}
+
+// --- K-013: orari senza i dati particolari, prova per differenza -----------------------------------------------------------
+
+namespace {
+
+// Il pacchetto di prova dei servizi (k012-servizi) con il tipo di un servizio cambiato. Uguale in tutte le coppie: il servizio
+// ha una descrizione del tipo (obbligatoria per "altro", ammessa per gli altri) e i mezzi delle corse provate hanno tutti e due
+// gli usi (un'autorizzazione senza fine per l'uso che non hanno), cosi' nessun tipo fa nascere un errore nei dati.
+InMemoria con_il_tipo(const std::string& servizio, const std::string& tipo) {
+    InMemoria m = da_cartella(std::string(KZERO_CARTELLA_PROVE) + "/esempi/k012-servizi");
+    JsonDati s = JsonDati::parse(m.file.at("servizi.json"));
+    bool trovato = false;
+    for (JsonDati& x : s.at("servizi"))
+        if (x.at("codice") == servizio) {
+            x["tipo"] = tipo;
+            x["tipo_descrizione"] = "Servizio della prova per differenza";
+            trovato = true;
+        }
+    EXPECT_TRUE(trovato) << servizio;
+    m.file["servizi.json"] = s.dump(2);
+    JsonDati v = JsonDati::parse(m.file.at("mezzi.json"));
+    const std::map<std::string, std::string> uso_in_piu = {{"V-NCC-50", "LINEA"}, {"V-17", "NCC"}, {"ALFA-03", "LINEA"}};
+    for (JsonDati& x : v.at("mezzi")) {
+        const auto it = uso_in_piu.find(x.at("codice").get<std::string>());
+        if (it == uso_in_piu.end()) continue;
+        x["autorizzazioni_uso"].push_back({{"uso", it->second},
+                                           {"ente", "Ente di prova (inventato)"},
+                                           {"riferimento", "Distrazione di prova (inventata)"},
+                                           {"dal", "2026-01-01"},
+                                           {"al", "2099-12-31"}});
+    }
+    m.file["mezzi.json"] = v.dump(2);
+    return m;
+}
+
+// Toglie dall'uscita i totali dell'intero pacchetto (errori e avvisi, anche quelli che si contano soltanto): l'unica
+// differenza ammessa tra le due uscite.
+std::string senza_totali(const std::string& uscita, Formato formato) {
+    if (formato == Formato::Json) {
+        JsonDati j = JsonDati::parse(uscita);
+        for (const char* k : {"riepilogo", "problemi_riservati", "controllo"}) j.erase(k);
+        return j.dump(1);
+    }
+    std::istringstream in(uscita);
+    std::string out;
+    for (std::string r; std::getline(in, r);) {
+        if (r.rfind("Riepilogo:", 0) == 0 || r.rfind("Problemi sui dati particolari (salute), non elencati", 0) == 0 ||
+            r.rfind("Controllo del pacchetto:", 0) == 0)
+            continue;
+        out += r + "\n";
+    }
+    return out;
+}
+
+// L'esito delle leggi in un'uscita JSON di kzero ore (con tutti i dati): per ogni persona e giornata i regimi con le loro
+// famiglie, e i problemi della persona.
+std::string esito_delle_leggi(const std::string& uscita) {
+    const JsonDati j = JsonDati::parse(uscita);
+    std::string out;
+    for (const JsonDati& p : j.at("persone")) {
+        for (const JsonDati& g : p.at("giornate")) {
+            if (!g.at("regimi").is_array()) continue;
+            for (const JsonDati& r : g.at("regimi"))
+                out += p.at("codice").get<std::string>() + " " + g.at("data").get<std::string>() + " " + r.at("codice").dump() +
+                       (r.at("per_scelta").get<bool>() ? " per scelta " : " ") + r.at("famiglie").dump() + "\n";
+        }
+        if (p.at("problemi").is_array())
+            for (const JsonDati& q : p.at("problemi")) out += p.at("codice").get<std::string>() + " " + q.dump() + "\n";
+    }
+    return out;
+}
+
+// La prima riga diversa, per il messaggio della prova.
+std::string prima_differenza(const std::string& a, const std::string& b) {
+    std::istringstream x(a), y(b);
+    std::string ra, rb;
+    for (int n = 1;; ++n) {
+        const bool ha = static_cast<bool>(std::getline(x, ra)), hb = static_cast<bool>(std::getline(y, rb));
+        if (!ha && !hb) return "";
+        if (!ha || !hb || ra != rb) return "riga " + std::to_string(n) + ":\n    " + (ha ? ra : "(fine)") + "\n    " + (hb ? rb : "(fine)");
+    }
+}
+
+}  // namespace
+
+// Criterio di accettazione del K-013 (arbitro): per ogni coppia di tipi di servizio, due pacchetti uguali tranne il tipo
+// dichiarato di un servizio, tutti e due senza errori nei dati. Senza i dati particolari (di base, e con i soli dati personali)
+// kzero controlla, kzero ore (tutto il periodo) e kzero giornata (i giorni delle corse del servizio), in testo e JSON, danno
+// la stessa uscita, tranne i totali dell'intero pacchetto: ogni altra differenza e' una fuga del tipo di servizio. I servizi
+// sono scelti dove il tipo cambia l'esito delle leggi (lo controlla la prova con i dati particolari): l'escursione NCC con il
+// pullman (corse di 140, 25 e 100 km: linea, scolastico e disabili oltre i 50 km, NCC occasionale certo, altro da confermare,
+// L. 138 certa, da confermare o no) e il servizio per disabili del centro diurno (corse fino a 50 km con il minibus da 13 persone
+// e con il mezzo da 18: escluso dal 561 con certezza come scolastico o linea, da confermare come disabili, mai come NCC).
+TEST(Unione, OrariSenzaDatiParticolariProvaPerDifferenza) {
+    const DefinizioneComando* controlla = trova_comando("controlla");
+    const DefinizioneComando* giornata = trova_comando("giornata");
+    const DefinizioneComando* ore = trova_comando("ore");
+    ASSERT_TRUE(controlla && giornata && ore);
+    const std::vector<std::string> tipi = {"linea", "scolastico", "disabili", "ncc", "altro"};
+    std::string fughe;
+    std::map<std::string, int> con_effetto;   // coppia di tipi -> in quanti servizi il tipo cambia l'esito delle leggi
+    int coppie = 0;
+    for (const std::string servizio : {"S-NCC-BUS", "S-DIS"}) {
+        // I giorni delle corse del servizio fatte da una persona (con tutti i dati, dal pacchetto del primo tipo).
+        std::vector<kzero::Day> giorni;
+        {
+            const Lettura l = leggi_pacchetto(con_il_tipo(servizio, tipi.front()));
+            ASSERT_TRUE(l.forma_valida()) << servizio;
+            std::set<std::string> corse;
+            for (const kzero::Trip& t : l.pacchetto.trips)
+                for (const kzero::Ref& s : t.services)
+                    if (s.code == servizio) corse.insert(t.code);
+            kzero::HoursRequest richiesta;
+            richiesta.report = true;
+            richiesta.from = l.pacchetto.manifest.period.from;
+            richiesta.to = l.pacchetto.manifest.period.to;
+            kzero::HoursReport orari;
+            controlla_lettura(leggi_pacchetto(con_il_tipo(servizio, tipi.front())), Visibilita{true, true}, &richiesta, &orari);
+            std::set<kzero::Day> visti;
+            for (const kzero::PersonHours& ph : orari.persons)
+                for (const kzero::DayHours& dh : ph.days)
+                    for (const kzero::TripOnDay& t : dh.trips)
+                        if (corse.count(t.trip->code)) visti.insert(dh.pd->day);
+            ASSERT_FALSE(visti.empty()) << servizio;
+            giorni.assign(visti.begin(), visti.end());
+            if (giorni.size() > 2) giorni.erase(giorni.begin() + 1, giorni.end() - 1);   // il primo e l'ultimo
+        }
+        for (std::size_t i = 0; i < tipi.size(); ++i)
+            for (std::size_t k = i + 1; k < tipi.size(); ++k) {
+                ++coppie;
+                const std::string tipi_coppia = tipi[i] + " <-> " + tipi[k];
+                const std::string coppia = servizio + " " + tipi_coppia;
+                con_effetto[tipi_coppia] += 0;
+                const InMemoria a = con_il_tipo(servizio, tipi[i]), b = con_il_tipo(servizio, tipi[k]);
+                for (const InMemoria* m : {&a, &b}) {
+                    const Resoconto r = controlla_lettura(leggi_pacchetto(*m), Visibilita{true, true});
+                    ASSERT_TRUE(r.lettura.forma_valida()) << coppia;
+                    ASSERT_EQ(r.errori_nei_dati(), 0) << coppia << ": la coppia si deve poter fare senza errori nei dati";
+                }
+                const auto esegui = [&](const InMemoria& m, const DefinizioneComando& c, Parametri par) {
+                    accesso::LetturaPerComando lc;
+                    lc.lettura = leggi_pacchetto(m);
+                    lc.visibilita = Visibilita{par.includi_dati_personali, par.includi_dati_particolari};
+                    par.argomenti = {"pacchetto in memoria"};
+                    if (&c == controlla) return controlla_su(c, par, std::move(lc)).uscita;
+                    if (&c == ore) return ore_su(c, par, std::move(lc)).uscita;
+                    return giornata_su(c, par, std::move(lc)).uscita;
+                };
+                // Con i dati particolari il tipo cambia l'esito delle leggi (altrimenti la coppia non proverebbe niente).
+                {
+                    Parametri par;
+                    par.formato = Formato::Json;
+                    par.includi_dati_personali = par.includi_dati_particolari = true;
+                    par.dal = giorni.front() - 6;
+                    par.al = giorni.back() + 6;
+                    if (esito_delle_leggi(esegui(a, *ore, par)) != esito_delle_leggi(esegui(b, *ore, par))) ++con_effetto[tipi_coppia];
+                }
+                for (const bool personali : {false, true})
+                    for (const Formato formato : {Formato::Testo, Formato::Json}) {
+                        Parametri par;
+                        par.formato = formato;
+                        par.includi_dati_personali = personali;
+                        std::vector<std::pair<std::string, Parametri>> comandi;
+                        comandi.push_back({"controlla", par});
+                        Parametri po = par;
+                        po.dal = kzero::day_from_ymd(2026, 9, 1);
+                        po.al = kzero::day_from_ymd(2027, 8, 31);
+                        comandi.push_back({"ore di tutto il periodo", po});
+                        for (const kzero::Day d : giorni) {
+                            Parametri pg = par;
+                            pg.data = d;
+                            comandi.push_back({"giornata del " + kzero::text_from_day(d), pg});
+                        }
+                        for (const auto& [nome, p] : comandi) {
+                            const DefinizioneComando& c = nome == "controlla" ? *controlla : nome.rfind("ore", 0) == 0 ? *ore : *giornata;
+                            const std::string x = senza_totali(esegui(a, c, p), formato), y = senza_totali(esegui(b, c, p), formato);
+                            if (x != y)
+                                fughe += "\n  " + coppia + ", " + nome + (personali ? ", --includi-dati-personali" : "") +
+                                         (formato == Formato::Json ? ", json" : ", testo") + ": " + prima_differenza(x, y);
+                        }
+                    }
+            }
+    }
+    EXPECT_EQ(coppie, 20);
+    // Ogni coppia di tipi cambia l'esito delle leggi in almeno uno dei servizi (nel servizio per disabili NCC e "altro" danno
+    // lo stesso esito: la differenza, il 15 + 15, si vede nell'escursione con il pullman).
+    std::string senza_effetto;
+    for (const auto& [c, n] : con_effetto)
+        if (n == 0) senza_effetto += "\n  " + c;
+    EXPECT_EQ(con_effetto.size(), 10u);
+    EXPECT_TRUE(senza_effetto.empty()) << "Coppie di tipi che non cambiano l'esito delle leggi in nessun servizio:" << senza_effetto;
+    EXPECT_TRUE(fughe.empty()) << "Uscite diverse senza i dati particolari (fughe del tipo di servizio):" << fughe;
+}
+
+// K-013: il nucleo dice "dipende dal tipo di servizio" (Problem::by_service_kind) solo per i controlli che il catalogo dichiara
+// (dal_tipo): cosi' la tabella di docs/controlli.md, provata contro il catalogo, dice il vero. Su tutti i pacchetti delle prove.
+TEST(Unione, DipendeDalTipoSoloNeiControlliCheLoDichiarano) {
+    std::string fuori;
+    int dal_tipo = 0;
+    for (const PacchettoDiProva& p : pacchetti_delle_prove()) {
+        const Lettura l = leggi_pacchetto(p.chiaro);
+        if (!l.forma_valida()) continue;
+        for (const kzero::Problem& x : kzero::check_package(l.pacchetto)) {
+            if (!x.by_service_kind) continue;
+            ++dal_tipo;
+            const DefinizioneControllo& d = definizione_controllo(x.check);
+            if (!d.dal_tipo) fuori += "\n  " + p.nome + ": " + d.codice;
+        }
+    }
+    EXPECT_GT(dal_tipo, 0);
+    EXPECT_TRUE(fuori.empty()) << "Problemi che dipendono dal tipo di servizio in controlli che non lo dichiarano:" << fuori;
+}
+
+// K-013, con la cassaforte (decisione chiesta prima di scrivere il codice: "uguali sul tipo"): il titolare senza
+// --includi-dati-particolari e l'utente con i soli dati personali vedono le stesse cose di quello che dipende dal tipo di
+// servizio, con parole diverse: "riservato" per il titolare (i dati li ha, li vede con il parametro), "non verificato" per
+// l'altro (non sono calcolati). Il titolare vede come il pacchetto in chiaro senza il parametro (la prova per differenza
+// vale anche per lui); per l'utente con i soli dati personali leggi, lavoro e rientri restano "non verificati", come prima.
+TEST(Unione, OrariSenzaDatiParticolariConLaCassaforte) {
+    const DefinizioneComando* ore = trova_comando("ore");
+    ASSERT_TRUE(ore);
+    const InMemoria chiaro = da_cartella(std::string(KZERO_CARTELLA_PROVE) + "/../esempi/demo");
+    const Chiuso c = chiudi(chiaro);
+    const auto uscita = [&](const InMemoria* in_chiaro, Visibilita permessi, Visibilita mostra, Formato formato) {
+        accesso::LetturaPerComando lc;
+        const ValoriCassaforte v = valori(c, permessi);
+        lc.lettura = in_chiaro ? leggi_pacchetto(*in_chiaro) : leggi_pacchetto(c.normali, &v);
+        lc.visibilita = mostra;
+        Parametri par;
+        par.formato = formato;
+        par.includi_dati_personali = mostra.personali;
+        par.includi_dati_particolari = mostra.particolari;
+        par.argomenti = {"pacchetto in memoria"};
+        par.data = kzero::day_from_ymd(2026, 11, 11);
+        par.persona = "P-A";
+        return ore_su(*ore, par, std::move(lc)).uscita;
+    };
+    for (const bool personali : {false, true}) {
+        const Visibilita mostra{personali, false};
+        for (const Formato f : {Formato::Testo, Formato::Json}) {
+            const std::string titolare = uscita(nullptr, Visibilita{true, true}, mostra, f);
+            EXPECT_EQ(titolare, uscita(&chiaro, Visibilita{true, true}, mostra, f)) << personali;
+            const std::string ufficio = uscita(nullptr, Visibilita{true, false}, mostra, f);
+            for (const std::string* u : {&titolare, &ufficio})
+                for (const char* regime : {"R-L138", "R-561", "R-234", "servizio disabili", "\"disabili\""})
+                    EXPECT_EQ(u->find(regime), std::string::npos) << regime << "\n" << *u;
+            if (f == Formato::Testo) {
+                EXPECT_NE(titolare.find("  Regimi che dipendono dal tipo di servizio delle corse: riservati, anche quando l'azienda li segue per "
+                                        "scelta, con il lavoro che contano, il lavoro per il contratto, i riposi e i problemi (dato particolare; "
+                                        "--includi-dati-particolari)."),
+                          std::string::npos)
+                    << titolare;
+                EXPECT_NE(ufficio.find("  Regimi che dipendono dal tipo di servizio delle corse: non verificati, anche quando l'azienda li segue "
+                                       "per scelta, con il lavoro che contano, il lavoro per il contratto, i riposi e i problemi (servono i dati "
+                                       "particolari)."),
+                          std::string::npos)
+                    << ufficio;
+                EXPECT_NE(ufficio.find("Leggi, lavoro e rientri: non verificati"), std::string::npos) << ufficio;
+            } else {
+                const JsonDati t = JsonDati::parse(titolare), u = JsonDati::parse(ufficio);
+                EXPECT_EQ(t.at("persone").at(0).at("regimi_dal_tipo_di_servizio").at("esito"), "riservato");
+                EXPECT_EQ(u.at("persone").at(0).at("regimi_dal_tipo_di_servizio").at("esito"), "non_verificato");
+                EXPECT_EQ(t.at("persone").at(0).at("giornate").at(0).at("lavoro_contratto_minuti"), "riservato");
+                EXPECT_TRUE(u.at("persone").at(0).at("giornate").at(0).at("lavoro_contratto_minuti").is_null());
+            }
+        }
+    }
 }

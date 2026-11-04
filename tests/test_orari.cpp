@@ -1452,13 +1452,16 @@ TEST(Orari, tachigrafo_su_una_linea_fino_a_50_km) {
     const auto pref = prova(ChoiceStrength::Preference, true);
     EXPECT_TRUE(pref.first.empty());
     ASSERT_EQ(pref.second.size(), 1u);
-    // Guida di fila (variante 0 della guida, 13); +30: la scelta e' per tipo di servizio, il problema rivela un dato particolare
-    // (K-011 aggiunta 2). Con la scelta per il servizio, la variante comune.
-    EXPECT_EQ(pref.second[0].variant, 13 + 30);
+    // Guida di fila (variante 0 della guida, 13). La scelta e' per tipo di servizio, quindi il problema rivela un dato
+    // particolare (K-011 aggiunta 2; dal K-013 lo dice by_service_kind, prima la variante +30). Con la scelta per il servizio
+    // anche: il regime di legge (il 561 di prova, con le esclusioni per tipo) dipende dal tipo di servizio (K-013).
+    EXPECT_EQ(pref.second[0].variant, 13);
+    EXPECT_TRUE(pref.second[0].by_service_kind);
     EXPECT_TRUE(con_motivo(pref.second[0], "preferenza"));
     const auto servizio = prova(ChoiceStrength::Preference, true, false);
     ASSERT_EQ(servizio.second.size(), 1u);
     EXPECT_EQ(servizio.second[0].variant, 13);
+    EXPECT_TRUE(servizio.second[0].by_service_kind);
     const auto lim = prova(ChoiceStrength::Limit, true);
     ASSERT_EQ(lim.first.size(), 1u);
     EXPECT_TRUE(lim.second.empty());

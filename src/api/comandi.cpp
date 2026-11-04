@@ -354,7 +354,7 @@ std::vector<DefinizioneComando> crea_comandi() {
          {parametro_formato(), parametro_dati_personali(), parametro_dati_particolari(), parametro_data_o_periodo(),
           parametro_periodo(true), parametro_periodo(false), parametro_persona_ore(), parametro_utente(false),
           parametro_password_da_ingresso()},
-         {"ore", 2},
+         {"ore", 3},
          esegui_ore},
         {"versione",
          "Mostra la versione del programma.",
@@ -401,7 +401,7 @@ const std::vector<Schema>& schemi_ritirati() {
     // Versioni non piu' prodotte: i file restano in docs/schema per controllare le uscite salvate prima.
     static const std::vector<Schema> s = {{"controlla", 1}, {"controlla", 2}, {"controlla", 3}, {"controlla", 4}, {"descrivi", 1},
                                           {"descrivi", 2},  {"descrivi", 3},  {"descrivi", 4},  {"dimostrazione", 1},
-                                          {"dimostrazione", 2}, {"giornata", 1},  {"giornata", 2}, {"giornata", 3}, {"ore", 1}};
+                                          {"dimostrazione", 2}, {"giornata", 1},  {"giornata", 2}, {"giornata", 3}, {"ore", 1}, {"ore", 2}};
     return s;
 }
 

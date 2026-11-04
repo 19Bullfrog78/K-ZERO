@@ -116,35 +116,54 @@ comunque la regola qui sopra):
 | K-CTR-081 | personale | tutti i casi | le preferenze di una persona |
 | K-CTR-094 | particolare | alcuni casi | che un elemento aveva dati particolari nella cassaforte |
 | K-CTR-095 | particolare | alcuni casi | che un elemento ha un dato particolare nella cassaforte |
+| K-CTR-104 | particolare | alcuni casi | per quante persone e in quali giorni si verifica in parte una regola di un regime che dipende dal tipo di servizio delle corse (K-013) |
 | K-CTR-105 | personale | alcuni casi | la chiave del rientro di una persona |
 | K-CTR-106 | personale | alcuni casi | una scelta sugli orari di una persona |
 | K-CTR-107 | personale | tutti i casi | che una persona e' dipendente e nessuna legge sugli orari vale per lei |
+| K-CTR-107 | particolare | alcuni casi | che nessuna legge sugli orari vale per la persona, quando una legge sugli orari dei dati dipende dal tipo di servizio delle corse (K-013) |
 | K-CTR-108 | personale | tutti i casi | quale legge sugli orari vale per la persona (puo' dipendere dal suo rapporto) |
+| K-CTR-108 | particolare | alcuni casi | che il regime valga (e come) per la persona, quando il regime dipende dal tipo di servizio delle corse (K-013): allora il problema si conta soltanto |
 | K-CTR-109 | personale | tutti i casi | le giornate di lavoro di una persona (lavoro a chiamata) |
+| K-CTR-109 | particolare | alcuni casi | che il regime valga (e come) per la persona, quando il regime dipende dal tipo di servizio delle corse (K-013): allora il problema si conta soltanto |
 | K-CTR-110 | personale | tutti i casi | quale legge sugli orari vale per la persona e i suoi orari |
+| K-CTR-110 | particolare | alcuni casi | che il regime valga (e come) per la persona, quando il regime dipende dal tipo di servizio delle corse (K-013): allora il problema si conta soltanto |
 | K-CTR-111 | personale | tutti i casi | quale legge sugli orari vale per la persona e i suoi orari |
+| K-CTR-111 | particolare | alcuni casi | che il regime valga (e come) per la persona, quando il regime dipende dal tipo di servizio delle corse (K-013): allora il problema si conta soltanto |
 | K-CTR-112 | personale | tutti i casi | quale legge sugli orari vale per la persona e i suoi orari |
+| K-CTR-112 | particolare | alcuni casi | che il regime valga (e come) per la persona, quando il regime dipende dal tipo di servizio delle corse (K-013): allora il problema si conta soltanto |
 | K-CTR-113 | personale | tutti i casi | quale legge sugli orari vale per la persona e i suoi orari |
+| K-CTR-113 | particolare | alcuni casi | che il regime valga (e come) per la persona, quando il regime dipende dal tipo di servizio delle corse (K-013): allora il problema si conta soltanto |
 | K-CTR-114 | personale | tutti i casi | quale legge sugli orari vale per la persona e i suoi orari |
+| K-CTR-114 | particolare | alcuni casi | che il regime valga (e come) per la persona, quando il regime dipende dal tipo di servizio delle corse (K-013): allora il problema si conta soltanto |
 | K-CTR-115 | personale | tutti i casi | quale legge sugli orari vale per la persona e i suoi orari |
+| K-CTR-115 | particolare | alcuni casi | che il regime valga (e come) per la persona, quando il regime dipende dal tipo di servizio delle corse (K-013): allora il problema si conta soltanto |
 | K-CTR-116 | personale | tutti i casi | quale legge sugli orari vale per la persona e i suoi orari |
+| K-CTR-116 | particolare | alcuni casi | che il regime valga (e come) per la persona, quando il regime dipende dal tipo di servizio delle corse (K-013): allora il problema si conta soltanto |
 | K-CTR-117 | personale | tutti i casi | quale legge sugli orari vale per la persona e i suoi orari |
+| K-CTR-117 | particolare | alcuni casi | che il regime valga (e come) per la persona, quando il regime dipende dal tipo di servizio delle corse (K-013): allora il problema si conta soltanto |
 | K-CTR-118 | personale | tutti i casi | quale legge sugli orari vale per la persona e i suoi orari |
+| K-CTR-118 | particolare | alcuni casi | che il regime valga (e come) per la persona, quando il regime dipende dal tipo di servizio delle corse (K-013): allora il problema si conta soltanto |
 | K-CTR-119 | personale | tutti i casi | le ore massime del contratto della persona |
+| K-CTR-119 | particolare | alcuni casi | il lavoro contato, quando lo contano regimi che dipendono dal tipo di servizio delle corse (K-013) |
 | K-CTR-120 | personale | tutti i casi | le ore massime del contratto della persona |
+| K-CTR-120 | particolare | alcuni casi | il lavoro contato, quando lo contano regimi che dipendono dal tipo di servizio delle corse (K-013) |
 | K-CTR-121 | personale | tutti i casi | una scelta sugli orari dell'azienda o della persona e gli orari della persona |
+| K-CTR-121 | particolare | alcuni casi | il lavoro contato per le scelte sul lavoro massimo, quando lo contano regimi che dipendono dal tipo di servizio delle corse (K-013) |
 | K-CTR-122 | personale | tutti i casi | una scelta sugli orari dell'azienda o della persona e gli orari della persona |
+| K-CTR-122 | particolare | alcuni casi | il lavoro contato per le scelte sul lavoro massimo, quando lo contano regimi che dipendono dal tipo di servizio delle corse (K-013) |
 | K-CTR-123 | personale | tutti i casi | la chiave del rientro (anche della persona) e la giornata della persona |
 | K-CTR-124 | personale | tutti i casi | la chiave del rientro (anche della persona) e la giornata della persona |
 | K-CTR-125 | personale | tutti i casi | la chiave del rientro (anche della persona) e la giornata della persona |
-| K-CTR-127 | personale | alcuni casi | quale regola sugli orari vale per la persona e i suoi orari |
-| K-CTR-127 | particolare | alcuni casi | che il regime per scelta dipenda da scelte del tachigrafo per tipo di servizio (la sua azienda o quella di un suo turno ne ha una): allora e' riservato tutto (K-011 aggiunta 2, decisione dell'arbitro) |
-| K-CTR-128 | personale | alcuni casi | quale regola sugli orari vale per la persona e i suoi orari |
-| K-CTR-128 | particolare | alcuni casi | che il regime per scelta dipenda da scelte del tachigrafo per tipo di servizio (la sua azienda o quella di un suo turno ne ha una): allora e' riservato tutto (K-011 aggiunta 2, decisione dell'arbitro) |
+| K-CTR-127 | personale | tutti i casi | quale regola sugli orari vale per la persona e i suoi orari |
+| K-CTR-127 | particolare | alcuni casi | che il regime per scelta dipenda dal tipo di servizio: quello di legge ne dipende (K-013), oppure la scelta del tachigrafo viene anche dal tipo di servizio (la sua azienda o quella di un suo turno ne ha una; K-011 aggiunta 2): allora e' riservato tutto |
+| K-CTR-128 | personale | tutti i casi | quale regola sugli orari vale per la persona e i suoi orari |
+| K-CTR-128 | particolare | alcuni casi | che il regime per scelta dipenda dal tipo di servizio: quello di legge ne dipende (K-013), oppure la scelta del tachigrafo viene anche dal tipo di servizio (la sua azienda o quella di un suo turno ne ha una; K-011 aggiunta 2): allora e' riservato tutto |
 | K-CTR-130 | personale | tutti i casi | quali regole varrebbero e per quante persone (dipende anche dal loro rapporto) |
+| K-CTR-130 | particolare | alcuni casi | dove la legge varrebbe, quando il regime dipende dal tipo di servizio delle corse (K-013) |
 | K-CTR-131 | particolare | tutti i casi | che la dichiarazione ci sia (c'e' solo dove l'esclusione e' da confermare: dice il tipo di servizio; K-011 aggiunta 2); il motivo e chi l'ha scritta solo con tutti e due i permessi |
-| K-CTR-132 | particolare | alcuni casi | la scelta per il tipo di servizio della corsa; le scelte diverse tra i tipi di servizio della corsa (K-011 aggiunta 2) |
+| K-CTR-132 | particolare | alcuni casi | la scelta per il tipo di servizio della corsa; le scelte diverse tra i tipi di servizio della corsa (K-011 aggiunta 2); che la legge voglia il regime, quando il regime dipende dal tipo di servizio delle corse (K-013) |
 | K-CTR-133 | particolare | alcuni casi | i tipi di servizio della corsa |
+| K-CTR-134 | particolare | alcuni casi | dove la legge vale con certezza (la forzatura vale ma non cambia niente), quando il regime dipende dal tipo di servizio delle corse (K-013) |
 | K-CTR-135 | particolare | tutti i casi | che la dichiarazione ci sia, come K-CTR-131 (K-011 aggiunta 2) |
 
 Nei problemi degli orari (K-CTR-107 ... K-CTR-125) quale legge vale per la persona e' un dato personale quando la legge
@@ -154,6 +173,21 @@ personali: riservati)". Per una legge che vale per tutti (es. il Reg. 561/2006, 
 si vedono sempre. Nei motivi di un avviso "da confermare" il rapporto e il contratto collettivo sono personali, il tipo
 di servizio della corsa (e se la corsa e' un servizio occasionale) particolari: senza il loro parametro diventano "c'e' un motivo
 riservato".
+
+**Orari e tipo di servizio (K-013).** Il tipo di servizio di una corsa e' un dato particolare (rivela il servizio per
+disabili), e una legge sugli orari che dipende dal tipo lo lascia capire: per quali corse e giorni vale, le sue violazioni, il
+lavoro che conta. Quali regimi dipendono dal tipo lo dicono i dati, mai il nome: un regime con condizioni sul tipo di servizio
+(`si_applica.tipi_servizio`), con `esclusioni`, con `servizi_occasionali`, che prende le condizioni sulla corsa da uno di
+questi (`come_regime`) o che uno di questi esclude per alcune famiglie (`esclude`); il regime seguito per scelta dell'azienda
+(tachigrafo) se ne dipende quello di legge o se la scelta viene anche dal tipo di servizio. Senza i dati particolari (per
+permesso o per parametro) i problemi di quei regimi si contano soltanto, nella riga "Problemi sui dati particolari": K-CTR-104,
+107 (nessuna legge vale, se una legge sugli orari dipende dal tipo), 108 ... 118, 127, 128, 130, 132 (OUT che non vale), 134
+("vale ma non cambia niente"); e anche il contratto della persona e le scelte sul lavoro massimo (K-CTR-119 ... 122), se uno
+di quei regimi conta il lavoro (il lavoro per il contratto e' il conteggio di quei regimi). Lo dice il nucleo problema per
+problema, il catalogo dichiara per quali controlli puo' succedere e una prova controlla che coincidano. Gli altri regimi (es.
+un contratto collettivo, il lavoro a chiamata) e le loro violazioni restano visibili come prima, entro i dati personali. La
+prova per differenza (tests/test_unione.cpp) lo controlla su due pacchetti uguali tranne il tipo di un servizio, per ogni
+coppia di tipi.
 
 Non sono in questo catalogo (arriveranno con la verifica delle regole e con il calcolo): posti a bordo, attese massime
 sulle corse, limiti di accesso confrontati con i mezzi, tempi per andare da un luogo all'altro tra due turni, km
@@ -190,7 +224,8 @@ una persona in due turni insieme) restano errori nei dati.
 
 Per un utente della cassaforte che non puo' aprire i dati personali o quelli particolari, i controlli sugli orari del
 piano sono "non verificati" (le leggi che valgono dipendono dal rapporto e dal tipo di servizio, chi fa i turni dalle
-assenze), come gli altri controlli sul piano del giorno.
+assenze), come gli altri controlli sul piano del giorno. Chi puo' aprire i dati particolari ma non li chiede
+(`--includi-dati-particolari`) vede i problemi dei regimi che dipendono dal tipo di servizio solo contati (K-013, qui sopra).
 
 ## Controlli sui turni, giorno per giorno
 

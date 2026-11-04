@@ -219,6 +219,10 @@ struct Problem {
     int variant = 0;   // forma del messaggio, quando lo stesso problema si presenta in modi diversi
     Source where;
     std::vector<Param> params;
+    // K-013: il problema dipende dal tipo di servizio delle corse (orari di lavoro: un regime che dipende dal tipo, il lavoro
+    // contato da quei regimi). Che ci sia, e il suo messaggio, rivelano allora un dato particolare: il catalogo dell'API dice
+    // per quali controlli puo' succedere.
+    bool by_service_kind = false;
 };
 
 // Controlli sul contenuto del pacchetto (dati gia' conformi agli schemi). Ordine dei problemi: quello dei dati.

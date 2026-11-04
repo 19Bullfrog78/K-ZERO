@@ -89,6 +89,8 @@ struct RegimeData {
     // giorno la forza della scelta (0 nessuna, 1 preferenza, 2 limite). Le sue violazioni non sono la legge.
     bool chosen = false;
     std::vector<char> chosen_strength;
+    // K-013: il regime dipende dal tipo di servizio delle corse (KindDependence; per scelta: anche chosen_by_kind).
+    bool by_kind = false;
     bool own_drive = false;
     std::array<std::vector<int>, kWorlds> drive_weight;
     std::array<std::vector<long long>, kWorlds> drive_prefix;
@@ -109,6 +111,7 @@ struct PersonCtx {
     const PersonPlan* plan = nullptr;
     const Norms* norms = nullptr;
     bool chosen_by_kind = false;       // regimi per scelta da scelte per tipo di servizio (K-011 aggiunta 2)
+    const KindDependence* kinds = nullptr;   // K-013: i regimi delle norme della persona che dipendono dal tipo di servizio
     std::vector<Seg> segs;
     long long h0 = 0, h1 = 0;          // periodo noto: dall'inizio del primo giorno alla fine dell'ultimo del pacchetto
     Day d0 = 0, d1 = 0;                // periodo del pacchetto
