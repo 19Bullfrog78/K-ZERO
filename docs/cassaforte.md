@@ -283,6 +283,18 @@ schema/cassaforte.v1.schema.json)); `kzero registro` con lo schema `registro` (v
 `non_verificato`. Nessuna uscita contiene mai i valori della cassaforte se non quelli che l'utente puo' aprire e ha
 chiesto di vedere.
 
+Orari di lavoro e tipo di servizio (K-013): quello che dipende dal tipo di servizio delle corse (i regimi che ne dipendono,
+il lavoro che contano, il lavoro per il contratto, i riposi secondo quei regimi, i loro problemi) lo vedono allo stesso modo
+il titolare senza `--includi-dati-particolari` e l'utente con i soli dati personali: per tutti e due non c'e'. Cambia la
+parola: per il titolare e' **"riservato"** (i dati li ha e il programma li ha calcolati: li vede con il parametro, e i problemi
+contano nel riepilogo), per l'altro **"non verificato"** (non puo' aprire il tipo di servizio, quindi il programma non li
+calcola). In `kzero ore` la riga fissa della persona ("Regimi che dipendono dal tipo di servizio delle corse: riservati" oppure
+"non verificati"; in JSON `regimi_dal_tipo_di_servizio.esito`) e, dal K-013, anche quella dei regimi seguiti per scelta
+dell'azienda dice "non verificati" a chi non ha il permesso. Il resto degli orari (i regimi che non dipendono dal tipo, i
+rientri) resta come prima: il titolare lo vede, per l'utente con i soli dati personali resta "non verificato", perche' anche il
+suo piano dei turni lo e' (gli usi dei mezzi dipendono dal tipo di servizio). Decisione chiesta prima di scrivere il codice:
+DECISIONI.md, K-013.
+
 Gli avvisi della cassaforte (K-CTR-097 data di conservazione passata, K-CTR-098 ... K-CTR-100 password da cambiare) hanno
 i testi del catalogo dei controlli, uguali in testo ("Avviso K-CTR-nnn: ...") e in JSON (`codice` e `messaggio`): in
 `kzero controlla` stanno tra i problemi; in `kzero giornata` nel campo `cassaforte.avvisi`; in `kzero registro` e nei

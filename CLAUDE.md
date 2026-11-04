@@ -146,7 +146,11 @@ Si parte da Alpinabus (3 minibus + 1 auto) e si deve poter crescere fino a 500 m
   soltanto). Con i nomi dei passeggeri o le loro case e senza i dati particolari, il legame con un luogo sensibile e'
   riservato in tutto l'insieme che l'uscita lega (il messaggio, servizi e corse, l'intera giornata): una regola sola,
   `LegameSensibile` in src/api/riservatezza.hpp. Dal K-010 segue i permessi, non i parametri, e nome e casa di chi va in
-  un luogo sensibile sono dati particolari in tutte le uscite (DECISIONI.md).
+  un luogo sensibile sono dati particolari in tutte le uscite (DECISIONI.md). Dal K-013, senza i dati particolari (permesso o
+  parametro) negli orari e' riservato tutto quello che dipende dal tipo di servizio delle corse: i regimi che ne dipendono
+  (lo dicono i dati, `kind_dependence` nel nucleo), il lavoro che contano, il contratto e i loro problemi (contati soltanto,
+  `Problem::by_service_kind` e `dal_tipo` nel catalogo), con una riga fissa per persona; ogni nuova uscita degli orari passa
+  da li' e la prova per differenza (tests/test_unione.cpp) lo controlla.
 - Cassaforte (K-010): i dati personali e particolari veri stanno solo nella cassaforte del pacchetto; ogni nuovo lettore
   (es. il file del CTA) li scrive solo li', mai in file in chiaro. Dati decifrati mai su disco ne' in file temporanei
   (l'unica eccezione e' l'uscita in chiaro esplicita di `kzero esporta --scrivi`). Ogni nuova uscita prende la visibilita'
