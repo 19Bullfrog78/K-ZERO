@@ -1759,13 +1759,15 @@ target_compile_options(genera_scala PRIVATE ${KZERO_WARNINGS})
 add_test(NAME scala.genera COMMAND genera_scala ${CMAKE_CURRENT_BINARY_DIR}/scala)
 set_tests_properties(scala.genera PROPERTIES FIXTURES_SETUP scala LABELS scala)
 # Il riepilogo in due pezzi: in CMake il punto e virgola separa gli elementi di un elenco.
-# Dal K-011 con le leggi sugli orari della dimostrazione: i turni le rispettano anche nella lettura prudente. Dal K-011
-# aggiunta 1 le corse scolastiche fino a 50 km sono escluse con certezza dal Reg. 561 (e quindi dal D.Lgs. 234): sparisce
-# l'avviso sulla media di 4 mesi del D.Lgs. 234, perche' la legge non vale piu' per nessuno (la prova di scala ha solo
-# servizi scolastici).
+# Dal K-011 con le leggi sugli orari della dimostrazione: i turni le rispettano anche nella lettura prudente. Dal K-012 la
+# prova e' mista (genera_scala.cpp): linee anche oltre i 50 km, scolastico, disabili verso i centri diurni (luoghi sensibili),
+# corse promiscue, NCC con i pullman e con le auto, modo delle corse OUT o tachigrafo, prestiti di persone e di mezzi; prima
+# solo servizi scolastici ("10000 corse, 600 mezzi", "0 errori, 0 avvisi"). Resta un avviso, perche' il Reg. 561 (e quindi il
+# D.Lgs. 234) ora vale per molte persone: la media di 4 mesi del D.Lgs. 234 esce dal periodo del pacchetto (K-CTR-104, come
+# prima dell'aggiunta 1 del K-011).
 kzero_prova(scala_controlla USCITA 0 FORMATO testo
-            CONTIENE "10000 corse, 600 mezzi, 1320 persone, 1200 turni" " 0 errori, 0 avvisi."
-            NON_CONTIENE "K-CTR-104"
+            CONTIENE "9800 corse, 610 mezzi, 1320 persone, 1200 turni" " 0 errori, 1 avviso."
+                     "Avviso K-CTR-104 (norme.json, /norme/0/regimi/2/regole/2): La regola R-234 234-MEDIA"
             ARGOMENTI controlla ${CMAKE_CURRENT_BINARY_DIR}/scala)
 set_tests_properties(programma.scala_controlla PROPERTIES FIXTURES_REQUIRED scala LABELS "programma;scala")
 # K-011: gli orari di tutte le 1.320 persone in un mese, e quelli di una persona in una settimana (un anno intero si misura
@@ -1780,6 +1782,19 @@ set_tests_properties(programma.scala_ore_persona PROPERTIES FIXTURES_REQUIRED sc
 kzero_prova(scala_giornata USCITA 0 FORMATO testo CONTIENE "Totali: 1200 turni (nessuno scoperto, nessuno senza mezzo)"
             ARGOMENTI giornata ${CMAKE_CURRENT_BINARY_DIR}/scala --data 2026-10-15)
 set_tests_properties(programma.scala_giornata PROPERTIES FIXTURES_REQUIRED scala LABELS "programma;scala")
+# K-012: chi guida l'autobus di linea fa linee oltre i 50 km (561 certo, tachigrafo per servizio) e linee corte (OUT per il
+# tipo); chi guida l'auto da 8 posti fa NCC e scuola: il 561 non vale per legge, solo per la scelta del tachigrafo di AZ-02.
+kzero_prova(scala_ore_linea_lunga USCITA 0 FORMATO testo
+            CONTIENE "Corse con il mezzo V-01-001 (75 persone): C-00001 (servizio linea, 57,8 km)"
+                     "Regime R-561 per guida e riposi: vale con certezza per le corse C-00001, C-00005, C-00009"
+                     "Problemi degli orari: nessuno in questo periodo."
+            ARGOMENTI ore ${CMAKE_CURRENT_BINARY_DIR}/scala --data 2026-10-15 --persona P-01-001 --includi-dati-particolari)
+set_tests_properties(programma.scala_ore_linea_lunga PROPERTIES FIXTURES_REQUIRED scala LABELS "programma;scala")
+kzero_prova(scala_ore_auto_ncc USCITA 0 FORMATO testo
+            CONTIENE "Corse con il mezzo V-02-005 (9 persone): C-01026 (servizio ncc" "Non valgono per legge: R-561."
+                     "Regime R-561 per scelta dell'azienda (tachigrafo, non per legge)"
+            ARGOMENTI ore ${CMAKE_CURRENT_BINARY_DIR}/scala --data 2026-10-15 --persona P-02-005 --includi-dati-particolari)
+set_tests_properties(programma.scala_ore_auto_ncc PROPERTIES FIXTURES_REQUIRED scala LABELS "programma;scala")
 kzero_prova(scala_giornata_persona USCITA 0 FORMATO json SCHEMA giornata CONTIENE "\"turni\": 1,"
             ARGOMENTI giornata ${CMAKE_CURRENT_BINARY_DIR}/scala --data 2026-10-15 --persona P-03-007 --formato json)
 set_tests_properties(programma.scala_giornata_persona PROPERTIES FIXTURES_REQUIRED scala LABELS "programma;scala")
