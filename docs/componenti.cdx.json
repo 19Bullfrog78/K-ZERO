@@ -8,7 +8,7 @@
       "bom-ref": "kzero",
       "name": "K-Zero (kzero)",
       "version": "0.1.0",
-      "description": "Pianificazione della flotta: servizi di linea, per disabili, scolastici e ibridi. Programma kzero."
+      "description": "Pianificazione della flotta: servizi di linea, per disabili, scolastici, NCC e promiscui. Programma kzero."
     },
     "properties": [
       {

@@ -388,6 +388,66 @@
   scelta del tipo 4; regime per scelta non riservato 3; K-CTR-127/128 senza varianti particolari 1; K-CTR-132 scelte
   diverse tra tipi comune 1; K-CTR-129 con il testo di prima 3; avvisi "non serve" mai scritti 8; forzatura da
   confermare presa per utile 1; forza del tachigrafo non estesa alla settimana 1. Tutti scoperti.
+- 2026-11-04 - K-012 (programma, proposta "K-012: tipi di servizio NCC e promiscuo, clienti privati"). **1. Il tipo NCC**
+  (noleggio con conducente: gite, turismo, eventi) in ogni elenco dei tipi: servizi 3, norme 3, regolamenti 3, mezzi 3,
+  aziende 3; uscite dimostrazione 3 e ore 2. Il tipo dice la natura del servizio, non la licenza del mezzo (una navetta di
+  operai con tragitto e orari fissi resta "altro"). Le versioni vecchie si leggono ancora e "altro" resta "altro". Categoria
+  della corsa: per un servizio NCC i gruppi non la cambiano (una gita scolastica e' NCC); piu' servizi = promiscuo anche con
+  un NCC. Norme 3: servizi occasionali tipo per tipo (demo: l'NCC certo, "altro" da confermare, con la fonte); usi per
+  servizio: l'NCC chiede l'uso NCC con certezza, "altro" da confermare; Alfa sceglie il tachigrafo per l'NCC. Trovato strada
+  facendo: il trasferimento a vuoto dalla rimessa non seguiva la corsa NCC per l'interruzione di 15 + 15 minuti dei servizi
+  occasionali (errore falso): ora la segue, come per la guida delle corse escluse. **2. "Ibrido" diventa "promiscuo"** in
+  uscite, messaggi, descrivi, documenti, descrizioni degli schemi in uso, prove e CLAUDE.md; le righe vecchie di DECISIONI e
+  DIARIO restano (storia: fino al K-011 la categoria si chiamava "ibrido"); l'alimentazione "ibrido" dei mezzi resta.
+  **3. Clienti privati**: committenti.json versione 2 con `committenti_privati` (nome e nota personali, codice e codici
+  esterni comuni), mai nel "solo numeri" (K-CTR-019, varianti 8 e 9); `LegameSensibile` esteso ai privati (gruppi, fermate
+  o passeggeri in un luogo sensibile, corse che ci passano anche con i trasbordi, case porta a porta con il porta a porta
+  sensibile), una regola sola anche per la cassaforte. Su domanda (risposta: "nome nelle uscite") giornata versione 4 e
+  dimostrazione 3 mostrano il nome del committente, filtrato; Mauro: il nome non si perde mai, chi ha i permessi lo vede
+  sempre (REGOLE.md, docs/cassaforte.md). **4. Prova di scala mista** (DECISIONI.md): 610 mezzi, 9.800 corse (40 linee oltre i
+  50 km, 400 corse promiscue), NCC con pullman e auto, disabili verso 20 centri sensibili, OUT o tachigrafo per tipo e per
+  servizio, 20 prestiti di persone e 10 di mezzi; 0 errori, 1 avviso (K-CTR-104: la media di 4 mesi del D.Lgs. 234 esce
+  dal periodo, perche' ora il 561 vale per molte persone). Attese cambiate: scala_controlla "10000 corse, 600 mezzi ... 0
+  errori, 0 avvisi" -> "9800 corse, 610 mezzi ... 0 errori, 1 avviso"; scala_giornata resta "1200 turni". Tempi sulla stessa
+  macchina (4 processori, 15 GB; memoria = picco del processo), main -> K-012: controlla 10,5 -> 13,1 s (496 -> 498 MB); ore di
+  una persona per l'anno 10,5 -> 13,1 s; di tutti per una settimana 11,9 -> 14,2 s; per un mese 14,8 -> 16,6 s (642 -> 663
+  MB); per l'anno in testo 40,0 -> 43,9 s (1,7 -> 1,9 GB di memoria, 171 -> 243 MB di uscita), in JSON 72,1 -> 70,9 s (3,7
+  -> 3,8 GB, 1,65 -> 1,81 GB di uscita); giornata di tutti 12,1 -> 14,5 s. Nessun tempo raddoppia. **5. Demo**: la gita e'
+  NCC; due clienti privati inventati: CP-01 (matrimonio, sabato 2027-07-10, calendario con la data aggiunta) e CP-02
+  (noleggio verso il centro diurno, mercoledi' 2027-07-07, nome legato), fatti da P-G (a chiamata) con il suo minibus
+  ALFA-06 per un'assegnazione del singolo giorno; demo "solo numeri" senza i nomi. Il demo resta 0 errori, 31 avvisi
+  (uguali): cambiano due conteggi, K-CTR-104 (persone 5 -> 6: P-G nei giorni dei noleggi ha il 561 e il 234) e K-CTR-109 (P-G
+  375 -> 377 giornate a chiamata, 6 -> 8 giorni). Valori: 257 personali e 37 particolari -> 262 e 43 (nomi e nota dei
+  privati, note delle due assegnazioni; tipi e gruppi dei servizi nuovi; tolta la descrizione del tipo "altro" della gita).
+  Pacchetti di prova: tests/esempi/k011-orari resta alla versione 2 (stesso esito: 11 errori, 107 avvisi); nuovo
+  tests/esempi/k012-servizi (genera_k012.py: il pacchetto degli orari rifatto sul demo di oggi piu' gita scolastica NCC,
+  auto NCC da 8 posti, pullman NCC, navetta "altro", turni dei privati): 11 errori (del piano, quelli del K-011), 107 avvisi
+  (due in piu' rispetto al K-011, K-CTR-107 dell'auto NCC e K-CTR-114 della navetta; due in meno, K-CTR-084 e 085, perche'
+  P-G e ALFA-06 ora lavorano). **6. Documenti**: REGOLE.md (categorie, NCC, NCC e leggi sugli orari, domanda 11, clienti
+  privati), docs/formato-dati.md, docs/controlli.md, docs/cassaforte.md, docs/architettura.md, docs/sicurezza.md,
+  DECISIONI.md, CLAUDE.md. Nessun codice K-CTR o K-ERR nuovo (servivano solo due varianti di K-CTR-019).
+  Prove: 906 su 906 (prima del K-012: 867), 39 nuove: categorie NCC e promiscuo (nucleo e pacchetto dei servizi), servizi
+  occasionali tipo per tipo e nelle versioni, legame dei committenti privati (gruppo, corsa che passa dal centro, trasbordo,
+  porta a porta, enti mai), privati nei messaggi e nella cassaforte, demo chiuso con TIT, UFF e SAL in giornata (testo e
+  JSON), dimostrazione con i privati, pacchetto k012 (controlla, NCC con pullman e auto, navetta "altro", gita scolastica),
+  scala (linea lunga, auto NCC). Prove di prima cambiate: categorie (Hybrid -> Mixed, la gita NCC), conteggi del demo (servizi, corse,
+  valori, K-CTR-019 37 -> 42), versioni lette del demo, testi delle giornate e della dimostrazione con il nome del
+  committente (4 uscite attese rigenerate: cambiano solo le righe dei committenti e i servizi nuovi), la prova dei 15 + 15
+  minuti (ora sulla gita NCC), scala_controlla. Nessuna prova tolta.
+  Con i sanitizer 904 su 904 (senza le 2 prove sul programma di rilascio), 25 minuti con 4 prove insieme (compilazione 6
+  minuti).
+  Fuzzing in locale sul codice finale, i 32 bersagli 60 secondi ciascuno, 4 alla volta, con i semi anche del pacchetto
+  dei servizi (k012) e la cassaforte preparata da quel pacchetto (privati legati): 16.605 file del pacchetto, 15.493 righe di
+  comando, 2.035.952 date e orari, 71.105 cassaforti e 27.031 contenuti, 527.280 registri e 358.362 elenchi di voci,
+  291.735 password. Nessun guasto.
+  Sabotaggi sul codice finale, uno alla volta, ricompilato, con tutte le prove (prove rosse): NCC che diventa scolastico
+  con un gruppo di studenti 5; NCC trattato come "altro" da confermare per il 561 3; trasferimento a vuoto non legato alla
+  corsa NCC 5; norme 2 con il "da confermare" dei servizi occasionali ignorato 1; "ncc" letto come "altro" 18; "ibrido"
+  rimesso in uscita 4; nome del privato comune 20; privato di un servizio verso un luogo sensibile non legato 1; privato con
+  una corsa che passa da un luogo sensibile non legato 1; nome del committente non filtrato 8; nome e nota del privato nel
+  "solo numeri" 1; nome del privato legato a chi ha solo i dati personali nei messaggi: 0 al primo giro, quindi la prova
+  nuova Api.committente_privato_nei_messaggi, poi 1; linee oltre i 50 km escluse dal 561 27 (anche la scala); committenti
+  privati non letti 123; formato-dati senza il riferimento a committenti 2: 1. Tutti scoperti.
 
 ## Bug e limiti noti
 - I pesi del calcolo (ObjectiveWeights) hanno ancora valori provvisori nel codice, non usati: andranno nei dati con il
@@ -448,11 +508,17 @@
 - Orari di lavoro (K-011 aggiunta 2), nota dell'arbitro per dopo: le righe dei regimi di legge di kzero ore ("vale da
   confermare (per un dato particolare)", e "Non valgono: R-561" quando una dichiarazione rende certa l'esclusione) dipendono
   dal tipo di servizio delle corse e restano come sono: dipendono dalla legge, non dalle scelte dell'azienda.
-- kzero ore e kzero controlla rifanno tutti i controlli a ogni richiesta. Con la prova di scala (1.320 persone, un anno):
-  kzero controlla circa 11 secondi; kzero ore di una persona per l'anno o di tutti per una settimana circa 12 secondi; di
-  tutti per un mese 16 secondi; di tutti per l'anno 38 secondi in testo (192 MB, 1,4 GB di memoria) e circa 1 minuto in
-  JSON (1,6 GB di uscita, 3,4 GB di memoria, perche' l'uscita si prepara tutta prima di scriverla). Per periodi lunghi
-  di tutte le persone conviene chiedere un mese alla volta.
+- kzero ore e kzero controlla rifanno tutti i controlli a ogni richiesta. Con la prova di scala mista del K-012 (1.320
+  persone, un anno, 9.800 corse): kzero controlla circa 13 secondi; kzero ore di una persona per l'anno 13 secondi, di tutti
+  per una settimana 14, per un mese 17; di tutti per l'anno 44 secondi in testo (243 MB di uscita, 1,9 GB di memoria) e circa
+  71 secondi in JSON (1,8 GB di uscita, 3,8 GB di memoria, perche' l'uscita si prepara tutta prima di scriverla). Per periodi
+  lunghi di tutte le persone conviene chiedere un mese alla volta.
+- (K-012) Un contratto vuole sempre un regolamento, anche per il noleggio di un privato: nel demo i contratti dei privati
+  usano il regolamento inventato R-INV. Se servira', un contratto senza regolamento (o un regolamento "nessuno") per l'NCC.
+- (K-012) Nella prova di scala linee, NCC e disabili usano il calendario dei giorni di scuola, come lo scolastico: una
+  semplificazione per avere turni regolari; i weekend e le linee festive sono provati nel demo.
+- (K-012) Il nome di un ente committente si vede sempre (dato comune); il nome di un committente privato non deve stare nei
+  nomi dei servizi e dei contratti: oggi lo dice solo il formato, l'avviso arriva con il mandato dei nomi liberi.
 
 ## Idee
 - Generare scenari "gonfiati" (50-500 mezzi) dai giri reali per provare il carico.

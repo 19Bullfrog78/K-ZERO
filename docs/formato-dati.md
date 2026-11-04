@@ -16,7 +16,9 @@ con dati inventati. Dal K-008 il demo ha anche persone e turni: in Alfa la rotaz
 quella di Alpinabus, un servizio fisso solo il mercoledi', sostituzioni, un mezzo in revisione sostituito dal mezzo di
 scorta, un autobus di linea con la distrazione al noleggio usato per una gita, il cambio dell'autista a meta' corsa,
 turni notturni, spezzati, di riserva e di reperibilita'; in Beta una linea 7 su 7 con orario feriale e festivo e un
-ciclo di 3 giorni. La giornata di un giorno si vede con `kzero giornata esempi/demo --data 2026-10-22`.
+ciclo di 3 giorni. Dal K-012 la gita della Pro Loco e' un servizio NCC e ci sono due committenti privati: il matrimonio di
+CP-01 (sabato 2027-07-10) e il noleggio di CP-02 verso il centro diurno (mercoledi' 2027-07-07). La giornata di un giorno si
+vede con `kzero giornata esempi/demo --data 2026-10-22`.
 
 ## Il pacchetto dati
 
