@@ -1,4 +1,4 @@
-# K-Zero - prepara le prove con la cassaforte vera sul pacchetto di prova degli orari (K-011 aggiunta 2): lo chiude in
+# K-Zero - prepara le prove con la cassaforte vera su un pacchetto (K-011 aggiunta 2: quello degli orari; K-012: il demo): lo chiude in
 # una cartella nuova con tre utenti, TIT (dati personali e particolari), UFF (solo personali) e SAL (solo particolari).
 # Uso: cmake -DKZERO=<kzero> -DORIGINE=<cartella in chiaro> -DDESTINAZIONE=<cartella nuova>
 #            -DPW_TIT=<password> -DPW_UFF=<password> -DPW_SAL=<password> -P chiudi_k011.cmake

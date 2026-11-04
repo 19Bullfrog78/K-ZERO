@@ -160,6 +160,43 @@ LegameSensibile::LegameSensibile(const kzero::Index* indice) {
             for (const kzero::Passage& ps : p.trips[i].passages)
                 if (casa_pap(ps.place.code)) case_.insert(ps.place.code);
 
+    // K-012: i committenti privati con un servizio legato (la regola in riservatezza.hpp). Un servizio e' legato se i suoi
+    // gruppi, le loro fermate o i loro passeggeri toccano un luogo sensibile (o, con tutto il porta a porta sensibile, una casa
+    // porta a porta), oppure se una sua corsa passa da un luogo sensibile, da sola o con i trasbordi (o da una casa porta a
+    // porta, con tutto il porta a porta sensibile).
+    std::set<kzero::Code> servizi_legati;
+    for (const kzero::Service& s : p.services) {
+        bool legato = false;
+        const auto tocca = [&](const kzero::Code& luogo) {
+            legato = legato || sensibile(luogo) || (tutto_il_porta_a_porta && casa_pap(luogo));
+        };
+        for (const kzero::PassengerGroup& g : s.groups) {
+            if (g.school)
+                if (const kzero::School* sc = indice->school(g.school->code)) tocca(sc->place.code);
+            for (const auto& f : g.stops) tocca(f.place.code);
+            for (const kzero::Passenger& q : g.passengers)
+                for (const auto* a : {q.boarding ? &*q.boarding : nullptr, q.alighting ? &*q.alighting : nullptr})
+                    if (a) tocca(a->place.code);
+        }
+        if (legato) servizi_legati.insert(s.code);
+    }
+    for (std::size_t i = 0; i < p.trips.size(); ++i) {
+        bool legata = radici_sensibili.count(insiemi.radice(i)) > 0;
+        if (tutto_il_porta_a_porta)
+            for (const kzero::Passage& ps : p.trips[i].passages) legata = legata || casa_pap(ps.place.code);
+        if (legata)
+            for (const kzero::Ref& r : p.trips[i].services) servizi_legati.insert(r.code);
+    }
+    std::set<kzero::Code> privati;
+    for (const kzero::Client& c : p.clients)
+        if (c.is_private) privati.insert(c.code);
+    if (!privati.empty())
+        for (const kzero::Service& s : p.services) {
+            if (!servizi_legati.count(s.code)) continue;
+            const kzero::Contract* ct = indice->contract(s.contract.code);
+            if (ct && privati.count(ct->client.code)) committenti_.insert(ct->client.code);
+        }
+
     // Passeggeri e case si legano a vicenda, fino a quando non cambia piu' nulla.
     for (bool cambiato = true; cambiato;) {
         cambiato = false;
@@ -178,6 +215,7 @@ LegameSensibile::LegameSensibile(const kzero::Index* indice) {
 bool LegameSensibile::legato(const std::string& tipo, const kzero::Code& codice) const {
     if (tipo == "passeggero") return passeggero(codice);
     if (tipo == "casa") return casa(codice);
+    if (tipo == "committente") return committente(codice);
     return false;
 }
 

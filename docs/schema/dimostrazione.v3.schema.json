@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "kzero - dimostrazione, versione 3",
-  "description": "Uscita di 'kzero dimostrazione --formato json': il pacchetto dimostrativo esempi/demo (DATI INVENTATI, incorporato nel programma) e alcune regole del mestiere applicate ai suoi dati. Orari \"HH:MM\" (dopo mezzanotte si continua a contare: \"24:12\"), distanze in km, costi nella valuta del pacchetto. Classi dei dati: di base un dato personale e' sostituito dal codice del suo elemento e un dato particolare vale \"riservato\"; con --includi-dati-personali e --includi-dati-particolari compaiono i valori. Sostituisce la versione 1, che non e' piu' prodotta.",
+  "description": "Uscita di 'kzero dimostrazione --formato json': il pacchetto dimostrativo esempi/demo (DATI INVENTATI, incorporato nel programma) e alcune regole del mestiere applicate ai suoi dati. Orari \"HH:MM\" (dopo mezzanotte si continua a contare: \"24:12\"), distanze in km, costi nella valuta del pacchetto. Classi dei dati: di base un dato personale e' sostituito dal codice del suo elemento e un dato particolare vale \"riservato\"; con --includi-dati-personali e --includi-dati-particolari compaiono i valori. Versione 3 (K-012): il tipo di servizio 'ncc', la categoria 'ncc' e 'promiscuo' (fino alla versione 2 'ibrido'), il nome del committente di ogni servizio. Sostituisce le versioni 1 e 2, che non sono piu' prodotte.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -145,7 +145,7 @@
       "items": {
         "type": "object",
         "additionalProperties": false,
-        "required": ["codice", "nome", "tipo", "contratto", "committente", "calendario", "gruppi"],
+        "required": ["codice", "nome", "tipo", "contratto", "committente", "nome_committente", "calendario", "gruppi"],
         "properties": {
           "codice": { "type": "string", "minLength": 1 },
           "nome": { "type": "string" },
@@ -154,6 +154,10 @@
           },
           "contratto": { "type": "string", "minLength": 1 },
           "committente": { "type": ["string", "null"] },
+          "nome_committente": {
+            "description": "Nome del committente (K-012): di un ente sempre; di un committente privato e' un dato personale (di base il codice), legato a un luogo sensibile come quello dei passeggeri.",
+            "type": ["string", "null"]
+          },
           "calendario": { "type": "string", "minLength": 1 },
           "gruppi": {
             "type": "array",

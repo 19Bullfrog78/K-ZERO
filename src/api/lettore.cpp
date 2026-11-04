@@ -1287,8 +1287,13 @@ void committenti(const JsonDati& d, Package& pk) {
     const Conversione c("committenti.json");
     const auto& v = d.at("committenti");
     for (std::size_t i = 0; i < v.size(); ++i)
-        pk.clients.push_back({v[i].at("codice").get<std::string>(), v[i].at("nome").get<std::string>(), c.esterni(v[i]),
+        pk.clients.push_back({v[i].at("codice").get<std::string>(), v[i].at("nome").get<std::string>(), c.esterni(v[i]), false, {},
                               c.src(indice("/committenti", i))});
+    // Versione 2 (K-012): i committenti privati. Nome e nota sono personali: senza il permesso non arrivano dalla cassaforte.
+    const auto& w = c.elenco(d, "committenti_privati");
+    for (std::size_t i = 0; i < w.size(); ++i)
+        pk.clients.push_back({w[i].at("codice").get<std::string>(), c.testo(w[i], "nome"), c.esterni(w[i]), true, c.testo(w[i], "nota"),
+                              c.src(indice("/committenti_privati", i))});
 }
 
 VehicleRules regole(const JsonDati& o, const std::string& p, const Conversione& c) {

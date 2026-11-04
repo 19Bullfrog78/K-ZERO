@@ -58,6 +58,15 @@ Una regola sola, ricavata dalle marcature degli schemi (`x-kzero-classe`, src/ap
   con una chiave ricavata dalla chiave dei personali **e** da quella dei particolari insieme: li decifra solo chi ha tutti
   e due i permessi. Chi ne ha uno solo non li decifra, nemmeno lavorando sul file con le chiavi che si procura (aggiunta
   1 del K-010; la prova interna lo verifica sul file, non solo sulle uscite);
+- (K-012) il nome e la nota di un **committente privato** (una persona, es. chi prenota un noleggio per un matrimonio; il
+  codice resta nel file normale): sono dati personali, nella sezione dei personali; se un servizio di un suo contratto va in
+  un luogo sensibile (gruppi, fermate, passeggeri, una corsa che ci passa anche con i trasbordi o, con il porta a porta
+  sensibile, case porta a porta) stanno nella **sezione dei legati**, come nome e casa dei passeggeri. La regola e' una sola
+  (`LegameSensibile`, formato-dati.md). Il nome **non si perde mai**: il titolare e i delegati con i permessi lo vedono
+  sempre, nome e cognome (se il servizio va in un luogo sensibile servono i permessi dei dati personali e particolari
+  insieme); gli altri vedono il codice del committente. Nel demo chiuso: chi ha tutti e due i permessi vede CP-01 (il
+  matrimonio) e CP-02 (il noleggio verso il centro diurno); chi ha solo i personali vede CP-01 e di CP-02 solo il codice; chi
+  ha solo i particolari vede i codici;
 - per la stessa ragione **un campo personale dentro un dato particolare** va tra i legati (regola ricavata dagli schemi, K-011
   aggiunta 2): oggi motivo e chi della dichiarazione del modo delle corse (dato particolare). Chi ha solo i particolari
   riceve la dichiarazione senza motivo e chi; chi ha solo i personali non la riceve. Un elemento marcato intero non puo'

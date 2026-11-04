@@ -234,6 +234,26 @@
       ]
     },
     {
+      "codice": "CAL-MATRIMONIO",
+      "nome": "Giorno del matrimonio",
+      "dal": "2027-07-01",
+      "al": "2027-07-31",
+      "giorni": [],
+      "date_aggiunte": [
+        "2027-07-10"
+      ]
+    },
+    {
+      "codice": "CAL-PRIVATO-CENTRO",
+      "nome": "Giorno del noleggio privato",
+      "dal": "2027-07-01",
+      "al": "2027-07-31",
+      "giorni": [],
+      "date_aggiunte": [
+        "2027-07-07"
+      ]
+    },
+    {
       "codice": "CAL-T-PAUSA-A",
       "nome": "Solo il 2026-11-02",
       "dal": "2026-11-02",

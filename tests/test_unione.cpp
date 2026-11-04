@@ -712,6 +712,40 @@ TEST(Unione, ElementiInteriSenzaCampiDiUnAltraClasse) {
     EXPECT_TRUE(errori.empty()) << errori;
 }
 
+// K-012: il nome e la nota di un committente privato vanno nella cassaforte; quelli di chi noleggia per andare in un luogo
+// sensibile (nel demo CP-02, verso il centro diurno) tra i legati, gli altri (CP-01, il matrimonio) tra i personali. Riaperti,
+// chi ha tutti e due i permessi li ha tutti; chi ha solo i personali solo quelli di CP-01; chi ha solo i particolari nessuno.
+// Il codice resta nel file normale.
+TEST(Unione, CommittentiPrivatiNellaCassaforte) {
+    const std::string prove = KZERO_CARTELLA_PROVE;
+    const Chiuso c = chiudi(da_cartella(prove + "/../esempi/demo"));
+    std::map<std::string, std::string> trovate;   // "<codice>/<campo>" -> classe e legato
+    for (const Voce& v : c.voci) {
+        if (v.file != "committenti.json") continue;
+        ASSERT_FALSE(v.percorso.empty());
+        ASSERT_TRUE(v.percorso.front() == "committenti_privati") << v.percorso.dump();
+        const std::string chiave = v.percorso.back().at("codice").get<std::string>() + "/" + v.campo;
+        trovate[chiave] = std::string(v.classe == Classe::Particolare ? "particolare" : "personale") + (v.legato ? " legato" : "");
+    }
+    const std::map<std::string, std::string> attese = {
+        {"CP-01/nome", "personale"}, {"CP-01/nota", "personale"}, {"CP-02/nome", "particolare legato"}};
+    EXPECT_EQ(trovate, attese);
+    const JsonDati normale = JsonDati::parse(c.normali.file.at("committenti.json"));
+    EXPECT_EQ(normale.at("committenti_privati").dump(), R"([{"codice":"CP-01"},{"codice":"CP-02"}])");
+    for (const auto& [v, nomi] : std::vector<std::pair<Visibilita, std::string>>{
+             {Visibilita{true, true}, "CP-01:Galli Marta CP-02:Ferri Bruno "},
+             {Visibilita{true, false}, "CP-01:Galli Marta CP-02: "},
+             {Visibilita{false, true}, "CP-01: CP-02: "}}) {
+        const ValoriCassaforte x = valori(c, v);
+        const Lettura l = leggi_pacchetto(c.normali, &x);
+        ASSERT_TRUE(l.forma_valida()) << elenco(l.problemi);
+        std::string visti;
+        for (const kzero::Client& k : l.pacchetto.clients)
+            if (k.is_private) visti += k.code + ":" + k.name + " ";
+        EXPECT_EQ(visti, nomi);
+    }
+}
+
 // K-011 aggiunta 2: la dichiarazione del modo delle corse e' un dato particolare; motivo e chi, personali dentro un dato
 // particolare, stanno tra i legati (tutti e due i permessi). La forzatura resta comune: motivo e chi solo personali.
 TEST(Unione, DichiarazioneParticolareConMotivoLegato) {

@@ -792,10 +792,14 @@ struct School {
 
 // --- Committenti, contratti, gruppi di servizi -----------------------------------------
 
+// Committente: un ente (scuola, Comune, agenzia...: dati comuni) oppure, dal K-012, un privato (una persona: nome e nota sono
+// dati personali, nella cassaforte; legati a un luogo sensibile come quelli dei passeggeri, riservatezza.hpp).
 struct Client {
     Code code;
-    std::string name;
+    std::string name;   // per un privato puo' mancare (pacchetto "solo numeri", o un utente senza il permesso)
     std::vector<ExternalCode> external;
+    bool is_private = false;   // committenti_privati (committenti.json versione 2)
+    std::string note;          // la nota di un privato (dato personale); quella di un ente non serve al calcolo
     Source src;
 };
 

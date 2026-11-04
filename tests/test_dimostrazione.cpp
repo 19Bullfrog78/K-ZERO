@@ -28,6 +28,8 @@ TEST(Dimostrazione, categorie_ricavate) {
         attese.push_back({c, ServiceType::Line});
     attese.push_back({"C-GITA-A", ServiceType::Ncc});
     attese.push_back({"C-GITA-R", ServiceType::Ncc});
+    // K-012: il matrimonio e il noleggio privato verso il centro diurno (un gruppo di disabili): servizi NCC.
+    for (const char* c : {"C-MATRIMONIO-A", "C-MATRIMONIO-R", "C-PRIVATO-CENTRO"}) attese.push_back({c, ServiceType::Ncc});
     const Index idx(demo());
     ASSERT_EQ(demo().trips.size(), attese.size());
     for (std::size_t i = 0; i < attese.size(); ++i) {
@@ -53,8 +55,8 @@ TEST(Dimostrazione, totali_e_pause) {
         pieni += t.loaded_km();
         vuoti += t.empty_km();
     }
-    EXPECT_NEAR(pieni, 349.2, 1e-9);
-    EXPECT_NEAR(vuoti, 63.7, 1e-9);
+    EXPECT_NEAR(pieni, 393.2, 1e-9);   // K-012: 349,2 + 32 del matrimonio + 12 del noleggio privato
+    EXPECT_NEAR(vuoti, 98.2, 1e-9);    // 63,7 + 19 + 15,5
 
     // Un turno con l'andata del mattino e il ritorno di mezzogiorno (K-008: il turno del giorno al posto della
     // vecchia "giornata del mezzo"): km dei dati e minuti fermi tra le due corse.

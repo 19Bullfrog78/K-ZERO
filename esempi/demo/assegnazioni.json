@@ -10,6 +10,8 @@
     { "data": "2026-11-03", "turno": "T-B-ASILO", "persona": "P-C", "nota": "Prestito a Beta con l'accordo consortile." },
     { "data": "2026-11-03", "turno": "T-B-SERA", "persona": "P-C", "nota": "Prestito a Beta con l'accordo consortile." },
     { "data": "2026-11-13", "turno": "T-PRIMO", "persona": "P-C", "nota": "Sostituzione: la gita di domenica porta il Reg. 561/2006 su tutta la settimana di P-A, che ha bisogno di un riposo settimanale regolare di 45 ore (art. 8 c. 6)." },
-    { "data": "2026-11-15", "turno": "T-GITA", "persona": "P-A", "nota": "Lavoro occasionale nel giorno di riposo." }
+    { "data": "2026-11-15", "turno": "T-GITA", "persona": "P-A", "nota": "Lavoro occasionale nel giorno di riposo." },
+    { "data": "2027-07-07", "turno": "T-PRIVATO-CENTRO", "persona": "P-G", "nota": "Lavoro a chiamata." },
+    { "data": "2027-07-10", "turno": "T-MATRIMONIO", "persona": "P-G", "nota": "Lavoro a chiamata." }
   ]
 }

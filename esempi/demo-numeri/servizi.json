@@ -266,6 +266,66 @@
           }
         ]
       }
+    },
+    {
+      "codice": "S-MATRIMONIO",
+      "nome": "Noleggio per un matrimonio",
+      "tipo": "ncc",
+      "contratto": "CT-MATRIMONIO",
+      "calendario": "CAL-MATRIMONIO",
+      "liberta_oraria": { "tipo": "fissa" },
+      "domanda": {
+        "gruppi": [
+          {
+            "codice": "G-MATRIMONIO-A",
+            "nome": "Invitati, andata",
+            "tipo": "altro",
+            "tipo_descrizione": "Invitati",
+            "verso": "andata",
+            "conteggi": "esatti",
+            "fermate": [
+              { "luogo": "F-PRADELLO", "salgono": 14 },
+              { "luogo": "F-LAGOBELLO", "scendono": 14 }
+            ]
+          },
+          {
+            "codice": "G-MATRIMONIO-R",
+            "nome": "Invitati, ritorno",
+            "tipo": "altro",
+            "tipo_descrizione": "Invitati",
+            "verso": "ritorno",
+            "conteggi": "esatti",
+            "fermate": [
+              { "luogo": "F-LAGOBELLO", "salgono": 14 },
+              { "luogo": "F-PRADELLO", "scendono": 14 }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "codice": "S-PRIVATO-CENTRO",
+      "nome": "Noleggio privato di un giorno",
+      "tipo": "ncc",
+      "contratto": "CT-PRIVATO-CENTRO",
+      "calendario": "CAL-PRIVATO-CENTRO",
+      "liberta_oraria": { "tipo": "fissa" },
+      "domanda": {
+        "gruppi": [
+          {
+            "codice": "G-PRIVATO-CENTRO",
+            "nome": "Andata",
+            "tipo": "disabili",
+            "verso": "andata",
+            "scuola": "SC-CENTRO",
+            "conteggi": "esatti",
+            "fermate": [
+              { "luogo": "F-PRADELLO", "salgono": 1 },
+              { "luogo": "L-CENTRO", "scendono": 1 }
+            ]
+          }
+        ]
+      }
     }
   ]
 }

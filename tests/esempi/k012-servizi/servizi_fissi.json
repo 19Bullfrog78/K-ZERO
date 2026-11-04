@@ -265,6 +265,18 @@
       "turno": "T-NAVETTA",
       "persona": "P-NAVETTA",
       "calendario": "CAL-T-NAVETTA"
+    },
+    {
+      "codice": "SF-T-MATRIMONIO",
+      "turno": "T-MATRIMONIO",
+      "persona": "P-G",
+      "calendario": "CAL-MATRIMONIO"
+    },
+    {
+      "codice": "SF-T-PRIVATO-CENTRO",
+      "turno": "T-PRIVATO-CENTRO",
+      "persona": "P-G",
+      "calendario": "CAL-PRIVATO-CENTRO"
     }
   ]
 }

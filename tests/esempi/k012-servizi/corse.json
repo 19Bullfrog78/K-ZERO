@@ -1418,6 +1418,145 @@
       "testo_esposto": "GITA"
     },
     {
+      "codice": "C-MATRIMONIO-A",
+      "nome": "Matrimonio, andata",
+      "servizi": [
+        "S-MATRIMONIO"
+      ],
+      "calendario": "CAL-MATRIMONIO",
+      "passaggi": [
+        {
+          "luogo": "L-RIMESSA-ALFA",
+          "orario": "11:00"
+        },
+        {
+          "luogo": "F-PRADELLO",
+          "orario": "11:30",
+          "persone": [
+            {
+              "gruppo": "G-MATRIMONIO-A",
+              "salgono": 14
+            }
+          ],
+          "km": {
+            "vuoti": 9.5
+          }
+        },
+        {
+          "luogo": "F-LAGOBELLO",
+          "orario": "12:00",
+          "persone": [
+            {
+              "gruppo": "G-MATRIMONIO-A",
+              "scendono": 14
+            }
+          ],
+          "km": {
+            "pieni": 16.0
+          }
+        }
+      ],
+      "km_totali": {
+        "pieni": 16.0,
+        "vuoti": 9.5
+      }
+    },
+    {
+      "codice": "C-MATRIMONIO-R",
+      "nome": "Matrimonio, ritorno",
+      "servizi": [
+        "S-MATRIMONIO"
+      ],
+      "calendario": "CAL-MATRIMONIO",
+      "passaggi": [
+        {
+          "luogo": "F-LAGOBELLO",
+          "orario": "17:30",
+          "persone": [
+            {
+              "gruppo": "G-MATRIMONIO-R",
+              "salgono": 14
+            }
+          ]
+        },
+        {
+          "luogo": "F-PRADELLO",
+          "orario": "18:05",
+          "persone": [
+            {
+              "gruppo": "G-MATRIMONIO-R",
+              "scendono": 14
+            }
+          ],
+          "km": {
+            "pieni": 16.0
+          }
+        },
+        {
+          "luogo": "L-RIMESSA-ALFA",
+          "orario": "18:35",
+          "km": {
+            "vuoti": 9.5
+          }
+        }
+      ],
+      "km_totali": {
+        "pieni": 16.0,
+        "vuoti": 9.5
+      }
+    },
+    {
+      "codice": "C-PRIVATO-CENTRO",
+      "nome": "Noleggio privato, andata",
+      "servizi": [
+        "S-PRIVATO-CENTRO"
+      ],
+      "calendario": "CAL-PRIVATO-CENTRO",
+      "passaggi": [
+        {
+          "luogo": "L-RIMESSA-ALFA",
+          "orario": "08:00"
+        },
+        {
+          "luogo": "F-PRADELLO",
+          "orario": "08:20",
+          "persone": [
+            {
+              "gruppo": "G-PRIVATO-CENTRO",
+              "salgono": 1
+            }
+          ],
+          "km": {
+            "vuoti": 9.5
+          }
+        },
+        {
+          "luogo": "L-CENTRO",
+          "orario": "08:50",
+          "persone": [
+            {
+              "gruppo": "G-PRIVATO-CENTRO",
+              "scendono": 1
+            }
+          ],
+          "km": {
+            "pieni": 12.0
+          }
+        },
+        {
+          "luogo": "L-RIMESSA-ALFA",
+          "orario": "09:10",
+          "km": {
+            "vuoti": 6.0
+          }
+        }
+      ],
+      "km_totali": {
+        "pieni": 12.0,
+        "vuoti": 15.5
+      }
+    },
+    {
       "codice": "C-PAUSA-A1",
       "nome": "Esempio a, andata",
       "servizi": [

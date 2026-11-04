@@ -45,23 +45,23 @@ PP-04  porta a porta
 
 === SERVIZI ===
 S-SCU-AM  Andata mattina Pradello - Valfonda, medie e primaria
-   tipo: riservato  contratto CT-SCU (committente CVA)  calendario CAL-SCUOLA-LV
+   tipo: riservato  contratto CT-SCU (committente CVA "Consorzio Valle Alta (inventato)")  calendario CAL-SCUOLA-LV
    gruppo G-AM-MEDIE  tipo: riservato  scuola SC-MEDIE  persone 24 in 4 fermate  carrozzine: riservato  ausili piegati: riservato  assistente richiesto: riservato
    gruppo G-AM-PRIM  tipo: riservato  scuola SC-PRIM  persone 14 in 3 fermate  carrozzine: riservato  ausili piegati: riservato  assistente richiesto: riservato
 S-SCU-RM  Ritorno mezzogiorno medie
-   tipo: riservato  contratto CT-SCU (committente CVA)  calendario CAL-SCUOLA-LV
+   tipo: riservato  contratto CT-SCU (committente CVA "Consorzio Valle Alta (inventato)")  calendario CAL-SCUOLA-LV
    gruppo G-RM-MEDIE  tipo: riservato  scuola SC-MEDIE  persone 11 in 4 fermate  carrozzine: riservato  ausili piegati: riservato  assistente richiesto: riservato
 S-SUP-RM  Ritorno superiori a supporto della linea B610
-   tipo: riservato  contratto CT-LIN (committente TPV)  calendario CAL-SCUOLA-LV
+   tipo: riservato  contratto CT-LIN (committente TPV "Trasporti Provinciali Valfonda (inventato)")  calendario CAL-SCUOLA-LV
    gruppo G-RM-SUP  tipo: riservato  scuola SC-SUP  persone 5 in 4 fermate  carrozzine: riservato  ausili piegati: riservato  assistente richiesto: riservato
 S-DIS  Trasporto al centro diurno Il Faro
-   tipo: riservato  contratto CT-SCU (committente CVA)  calendario CAL-CENTRO
+   tipo: riservato  contratto CT-SCU (committente CVA "Consorzio Valle Alta (inventato)")  calendario CAL-CENTRO
    gruppo G-DIS  tipo: riservato  scuola SC-CENTRO  persone 3 in 4 fermate  carrozzine: riservato  ausili piegati: riservato  assistente richiesto: riservato
       passeggero P-D1  attivo  sale a PP-01, scende a L-CENTRO  esigenze: riservato
       passeggero P-D2  attivo  sale a PP-02, scende a L-CENTRO  esigenze: riservato
       passeggero P-D3  attivo  sale a PP-03, scende a L-CENTRO  esigenze: riservato
 S-ASILO  Scuola dell'infanzia di Lagobello, andata
-   tipo: riservato  contratto CT-ASILO (committente CVA)  calendario CAL-INFANZIA
+   tipo: riservato  contratto CT-ASILO (committente CVA "Consorzio Valle Alta (inventato)")  calendario CAL-INFANZIA
    gruppo G-ASILO  tipo: riservato  scuola SC-INFANZIA  persone 7 in 3 fermate  carrozzine: riservato  ausili piegati: riservato  assistente richiesto: riservato
       passeggero P-A1  attivo  sale a F-SORGENTA, scende a L-INFANZIA  esigenze: riservato
       passeggero P-A2  attivo  sale a F-SORGENTA, scende a L-INFANZIA  esigenze: riservato
@@ -72,19 +72,26 @@ S-ASILO  Scuola dell'infanzia di Lagobello, andata
       passeggero P-A7  attivo  sale a F-LAGOBELLO, scende a L-INFANZIA  esigenze: riservato
       passeggero P-A8  sospeso  sale a F-LAGOBELLO, scende a L-INFANZIA  esigenze: riservato
 S-LIN-B610  Linea B610 Valfonda - Pradello
-   tipo: riservato  contratto CT-LIN (committente TPV)  calendario CAL-FERIALI
+   tipo: riservato  contratto CT-LIN (committente TPV "Trasporti Provinciali Valfonda (inventato)")  calendario CAL-FERIALI
    gruppo G-LIN  tipo: riservato  persone non note in 4 fermate  carrozzine: riservato  ausili piegati: riservato  assistente richiesto: riservato
 S-DIS-GIO  Trasporto al centro diurno Il Faro, il giovedi'
-   tipo: riservato  contratto CT-SCU (committente CVA)  calendario CAL-CENTRO-GIO
+   tipo: riservato  contratto CT-SCU (committente CVA "Consorzio Valle Alta (inventato)")  calendario CAL-CENTRO-GIO
    gruppo G-DIS-GIO  tipo: riservato  scuola SC-CENTRO  persone 1 in 2 fermate  carrozzine: riservato  ausili piegati: riservato  assistente richiesto: riservato
       passeggero P-D4  attivo  sale a PP-04, scende a L-CENTRO  esigenze: riservato
 S-LIN-B620  Linea B620 Sorgenta - Montebrino, tutti i giorni
-   tipo: riservato  contratto CT-LIN-BETA (committente TPV)  calendario CAL-SEMPRE
+   tipo: riservato  contratto CT-LIN-BETA (committente TPV "Trasporti Provinciali Valfonda (inventato)")  calendario CAL-SEMPRE
    gruppo G-LIN-B620  tipo: riservato  persone non note in 3 fermate  carrozzine: riservato  ausili piegati: riservato  assistente richiesto: riservato
 S-GITA  Gita della Pro Loco al lago di Lagobello
-   tipo: riservato  contratto CT-GITA (committente PROLOCO)  calendario CAL-GITA
+   tipo: riservato  contratto CT-GITA (committente PROLOCO "Pro Loco di Valfonda (inventata)")  calendario CAL-GITA
    gruppo G-GITA-A  tipo: riservato  persone 30 in 2 fermate  carrozzine: riservato  ausili piegati: riservato  assistente richiesto: riservato
    gruppo G-GITA-R  tipo: riservato  persone 30 in 2 fermate  carrozzine: riservato  ausili piegati: riservato  assistente richiesto: riservato
+S-MATRIMONIO  Noleggio per un matrimonio
+   tipo: riservato  contratto CT-MATRIMONIO (committente CP-01)  calendario CAL-MATRIMONIO
+   gruppo G-MATRIMONIO-A  tipo: riservato  persone 14 in 2 fermate  carrozzine: riservato  ausili piegati: riservato  assistente richiesto: riservato
+   gruppo G-MATRIMONIO-R  tipo: riservato  persone 14 in 2 fermate  carrozzine: riservato  ausili piegati: riservato  assistente richiesto: riservato
+S-PRIVATO-CENTRO  Noleggio privato di un giorno
+   tipo: riservato  contratto CT-PRIVATO-CENTRO (committente CP-02)  calendario CAL-PRIVATO-CENTRO
+   gruppo G-PRIVATO-CENTRO  tipo: riservato  scuola SC-CENTRO  persone 1 in 2 fermate  carrozzine: riservato  ausili piegati: riservato  assistente richiesto: riservato
 
 === CORSE ===
 C-AM-1  Andata mattina, giro 1
@@ -235,6 +242,22 @@ C-GITA-R  Gita della Pro Loco, ritorno
    17:00  F-LAGOBELLO  Lagobello, Lago  salgono 30  a bordo 30
    17:35  F-VALFONDA-PIAZZA  Valfonda, Piazza Grande  scendono 30  a bordo 0
    17:45  L-RIMESSA-ALFA  Valfonda, rimessa Autoservizi Alfa  a bordo 0
+C-MATRIMONIO-A  Matrimonio, andata
+   categoria: riservato  servizi S-MATRIMONIO  calendario CAL-MATRIMONIO  11:00-12:00  km a pieno 16, a vuoto 9,5
+   11:00  L-RIMESSA-ALFA  Valfonda, rimessa Autoservizi Alfa  a bordo 0
+   11:30  F-PRADELLO  Pradello, Piazza  salgono 14  a bordo 14
+   12:00  F-LAGOBELLO  Lagobello, Lago  scendono 14  a bordo 0
+C-MATRIMONIO-R  Matrimonio, ritorno
+   categoria: riservato  servizi S-MATRIMONIO  calendario CAL-MATRIMONIO  17:30-18:35  km a pieno 16, a vuoto 9,5
+   17:30  F-LAGOBELLO  Lagobello, Lago  salgono 14  a bordo 14
+   18:05  F-PRADELLO  Pradello, Piazza  scendono 14  a bordo 0
+   18:35  L-RIMESSA-ALFA  Valfonda, rimessa Autoservizi Alfa  a bordo 0
+C-PRIVATO-CENTRO  Noleggio privato, andata
+   categoria: riservato  servizi S-PRIVATO-CENTRO  calendario CAL-PRIVATO-CENTRO  08:00-09:10  km a pieno 12, a vuoto 15,5
+   08:00  L-RIMESSA-ALFA  Valfonda, rimessa Autoservizi Alfa  a bordo 0
+   08:20  F-PRADELLO  Pradello, Piazza  salgono 1  a bordo 1
+   08:50  L-CENTRO  Valfonda, Centro diurno Il Faro  scendono 1  a bordo 0
+   09:10  L-RIMESSA-ALFA  Valfonda, rimessa Autoservizi Alfa  a bordo 0
 
 === REGOLE ===
 Giri per il servizio S-SCU-AM (38 persone):  ALFA-01 (16 posti) 3 giri;  ALFA-02 (16 posti) 3 giri;  ALFA-03 (12 posti) 4 giri;  ALFA-04 (4 posti) 10 giri;  ALFA-X30 (30 posti) 2 giri;  ALFA-05 (35 posti) 2 giri;  ALFA-06 (14 posti) 3 giri;  ALFA-07 (15 posti) 3 giri

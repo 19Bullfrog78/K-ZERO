@@ -14,7 +14,7 @@ T-DIS "Centro diurno"  07:25-09:35 (2 ore e 10 minuti)  azienda ALFA, autista
    07:25-07:38  Presa servizio con il controllo del mezzo (PRESA), a L-RIMESSA-ALFA (Valfonda, rimessa Autoservizi Alfa)
                 (fermo 2 minuti)
    07:40-08:52  corsa C-DIS-1 "Centro diurno, giro principale"
-                servizi S-DIS (tipo riservato, contratto CT-SCU, committente CVA)
+                servizi S-DIS (tipo riservato, contratto CT-SCU, committente CVA "Consorzio Valle Alta (inventato)")
                 modo per un dato particolare
                 calendario CAL-CENTRO "Centro diurno: lunedi', mercoledi' e giovedi'", 139 giorni nel periodo; km a pieno 20,3, a vuoto 5,5; assistente fornito dal committente
       07:40  L-RIMESSA-ALFA  Valfonda, rimessa Autoservizi Alfa  sale l'assistente  a bordo 0

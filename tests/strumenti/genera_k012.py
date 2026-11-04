@@ -147,6 +147,14 @@ servizio('S-NAVETTA', "Navetta degli operai della cartiera", 'altro', 'CT-NAVETT
          gruppi_giro('NAVETTA', 'altro', "Operai della cartiera"),
          descrizione="Navetta casa-lavoro con tragitto e orari fissi (servizio regolare specializzato, non un noleggio)")
 
+# 5. I committenti privati del demo (K-012): CP-01 noleggia per un matrimonio (luoghi normali: nome personale), CP-02 per andare
+# al centro diurno (luogo sensibile: nome legato). Il pacchetto degli orari rifa' tutti i turni: si riprendono quelli del demo.
+demo_turni = json.load(open(f'{SRC}/turni.json', encoding='utf-8'))['turni']
+for codice, data in [('T-MATRIMONIO', '2027-07-10'), ('T-PRIVATO-CENTRO', '2027-07-07')]:
+    t = copy.deepcopy(uno(demo_turni, codice))
+    tu['turni'].append(t)
+    sf['servizi_fissi'].append({"codice": f'SF-{codice}', "turno": codice, "persona": 'P-G', "calendario": t['calendario']})
+
 for n, d in [('calendari', ca), ('turni', tu), ('servizi_fissi', sf), ('corse', co), ('servizi', se), ('mezzi', me), ('persone', pe),
              ('committenti', cm), ('contratti', ct)]:
     save(n, d)

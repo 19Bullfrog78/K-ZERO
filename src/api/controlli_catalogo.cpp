@@ -591,8 +591,12 @@ const std::vector<DefinizioneControllo>& catalogo_controlli() {
               "Il pacchetto e' di livello \"solo numeri\": il servizio fisso {servizio_fisso} ha una nota scritta a mano (puo' "
               "parlare delle persone), ammessa solo nel livello \"completo\".",
               "Il pacchetto e' di livello \"solo numeri\": l'assegnazione del {data} del turno {turno} ha una nota scritta a mano "
-              "(puo' dire il motivo di un cambio), ammessa solo nel livello \"completo\"."},
-             {{2, PE}, {3, PE}, {4, PE}}},
+              "(puo' dire il motivo di un cambio), ammessa solo nel livello \"completo\".",
+              "Il pacchetto e' di livello \"solo numeri\": il committente privato {committente} ha il nome, ammesso solo nel livello "
+              "\"completo\".",
+              "Il pacchetto e' di livello \"solo numeri\": il committente privato {committente} ha una nota scritta a mano, ammessa "
+              "solo nel livello \"completo\"."},
+             {{2, PE}, {3, PE}, {4, PE}, {8, PE}, {9, PE}}},
             {Check::NegativeOnBoard, "K-CTR-020", E, N, "Persone a bordo sotto zero",
              {"Nella corsa {corsa} le persone del gruppo {gruppo} che scendono ({scendono}) sono piu' di quelle a bordo "
               "({a_bordo})."}},
@@ -1329,10 +1333,12 @@ std::string Presentatore::riferimento(kzero::Element e, const std::string& codic
     const std::string schema = src->file.substr(0, src->file.rfind(".json"));
     if (versione == dati_->versioni->end()) return codice;
     const Classe classe = SchemiDati::incorporati().classe(schema, versione->second, src->pointer + "/" + campo);
-    // Il nome di un passeggero o di una casa legati a un luogo sensibile vale come dato particolare (riservatezza.hpp).
+    // Il nome di un passeggero, di una casa o di un committente privato (K-012) legati a un luogo sensibile vale come dato
+    // particolare (riservatezza.hpp).
     const bool legato = classe == Classe::Personale && dati_->legame &&
                         ((e == kzero::Element::Passenger && dati_->legame->passeggero(codice)) ||
-                         (e == kzero::Element::Place && dati_->legame->casa(codice)));
+                         (e == kzero::Element::Place && dati_->legame->casa(codice)) ||
+                         (e == kzero::Element::Client && dati_->legame->committente(codice)));
     const bool mostra = visibile(classe, dati_->visibilita) && (!legato || visibile(Classe::Particolare, dati_->visibilita));
     return mostra ? codice + " (" + nome + ")" : codice;
 }

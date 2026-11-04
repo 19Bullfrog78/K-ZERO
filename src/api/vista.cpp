@@ -24,6 +24,11 @@ Json Vista::campo(const kzero::Source& elemento, const std::string& campo, Json 
     return filtra(c, std::move(valore), codice);
 }
 
+Json Vista::nome_committente(const kzero::Client* c) const {
+    if (!c) return Json(nullptr);
+    return campo(c->src, "nome", c->name.empty() ? Json(nullptr) : Json(c->name), c->code);
+}
+
 Json Vista::filtra(Classe c, Json valore, const std::string& codice) const {
     if (visibile(c, visibilita_)) return valore;
     return c == Classe::Personale ? Json(codice) : Json(kRiservato);
@@ -69,6 +74,13 @@ Json Vista::modo_corsa(const kzero::TripMode& m) const {
     // "riservato" su ogni corsa, che ci sia o no, e la riga di testo non la nomina.
     j["dichiarazione"] = visibile(Classe::Particolare, visibilita_) ? giustificazione(m.declaration, false) : Json(kRiservato);
     return j;
+}
+
+std::string testo_committente(const Json& servizio) {
+    const Json& c = servizio.at("committente");
+    if (!c.is_string()) return "nessuno";
+    const Json& n = servizio.at("nome_committente");
+    return c.get<std::string>() + (n.is_string() && n != c ? " \"" + n.get<std::string>() + "\"" : std::string());
 }
 
 std::string testo_modo_corsa(const Json& m) {

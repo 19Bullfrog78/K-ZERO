@@ -92,6 +92,8 @@ Json in_json(const DefinizioneComando& comando, const Resoconto& r, const Vista&
         x["contratto"] = s.contract.code;
         const kzero::Contract* c = idx.contract(s.contract.code);
         x["committente"] = c ? Json(c->client.code) : Json(nullptr);
+        // K-012: il nome del committente; di un privato e' personale (o legato a un luogo sensibile).
+        x["nome_committente"] = c ? vista.nome_committente(idx.client(c->client.code)) : Json(nullptr);
         x["calendario"] = s.calendar.code;
         Json gruppi = Json::array();
         for (const auto& g : s.groups) {
@@ -335,7 +337,7 @@ std::string in_testo(const Json& j) {
     for (const auto& s : j.at("servizi")) {
         t += s.at("codice").get<std::string>() + "  " + s.at("nome").get<std::string>() + "\n";
         t += "   tipo: " + testo(s.at("tipo")) + "  contratto " + s.at("contratto").get<std::string>() + " (committente " +
-             testo(s.at("committente")) + ")  calendario " + s.at("calendario").get<std::string>() + "\n";
+             testo_committente(s) + ")  calendario " + s.at("calendario").get<std::string>() + "\n";
         for (const auto& g : s.at("gruppi")) {
             t += "   gruppo " + g.at("codice").get<std::string>() + "  tipo: " + testo(g.at("tipo"));
             if (!g.at("scuola").is_null()) t += "  scuola " + g.at("scuola").get<std::string>();

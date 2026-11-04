@@ -57,9 +57,15 @@ bool file_riservato(const std::string& file);
 // - le case (porta a porta) dei passeggeri legati e quelle tra le fermate di un gruppo legato; le case toccate da una
 //   corsa che, da sola o con i trasbordi, passa da un luogo sensibile; e i passeggeri che salgono o scendono in una casa
 //   legata;
-// - con "porta_a_porta_sensibile" nel manifesto (versione 2): tutte le case porta a porta e i loro passeggeri.
-// Non riguarda il personale (es. il garage presso la casa di un autista) ne' i conteggi. Una regola sola nel codice,
-// usata da tutte le uscite (vista.hpp, controlli_catalogo.cpp) e dalla cassaforte (separazione.hpp).
+// - con "porta_a_porta_sensibile" nel manifesto (versione 2): tutte le case porta a porta e i loro passeggeri;
+// - (K-012) i committenti privati con un servizio (di un loro contratto) legato: che ha gruppi, fermate o passeggeri che
+//   salgono o scendono in un luogo sensibile (anche la scuola o il centro di un gruppo); che ha una corsa che passa da un luogo
+//   sensibile, da sola o con i suoi trasbordi; oppure, con "porta_a_porta_sensibile", che ha case porta a porta (fermate dei
+//   gruppi, salite e discese dei passeggeri, passaggi delle sue corse). Il nome di un privato che noleggia per andare a un
+//   centro diurno lo lega al centro come il nome di un passeggero; altrimenti resta solo personale (il tipo del servizio
+//   resta un dato particolare a parte).
+// Non riguarda il personale (es. il garage presso la casa di un autista), i committenti che sono enti ne' i conteggi. Una
+// regola sola nel codice, usata da tutte le uscite (vista.hpp, controlli_catalogo.cpp) e dalla cassaforte (classi.hpp).
 class LegameSensibile {
 public:
     // Senza indice (nessun pacchetto letto) nessuno e' legato.
@@ -67,13 +73,15 @@ public:
 
     bool passeggero(const kzero::Code& codice) const { return passeggeri_.count(codice) > 0; }
     bool casa(const kzero::Code& codice) const { return case_.count(codice) > 0; }
-    // Per un elemento marcato "x-kzero-trasportato" negli schemi ("passeggero" o "casa") e il suo codice.
+    bool committente(const kzero::Code& codice) const { return committenti_.count(codice) > 0; }   // un privato (K-012)
+    // Per un elemento marcato "x-kzero-trasportato" negli schemi ("passeggero", "casa" o "committente") e il suo codice.
     bool legato(const std::string& tipo, const kzero::Code& codice) const;
-    bool nessuno() const { return passeggeri_.empty() && case_.empty(); }
+    bool nessuno() const { return passeggeri_.empty() && case_.empty() && committenti_.empty(); }
 
 private:
     std::set<kzero::Code> passeggeri_;
     std::set<kzero::Code> case_;
+    std::set<kzero::Code> committenti_;
 };
 
 // Il tipo "x-kzero-trasportato" dell'elemento che sta in quella posizione (es. "/servizi/3/domanda/gruppi/0/passeggeri/0"),

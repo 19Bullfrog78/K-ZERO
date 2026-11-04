@@ -36,6 +36,11 @@ public:
     // Valore di una classe nota: visibile, oppure sostituito dal codice (personale) o da "riservato".
     Json filtra(Classe c, Json valore, const std::string& codice) const;
 
+    // Il nome del committente (K-012): di un ente si vede sempre; di un privato e' un dato personale (di base il suo codice) e,
+    // se e' legato a un luogo sensibile, si vede solo insieme ai dati particolari. null se non c'e' il committente, oppure se
+    // si potrebbe vedere ma il nome non e' scritto (es. un pacchetto "solo numeri").
+    Json nome_committente(const kzero::Client* c) const;
+
     // Il modo di una corsa per l'azienda del turno (K-011 aggiunta 1): out o tachigrafo, da dove viene la scelta, la
     // forzatura o la dichiarazione; null senza scelta. Una scelta per tipo di servizio rivela il tipo (dato particolare); il
     // motivo e chi l'ha scritta sono dati personali.
@@ -55,6 +60,9 @@ private:
 // Il modo di una corsa (Vista::modo_corsa) in italiano: "OUT, scelta per il servizio (regime R-561)", con la forzatura o la
 // dichiarazione (chi, quando, perche', gia' filtrati).
 std::string testo_modo_corsa(const Json& m);
+// Il committente di un servizio delle uscite (campi "committente" e "nome_committente", gia' filtrati) in italiano: il codice e,
+// se si vede, il nome tra virgolette (K-012).
+std::string testo_committente(const Json& servizio);
 const char* nome_tipo_luogo(kzero::PlaceType t);
 const char* nome_categoria(kzero::ServiceType t);
 const char* nome_tipo_servizio(kzero::ServiceKind k);

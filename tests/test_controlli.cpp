@@ -454,10 +454,15 @@ TEST(Controlli, K_CTR_019_dati_personali_in_solo_numeri) {
     EXPECT_TRUE(segnala(p, Check::NumbersOnlyPersonalData, 5, "rotazioni.json", "/rotazioni/0/nota"));
     EXPECT_TRUE(segnala(p, Check::NumbersOnlyPersonalData, 6, "servizi_fissi.json", "/servizi_fissi/0/nota"));
     EXPECT_TRUE(segnala(p, Check::NumbersOnlyPersonalData, 7, "assegnazioni.json", "/assegnazioni/2/nota"));
+    // K-012: il committente privato resta, ma senza nome e senza nota.
+    EXPECT_TRUE(segnala(p, Check::NumbersOnlyPersonalData, 8, "committenti.json", "/committenti_privati/0/nome"));
+    EXPECT_TRUE(segnala(p, Check::NumbersOnlyPersonalData, 9, "committenti.json", "/committenti_privati/0/nota"));
+    EXPECT_TRUE(segnala(p, Check::NumbersOnlyPersonalData, 8, "committenti.json", "/committenti_privati/1/nome"));
     // 5 luoghi privati, 3 gruppi con passeggeri; dal K-008 anche 11 nomi e 5 case di persone, 2 note di rotazioni,
     // 2 di servizi fissi e 8 di assegnazioni del singolo giorno; dal K-011 una nota in piu' (la sostituzione di P-A il
-    // 2026-11-13, per il riposo settimanale nella settimana della gita).
-    EXPECT_EQ(quanti(p, Check::NumbersOnlyPersonalData), 37);
+    // 2026-11-13, per il riposo settimanale nella settimana della gita); dal K-012 due nomi e una nota dei committenti
+    // privati e due note delle assegnazioni del matrimonio e del noleggio privato.
+    EXPECT_EQ(quanti(p, Check::NumbersOnlyPersonalData), 42);
 }
 
 TEST(Controlli, K_CTR_020_persone_a_bordo_sotto_zero) {

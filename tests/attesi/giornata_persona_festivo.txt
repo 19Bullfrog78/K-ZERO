@@ -13,7 +13,7 @@ T-B-FESTIVO "Festivo"  08:40-18:20 (9 ore e 40 minuti)  azienda BETA, autista
    08:40-08:58  Uscita dalla rimessa e controllo (PRESA-SERVIZIO), da L-RIMESSA-BETA (Sorgenta, rimessa Trasporti Beta) a F-SORGENTA (Sorgenta, Municipio), km a vuoto 2,5
                 (fermo 2 minuti)
    09:00-09:30  corsa C-B620-11 "Linea B620, festiva delle 09:00"
-                servizi S-LIN-B620 (tipo riservato, contratto CT-LIN-BETA, committente TPV)
+                servizi S-LIN-B620 (tipo riservato, contratto CT-LIN-BETA, committente TPV "Trasporti Provinciali Valfonda (inventato)")
                 modo per un dato particolare
                 calendario CAL-FESTIVI "Domeniche e festivita' nazionali", 60 giorni nel periodo; km a pieno 14,1, a vuoto 0
       09:00  F-SORGENTA  Sorgenta, Municipio  a bordo non noto
@@ -21,7 +21,7 @@ T-B-FESTIVO "Festivo"  08:40-18:20 (9 ore e 40 minuti)  azienda BETA, autista
       09:30  F-MONTEBRINO  Montebrino, Centro  km a pieno 7,9  a bordo non noto
    09:30-09:40  Sosta al capolinea (SOSTA), a F-MONTEBRINO (Montebrino, Centro)
    09:40-10:10  corsa C-B620-12 "Linea B620, festiva delle 09:40"
-                servizi S-LIN-B620 (tipo riservato, contratto CT-LIN-BETA, committente TPV)
+                servizi S-LIN-B620 (tipo riservato, contratto CT-LIN-BETA, committente TPV "Trasporti Provinciali Valfonda (inventato)")
                 modo per un dato particolare
                 calendario CAL-FESTIVI "Domeniche e festivita' nazionali", 60 giorni nel periodo; km a pieno 14,1, a vuoto 0
       09:40  F-MONTEBRINO  Montebrino, Centro  a bordo non noto
@@ -33,7 +33,7 @@ T-B-FESTIVO "Festivo"  08:40-18:20 (9 ore e 40 minuti)  azienda BETA, autista
    16:40-16:58  Uscita dalla rimessa e controllo (PRESA-SERVIZIO), da L-RIMESSA-BETA (Sorgenta, rimessa Trasporti Beta) a F-SORGENTA (Sorgenta, Municipio), km a vuoto 2,5
                 (fermo 2 minuti)
    17:00-17:30  corsa C-B620-13 "Linea B620, festiva delle 17:00"
-                servizi S-LIN-B620 (tipo riservato, contratto CT-LIN-BETA, committente TPV)
+                servizi S-LIN-B620 (tipo riservato, contratto CT-LIN-BETA, committente TPV "Trasporti Provinciali Valfonda (inventato)")
                 modo per un dato particolare
                 calendario CAL-FESTIVI "Domeniche e festivita' nazionali", 60 giorni nel periodo; km a pieno 14,1, a vuoto 0
       17:00  F-SORGENTA  Sorgenta, Municipio  a bordo non noto
@@ -41,7 +41,7 @@ T-B-FESTIVO "Festivo"  08:40-18:20 (9 ore e 40 minuti)  azienda BETA, autista
       17:30  F-MONTEBRINO  Montebrino, Centro  km a pieno 7,9  a bordo non noto
    17:30-17:40  Sosta al capolinea (SOSTA), a F-MONTEBRINO (Montebrino, Centro)
    17:40-18:10  corsa C-B620-14 "Linea B620, festiva delle 17:40"
-                servizi S-LIN-B620 (tipo riservato, contratto CT-LIN-BETA, committente TPV)
+                servizi S-LIN-B620 (tipo riservato, contratto CT-LIN-BETA, committente TPV "Trasporti Provinciali Valfonda (inventato)")
                 modo per un dato particolare
                 calendario CAL-FESTIVI "Domeniche e festivita' nazionali", 60 giorni nel periodo; km a pieno 14,1, a vuoto 0
       17:40  F-MONTEBRINO  Montebrino, Centro  a bordo non noto

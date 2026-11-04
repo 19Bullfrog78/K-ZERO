@@ -374,6 +374,38 @@
       "fine": "L-RIMESSA-ALFA",
       "elementi": [{ "attivita": "REPERIBILE", "luogo": "L-RIMESSA-ALFA", "dalle": "20:30", "alle": "30:30" }],
       "nota": "Raggiungibile per i guasti della notte, fino alle 06:30 del giorno dopo."
+    },
+    {
+      "codice": "T-MATRIMONIO",
+      "nome": "Matrimonio",
+      "azienda": "ALFA",
+      "ruolo": "autista",
+      "calendario": "CAL-MATRIMONIO",
+      "mezzo": { "modo": "preciso", "codice": "ALFA-06" },
+      "inizio": "L-RIMESSA-ALFA",
+      "fine": "L-RIMESSA-ALFA",
+      "elementi": [
+        { "attivita": "PRESA", "luogo": "L-RIMESSA-ALFA", "dalle": "10:45", "alle": "11:00" },
+        { "corsa": "C-MATRIMONIO-A" },
+        { "attivita": "ATTESA", "luogo": "F-LAGOBELLO", "dalle": "12:00", "alle": "17:30" },
+        { "corsa": "C-MATRIMONIO-R" },
+        { "attivita": "FINE", "luogo": "L-RIMESSA-ALFA", "dalle": "18:35", "alle": "18:45" }
+      ]
+    },
+    {
+      "codice": "T-PRIVATO-CENTRO",
+      "nome": "Noleggio privato",
+      "azienda": "ALFA",
+      "ruolo": "autista",
+      "calendario": "CAL-PRIVATO-CENTRO",
+      "mezzo": { "modo": "preciso", "codice": "ALFA-06" },
+      "inizio": "L-RIMESSA-ALFA",
+      "fine": "L-RIMESSA-ALFA",
+      "elementi": [
+        { "attivita": "PRESA", "luogo": "L-RIMESSA-ALFA", "dalle": "07:45", "alle": "08:00" },
+        { "corsa": "C-PRIVATO-CENTRO" },
+        { "attivita": "FINE", "luogo": "L-RIMESSA-ALFA", "dalle": "09:10", "alle": "09:20" }
+      ]
     }
   ]
 }

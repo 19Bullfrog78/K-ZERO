@@ -528,7 +528,10 @@ Chi e' legato (calcolato sul pacchetto, dai dati comuni; una regola sola nel cod
 - le case (punti porta a porta) dei passeggeri legati e quelle tra le fermate di un gruppo legato; le case toccate da
   una corsa che, da sola o con i suoi trasbordi, passa da un luogo sensibile; e i passeggeri che salgono o scendono in
   una casa legata;
-- con `porta_a_porta_sensibile: true` nel manifesto (versione 2): tutte le case porta a porta e i loro passeggeri.
+- con `porta_a_porta_sensibile: true` nel manifesto (versione 2): tutte le case porta a porta e i loro passeggeri;
+- (K-012) i committenti privati con un servizio legato: gruppi, fermate o passeggeri in un luogo sensibile, una corsa che
+  passa da un luogo sensibile (da sola o con i trasbordi) o, con `porta_a_porta_sensibile`, case porta a porta (vedi
+  committenti.json).
 
 Non riguarda il personale (lavorare in un centro, o il garage presso la casa di un autista, non e' un dato sulla salute
 di nessuno) ne' i conteggi. Nel demo il centro diurno `L-CENTRO` e' sensibile e il porta a porta e' sensibile. I nomi e
@@ -745,14 +748,42 @@ Scuole e centri (prima "destinazioni"). Schema: [docs/schema/scuole.v1.schema.js
 
 ### committenti.json
 
-Schema: [docs/schema/committenti.v1.schema.json](schema/committenti.v1.schema.json).
+Chi affida i servizi: un **ente** (un consorzio, una Provincia, un Comune, una scuola, un'associazione, un'agenzia) oppure,
+dalla versione 2 (K-012), un **privato** (una persona, es. chi prenota un noleggio per un matrimonio). Schemi:
+[docs/schema/committenti.v2.schema.json](schema/committenti.v2.schema.json) (versione attuale) e
+[docs/schema/committenti.v1.schema.json](schema/committenti.v1.schema.json) (versione 1, ancora letta: e' la versione 2 senza
+`committenti_privati`; per passare alla 2 si cambia solo `"schema_versione"`).
 
 | Campo | Obbl. | Classe | Significato |
 |---|---|---|---|
-| `committenti[].codice` | si' | comune | Codice del committente |
+| `committenti[].codice` | si' | comune | Codice del committente (un ente) |
 | `committenti[].nome` | si' | comune | Nome (es. un consorzio, una Provincia, un Comune, un'associazione) |
 | `committenti[].codici_esterni[]` | no | comune | Codici in altri sistemi |
 | `committenti[].nota` | no | comune | Note |
+| `committenti_privati[].codice` | si' | comune | Versione 2. Codice del committente privato: resta visibile al posto del nome (unico con i codici degli enti) |
+| `committenti_privati[].nome` | no | personale | Nome e cognome della persona |
+| `committenti_privati[].codici_esterni[]` | no | comune | Codici in altri sistemi |
+| `committenti_privati[].nota` | no | personale | Note |
+
+**Committenti privati** (K-012). Per un privato il nome e la nota sono **dati personali**: nella cassaforte, di base sostituiti
+dal codice nelle uscite (`kzero giornata` e `kzero dimostrazione` mostrano il nome del committente dal K-012), mai nel pacchetto
+"solo numeri" (lo dice K-CTR-019: il committente resta, con il solo codice). Per un ente restano comuni, come prima. Il formato
+non ha campi per telefono, mail o codice fiscale e non li avra'. Il nome **non si perde mai**: chi ha il permesso dei dati
+personali lo vede sempre (se il privato e' legato a un luogo sensibile, chi ha i permessi dei dati personali e particolari);
+gli altri vedono il codice. Le classi restano campo per campo, ricavate dagli schemi: i privati stanno in un **elenco a parte**,
+come i luoghi privati, invece di un campo che cambia classe secondo un altro valore (DECISIONI.md, K-012).
+
+**Il legame con la salute**: il nome di un privato segue la stessa regola dei passeggeri (sotto, "Luoghi sensibili" in
+luoghi.json): se un servizio di un suo contratto ha gruppi, fermate o passeggeri in un luogo sensibile, ha una corsa che passa
+da un luogo sensibile (anche con i trasbordi) o, con `porta_a_porta_sensibile`, ha case porta a porta, i suoi dati personali
+sono **legati**: si vedono solo con i dati personali e particolari insieme (nella cassaforte, la sezione dei legati).
+Altrimenti sono solo personali, come il nome di un passeggero di un servizio per disabili diretto a una scuola (il tipo del
+servizio resta un dato particolare).
+
+**Restano dati comuni, scelti dall'utente**: il codice del committente e i suoi codici esterni, il codice e il nome dei suoi
+servizi e dei suoi contratti. **Non devono contenere il nome del privato** (es. non "Matrimonio Rossi", ma "Noleggio per un
+matrimonio"; non il codice "ROSSI"): sono dati comuni e si vedono in tutte le uscite. L'avviso automatico sui nomi liberi
+arrivera' con il suo mandato.
 
 ### contratti.json
 

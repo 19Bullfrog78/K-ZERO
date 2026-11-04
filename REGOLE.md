@@ -17,13 +17,25 @@ Le regole sono divise in due parti:
 - La parola **"linea"** ha due sensi: la "linea" di un'azienda e' spesso la "corsa" del committente;
   la "linea" del committente (es. la B634 di Trentino Trasporti) contiene piu' corse.
 - Di solito un servizio si perde o si scambia una corsa alla volta, a volte un intero lotto (gruppo di servizi).
-- Quattro macro categorie: Linee, Handicap (nel formato dei dati: disabili), Scolastici, Ibridi.
-- Ibrido = qualsiasi mescolamento di gruppi sulla stessa corsa (studenti + handicap, studenti + linea, ecc.).
-- Ibrido anche: studenti portati a un centro esterno (doposcuola, centro diurno).
-- Una corsa che soddisfa piu' servizi e' ibrida. Una stessa corsa puo' servire committenti diversi.
+- Categorie (Mauro, 3/11): Linee, Handicap (nel formato dei dati: disabili), Scolastici, NCC (noleggio con conducente:
+  gite, turismo), Promiscui (di solito scolastico + handicap; fino al K-011 "ibridi"), e "altro" per i servizi che non sono
+  nessuno di questi (altre aziende, altri paesi). Il tipo del servizio lo dichiara il committente; la categoria della corsa
+  la ricava il programma, non si scrive a mano.
+- Promiscuo = qualsiasi mescolamento di gruppi sulla stessa corsa (studenti + handicap, studenti + linea, ecc.).
+- Promiscuo anche: studenti portati a un centro esterno (doposcuola, centro diurno).
+- Una corsa che soddisfa piu' servizi e' promiscua, anche se uno e' NCC. Una stessa corsa puo' servire committenti diversi.
   Esempio: a mezzogiorno si caricano le superiori insieme alle medie; le superiori sono un servizio a supporto
-  di Trentino Trasporti (servizio pubblico della Provincia) e non compaiono nel file del CTA. La corsa e' ibrida.
-- Corse ibride finora sempre autorizzate: infanzia + handicap, medie + superiori, medie + handicap.
+  di Trentino Trasporti (servizio pubblico della Provincia) e non compaiono nel file del CTA. La corsa e' promiscua.
+- Corse promiscue finora sempre autorizzate: infanzia + handicap, medie + superiori, medie + handicap.
+- **NCC** = servizi per gruppi formati su iniziativa del cliente o dell'azienda (gite, turismo, eventi, matrimoni), anche
+  se si ripetono. Il tipo dice la natura del servizio, non la licenza del mezzo: un trasporto con tragitto e frequenza fissi
+  per una categoria di persone (es. gli operai casa-lavoro) e' un servizio regolare specializzato anche se si fa con un mezzo
+  da noleggio, e non e' NCC (va "altro", o il tipo giusto) [Probabile: Reg. (CE) 1073/2009 art. 2, stesse definizioni del
+  Reg. (CE) 12/98 art. 2]. Senza questa regola una navetta di operai scritta NCC diventerebbe un servizio occasionale certo.
+- Per un servizio NCC chi sale non cambia la categoria: una gita scolastica porta studenti ma e' NCC (Mauro mette le gite
+  nell'NCC). Per gli altri tipi tutto come prima (gruppi misti = promiscuo).
+- Il committente puo' essere un privato (es. un matrimonio): nome e nota sono dati personali (sotto, "Dati personali nel
+  lavoro").
 
 ## Orari
 - Linee: orari fissi, li decide il committente; si cambiano solo su sua richiesta e con largo anticipo.
@@ -214,17 +226,30 @@ conducente e' libero si scrive una pausa); RICARICA e RISERVA disponibilita'; RE
   dell'azienda" con le violazioni che ci sarebbero se fosse sbagliata.
 - Il consulente (riferito da Mauro il 28/10): lo scolastico fino a 50 km e' OUT con certezza, anche con passeggeri
   disabili sulla stessa corsa; il servizio solo per disabili resta da confermare.
-- Demo: Alfa linee e scolastico OUT, gite (tipo "altro") con il tachigrafo; Beta linee con il tachigrafo, come
+- Demo: Alfa linee e scolastico OUT, NCC (gite e noleggi; fino al K-011 tipo "altro") con il tachigrafo; Beta linee con il tachigrafo, come
   preferenza. Nel pacchetto di prova una forzatura (corsa C-FORZATA di 55 km, "il percorso vero e' di 48 km") e una
   dichiarazione (servizio S-DIS-GIO, solo disabili).
+
+### NCC e leggi sugli orari (K-012)
+- Reg. 561: l'NCC e' un servizio occasionale, mai escluso; vale con un mezzo che porta piu' di 9 persone compreso il
+  conducente [Probabile: Reg. (CE) 1073/2009 art. 2, occasionali = non regolari]. Per i servizi occasionali l'interruzione di
+  45 minuti si puo' fare anche in due parti di 15 (art. 7): nel demo per l'NCC con certezza, per "altro" da confermare (un
+  avviso, mai un errore). Un trasferimento a vuoto vale come la corsa a cui serve (come per la guida delle corse escluse).
+- L. 138: non vale per l'NCC (e' per le linee). D.Lgs. 234: segue il 561, come per gli altri servizi.
+- NCC con un'auto fino a 9 persone: niente 561; per i dipendenti nessuna legge sugli orari nei dati (avviso K-CTR-107,
+  domanda 17 qui sotto).
+- Usi dei mezzi: l'NCC chiede l'uso NCC, con certezza (Codice della strada art. 82) [Probabile]; un servizio "altro" l'uso NCC
+  solo da confermare. Un autobus di linea fa l'NCC con la distrazione (nel demo ALFA-05, fino al 30/06/2027).
+- Gita scolastica: e' NCC anche se porta studenti, quindi niente esclusione dello scolastico fino a 50 km dal 561.
+- Nel demo Alfa sceglie il tachigrafo per l'NCC (prima per il tipo "altro"); dove vale la legge, vale la legge.
 
 ### Le leggi del demo (norme N-IT, regole pubbliche con la fonte)
 Riassunti per il pacchetto dimostrativo (letture dell'arbitro del 20/10). "dc" = da confermare (vedi l'elenco sotto).
 
 | Regime | Fonte | Quando vale | Regole |
 |---|---|---|---|
-| R-L138 | L. 14 febbraio 1958, n. 138 | autisti; dipendenti (tempo pieno, part-time, determinato, stagionale, a chiamata); servizi di linea. Dc: titolare, socio, collaboratore familiare, autonomo, volontario, altro; scolastico e disabili; assistente. Nelle settimane del 561 non vale per guida e riposi; per il lavoro resta (dc) | art. 6 lavoro effettivo (guida, altre mansioni, disponibilita', soste fino a 30 minuti, 12% dell'inoperoso fuori residenza); artt. 2-3: 8 ore al giorno e 48 a settimana, con lo straordinario al massimo 10 e 60; art. 4 notte 22-5 (solo conteggio); art. 5 guida di fila al massimo 5 ore; art. 7 riposo di 9 ore nelle 24 ore dall'inizio della giornata; art. 8 riposo settimanale di 24 ore |
-| R-561 | Reg. (CE) n. 561/2006, testo consolidato al 31/12/2024; nota INL n. 61 del 14/01/2021 | chi guida un mezzo che porta piu' di 9 persone compreso il conducente; esclusi i servizi di linea fino a 50 km (art. 3 a); scolastico fino a 50 km escluso, anche con disabili sulla stessa corsa (il consulente, Mauro 28/10); solo disabili fino a 50 km escluso solo dc (art. 4 n); servizi occasionali (nel demo il tipo "altro", dc) mai esclusi. Una corsa che lo fa valere lo porta su tutta la settimana per guida e riposi (nota INL). La guida delle corse escluse conta come altre mansioni per le sue regole di guida (art. 6 c. 5; dc, prudente: guida) | art. 6 guida 9 ore tra due riposi (10 due volte a settimana), 56 a settimana, 90 in due settimane; art. 7 dopo 4 ore e 30 di guida 45 minuti di interruzione (o 15 + 30; 15 + 15 per i servizi occasionali); art. 8 riposo giornaliero 11 ore (3 + 9; ridotto 9, al massimo 3 volte), riposo settimanale 45 ore (ridotto 24) entro 6 periodi di 24 ore, compensazione entro la terza settimana |
+| R-L138 | L. 14 febbraio 1958, n. 138 | autisti; dipendenti (tempo pieno, part-time, determinato, stagionale, a chiamata); servizi di linea (non l'NCC). Dc: titolare, socio, collaboratore familiare, autonomo, volontario, altro; scolastico e disabili; assistente. Nelle settimane del 561 non vale per guida e riposi; per il lavoro resta (dc) | art. 6 lavoro effettivo (guida, altre mansioni, disponibilita', soste fino a 30 minuti, 12% dell'inoperoso fuori residenza); artt. 2-3: 8 ore al giorno e 48 a settimana, con lo straordinario al massimo 10 e 60; art. 4 notte 22-5 (solo conteggio); art. 5 guida di fila al massimo 5 ore; art. 7 riposo di 9 ore nelle 24 ore dall'inizio della giornata; art. 8 riposo settimanale di 24 ore |
+| R-561 | Reg. (CE) n. 561/2006, testo consolidato al 31/12/2024; nota INL n. 61 del 14/01/2021 | chi guida un mezzo che porta piu' di 9 persone compreso il conducente; esclusi i servizi di linea fino a 50 km (art. 3 a); scolastico fino a 50 km escluso, anche con disabili sulla stessa corsa (il consulente, Mauro 28/10); solo disabili fino a 50 km escluso solo dc (art. 4 n); servizi occasionali mai esclusi: nel demo l'NCC con certezza (K-012), il tipo "altro" dc. Una corsa che lo fa valere lo porta su tutta la settimana per guida e riposi (nota INL). La guida delle corse escluse conta come altre mansioni per le sue regole di guida (art. 6 c. 5; dc, prudente: guida) | art. 6 guida 9 ore tra due riposi (10 due volte a settimana), 56 a settimana, 90 in due settimane; art. 7 dopo 4 ore e 30 di guida 45 minuti di interruzione (o 15 + 30; 15 + 15 per i servizi occasionali); art. 8 riposo giornaliero 11 ore (3 + 9; ridotto 9, al massimo 3 volte), riposo settimanale 45 ore (ridotto 24) entro 6 periodi di 24 ore, compensazione entro la terza settimana |
 | R-234 | D.Lgs. 19 novembre 2007, n. 234 | dove vale il 561, per dipendenti e autonomi (nelle settimane in cui il 561 vale per estensione, nei giorni senza le sue corse dc); dc: titolare, socio, collaboratore familiare, volontario, altro, assistente | art. 3 orario di lavoro = guida e altre mansioni; art. 4 al massimo 60 ore a settimana e media 48 su 4 mesi; art. 5 mai piu' di 6 ore di fila senza pausa, 30 minuti tra 6 e 9 ore, 45 oltre; art. 7 con lavoro notturno al massimo 10 ore in 24 |
 | R-CHIAMATA | D.Lgs. 15 giugno 2015, n. 81, art. 13 c. 3 | rapporto a chiamata | al massimo 400 giornate in tre anni con lo stesso datore (solo avvisi: oltre e vicino al limite) |
 | ESEMPIO-01 | contratto collettivo inventato | chi ha quel contratto (P-A, e P-CONTRATTO nel pacchetto di prova) | regole inventate per provare i contratti collettivi: ampiezza 14 ore, riposo 10 ore tra due giornate, 7 giorni di fila |
@@ -253,7 +278,12 @@ Il programma le tratta oggi con prudenza: con la lettura certa da' errori, con q
     disabili sulla stessa corsa: confermato dal consulente (riferito da Mauro il 28/10). Resta da confermare: un servizio
     solo per disabili fino a 50 km e' un "servizio regolare specializzato" escluso? Fino alla risposta l'azienda puo'
     dichiararlo escluso nei dati (dichiarazione, "OUT o tachigrafo").
-11. Reg. 561: quali nostri servizi sono "servizi occasionali" (gite, noleggi; nel demo il tipo "altro")?
+11. Reg. 561: quali nostri servizi sono "servizi occasionali"? Dal K-012 (Mauro, 3/11) l'NCC (gite, turismo, eventi,
+    matrimoni: gruppi formati su iniziativa del cliente o dell'azienda, anche se si ripetono) lo e' con certezza nel demo
+    [Probabile: Reg. (CE) 1073/2009 art. 2, occasionali = non regolari ne' regolari specializzati]; resta da confermare il
+    confine con il servizio regolare specializzato (es. una navetta di operai con tragitto e orari fissi fatta con un mezzo
+    da noleggio: per noi "altro", e un servizio "altro" resta occasionale solo da confermare). Un NCC con un'auto fino a 9
+    persone (conducente compreso) e' fuori dal 561: per i dipendenti quale legge vale e' la domanda 17.
 12. D.Lgs. 234: titolare, socio e collaboratore familiare sono "autotrasportatori autonomi"? L'assistente e' un
     "lavoratore mobile"? E il volontario?
 13. D.Lgs. 234 art. 4: la media di 48 ore si conta su ogni 4 mesi di fila?
@@ -287,6 +317,12 @@ Il programma le tratta oggi con prudenza: con la lettura certa da' errori, con q
 - Due livelli di pacchetto dati: "solo numeri" (solo conteggi per fermata: e' il livello consigliato)
   e "completo" (anche i passeggeri uno per uno).
 - Mai codice fiscale, telefoni, mail delle famiglie: per pianificare non servono.
+- Clienti privati (K-012, Mauro 3/11): un committente puo' essere una persona (es. un matrimonio). Il nome e la nota sono
+  dati personali, nella cassaforte; per un ente, una scuola o un'agenzia restano comuni. Il nome del cliente privato non si
+  perde mai: il titolare e i delegati con i permessi vedono sempre nome e cognome (se il servizio va in un luogo sensibile,
+  es. un centro diurno, servono tutti e due i permessi, come per i passeggeri); gli altri vedono il codice. Il codice del
+  cliente e i nomi dei suoi servizi e contratti sono dati comuni: non devono contenere il nome (es. "Noleggio per un
+  matrimonio", non "Matrimonio Rossi"). Mai telefono, mail o codice fiscale.
 
 ## Da confermare
 - Valori reali: tempo massimo a bordo, tempi di salita, tempo pedana, posti persi per carrozzina, costi.
