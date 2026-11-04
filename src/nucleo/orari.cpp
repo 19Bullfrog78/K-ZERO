@@ -281,6 +281,21 @@ bool applies_any(const RegimeData& rd, const PersonCtx& c, RuleFamily f, Day fro
     return n[static_cast<std::size_t>(to - c.d0) + 1] - n[static_cast<std::size_t>(from - c.d0)] > 0;
 }
 
+ServedTrip served_trip(const PersonDay& pd, std::size_t item) {
+    ServedTrip s;
+    const WorkItem& it = pd.items[item];
+    for (std::size_t j = item + 1; j < pd.items.size() && !s.next; ++j)
+        if (pd.items[j].shift == it.shift && pd.items[j].trip) s.next = j;
+    for (std::size_t j = item; j-- > 0 && !s.previous;)
+        if (pd.items[j].shift == it.shift && pd.items[j].trip) s.previous = j;
+    const ShiftActivity& a = it.item->activity;
+    if (s.next && a.to_place && a.to_place->code == pd.items[*s.next].trip->passages[pd.items[*s.next].from].place.code)
+        s.which = ServedTrip::Which::Next;
+    else if (s.previous && a.place.code == pd.items[*s.previous].trip->passages[pd.items[*s.previous].to].place.code)
+        s.which = ServedTrip::Which::Previous;
+    return s;
+}
+
 bool has_day_assignment(const PersonCtx& c, Day from, Day to) {
     for (Day d = std::max(from, c.d0); d <= std::min(to, c.d1); ++d)
         if (const PersonDay* p = c.pd(d); p && p->day_assignment) return true;
@@ -961,33 +976,22 @@ private:
         }
     }
 
-    // La guida senza passeggeri (es. un trasferimento a vuoto) e' legata alla corsa a cui serve, nello stesso turno: a
-    // quella dopo se il trasferimento arriva dove comincia; altrimenti a quella prima se parte da dove finisce. Se non si sa
-    // (nessuna delle due), da confermare: nella lettura certa conta come la guida esclusa, nella prudente come guida.
+    // La guida senza passeggeri (es. un trasferimento a vuoto) e' legata alla corsa a cui serve (served_trip). Se non si sa,
+    // da confermare: nella lettura certa conta come la guida esclusa, nella prudente come guida.
     static void link_driving(const PersonCtx& c, RegimeData& rd) {
         for (std::size_t di = 0; di < c.plan->days.size(); ++di) {
             const PersonDay& pd = c.plan->days[di];
-            const auto level_of_item = [&](std::size_t j) {
-                const int si = c.item_seg[di][j];
-                return si >= 0 ? rd.seg_level[static_cast<std::size_t>(si)] : Certainty::ToConfirm;
-            };
             for (std::size_t ii = 0; ii < pd.items.size(); ++ii) {
                 const WorkItem& it = pd.items[ii];
                 const int si = c.item_seg[di][ii];
                 if (it.trip || si < 0) continue;
                 const Seg& sg = c.segs[static_cast<std::size_t>(si)];
                 if (sg.cat[0] != TimeCategory::Driving && sg.cat[1] != TimeCategory::Driving) continue;
-                std::optional<std::size_t> next, prev;
-                for (std::size_t j = ii + 1; j < pd.items.size() && !next; ++j)
-                    if (pd.items[j].shift == it.shift && pd.items[j].trip) next = j;
-                for (std::size_t j = ii; j-- > 0 && !prev;)
-                    if (pd.items[j].shift == it.shift && pd.items[j].trip) prev = j;
-                const ShiftActivity& a = it.item->activity;
                 Certainty lv = Certainty::ToConfirm;
-                if (next && a.to_place && a.to_place->code == pd.items[*next].trip->passages[pd.items[*next].from].place.code)
-                    lv = level_of_item(*next);
-                else if (prev && a.place.code == pd.items[*prev].trip->passages[pd.items[*prev].to].place.code)
-                    lv = level_of_item(*prev);
+                if (const std::optional<std::size_t> j = served_trip(pd, ii).trip()) {
+                    const int sj = c.item_seg[di][*j];
+                    lv = sj >= 0 ? rd.seg_level[static_cast<std::size_t>(sj)] : Certainty::ToConfirm;
+                }
                 rd.seg_level[static_cast<std::size_t>(si)] = lv;
             }
         }
