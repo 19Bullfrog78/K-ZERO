@@ -7,15 +7,17 @@ const std::vector<FileDati>& file_dati() {
     static const std::vector<FileDati> elenco = {
         {"pacchetto.json", "pacchetto", {1, 2}, true,
          "Manifesto: aziende, periodo, origine, livello dei dati, fuso orario, valuta, impostazioni, cassaforte."},
-        {"aziende.json", "aziende", {1, 2}, false,
+        {"aziende.json", "aziende", {1, 2, 3}, false,
          "Elenchi e impostazioni di ogni azienda: attivita', assenze, fermi, competenze, norme, ricovero, abbinamento; dalla "
-         "versione 2 le categorie di tempo, le soste non scritte, le scelte sugli orari e la chiave del rientro."},
-        {"norme.json", "norme", {1, 2}, false,
+         "versione 2 le categorie di tempo, le soste non scritte, le scelte sugli orari e la chiave del rientro; dalla versione 3 il "
+         "tipo di servizio ncc nel modo delle corse."},
+        {"norme.json", "norme", {1, 2, 3}, false,
          "Norme di un paese: abilitazioni, usi dei mezzi, requisiti per guidare, usi per tipo di servizio, con la fonte; dalla "
-         "versione 2 le leggi e i contratti collettivi sugli orari di lavoro (regimi) e i cambi dell'ora."},
+         "versione 2 le leggi e i contratti collettivi sugli orari di lavoro (regimi) e i cambi dell'ora; dalla versione 3 il tipo "
+         "di servizio ncc e i servizi occasionali tipo per tipo."},
         {"luoghi.json", "luoghi", {1, 2}, false, "Luoghi pubblici (fermate, scuole, centri, rimesse...) e luoghi privati."},
         {"tratti.json", "tratti", {1}, false, "Tratti di strada tra due luoghi con i loro limiti."},
-        {"regolamenti.json", "regolamenti", {1, 2}, false, "Regolamenti di un territorio o di un committente."},
+        {"regolamenti.json", "regolamenti", {1, 2, 3}, false, "Regolamenti di un territorio o di un committente."},
         {"festivita.json", "festivita", {1}, false, "Calendari delle festivita' di un paese o di un territorio, con la fonte."},
         {"calendari.json", "calendari", {1, 2}, false,
          "Calendari: giorni in cui valgono servizi, corse e turni; possono aggiungere o togliere altri calendari e le festivita'."},
@@ -23,9 +25,10 @@ const std::vector<FileDati>& file_dati() {
         {"committenti.json", "committenti", {1}, false, "Committenti."},
         {"contratti.json", "contratti", {1}, false, "Contratti, senza importi."},
         {"gruppi_servizi.json", "gruppi_servizi", {1}, false, "Gruppi di servizi (es. lotti)."},
-        {"servizi.json", "servizi", {1, 2}, false, "Servizi con la loro domanda e le competenze richieste."},
+        {"servizi.json", "servizi", {1, 2, 3}, false,
+         "Servizi con la loro domanda e le competenze richieste; dalla versione 3 il tipo ncc (noleggio con conducente)."},
         {"corse.json", "corse", {1}, false, "Corse con i passaggi, i trasbordi e le coincidenze."},
-        {"mezzi.json", "mezzi", {1, 2}, false,
+        {"mezzi.json", "mezzi", {1, 2, 3}, false,
          "Mezzi delle aziende: posti, attrezzature, costi, uso della carta di circolazione, distrazioni, prestiti."},
         {"rimesse.json", "rimesse", {1}, false, "Rimesse e ricoveri."},
         {"tempi_sosta.json", "tempi_sosta", {1}, false, "Tempi di sosta alle fermate."},

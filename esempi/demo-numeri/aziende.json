@@ -1,6 +1,6 @@
 {
   "schema": "aziende",
-  "schema_versione": 2,
+  "schema_versione": 3,
   "aziende": [
     {
       "azienda": "ALFA",
@@ -47,7 +47,7 @@
         "per_tipo_servizio": [
           { "tipo_servizio": "linea", "modo": "out" },
           { "tipo_servizio": "scolastico", "modo": "out" },
-          { "tipo_servizio": "altro", "modo": "tachigrafo", "nota": "Gite: niente OUT, solo la carta del tachigrafo." }
+          { "tipo_servizio": "ncc", "modo": "tachigrafo", "nota": "Gite e noleggi: niente OUT, solo la carta del tachigrafo." }
         ],
         "nota": "Linee e scolastico con le regole nazionali dove la legge lo permette; le gite con il tachigrafo."
       }

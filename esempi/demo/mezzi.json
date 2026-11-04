@@ -1,6 +1,6 @@
 {
   "schema": "mezzi",
-  "schema_versione": 2,
+  "schema_versione": 3,
   "mezzi": [
     {
       "codice": "ALFA-01",

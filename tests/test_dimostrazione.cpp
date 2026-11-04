@@ -14,20 +14,20 @@
 using namespace kzero;
 using namespace kzero::prove;
 
-// La categoria di ogni corsa la ricava il nucleo: superiori + medie di due contratti = ibrido,
+// La categoria di ogni corsa la ricava il nucleo: superiori + medie di due contratti = promiscuo,
 // centro diurno = handicap (anche la corsa del giovedi' con la carrozzina piegata), solo utenti di linea = linea,
-// solo gruppi di tipo "altro" (la gita, K-008) = altro.
+// la gita della Pro Loco (servizio NCC dal K-012, gruppi di tipo "altro") = NCC.
 TEST(Dimostrazione, categorie_ricavate) {
     std::vector<std::pair<std::string, ServiceType>> attese = {
         {"C-AM-1", ServiceType::School},      {"C-AM-2", ServiceType::School},     {"C-AM-3", ServiceType::School},
-        {"C-RM-1", ServiceType::Hybrid},      {"C-DIS-R", ServiceType::Disability}, {"C-DIS-1", ServiceType::Disability},
+        {"C-RM-1", ServiceType::Mixed},       {"C-DIS-R", ServiceType::Disability}, {"C-DIS-1", ServiceType::Disability},
         {"C-ASILO-1", ServiceType::School},   {"C-LIN-533", ServiceType::Line},     {"C-LIN-560", ServiceType::Line},
         {"C-DIS-GIO", ServiceType::Disability}};
     for (const char* c : {"C-LIN-537", "C-LIN-545", "C-LIN-549", "C-LIN-553", "C-B620-01", "C-B620-02", "C-B620-03", "C-B620-04",
                           "C-B620-05", "C-B620-06", "C-B620-11", "C-B620-12", "C-B620-13", "C-B620-14"})
         attese.push_back({c, ServiceType::Line});
-    attese.push_back({"C-GITA-A", ServiceType::Other});
-    attese.push_back({"C-GITA-R", ServiceType::Other});
+    attese.push_back({"C-GITA-A", ServiceType::Ncc});
+    attese.push_back({"C-GITA-R", ServiceType::Ncc});
     const Index idx(demo());
     ASSERT_EQ(demo().trips.size(), attese.size());
     for (std::size_t i = 0; i < attese.size(); ++i) {

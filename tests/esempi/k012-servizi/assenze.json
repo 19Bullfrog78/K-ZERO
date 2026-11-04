@@ -1,0 +1,14 @@
+{
+  "schema": "assenze",
+  "schema_versione": 1,
+  "assenze": [
+    {
+      "persona": "P-NONSERVE",
+      "tipo": "PERMESSO",
+      "dal": "2026-11-30",
+      "al": "2026-11-30",
+      "dalle": "10:00",
+      "alle": "12:00"
+    }
+  ]
+}

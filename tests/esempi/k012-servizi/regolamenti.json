@@ -1,0 +1,91 @@
+{
+  "schema": "regolamenti",
+  "schema_versione": 3,
+  "regolamenti": [
+    {
+      "codice": "R-TN",
+      "ente": "Provincia autonoma di Trento",
+      "titolo": "Testo unico del trasporto scolastico (regole pubbliche, esempio)",
+      "documento": "Delibera della Giunta provinciale n. 2 del 10/01/2025",
+      "valido_dal": "2025-01-10",
+      "parametri": {
+        "attesa_massima_prima_minuti": { "valore": 25, "fonte": { "punto": "1.B.1" } },
+        "attesa_massima_dopo_minuti": { "valore": 20, "fonte": { "punto": "1.B.1" } },
+        "distanza_massima_casa_fermata_m": { "valore": 1000, "fonte": { "punto": "1.B.1" } },
+        "distanza_massima_fermata_scuola_m": { "valore": 500, "fonte": { "punto": "1.B.1" } },
+        "distanza_minima_casa_scuola_m": {
+          "valori": [
+            { "gradi": ["infanzia"], "valore": 500 },
+            { "gradi": ["primaria", "secondaria_primo_grado"], "valore": 1000 }
+          ],
+          "fonte": { "punto": "1.B.1" }
+        },
+        "distanza_minima_tra_fermate_m": { "valore": 300, "fonte": { "punto": "1.C1.5" }, "nota": "Di norma: il testo ammette eccezioni." },
+        "alunni_minimi_per_servizio": { "valori": [{ "gradi": ["infanzia"], "valore": 3 }], "fonte": { "punto": "1.C1.6" } },
+        "assistente_a_bordo": {
+          "condizioni": [{ "gradi": ["infanzia"], "posti_passeggeri_oltre": 8 }],
+          "fonte": { "punto": "1.C1.9", "riferimenti": "DM 31/01/1997" },
+          "nota": "Il testo dice 'mezzi con piu' di 9 posti': letto come 9 posti compreso il conducente (autobus, art. 54 del Codice della strada), cioe' piu' di 8 posti per i passeggeri. Da confermare."
+        },
+        "adulto_alla_discesa": {
+          "condizioni": [{ "gradi": ["infanzia"] }, { "tipi_centro": ["terapie"] }],
+          "fonte": { "punto": "1.C1.12; 2.C2" },
+          "nota": "Infanzia: adulto sempre alla fermata (1.C1.12). Servizi di terapia: adulto all'arrivo a casa (2.C2)."
+        },
+        "discesa_senza_adulto_con_autorizzazione": {
+          "gradi": ["primaria", "secondaria_primo_grado"],
+          "fonte": { "punto": "1.B.4", "riferimenti": "art. 19-bis D.L. 148/2017, convertito dalla legge 172/2017" }
+        },
+        "passeggeri_in_piedi": {
+          "non_ammessi_per_gradi": ["infanzia"],
+          "durata_massima_minuti": 10,
+          "km_massimi": 5,
+          "fonte": { "punto": "1.B.6" }
+        },
+        "usi_dei_mezzi": {
+          "valori": [{ "tipi_servizio": ["scolastico", "disabili"], "usi": ["LINEA", "NCC"] }],
+          "fonte": { "documento": "Carta della mobilita' 2013, servizi speciali (D.G.P. n. 2649/2012)", "punto": "3" },
+          "nota": "Mezzi immatricolati per la linea o per il noleggio con conducente. Per lo scolastico la fonte e' da confermare: la Carta riguarda i servizi speciali."
+        },
+        "autorizzazione_del_committente": {
+          "tipi_servizio": ["disabili"],
+          "fonte": { "documento": "Carta della mobilita' 2013, servizi speciali (D.G.P. n. 2649/2012)", "punto": "2" },
+          "nota": "Cartellino di riconoscimento che la Provincia rilascia agli autisti dei servizi speciali."
+        }
+      }
+    },
+    {
+      "codice": "R-INV",
+      "ente": "Comunita' di Valfonda (inventato)",
+      "titolo": "Regolamento di prova con valori inventati",
+      "documento": "Regolamento di prova n. 1/2026 (inventato)",
+      "valido_dal": "2026-09-01",
+      "parametri": {
+        "attesa_massima_prima_minuti": { "valore": 15, "fonte": { "punto": "art. 3" } },
+        "attesa_massima_dopo_minuti": { "valore": 10, "fonte": { "punto": "art. 3" } },
+        "distanza_massima_casa_fermata_m": { "valore": 1500, "fonte": { "punto": "art. 4" } },
+        "durata_massima_a_bordo_minuti": {
+          "valori": [
+            { "gradi": ["primaria", "secondaria_primo_grado"], "valore": 60 },
+            { "gradi": ["secondaria_secondo_grado"], "valore": 75 }
+          ],
+          "fonte": { "punto": "art. 5" }
+        },
+        "assistente_a_bordo": {
+          "condizioni": [{ "gradi": ["infanzia"] }, { "tipi_gruppo": ["disabili"] }],
+          "fonte": { "punto": "art. 6" }
+        },
+        "passeggeri_in_piedi": {
+          "non_ammessi_per_gradi": ["infanzia", "primaria"],
+          "durata_massima_minuti": 15,
+          "km_massimi": 8,
+          "fonte": { "punto": "art. 7" }
+        },
+        "combinazioni_vietate": {
+          "combinazioni": [{ "primo": { "gradi": ["infanzia"] }, "secondo": { "gradi": ["secondaria_secondo_grado"] } }],
+          "fonte": { "punto": "art. 8" }
+        }
+      }
+    }
+  ]
+}

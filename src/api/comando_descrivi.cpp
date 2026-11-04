@@ -17,7 +17,7 @@ namespace kzero::api {
 namespace {
 
 const char* const kDescrizioneProgramma =
-    "K-Zero: pianificazione della flotta per servizi di linea, disabili, scolastici e ibridi, per aziende, consorzi "
+    "K-Zero: pianificazione della flotta per servizi di linea, disabili, scolastici, NCC e promiscui, per aziende, consorzi "
     "ed enti di ogni dimensione e di ogni paese.";
 
 const char* nome_tipo(TipoParametro t) {

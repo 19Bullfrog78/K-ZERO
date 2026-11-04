@@ -1,0 +1,996 @@
+{
+  "schema": "servizi",
+  "schema_versione": 3,
+  "servizi": [
+    {
+      "codice": "S-SCU-AM",
+      "nome": "Andata mattina Pradello - Valfonda, medie e primaria",
+      "codici_esterni": [
+        {
+          "sistema": "Consorzio Valle Alta",
+          "tipo": "servizio",
+          "codice": "2050001/1"
+        }
+      ],
+      "tipo": "scolastico",
+      "contratto": "CT-SCU",
+      "calendario": "CAL-SCUOLA-LV",
+      "liberta_oraria": {
+        "tipo": "libera",
+        "soglia_da_concordare_minuti": 10
+      },
+      "domanda": {
+        "gruppi": [
+          {
+            "codice": "G-AM-MEDIE",
+            "nome": "Medie, andata",
+            "tipo": "studenti",
+            "verso": "andata",
+            "scuola": "SC-MEDIE",
+            "finestra": {
+              "dalle": "07:30",
+              "alle": "07:55"
+            },
+            "conteggi": "esatti",
+            "fermate": [
+              {
+                "luogo": "F-PRADELLO",
+                "salgono": 9
+              },
+              {
+                "luogo": "F-CASTELROVO",
+                "salgono": 8
+              },
+              {
+                "luogo": "F-MONTEBRINO",
+                "salgono": 7
+              },
+              {
+                "luogo": "L-MEDIE",
+                "scendono": 24
+              }
+            ]
+          },
+          {
+            "codice": "G-AM-PRIM",
+            "nome": "Primaria, andata",
+            "tipo": "studenti",
+            "verso": "andata",
+            "scuola": "SC-PRIM",
+            "finestra": {
+              "dalle": "07:40",
+              "alle": "08:05"
+            },
+            "conteggi": "esatti",
+            "fermate": [
+              {
+                "luogo": "F-SORGENTA",
+                "salgono": 6
+              },
+              {
+                "luogo": "F-LAGOBELLO",
+                "salgono": 8
+              },
+              {
+                "luogo": "L-PRIM",
+                "scendono": 14
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "codice": "S-SCU-RM",
+      "nome": "Ritorno mezzogiorno medie",
+      "codici_esterni": [
+        {
+          "sistema": "Consorzio Valle Alta",
+          "tipo": "servizio",
+          "codice": "2050001/2"
+        }
+      ],
+      "tipo": "scolastico",
+      "contratto": "CT-SCU",
+      "calendario": "CAL-SCUOLA-LV",
+      "liberta_oraria": {
+        "tipo": "libera",
+        "soglia_da_concordare_minuti": 10
+      },
+      "domanda": {
+        "gruppi": [
+          {
+            "codice": "G-RM-MEDIE",
+            "nome": "Medie, ritorno",
+            "tipo": "studenti",
+            "verso": "ritorno",
+            "scuola": "SC-MEDIE",
+            "finestra": {
+              "dalle": "12:00",
+              "alle": "12:15"
+            },
+            "conteggi": "esatti",
+            "fermate": [
+              {
+                "luogo": "L-MEDIE",
+                "salgono": 11
+              },
+              {
+                "luogo": "F-CASTELROVO",
+                "scendono": 4
+              },
+              {
+                "luogo": "F-MONTEBRINO",
+                "scendono": 4
+              },
+              {
+                "luogo": "F-PRADELLO",
+                "scendono": 3
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "codice": "S-SUP-RM",
+      "nome": "Ritorno superiori a supporto della linea B610",
+      "codici_esterni": [
+        {
+          "sistema": "Trasporti Provinciali Valfonda",
+          "tipo": "servizio",
+          "codice": "SUP-B610-R"
+        }
+      ],
+      "tipo": "scolastico",
+      "contratto": "CT-LIN",
+      "calendario": "CAL-SCUOLA-LV",
+      "liberta_oraria": {
+        "tipo": "libera",
+        "soglia_da_concordare_minuti": 10
+      },
+      "regole": {
+        "posti_minimi": 12
+      },
+      "domanda": {
+        "gruppi": [
+          {
+            "codice": "G-RM-SUP",
+            "nome": "Superiori, ritorno",
+            "tipo": "studenti",
+            "verso": "ritorno",
+            "scuola": "SC-SUP",
+            "finestra": {
+              "dalle": "11:50",
+              "alle": "12:00"
+            },
+            "conteggi": "esatti",
+            "fermate": [
+              {
+                "luogo": "L-SUP",
+                "salgono": 5
+              },
+              {
+                "luogo": "F-CASTELROVO",
+                "scendono": 2
+              },
+              {
+                "luogo": "F-MONTEBRINO",
+                "scendono": 1
+              },
+              {
+                "luogo": "F-PRADELLO",
+                "scendono": 2
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "codice": "S-DIS",
+      "nome": "Trasporto al centro diurno Il Faro",
+      "codici_esterni": [
+        {
+          "sistema": "Consorzio Valle Alta",
+          "tipo": "scheda",
+          "codice": "48211"
+        }
+      ],
+      "tipo": "disabili",
+      "contratto": "CT-SCU",
+      "calendario": "CAL-CENTRO",
+      "competenze_richieste": [
+        "PEDANA"
+      ],
+      "liberta_oraria": {
+        "tipo": "libera",
+        "soglia_da_concordare_minuti": 15
+      },
+      "regole": {
+        "pedana_obbligatoria": true
+      },
+      "domanda": {
+        "gruppi": [
+          {
+            "codice": "G-DIS",
+            "nome": "Centro diurno, andata",
+            "tipo": "disabili",
+            "verso": "andata",
+            "scuola": "SC-CENTRO",
+            "finestra": {
+              "dalle": "08:30",
+              "alle": "09:00"
+            },
+            "conteggi": "esatti",
+            "assistente_richiesto": true,
+            "fermate": [
+              {
+                "luogo": "PP-01",
+                "salgono": 1,
+                "carrozzine": 1
+              },
+              {
+                "luogo": "PP-02",
+                "salgono": 1,
+                "ausili_piegati": 1
+              },
+              {
+                "luogo": "PP-03",
+                "salgono": 1
+              },
+              {
+                "luogo": "L-CENTRO",
+                "scendono": 3
+              }
+            ],
+            "passeggeri": [
+              {
+                "codice": "P-D1",
+                "nome": "Bianchi Luca",
+                "casa": {
+                  "indirizzo": "Via dei Larici 4",
+                  "comune": "Pradello",
+                  "coordinate": {
+                    "lat": 46.4433,
+                    "lon": 11.073
+                  }
+                },
+                "stato": {
+                  "tipo": "attivo"
+                },
+                "salita": {
+                  "luogo": "PP-01",
+                  "assegnazione": "proposta"
+                },
+                "discesa": {
+                  "luogo": "L-CENTRO",
+                  "assegnazione": "proposta"
+                },
+                "esigenze": {
+                  "carrozzina": "sulla_carrozzina",
+                  "assistente": true
+                }
+              },
+              {
+                "codice": "P-D2",
+                "nome": "Verdi Anna",
+                "casa": {
+                  "indirizzo": "Via del Mulino 12",
+                  "comune": "Castelrovo"
+                },
+                "stato": {
+                  "tipo": "attivo"
+                },
+                "salita": {
+                  "luogo": "PP-02",
+                  "assegnazione": "proposta"
+                },
+                "discesa": {
+                  "luogo": "L-CENTRO",
+                  "assegnazione": "proposta"
+                },
+                "esigenze": {
+                  "ausili_piegati": 1,
+                  "altro": "Deambulatore pieghevole"
+                }
+              },
+              {
+                "codice": "P-D3",
+                "nome": "Neri Paolo",
+                "casa": {
+                  "indirizzo": "Maso Alto 2",
+                  "comune": "Montebrino"
+                },
+                "stato": {
+                  "tipo": "attivo"
+                },
+                "salita": {
+                  "luogo": "PP-03",
+                  "assegnazione": "proposta"
+                },
+                "discesa": {
+                  "luogo": "L-CENTRO",
+                  "assegnazione": "proposta"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "codice": "S-ASILO",
+      "nome": "Scuola dell'infanzia di Lagobello, andata",
+      "tipo": "scolastico",
+      "contratto": "CT-ASILO",
+      "calendario": "CAL-INFANZIA",
+      "liberta_oraria": {
+        "tipo": "libera",
+        "soglia_da_concordare_minuti": 10
+      },
+      "domanda": {
+        "gruppi": [
+          {
+            "codice": "G-ASILO",
+            "nome": "Bambini dell'infanzia",
+            "tipo": "studenti",
+            "verso": "andata",
+            "scuola": "SC-INFANZIA",
+            "finestra": {
+              "dalle": "07:50",
+              "alle": "08:00"
+            },
+            "conteggi": "esatti",
+            "fermate": [
+              {
+                "luogo": "F-SORGENTA",
+                "salgono": 4
+              },
+              {
+                "luogo": "F-LAGOBELLO",
+                "salgono": 3
+              },
+              {
+                "luogo": "L-INFANZIA",
+                "scendono": 7
+              }
+            ],
+            "passeggeri": [
+              {
+                "codice": "P-A1",
+                "nome": "Rossi Giulia",
+                "casa": {
+                  "indirizzo": "Via Fontana 3",
+                  "comune": "Sorgenta"
+                },
+                "stato": {
+                  "tipo": "attivo"
+                },
+                "salita": {
+                  "luogo": "F-SORGENTA",
+                  "assegnazione": "proposta"
+                },
+                "discesa": {
+                  "luogo": "L-INFANZIA",
+                  "assegnazione": "proposta"
+                }
+              },
+              {
+                "codice": "P-A2",
+                "nome": "Ferrari Marco",
+                "casa": {
+                  "indirizzo": "Via Fontana 9",
+                  "comune": "Sorgenta"
+                },
+                "stato": {
+                  "tipo": "attivo"
+                },
+                "salita": {
+                  "luogo": "F-SORGENTA",
+                  "assegnazione": "proposta"
+                },
+                "discesa": {
+                  "luogo": "L-INFANZIA",
+                  "assegnazione": "proposta"
+                }
+              },
+              {
+                "codice": "P-A3",
+                "nome": "Esposito Sara",
+                "casa": {
+                  "indirizzo": "Via del Lago 21",
+                  "comune": "Lagobello"
+                },
+                "stato": {
+                  "tipo": "attivo"
+                },
+                "salita": {
+                  "luogo": "F-SORGENTA",
+                  "assegnazione": "bloccata"
+                },
+                "discesa": {
+                  "luogo": "L-INFANZIA",
+                  "assegnazione": "proposta"
+                },
+                "motivo": "Spostata da Lagobello a Sorgenta su richiesta della famiglia: la mattina sta dai nonni."
+              },
+              {
+                "codice": "P-A4",
+                "nome": "Ricci Tommaso",
+                "casa": {
+                  "indirizzo": "Via Fontana 14",
+                  "comune": "Sorgenta"
+                },
+                "stato": {
+                  "tipo": "sbloccato",
+                  "riferimento": "Mail del Consorzio Valle Alta del 2026-09-15"
+                },
+                "salita": {
+                  "luogo": "F-SORGENTA",
+                  "assegnazione": "proposta"
+                },
+                "discesa": {
+                  "luogo": "L-INFANZIA",
+                  "assegnazione": "proposta"
+                }
+              },
+              {
+                "codice": "P-A5",
+                "nome": "Marino Elena",
+                "casa": {
+                  "indirizzo": "Via del Lago 2",
+                  "comune": "Lagobello"
+                },
+                "stato": {
+                  "tipo": "attivo"
+                },
+                "salita": {
+                  "luogo": "F-LAGOBELLO",
+                  "assegnazione": "proposta"
+                },
+                "discesa": {
+                  "luogo": "L-INFANZIA",
+                  "assegnazione": "proposta"
+                }
+              },
+              {
+                "codice": "P-A6",
+                "nome": "Greco Luca",
+                "casa": {
+                  "indirizzo": "Via del Lago 7",
+                  "comune": "Lagobello"
+                },
+                "stato": {
+                  "tipo": "attivo"
+                },
+                "salita": {
+                  "luogo": "F-LAGOBELLO",
+                  "assegnazione": "proposta"
+                },
+                "discesa": {
+                  "luogo": "L-INFANZIA",
+                  "assegnazione": "proposta"
+                }
+              },
+              {
+                "codice": "P-A7",
+                "nome": "Bruno Chiara",
+                "casa": {
+                  "indirizzo": "Via dei Pini 1",
+                  "comune": "Lagobello"
+                },
+                "stato": {
+                  "tipo": "attivo"
+                },
+                "salita": {
+                  "luogo": "F-LAGOBELLO",
+                  "assegnazione": "proposta"
+                },
+                "discesa": {
+                  "luogo": "L-INFANZIA",
+                  "assegnazione": "proposta"
+                }
+              },
+              {
+                "codice": "P-A8",
+                "nome": "Gallo Pietro",
+                "casa": {
+                  "indirizzo": "Via dei Pini 5",
+                  "comune": "Lagobello"
+                },
+                "stato": {
+                  "tipo": "sospeso"
+                },
+                "salita": {
+                  "luogo": "F-LAGOBELLO",
+                  "assegnazione": "proposta"
+                },
+                "discesa": {
+                  "luogo": "L-INFANZIA",
+                  "assegnazione": "proposta"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "codice": "S-LIN-B610",
+      "nome": "Linea B610 Valfonda - Pradello",
+      "codici_esterni": [
+        {
+          "sistema": "Trasporti Provinciali Valfonda",
+          "tipo": "linea",
+          "codice": "B610"
+        }
+      ],
+      "tipo": "linea",
+      "contratto": "CT-LIN",
+      "calendario": "CAL-FERIALI",
+      "liberta_oraria": {
+        "tipo": "fissa"
+      },
+      "domanda": {
+        "gruppi": [
+          {
+            "codice": "G-LIN",
+            "nome": "Utenti della linea B610",
+            "tipo": "utenti_linea",
+            "verso": "andata",
+            "conteggi": "non_noti",
+            "fermate": [
+              {
+                "luogo": "F-STAZIONE"
+              },
+              {
+                "luogo": "F-VALFONDA-PIAZZA"
+              },
+              {
+                "luogo": "F-CASTELROVO-ALTO"
+              },
+              {
+                "luogo": "F-PRADELLO"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "codice": "S-DIS-GIO",
+      "nome": "Trasporto al centro diurno Il Faro, il giovedi'",
+      "codici_esterni": [
+        {
+          "sistema": "Consorzio Valle Alta",
+          "tipo": "scheda",
+          "codice": "48230"
+        }
+      ],
+      "tipo": "disabili",
+      "contratto": "CT-SCU",
+      "calendario": "CAL-CENTRO-GIO",
+      "liberta_oraria": {
+        "tipo": "libera",
+        "soglia_da_concordare_minuti": 15
+      },
+      "domanda": {
+        "gruppi": [
+          {
+            "codice": "G-DIS-GIO",
+            "nome": "Centro diurno, andata del giovedi'",
+            "tipo": "disabili",
+            "verso": "andata",
+            "scuola": "SC-CENTRO",
+            "finestra": {
+              "dalle": "08:30",
+              "alle": "09:00"
+            },
+            "conteggi": "esatti",
+            "fermate": [
+              {
+                "luogo": "PP-04",
+                "salgono": 1,
+                "ausili_piegati": 1
+              },
+              {
+                "luogo": "L-CENTRO",
+                "scendono": 1
+              }
+            ],
+            "passeggeri": [
+              {
+                "codice": "P-D4",
+                "nome": "Gialli Marta",
+                "casa": {
+                  "indirizzo": "Via delle Fontane 7",
+                  "comune": "Sorgenta",
+                  "coordinate": {
+                    "lat": 46.4312,
+                    "lon": 11.0228
+                  }
+                },
+                "stato": {
+                  "tipo": "attivo"
+                },
+                "salita": {
+                  "luogo": "PP-04",
+                  "assegnazione": "proposta"
+                },
+                "discesa": {
+                  "luogo": "L-CENTRO",
+                  "assegnazione": "proposta"
+                },
+                "esigenze": {
+                  "carrozzina": "piegata"
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "codice": "S-LIN-B620",
+      "nome": "Linea B620 Sorgenta - Montebrino, tutti i giorni",
+      "codici_esterni": [
+        {
+          "sistema": "Trasporti Provinciali Valfonda",
+          "tipo": "linea",
+          "codice": "B620"
+        }
+      ],
+      "tipo": "linea",
+      "contratto": "CT-LIN-BETA",
+      "calendario": "CAL-SEMPRE",
+      "liberta_oraria": {
+        "tipo": "fissa"
+      },
+      "domanda": {
+        "gruppi": [
+          {
+            "codice": "G-LIN-B620",
+            "nome": "Utenti della linea B620",
+            "tipo": "utenti_linea",
+            "verso": "andata",
+            "conteggi": "non_noti",
+            "fermate": [
+              {
+                "luogo": "F-SORGENTA"
+              },
+              {
+                "luogo": "F-LAGOBELLO"
+              },
+              {
+                "luogo": "F-MONTEBRINO"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "codice": "S-GITA",
+      "nome": "Gita della Pro Loco al lago di Lagobello",
+      "tipo": "ncc",
+      "contratto": "CT-GITA",
+      "calendario": "CAL-GITA",
+      "liberta_oraria": {
+        "tipo": "fissa"
+      },
+      "domanda": {
+        "gruppi": [
+          {
+            "codice": "G-GITA-A",
+            "nome": "Soci della Pro Loco, andata",
+            "tipo": "altro",
+            "tipo_descrizione": "Soci della Pro Loco",
+            "verso": "andata",
+            "conteggi": "esatti",
+            "fermate": [
+              {
+                "luogo": "F-VALFONDA-PIAZZA",
+                "salgono": 30
+              },
+              {
+                "luogo": "F-LAGOBELLO",
+                "scendono": 30
+              }
+            ]
+          },
+          {
+            "codice": "G-GITA-R",
+            "nome": "Soci della Pro Loco, ritorno",
+            "tipo": "altro",
+            "tipo_descrizione": "Soci della Pro Loco",
+            "verso": "ritorno",
+            "conteggi": "esatti",
+            "fermate": [
+              {
+                "luogo": "F-LAGOBELLO",
+                "salgono": 30
+              },
+              {
+                "luogo": "F-VALFONDA-PIAZZA",
+                "scendono": 30
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "codice": "S-LIN-PROVA",
+      "nome": "Linea di prova della forzatura che non serve",
+      "tipo": "linea",
+      "contratto": "CT-LIN",
+      "calendario": "CAL-FERIALI",
+      "liberta_oraria": {
+        "tipo": "fissa"
+      },
+      "domanda": {
+        "gruppi": [
+          {
+            "codice": "G-LIN-PROVA",
+            "nome": "Utenti della linea B610",
+            "tipo": "utenti_linea",
+            "verso": "andata",
+            "conteggi": "non_noti",
+            "fermate": [
+              {
+                "luogo": "F-STAZIONE"
+              },
+              {
+                "luogo": "F-VALFONDA-PIAZZA"
+              },
+              {
+                "luogo": "F-CASTELROVO-ALTO"
+              },
+              {
+                "luogo": "F-PRADELLO"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "codice": "S-GITA-SCUOLA",
+      "nome": "Gita scolastica delle medie al lago",
+      "tipo": "ncc",
+      "contratto": "CT-GITE-SCUOLA",
+      "calendario": "CAL-T-GITA-SCUOLA",
+      "liberta_oraria": {
+        "tipo": "fissa"
+      },
+      "domanda": {
+        "gruppi": [
+          {
+            "codice": "G-GITA-SCUOLA-A",
+            "nome": "Medie, andata della gita",
+            "tipo": "studenti",
+            "verso": "andata",
+            "scuola": "SC-MEDIE",
+            "conteggi": "esatti",
+            "fermate": [
+              {
+                "luogo": "L-MEDIE",
+                "salgono": 14
+              },
+              {
+                "luogo": "F-LAGOBELLO",
+                "scendono": 14
+              }
+            ]
+          },
+          {
+            "codice": "G-GITA-SCUOLA-R",
+            "nome": "Medie, ritorno della gita",
+            "tipo": "studenti",
+            "verso": "ritorno",
+            "scuola": "SC-MEDIE",
+            "conteggi": "esatti",
+            "fermate": [
+              {
+                "luogo": "F-LAGOBELLO",
+                "salgono": 14
+              },
+              {
+                "luogo": "L-MEDIE",
+                "scendono": 14
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "codice": "S-NCC-AUTO",
+      "nome": "Noleggio con l'auto al lago",
+      "tipo": "ncc",
+      "contratto": "CT-NCC-BETA",
+      "calendario": "CAL-T-NCC-AUTO",
+      "liberta_oraria": {
+        "tipo": "fissa"
+      },
+      "domanda": {
+        "gruppi": [
+          {
+            "codice": "G-NCC-AUTO-A",
+            "nome": "Clienti, andata",
+            "tipo": "altro",
+            "tipo_descrizione": "Clienti del noleggio",
+            "verso": "andata",
+            "conteggi": "esatti",
+            "fermate": [
+              {
+                "luogo": "F-SORGENTA",
+                "salgono": 4
+              },
+              {
+                "luogo": "F-LAGOBELLO",
+                "scendono": 4
+              }
+            ]
+          },
+          {
+            "codice": "G-NCC-AUTO-R",
+            "nome": "Clienti, ritorno",
+            "tipo": "altro",
+            "tipo_descrizione": "Clienti del noleggio",
+            "verso": "ritorno",
+            "conteggi": "esatti",
+            "fermate": [
+              {
+                "luogo": "F-LAGOBELLO",
+                "salgono": 4
+              },
+              {
+                "luogo": "F-SORGENTA",
+                "scendono": 4
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "codice": "S-NCC-BUS",
+      "nome": "Escursione al lago con il pullman",
+      "tipo": "ncc",
+      "contratto": "CT-NCC-ALFA",
+      "calendario": "CAL-T-NCC-BUS",
+      "liberta_oraria": {
+        "tipo": "fissa"
+      },
+      "domanda": {
+        "gruppi": [
+          {
+            "codice": "G-NCC-BUS",
+            "nome": "Andata",
+            "tipo": "altro",
+            "tipo_descrizione": "Turisti",
+            "verso": "andata",
+            "conteggi": "esatti",
+            "fermate": [
+              {
+                "luogo": "F-STAZIONE",
+                "salgono": 30
+              },
+              {
+                "luogo": "F-LAGOBELLO",
+                "scendono": 30
+              }
+            ]
+          },
+          {
+            "codice": "G-NCC-BUS-2",
+            "nome": "Tratto breve",
+            "tipo": "altro",
+            "tipo_descrizione": "Turisti",
+            "verso": "andata",
+            "conteggi": "esatti",
+            "fermate": [
+              {
+                "luogo": "F-LAGOBELLO",
+                "salgono": 30
+              },
+              {
+                "luogo": "F-PRADELLO",
+                "scendono": 30
+              }
+            ]
+          },
+          {
+            "codice": "G-NCC-BUS-3",
+            "nome": "Ritorno",
+            "tipo": "altro",
+            "tipo_descrizione": "Turisti",
+            "verso": "ritorno",
+            "conteggi": "esatti",
+            "fermate": [
+              {
+                "luogo": "F-PRADELLO",
+                "salgono": 30
+              },
+              {
+                "luogo": "F-STAZIONE",
+                "scendono": 30
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "codice": "S-NAVETTA",
+      "nome": "Navetta degli operai della cartiera",
+      "tipo": "altro",
+      "tipo_descrizione": "Navetta casa-lavoro con tragitto e orari fissi (servizio regolare specializzato, non un noleggio)",
+      "contratto": "CT-NAVETTA",
+      "calendario": "CAL-T-NAVETTA",
+      "liberta_oraria": {
+        "tipo": "fissa"
+      },
+      "domanda": {
+        "gruppi": [
+          {
+            "codice": "G-NAVETTA",
+            "nome": "Andata",
+            "tipo": "altro",
+            "tipo_descrizione": "Operai della cartiera",
+            "verso": "andata",
+            "conteggi": "esatti",
+            "fermate": [
+              {
+                "luogo": "F-STAZIONE",
+                "salgono": 30
+              },
+              {
+                "luogo": "F-LAGOBELLO",
+                "scendono": 30
+              }
+            ]
+          },
+          {
+            "codice": "G-NAVETTA-2",
+            "nome": "Tratto breve",
+            "tipo": "altro",
+            "tipo_descrizione": "Operai della cartiera",
+            "verso": "andata",
+            "conteggi": "esatti",
+            "fermate": [
+              {
+                "luogo": "F-LAGOBELLO",
+                "salgono": 30
+              },
+              {
+                "luogo": "F-PRADELLO",
+                "scendono": 30
+              }
+            ]
+          },
+          {
+            "codice": "G-NAVETTA-3",
+            "nome": "Ritorno",
+            "tipo": "altro",
+            "tipo_descrizione": "Operai della cartiera",
+            "verso": "ritorno",
+            "conteggi": "esatti",
+            "fermate": [
+              {
+                "luogo": "F-PRADELLO",
+                "salgono": 30
+              },
+              {
+                "luogo": "F-STAZIONE",
+                "scendono": 30
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

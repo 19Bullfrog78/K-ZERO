@@ -114,7 +114,8 @@ const char* nome_categoria(kzero::ServiceType t) {
         case kzero::ServiceType::Line: return "linea";
         case kzero::ServiceType::Disability: return "disabili";
         case kzero::ServiceType::School: return "scolastico";
-        case kzero::ServiceType::Hybrid: return "ibrido";
+        case kzero::ServiceType::Ncc: return "ncc";
+        case kzero::ServiceType::Mixed: return "promiscuo";
         case kzero::ServiceType::Other: return "altro";
     }
     return "?";
@@ -125,6 +126,7 @@ const char* nome_tipo_servizio(kzero::ServiceKind k) {
         case kzero::ServiceKind::Line: return "linea";
         case kzero::ServiceKind::School: return "scolastico";
         case kzero::ServiceKind::Disability: return "disabili";
+        case kzero::ServiceKind::Ncc: return "ncc";
         case kzero::ServiceKind::Other: return "altro";
     }
     return "?";

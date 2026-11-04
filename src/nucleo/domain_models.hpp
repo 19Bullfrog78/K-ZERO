@@ -74,8 +74,9 @@ enum class Grade { Kindergarten, Primary, LowerSecondary, UpperSecondary };   //
 
 enum class VehicleCategory { M1, M2, M3 };   // categorie europee dei veicoli per persone
 
-// Tipo di servizio dichiarato dal committente. "Ibrido" non si dichiara: lo ricava derive_service sulla corsa.
-enum class ServiceKind { Line, School, Disability, Other };
+// Tipo di servizio dichiarato dal committente. Dal K-012 anche l'NCC (noleggio con conducente: gite, turismo, eventi): dice la
+// natura del servizio, non la licenza del mezzo. "Promiscuo" non si dichiara: lo ricava derive_service sulla corsa.
+enum class ServiceKind { Line, School, Disability, Ncc, Other };
 
 // Chi viaggia: tipo di un gruppo di passeggeri della domanda.
 enum class GroupType { Students, Disabled, LineUsers, AuthorizedAdults, Other };
@@ -102,7 +103,8 @@ enum class ServiceType {
     Line,        // Servizi di Linee
     Disability,  // Servizi Handicap (disabili)
     School,      // Servizi Scolastici
-    Hybrid,      // Servizi Ibridi
+    Ncc,         // Noleggio con conducente (K-012): gite, turismo, eventi
+    Mixed,       // Servizi promiscui (fino al K-011 "ibridi")
     Other        // solo gruppi di tipo "altro"
 };
 
@@ -540,9 +542,12 @@ struct Regime {
     // Con come_regime e l'estensione alla settimana dell'altro regime: nei giorni della settimana senza le corse che lo
     // fanno valere, questo regime vale solo da confermare (di base: la legge non lo dice, K-011 aggiunta 1) o con certezza.
     bool like_extension_to_confirm = true;
-    // Servizi occasionali (gite, noleggi): per le interruzioni che valgono solo per loro.
-    std::vector<ServiceKind> occasional;
-    bool occasional_to_confirm = false;
+    // Servizi occasionali (gite, noleggi): per le interruzioni che valgono solo per loro. Dal K-012 (norme versione 3) tipo
+    // per tipo certi o da confermare (es. l'NCC certo, "altro" da confermare); la versione 2 aveva un solo "da confermare"
+    // per tutto l'elenco, che si legge mettendo tutti i tipi tra i certi o tutti tra quelli da confermare.
+    Applies<ServiceKind> occasional;
+    RuleSource occasional_source;
+    std::string occasional_note;
     // Estensione: una corsa che lo fa scattare vale per tutta la settimana, per queste famiglie.
     bool week_extension = false;
     std::vector<RuleFamily> extension_families;
@@ -986,7 +991,7 @@ struct Connection {
     Source src;
 };
 
-// Corsa: il viaggio vero di un mezzo. Puo' soddisfare piu' servizi (allora e' ibrida).
+// Corsa: il viaggio vero di un mezzo. Puo' soddisfare piu' servizi (allora e' promiscua).
 struct Trip {
     Code code;
     std::string name;
@@ -1581,30 +1586,45 @@ struct Package {
 // --- Regole del mestiere sulle corse --------------------------------------------------------
 
 // Categoria della corsa ricavata da chi trasporta e dove lo porta:
-// - piu' servizi sulla stessa corsa                    -> Ibrido
+// - piu' servizi sulla stessa corsa, anche se uno e' NCC    -> Promiscuo
+// - un solo servizio NCC                                   -> NCC: i gruppi non cambiano la categoria (una gita
+//                                                             scolastica porta studenti ma e' NCC; K-012)
 // - gruppi di tipi diversi (studenti, disabili, utenti
-//   di linea, altro; gli adulti autorizzati non contano) -> Ibrido
-// - studenti verso un centro (non una scuola)           -> Ibrido
-// - solo utenti di linea / disabili / studenti / altro  -> Linea / Handicap / Scolastico / Altro
+//   di linea, altro; gli adulti autorizzati non contano)    -> Promiscuo
+// - studenti verso un centro (non una scuola)              -> Promiscuo
+// - solo utenti di linea / disabili / studenti / altro     -> Linea / Handicap / Scolastico / Altro
 // I gruppi sono quelli che salgono o scendono nei passaggi; se la corsa non ne nomina nessuno valgono
 // i gruppi del suo servizio (anche anonimi, anche con conteggi non noti), e senza gruppi il tipo dichiarato
-// dal committente. Nessun valore se la corsa non ha ne' servizi ne' gruppi.
-template <class FindService, class FindGroup, class FindSchool>
+// dal committente. Se la corsa non elenca i servizi (un errore nei dati, K-CTR-034) i servizi sono quelli dei suoi gruppi,
+// solo per riconoscere l'NCC: i gruppi di un solo servizio NCC = NCC; di piu' servizi, uno NCC = Promiscuo; altrimenti i
+// tipi dei gruppi, come sempre. Nessun valore se la corsa non ha ne' servizi ne' gruppi.
+template <class FindService, class FindGroup, class FindSchool, class FindGroupService>
 std::optional<ServiceType> derive_service(const Trip& t, FindService find_service, FindGroup find_group,
-                                          FindSchool find_school) {
+                                          FindSchool find_school, FindGroupService find_group_service) {
     std::set<Code> services;
     for (const auto& s : t.services) services.insert(s.code);
-    if (services.size() > 1) return ServiceType::Hybrid;
+    if (services.size() > 1) return ServiceType::Mixed;
 
     std::set<Code> group_codes;
     for (const auto& p : t.passages) {
         for (const auto& c : p.persons) group_codes.insert(c.group.code);
         for (const auto& h : p.transfers) group_codes.insert(h.group.code);
     }
+    const Service* service = services.empty() ? nullptr : find_service(*services.begin());
+    if (service && service->kind == ServiceKind::Ncc) return ServiceType::Ncc;
+    if (services.empty()) {
+        std::set<Code> of_groups;
+        bool ncc = false;
+        for (const auto& g : group_codes)
+            if (const Service* s = find_group_service(g)) {
+                of_groups.insert(s->code);
+                ncc = ncc || s->kind == ServiceKind::Ncc;
+            }
+        if (ncc) return of_groups.size() > 1 ? ServiceType::Mixed : ServiceType::Ncc;
+    }
     std::vector<const PassengerGroup*> groups;
     for (const auto& g : group_codes)
         if (const PassengerGroup* pg = find_group(g)) groups.push_back(pg);
-    const Service* service = services.empty() ? nullptr : find_service(*services.begin());
     if (groups.empty() && service)
         for (const auto& g : service->groups) groups.push_back(&g);
 
@@ -1624,7 +1644,7 @@ std::optional<ServiceType> derive_service(const Trip& t, FindService find_servic
         }
     }
     const int kinds = int(students) + int(disabled) + int(line) + int(other);
-    if (kinds > 1 || students_to_center) return ServiceType::Hybrid;
+    if (kinds > 1 || students_to_center) return ServiceType::Mixed;
     if (disabled) return ServiceType::Disability;
     if (students) return ServiceType::School;
     if (line) return ServiceType::Line;
@@ -1634,6 +1654,7 @@ std::optional<ServiceType> derive_service(const Trip& t, FindService find_servic
         case ServiceKind::Line: return ServiceType::Line;
         case ServiceKind::School: return ServiceType::School;
         case ServiceKind::Disability: return ServiceType::Disability;
+        case ServiceKind::Ncc: return ServiceType::Ncc;
         case ServiceKind::Other: return ServiceType::Other;
     }
     return std::nullopt;

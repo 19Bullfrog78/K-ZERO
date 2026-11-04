@@ -583,7 +583,7 @@ TEST(Unione, StessaRegolaDelConteggio) {
 // riceve chi ha solo i dati personali, chi ha solo i particolari (niente legati) e chi li ha tutti, e lancia kzero controlla,
 // kzero giornata e kzero ore: mai un errore interno. Perche' valga anche per i campi futuri, controlla prima che ogni campo
 // personale o particolare degli schemi compaia in almeno uno dei pacchetti (altrimenti: aggiungerlo al pacchetto di prova
-// degli orari, tests/strumenti/genera_k011.py).
+// dei servizi del K-012, tests/strumenti/genera_k012.py, che comprende quello degli orari del K-011).
 
 namespace {
 
@@ -603,7 +603,8 @@ struct PacchettoDiProva {
 std::vector<PacchettoDiProva> pacchetti_delle_prove() {
     const std::string prove = KZERO_CARTELLA_PROVE;
     std::vector<PacchettoDiProva> out;
-    for (const char* c : {"/../esempi/demo", "/../esempi/demo-numeri", "/esempi/k011-orari", "/esempi/k007-demo", "/esempi/k007-demo-numeri"})
+    for (const char* c : {"/../esempi/demo", "/../esempi/demo-numeri", "/esempi/k011-orari", "/esempi/k012-servizi", "/esempi/k007-demo",
+                          "/esempi/k007-demo-numeri"})
         out.push_back({c, da_cartella(prove + c)});
     return out;
 }
@@ -754,6 +755,20 @@ TEST(Unione, DichiarazioneParticolareConMotivoLegato) {
     }
 }
 
+// K-012: nel pacchetto di prova dei servizi la gita scolastica (studenti delle medie, servizio NCC) ha la categoria NCC, non
+// scolastico; l'auto e il pullman del noleggio NCC; la navetta degli operai (servizio "altro") altro.
+TEST(Unione, CategorieDelPacchettoDeiServizi) {
+    const std::string prove = KZERO_CARTELLA_PROVE;
+    const Lettura l = leggi_pacchetto(da_cartella(prove + "/esempi/k012-servizi"));
+    ASSERT_TRUE(l.forma_valida());
+    const kzero::Index idx(l.pacchetto);
+    const auto categoria = [&](const char* corsa) { return idx.category(*idx.trip(corsa)); };
+    for (const char* c : {"C-GITA-SCUOLA-A", "C-GITA-SCUOLA-R", "C-NCC-AUTO-A", "C-NCC-BUS-1", "C-GITA-A"})
+        EXPECT_EQ(categoria(c), kzero::ServiceType::Ncc) << c;
+    EXPECT_EQ(categoria("C-NAVETTA-1"), kzero::ServiceType::Other);
+    EXPECT_EQ(categoria("C-RM-1"), kzero::ServiceType::Mixed);
+}
+
 TEST(Unione, OgniCampoRiservatoDegliSchemiCompareNeiPacchettiDelleProve) {
     std::map<std::string, std::set<std::string>> usati;   // schema -> percorsi usati nei file dell'ultima versione
     for (const PacchettoDiProva& p : pacchetti_delle_prove())
@@ -775,7 +790,7 @@ TEST(Unione, OgniCampoRiservatoDegliSchemiCompareNeiPacchettiDelleProve) {
             if (!usati[f.schema].count(c)) mancanti += f.file + " " + c + "\n";
     }
     EXPECT_TRUE(mancanti.empty()) << "Campi personali o particolari degli schemi che nessun pacchetto delle prove usa (vanno "
-                                     "aggiunti al pacchetto di prova degli orari, tests/strumenti/genera_k011.py):\n"
+                                     "aggiunti al pacchetto di prova dei servizi, tests/strumenti/genera_k012.py):\n"
                                   << mancanti;
 }
 

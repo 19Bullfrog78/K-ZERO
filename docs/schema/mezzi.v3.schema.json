@@ -1,0 +1,264 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "K-Zero - file di dati mezzi.json, versione 3",
+  "description": "Mezzi delle aziende (file mezzi.json). Versione 2: in piu' l'uso della carta di circolazione, le autorizzazioni a un uso in piu' (distrazioni), il vincolo di destinazione, il mezzo di scorta e i prestiti ad altre aziende. Versione 3 (K-012): in piu' il tipo di servizio 'ncc' nel vincolo di destinazione. Le versioni 1 e 2 restano valide.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "schema_versione", "mezzi"],
+  "properties": {
+    "schema": { "const": "mezzi", "x-kzero-classe": "comune" },
+    "schema_versione": { "const": 3, "x-kzero-classe": "comune" },
+    "mezzi": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["codice", "azienda", "targa", "categoria", "posti"],
+        "properties": {
+          "codice": { "$ref": "#/definitions/codice", "x-kzero-classe": "comune" },
+          "azienda": { "$ref": "#/definitions/codice", "x-kzero-classe": "comune" },
+          "targa": { "$ref": "#/definitions/testo", "x-kzero-classe": "comune" },
+          "codici_esterni": { "$ref": "#/definitions/codici_esterni", "x-kzero-classe": "comune" },
+          "categoria": { "enum": ["M1", "M2", "M3"], "x-kzero-classe": "comune" },
+          "posti": {
+            "description": "Posti per i passeggeri, conducente escluso (sulla carta di circolazione il campo S.1 lo comprende).",
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1000,
+            "x-kzero-classe": "comune"
+          },
+          "posti_in_piedi": {
+            "description": "Solo se previsti dal libretto (campo S.2).",
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 1000,
+            "x-kzero-classe": "comune"
+          },
+          "carrozzine": { "type": "integer", "minimum": 0, "maximum": 1000, "x-kzero-classe": "comune" },
+          "posti_persi_per_carrozzina": { "type": "integer", "minimum": 0, "maximum": 1000, "x-kzero-classe": "comune" },
+          "pedana": { "type": "boolean", "x-kzero-classe": "comune" },
+          "tempo_pedana_secondi": { "type": "integer", "minimum": 0, "maximum": 3600, "x-kzero-classe": "comune" },
+          "ausili_bagagliaio": {
+            "description": "Quanti ausili piegati (carrozzine piegate, deambulatori...) entrano nel bagagliaio o nel baule. 0 o assente = niente bagagliaio. Si contano gli ausili, non il loro volume.",
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 100,
+            "x-kzero-classe": "comune"
+          },
+          "ausili_tra_i_sedili": {
+            "description": "Presente = l'azienda ammette un ausilio piegato tra i sedili, legato e bloccato con cinghie o ancoraggi (scelta facoltativa dell'azienda, che ne risponde): ogni ausilio occupa i posti indicati, solo se sono liberi. Assente = tra i sedili non e' ammesso.",
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["posti_occupati"],
+            "properties": {
+              "posti_occupati": {
+                "description": "Posti a sedere occupati da ogni ausilio fissato tra i sedili (es. 2).",
+                "type": "integer",
+                "minimum": 1,
+                "maximum": 10
+              }
+            },
+            "x-kzero-classe": "comune"
+          },
+          "rimorchio": { "type": "boolean", "x-kzero-classe": "comune" },
+          "misure": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "lunghezza_m": { "type": "number", "exclusiveMinimum": 0, "maximum": 100 },
+              "larghezza_m": { "type": "number", "exclusiveMinimum": 0, "maximum": 100 },
+              "altezza_m": { "type": "number", "exclusiveMinimum": 0, "maximum": 100 },
+              "massa_t": { "type": "number", "exclusiveMinimum": 0, "maximum": 1000 },
+              "sbalzo_posteriore_m": { "type": "number", "exclusiveMinimum": 0, "maximum": 100 }
+            },
+            "minProperties": 1,
+            "x-kzero-classe": "comune"
+          },
+          "alimentazione": { "$ref": "#/definitions/alimentazione", "x-kzero-classe": "comune" },
+          "costo_fisso_giornaliero": {
+            "description": "Nella valuta del pacchetto.",
+            "type": "number",
+            "minimum": 0,
+            "maximum": 1000000,
+            "x-kzero-classe": "comune"
+          },
+          "costo_al_km": {
+            "description": "Nella valuta del pacchetto.",
+            "type": "number",
+            "minimum": 0,
+            "maximum": 10000,
+            "x-kzero-classe": "comune"
+          },
+          "ipotetico": {
+            "description": "true = mezzo non ancora in flotta (scenari).",
+            "type": "boolean",
+            "x-kzero-classe": "comune"
+          },
+          "uso": {
+            "description": "Uso del mezzo scritto sulla carta di circolazione: codice dell'elenco 'usi' delle norme dell'azienda (es. servizio di linea, noleggio con conducente).",
+            "$ref": "#/definitions/codice",
+            "x-kzero-classe": "comune"
+          },
+          "autorizzazioni_uso": {
+            "description": "Autorizzazioni a un uso in piu' (in Italia la 'distrazione': un mezzo di linea che fa noleggio o il contrario), da tenere a bordo con la carta di circolazione. Per singolo mezzo e con le date.",
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": ["uso", "ente", "riferimento", "dal", "al"],
+              "properties": {
+                "uso": { "description": "Uso autorizzato (codice dell'elenco 'usi').", "$ref": "#/definitions/codice" },
+                "ente": {
+                  "description": "Ente che la rilascia (cambia con il verso e con il territorio).",
+                  "$ref": "#/definitions/testo"
+                },
+                "riferimento": { "description": "Riferimento del documento.", "$ref": "#/definitions/testo" },
+                "dal": { "$ref": "#/definitions/data" },
+                "al": { "$ref": "#/definitions/data" },
+                "prescrizioni": { "$ref": "#/definitions/nota" }
+              }
+            },
+            "x-kzero-classe": "comune"
+          },
+          "vincolo_destinazione": {
+            "description": "Il mezzo fa solo certi servizi (per tipo o per contratto), fino a una data (es. comprato con contributi pubblici per le linee: niente noleggio).",
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["ammessi", "fonte"],
+            "properties": {
+              "ammessi": {
+                "description": "Servizi ammessi: per tipo, per contratto o tutti e due (basta che il servizio rispetti uno degli elenchi scritti).",
+                "type": "object",
+                "additionalProperties": false,
+                "minProperties": 1,
+                "properties": {
+                  "tipi_servizio": {
+                    "description": "Tipi di servizio ammessi.",
+                    "type": "array",
+                    "minItems": 1,
+                    "uniqueItems": true,
+                    "items": { "enum": ["linea", "scolastico", "disabili", "ncc", "altro"] }
+                  },
+                  "contratti": {
+                    "description": "Contratti ammessi.",
+                    "type": "array",
+                    "minItems": 1,
+                    "uniqueItems": true,
+                    "items": { "$ref": "#/definitions/codice" }
+                  }
+                }
+              },
+              "fino_al": { "description": "Ultimo giorno del vincolo; assente = senza scadenza.", "$ref": "#/definitions/data" },
+              "fonte": {
+                "description": "Da dove viene il vincolo (es. delibera del contributo).",
+                "$ref": "#/definitions/testo"
+              },
+              "nota": { "$ref": "#/definitions/nota" }
+            },
+            "x-kzero-classe": "comune"
+          },
+          "scorta": {
+            "description": "true = mezzo di scorta: se nessun turno lo usa non e' un avviso.",
+            "type": "boolean",
+            "x-kzero-classe": "comune"
+          },
+          "prestiti": {
+            "description": "Prestiti del mezzo ad altre aziende (subaffidamento, consorzio, noleggio): il mezzo entra nei turni di un'altra azienda solo se il prestito e' dichiarato.",
+            "$ref": "#/definitions/prestiti",
+            "x-kzero-classe": "comune"
+          },
+          "nota": { "$ref": "#/definitions/nota", "x-kzero-classe": "comune" }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "codice": {
+      "description": "Codice K-Zero: scelto da chi scrive i dati, unico per tipo di elemento. Lettere senza accenti, cifre, '-', '_' e '.'; inizia con una lettera o una cifra; al massimo 64 caratteri.",
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+    },
+    "testo": {
+      "description": "Testo di una riga, non vuoto (al massimo 300 caratteri).",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 300,
+      "pattern": "\\S"
+    },
+    "nota": {
+      "description": "Testo libero, non vuoto (al massimo 2000 caratteri).",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2000,
+      "pattern": "\\S"
+    },
+    "data": {
+      "description": "Data AAAA-MM-GG che esiste nel calendario (es. 2026-09-14; il 29 febbraio solo negli anni bisestili).",
+      "type": "string",
+      "pattern": "^([0-9]{4}-((0[13578]|1[02])-(0[1-9]|[12][0-9]|3[01])|(0[469]|11)-(0[1-9]|[12][0-9]|30)|02-(0[1-9]|1[0-9]|2[0-8]))|([0-9]{2}(0[48]|[2468][048]|[13579][26])|([02468][048]|[13579][26])00)-02-29)$"
+    },
+    "orario": {
+      "description": "Orario HH:MM, ora locale del fuso del pacchetto. Dopo mezzanotte si continua a contare come in GTFS: 24:15 = 00:15 del giorno dopo; al massimo 47:59.",
+      "type": "string",
+      "pattern": "^([0-3][0-9]|4[0-7]):[0-5][0-9]$"
+    },
+    "coordinate": {
+      "description": "Posizione WGS84 in gradi decimali.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["lat", "lon"],
+      "properties": {
+        "lat": { "type": "number", "minimum": -90, "maximum": 90 },
+        "lon": { "type": "number", "minimum": -180, "maximum": 180 }
+      }
+    },
+    "codici_esterni": {
+      "description": "Codici dello stesso elemento in altri sistemi (committenti, orari pubblici, piattaforme).",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["sistema", "tipo", "codice"],
+        "properties": {
+          "sistema": { "$ref": "#/definitions/testo" },
+          "tipo": { "$ref": "#/definitions/testo" },
+          "codice": { "$ref": "#/definitions/testo" }
+        }
+      }
+    },
+    "alimentazione": {
+      "description": "Alimentazione; per gli elettrici capacita' della batteria, consumo medio e carica minima.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["tipo"],
+      "properties": {
+        "tipo": { "enum": ["gasolio", "benzina", "metano", "gpl", "ibrido", "elettrico", "idrogeno", "altro"] },
+        "descrizione": { "$ref": "#/definitions/testo" },
+        "batteria_kwh": { "type": "number", "exclusiveMinimum": 0, "maximum": 10000 },
+        "consumo_kwh_km": { "type": "number", "exclusiveMinimum": 0, "maximum": 100 },
+        "carica_minima_percento": { "type": "integer", "minimum": 0, "maximum": 100 }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "tipo": { "const": "elettrico" } } },
+          "then": { "required": ["batteria_kwh", "consumo_kwh_km", "carica_minima_percento"] }
+        },
+        { "if": { "properties": { "tipo": { "const": "altro" } } }, "then": { "required": ["descrizione"] } }
+      ]
+    },
+    "prestiti": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["azienda", "accordo"],
+        "properties": {
+          "azienda": { "description": "Azienda che riceve il prestito.", "$ref": "#/definitions/codice" },
+          "accordo": { "description": "Riferimento dell'accordo.", "$ref": "#/definitions/testo" },
+          "dal": { "$ref": "#/definitions/data" },
+          "al": { "$ref": "#/definitions/data" }
+        }
+      }
+    }
+  }
+}

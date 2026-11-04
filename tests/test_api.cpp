@@ -290,8 +290,9 @@ TEST(Api, pacchetto_demo_letto) {
     EXPECT_TRUE(l.problemi.empty());
     EXPECT_TRUE(l.forma_valida());
     EXPECT_EQ(l.versioni.size(), 24u);   // tutti i file del formato tranne tempi_sosta.json
-    for (const char* f : {"calendari.json", "regolamenti.json", "servizi.json", "mezzi.json", "luoghi.json"})
-        EXPECT_EQ(l.versioni.at(f), 2) << f;
+    for (const char* f : {"calendari.json", "luoghi.json", "persone.json"}) EXPECT_EQ(l.versioni.at(f), 2) << f;
+    // K-012: il tipo di servizio ncc e i servizi occasionali tipo per tipo.
+    for (const char* f : {"regolamenti.json", "servizi.json", "mezzi.json", "aziende.json", "norme.json"}) EXPECT_EQ(l.versioni.at(f), 3) << f;
     EXPECT_EQ(l.pacchetto.trips.size(), 26u);
 }
 

@@ -1,6 +1,6 @@
 {
   "schema": "servizi",
-  "schema_versione": 2,
+  "schema_versione": 3,
   "servizi": [
     {
       "codice": "S-SCU-AM",
@@ -234,8 +234,7 @@
     {
       "codice": "S-GITA",
       "nome": "Gita della Pro Loco al lago di Lagobello",
-      "tipo": "altro",
-      "tipo_descrizione": "Gita (noleggio con conducente)",
+      "tipo": "ncc",
       "contratto": "CT-GITA",
       "calendario": "CAL-GITA",
       "liberta_oraria": { "tipo": "fissa" },

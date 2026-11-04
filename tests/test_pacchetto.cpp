@@ -182,7 +182,7 @@ TEST(ABordo, gruppi_sulla_corsa) {
     EXPECT_EQ(v[3].by_group.at("G-AM-PRIM"), 6);
     EXPECT_EQ(v[4].by_group.at("G-AM-MEDIE"), 0);
 
-    // Corsa ibrida: superiori e medie insieme.
+    // Corsa promiscua: superiori e medie insieme.
     const auto r = on_board(per_codice(demo().trips, "C-RM-1"), idx);
     ASSERT_EQ(r.size(), 7u);
     EXPECT_EQ(r[1].total, 16);

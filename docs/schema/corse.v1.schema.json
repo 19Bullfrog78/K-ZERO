@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "K-Zero - file di dati corse.json, versione 1",
-  "description": "Corse: i viaggi veri dei mezzi, con i passaggi (file corse.json). Una corsa che soddisfa piu' servizi e' ibrida.",
+  "description": "Corse: i viaggi veri dei mezzi, con i passaggi (file corse.json). Una corsa che soddisfa piu' servizi e' promiscua.",
   "type": "object",
   "additionalProperties": false,
   "required": ["schema", "schema_versione", "corse"],
@@ -19,7 +19,7 @@
           "nome": { "$ref": "#/definitions/testo", "x-kzero-classe": "comune" },
           "codici_esterni": { "$ref": "#/definitions/codici_esterni", "x-kzero-classe": "comune" },
           "servizi": {
-            "description": "Servizi che la corsa soddisfa (piu' di uno = corsa ibrida).",
+            "description": "Servizi che la corsa soddisfa (piu' di uno = corsa promiscua).",
             "type": "array",
             "uniqueItems": true,
             "items": { "$ref": "#/definitions/codice" },

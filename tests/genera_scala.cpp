@@ -413,7 +413,7 @@ int main(int argc, char** argv) {
         scrivi(cartella, "tempi_sosta.json", tempi);
 
         // --- K-008: norme, aziende, persone, turni, rotazioni, assenze e sostituzioni -------------------------------
-        Json norme = documento("norme", 2);
+        Json norme = documento("norme", 3);
         const Json fonte_norma = {{"documento", "Norme di prova (inventate)"}};
         const Json demo = norme_della_dimostrazione();
         norme["norme"] = Json::array({{
