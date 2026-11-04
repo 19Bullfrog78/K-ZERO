@@ -1470,3 +1470,47 @@ TEST(Orari, tachigrafo_su_una_linea_fino_a_50_km) {
     ASSERT_EQ(giorno_singolo.second.size(), 1u);
     EXPECT_TRUE(con_motivo(giorno_singolo.second[0], "assegnazione_del_giorno"));
 }
+
+// K-013: quali regimi dipendono dal tipo di servizio delle corse lo dicono i dati, mai il nome: condizioni sul tipo di servizio,
+// esclusioni, servizi occasionali, come_regime verso uno di questi, oppure esclusi per alcune famiglie da uno di questi (esclude).
+// Nel demo R-L138, R-561 e R-234 si', R-CHIAMATA ed ESEMPIO-01 no; ogni criterio da solo, su regimi di prova senza altre condizioni.
+TEST(Orari, regimi_che_dipendono_dal_tipo_di_servizio) {
+    const auto codici = [](const KindDependence& k) {
+        std::vector<std::string> v;
+        for (const Regime* r : k.regimes) v.push_back(r->code);
+        return v;
+    };
+    const Package p = demo();
+    const Norms* n = nullptr;
+    for (const Norms& x : p.norms)
+        if (x.code == "N-IT") n = &x;
+    ASSERT_NE(n, nullptr);
+    const KindDependence demo_k = kind_dependence(*n);
+    EXPECT_EQ(codici(demo_k), (std::vector<std::string>{"R-L138", "R-561", "R-234"}));
+    EXPECT_TRUE(demo_k.work);
+    EXPECT_TRUE(demo_k.law);
+    Norms m;
+    m.code = "N-PROVA";
+    const auto regime = [&](const std::string& codice) -> Regime& {
+        Regime r;
+        r.code = codice;
+        r.rules = {regola(RuleType::MaxWork, RuleFamily::Work)};
+        m.regimes.push_back(r);
+        return m.regimes.back();
+    };
+    regime("A-TIPI").service_kinds = Applies<ServiceKind>{true, {ServiceKind::Line}, {}};
+    regime("B-ESCLUSIONI").exclusions.push_back(RegimeExclusion{});
+    regime("C-OCCASIONALI").occasional = Applies<ServiceKind>{true, {ServiceKind::Ncc}, {}};
+    regime("D-COME-B").like = Ref{"B-ESCLUSIONI", {}};
+    regime("E-COME-F").like = Ref{"F-NIENTE", {}};
+    regime("F-NIENTE");
+    regime("G-ESCLUSO-DA-C");
+    regime("H-ESCLUSO-DA-F");
+    for (Regime& r : m.regimes) {
+        if (r.code == "C-OCCASIONALI") r.overrides.push_back(RegimeOverride{Ref{"G-ESCLUSO-DA-C", {}}, {RuleFamily::Driving}, ExclusionEffect::Exclude, {}});
+        if (r.code == "F-NIENTE") r.overrides.push_back(RegimeOverride{Ref{"H-ESCLUSO-DA-F", {}}, {RuleFamily::Driving}, ExclusionEffect::Exclude, {}});
+    }
+    const KindDependence k = kind_dependence(m);
+    EXPECT_EQ(codici(k), (std::vector<std::string>{"A-TIPI", "B-ESCLUSIONI", "C-OCCASIONALI", "D-COME-B", "G-ESCLUSO-DA-C"}));
+    EXPECT_FALSE(k.work);   // nessuno conta il lavoro
+}

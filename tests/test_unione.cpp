@@ -976,7 +976,7 @@ InMemoria con_il_tipo(const std::string& servizio, const std::string& tipo) {
     EXPECT_TRUE(trovato) << servizio;
     m.file["servizi.json"] = s.dump(2);
     JsonDati v = JsonDati::parse(m.file.at("mezzi.json"));
-    const std::map<std::string, std::string> uso_in_piu = {{"V-NCC-50", "LINEA"}, {"V-17", "NCC"}, {"ALFA-03", "LINEA"}};
+    const std::map<std::string, std::string> uso_in_piu = {{"V-NCC-50", "LINEA"}, {"V-17", "NCC"}, {"ALFA-03", "LINEA"}, {"V-NCC-8", "LINEA"}};
     for (JsonDati& x : v.at("mezzi")) {
         const auto it = uso_in_piu.find(x.at("codice").get<std::string>());
         if (it == uso_in_piu.end()) continue;
@@ -1046,8 +1046,9 @@ std::string prima_differenza(const std::string& a, const std::string& b) {
 // la stessa uscita, tranne i totali dell'intero pacchetto: ogni altra differenza e' una fuga del tipo di servizio. I servizi
 // sono scelti dove il tipo cambia l'esito delle leggi (lo controlla la prova con i dati particolari): l'escursione NCC con il
 // pullman (corse di 140, 25 e 100 km: linea, scolastico e disabili oltre i 50 km, NCC occasionale certo, altro da confermare,
-// L. 138 certa, da confermare o no) e il servizio per disabili del centro diurno (corse fino a 50 km con il minibus da 13 persone
-// e con il mezzo da 18: escluso dal 561 con certezza come scolastico o linea, da confermare come disabili, mai come NCC).
+// L. 138 certa, da confermare o no), il servizio per disabili del centro diurno (corse fino a 50 km con il minibus da 13 persone
+// e con il mezzo da 18: escluso dal 561 con certezza come scolastico o linea, da confermare come disabili, mai come NCC) e il
+// noleggio con l'auto da 9 persone (fuori dal 561: come NCC nessuna legge sugli orari vale, come linea vale la L. 138).
 TEST(Unione, OrariSenzaDatiParticolariProvaPerDifferenza) {
     const DefinizioneComando* controlla = trova_comando("controlla");
     const DefinizioneComando* giornata = trova_comando("giornata");
@@ -1057,7 +1058,7 @@ TEST(Unione, OrariSenzaDatiParticolariProvaPerDifferenza) {
     std::string fughe;
     std::map<std::string, int> con_effetto;   // coppia di tipi -> in quanti servizi il tipo cambia l'esito delle leggi
     int coppie = 0;
-    for (const std::string servizio : {"S-NCC-BUS", "S-DIS"}) {
+    for (const std::string servizio : {"S-NCC-BUS", "S-DIS", "S-NCC-AUTO"}) {
         // I giorni delle corse del servizio fatte da una persona (con tutti i dati, dal pacchetto del primo tipo).
         std::vector<kzero::Day> giorni;
         {
@@ -1072,7 +1073,8 @@ TEST(Unione, OrariSenzaDatiParticolariProvaPerDifferenza) {
             richiesta.from = l.pacchetto.manifest.period.from;
             richiesta.to = l.pacchetto.manifest.period.to;
             kzero::HoursReport orari;
-            controlla_lettura(leggi_pacchetto(con_il_tipo(servizio, tipi.front())), Visibilita{true, true}, &richiesta, &orari);
+            // Il resoconto resta vivo: le corse del resoconto degli orari puntano al suo pacchetto.
+            const Resoconto r = controlla_lettura(leggi_pacchetto(con_il_tipo(servizio, tipi.front())), Visibilita{true, true}, &richiesta, &orari);
             std::set<kzero::Day> visti;
             for (const kzero::PersonHours& ph : orari.persons)
                 for (const kzero::DayHours& dh : ph.days)
@@ -1138,7 +1140,7 @@ TEST(Unione, OrariSenzaDatiParticolariProvaPerDifferenza) {
                     }
             }
     }
-    EXPECT_EQ(coppie, 20);
+    EXPECT_EQ(coppie, 30);
     // Ogni coppia di tipi cambia l'esito delle leggi in almeno uno dei servizi (nel servizio per disabili NCC e "altro" danno
     // lo stesso esito: la differenza, il 15 + 15, si vede nell'escursione con il pullman).
     std::string senza_effetto;

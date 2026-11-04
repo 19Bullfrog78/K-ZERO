@@ -880,6 +880,17 @@ kzero_prova(controlla_non_serve_con_dati_particolari USCITA 1 FORMATO testo RESO
             ARGOMENTI controlla ${ORE_K011} --includi-dati-particolari)
 # K-013: anche K-CTR-134 "vale ma non cambia niente" dipende da dove la legge vale con certezza, quindi dal tipo di servizio
 # (il regime R-561 ne dipende): di base si conta soltanto, come K-CTR-135; la forzatura stessa (K-CTR-129) resta visibile.
+# K-013: "OUT dove la legge vuole il regime" (K-CTR-132) per una scelta della corsa (variante comune) dipende da dove la legge
+# vale con certezza, quindi dal tipo di servizio (R-561 ne dipende): di base si conta soltanto, con i dati particolari si vede.
+kzero_prova(controlla_out_della_corsa_riservato USCITA 1 FORMATO testo RESOCONTO BASE ${ORE_K011}
+            MODIFICA IMPOSTA aziende.json /aziende/0/modo_corse/corse/2 "{\"corsa\": \"C-50KM1\", \"modo\": \"out\"}"
+            NON_CONTIENE "/aziende/0/modo_corse/corse/2)"
+            ARGOMENTI controlla @PACCHETTO@)
+kzero_prova(controlla_out_della_corsa_dati_particolari USCITA 1 FORMATO testo RESOCONTO BASE ${ORE_K011}
+            MODIFICA IMPOSTA aziende.json /aziende/0/modo_corse/corse/2 "{\"corsa\": \"C-50KM1\", \"modo\": \"out\"}"
+            PROBLEMI "K-CTR-132|aziende.json|/aziende/0/modo_corse/corse/2"
+            CONTIENE "La scelta OUT dell'azienda ALFA (Autoservizi Alfa) per la corsa C-50KM1 (Linea di 50,1 km) non vale"
+            ARGOMENTI controlla @PACCHETTO@ --includi-dati-particolari)
 kzero_prova(controlla_non_serve_di_base USCITA 1 FORMATO testo RESOCONTO
             CONTIENE "Avviso K-CTR-129 (aziende.json, /aziende/0/modo_corse/servizi/1/forzatura)"
             NON_CONTIENE "K-CTR-134" "K-CTR-135" "C-NONSERVE-2 (Linea, ritorno) e' dichiarata"
@@ -976,6 +987,16 @@ kzero_prova(ore_ncc_auto_senza_561 USCITA 0 FORMATO testo
                      "Avviso K-CTR-107: La persona P-NCC-AUTO (Noleggio Auto) e' dipendente, ma il 2026-11-07 nessuna legge sugli orari dei dati vale per lei"
             NON_CONTIENE "Regime R-561 per" "Regime R-L138 per"
             ARGOMENTI ore ${K012} --data 2026-11-07 --persona P-NCC-AUTO --includi-dati-particolari --includi-dati-personali)
+# K-013: "nessuna legge vale" dipende dal tipo di servizio quando una legge sugli orari ne dipende (qui l'auto NCC da 8 posti:
+# niente Reg. 561, niente L. 138; come linea varrebbe la L. 138), quindi senza i dati particolari e' riservato, e il suo avviso
+# K-CTR-107 si conta soltanto.
+kzero_prova(ore_nessuna_legge_riservata USCITA 0 FORMATO testo
+            CONTIENE "Corse con il mezzo V-NCC-8 (9 persone): C-NCC-AUTO-A (25 km), C-NCC-AUTO-R (25 km)."
+            NON_CONTIENE "Nessuna legge sugli orari" "K-CTR-107"
+            ARGOMENTI ore ${K012} --data 2026-11-07 --persona P-NCC-AUTO --includi-dati-personali)
+kzero_prova(ore_nessuna_legge_riservata_json USCITA 0 FORMATO json SCHEMA ore
+            CONTIENE "\"nessuna_legge\": \"riservato\""
+            ARGOMENTI ore ${K012} --data 2026-11-07 --persona P-NCC-AUTO --includi-dati-personali --formato json)
 # Gita scolastica NCC con gli studenti delle medie: tipo ncc, il Reg. 561 vale con certezza (un servizio scolastico fino a 50
 # km ne sarebbe escluso) e la L. 138 no.
 kzero_prova(ore_gita_scolastica_ncc USCITA 0 FORMATO testo
