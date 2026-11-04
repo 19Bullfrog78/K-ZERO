@@ -143,9 +143,9 @@ TEST(Regole, carrozzina_piegata_senza_pedana) {
     EXPECT_FALSE(fits(tutto, {7, 1, 1, true}));
 }
 
-// Gruppi di tipi diversi sulla stessa corsa = Ibrido. La corsa C-AM-2 porta due gruppi di studenti
+// Gruppi di tipi diversi sulla stessa corsa = Promiscuo (fino al K-011 "ibrido"). La corsa C-AM-2 porta due gruppi di studenti
 // (medie e primaria): basta cambiare il tipo di uno dei due.
-TEST(Regole, gruppi_diversi_ibrido) {
+TEST(Regole, gruppi_diversi_promiscuo) {
     EXPECT_EQ(categoria(demo(), "C-AM-2"), ServiceType::School);
     const auto con_tipi = [](GroupType medie, GroupType primaria) {
         Package p = demo();
@@ -153,17 +153,17 @@ TEST(Regole, gruppi_diversi_ibrido) {
         gruppo(p, "G-AM-PRIM").type = primaria;
         return categoria(p, "C-AM-2");
     };
-    EXPECT_EQ(con_tipi(GroupType::Students, GroupType::Disabled), ServiceType::Hybrid);    // studenti + disabili
-    EXPECT_EQ(con_tipi(GroupType::Students, GroupType::LineUsers), ServiceType::Hybrid);   // studenti + linea
-    EXPECT_EQ(con_tipi(GroupType::Disabled, GroupType::LineUsers), ServiceType::Hybrid);   // disabili + linea
+    EXPECT_EQ(con_tipi(GroupType::Students, GroupType::Disabled), ServiceType::Mixed);    // studenti + disabili
+    EXPECT_EQ(con_tipi(GroupType::Students, GroupType::LineUsers), ServiceType::Mixed);   // studenti + linea
+    EXPECT_EQ(con_tipi(GroupType::Disabled, GroupType::LineUsers), ServiceType::Mixed);   // disabili + linea
     EXPECT_EQ(con_tipi(GroupType::Disabled, GroupType::Disabled), ServiceType::Disability);
 }
 
-// Studenti verso un centro (non una scuola) = Ibrido.
-TEST(Regole, studenti_centro_esterno_ibrido) {
+// Studenti verso un centro (non una scuola) = Promiscuo.
+TEST(Regole, studenti_centro_esterno_promiscuo) {
     Package p = demo();
     gruppo(p, "G-AM-PRIM").school = Ref{"SC-CENTRO", {}};
-    EXPECT_EQ(categoria(p, "C-AM-3"), ServiceType::Hybrid);
+    EXPECT_EQ(categoria(p, "C-AM-3"), ServiceType::Mixed);
     EXPECT_EQ(categoria(demo(), "C-AM-3"), ServiceType::School);
 }
 
@@ -185,13 +185,51 @@ TEST(Regole, solo_linea) {
     EXPECT_EQ(categoria(demo(), "C-LIN-560"), ServiceType::Line);
 }
 
-// Piu' servizi sulla stessa corsa = Ibrido: C-RM-1 (superiori del contratto delle linee + medie del lotto) e,
+// Piu' servizi sulla stessa corsa = Promiscuo: C-RM-1 (superiori del contratto delle linee + medie del lotto) e,
 // come nell'esempio del mandato, utenti di linea + studenti sulla stessa corsa.
-TEST(Regole, piu_servizi_ibrido) {
-    EXPECT_EQ(categoria(demo(), "C-RM-1"), ServiceType::Hybrid);
+TEST(Regole, piu_servizi_promiscuo) {
+    EXPECT_EQ(categoria(demo(), "C-RM-1"), ServiceType::Mixed);
     Package p = demo();
     per_codice(p.trips, "C-LIN-533").services.push_back(Ref{"S-SUP-RM", {}});
-    EXPECT_EQ(categoria(p, "C-LIN-533"), ServiceType::Hybrid);
+    EXPECT_EQ(categoria(p, "C-LIN-533"), ServiceType::Mixed);
+}
+
+// K-012: per un servizio NCC i gruppi non cambiano la categoria. La gita della Pro Loco (gruppi "altro") e' NCC; una gita
+// scolastica (studenti verso una scuola, anche un gruppo di disabili, anche verso un centro) resta NCC: chi sale non cambia
+// il tipo. Gli altri tipi come prima: gli stessi gruppi su un servizio scolastico danno scolastico o promiscuo.
+TEST(Regole, ncc_i_gruppi_non_cambiano_la_categoria) {
+    EXPECT_EQ(categoria(demo(), "C-GITA-A"), ServiceType::Ncc);
+    EXPECT_EQ(categoria(demo(), "C-GITA-R"), ServiceType::Ncc);
+    Package p = demo();
+    per_codice(p.services, "S-SCU-AM").kind = ServiceKind::Ncc;   // gita scolastica: medie e primaria
+    EXPECT_EQ(categoria(p, "C-AM-2"), ServiceType::Ncc);
+    gruppo(p, "G-AM-PRIM").type = GroupType::Disabled;
+    EXPECT_EQ(categoria(p, "C-AM-2"), ServiceType::Ncc);
+    gruppo(p, "G-AM-PRIM").school = Ref{"SC-CENTRO", {}};
+    EXPECT_EQ(categoria(p, "C-AM-2"), ServiceType::Ncc);
+    per_codice(p.services, "S-SCU-AM").kind = ServiceKind::School;   // lo stesso servizio scolastico: promiscuo
+    EXPECT_EQ(categoria(p, "C-AM-2"), ServiceType::Mixed);
+    Package q = demo();
+    per_codice(q.services, "S-SCU-AM").kind = ServiceKind::Ncc;
+    EXPECT_EQ(categoria(q, "C-AM-1"), ServiceType::Ncc);   // studenti, un solo gruppo
+}
+
+// K-012: piu' servizi sulla stessa corsa = Promiscuo anche se uno e' NCC. Se la corsa non elenca i servizi (errore K-CTR-034)
+// valgono i servizi dei suoi gruppi: di un solo servizio NCC = NCC, di piu' servizi con un NCC = Promiscuo.
+TEST(Regole, ncc_con_altri_servizi_promiscuo) {
+    Package p = demo();
+    per_codice(p.trips, "C-GITA-A").services.push_back(Ref{"S-SUP-RM", {}});
+    EXPECT_EQ(categoria(p, "C-GITA-A"), ServiceType::Mixed);
+    Package q = demo();
+    per_codice(q.trips, "C-GITA-A").services.clear();
+    EXPECT_EQ(categoria(q, "C-GITA-A"), ServiceType::Ncc);   // i gruppi sono tutti di S-GITA
+    Trip& t = per_codice(q.trips, "C-GITA-A");
+    t.passages[0].persons.push_back(PassageCount{Ref{"G-RM-SUP", {}}, 2, 0, {}});
+    EXPECT_EQ(categoria(q, "C-GITA-A"), ServiceType::Mixed);   // anche un gruppo di S-SUP-RM
+    Package r = demo();
+    Trip& u = per_codice(r.trips, "C-AM-2");
+    u.services.clear();   // gruppi di un solo servizio scolastico: come prima, dai tipi dei gruppi
+    EXPECT_EQ(categoria(r, "C-AM-2"), ServiceType::School);
 }
 
 // Gli adulti autorizzati viaggiano con il servizio e non cambiano la categoria; senza gruppi vale il tipo dichiarato.
@@ -207,6 +245,8 @@ TEST(Regole, adulti_autorizzati_e_tipo_dichiarato) {
     EXPECT_EQ(categoria(q, "C-AM-1"), ServiceType::School);   // tipo dichiarato dal committente
     per_codice(q.services, "S-SCU-AM").kind = ServiceKind::Other;
     EXPECT_EQ(categoria(q, "C-AM-1"), ServiceType::Other);
+    per_codice(q.services, "S-SCU-AM").kind = ServiceKind::Ncc;
+    EXPECT_EQ(categoria(q, "C-AM-1"), ServiceType::Ncc);
     t.services.clear();
     EXPECT_EQ(categoria(q, "C-AM-1"), std::nullopt);          // ne' servizi ne' gruppi: non si sa
 }

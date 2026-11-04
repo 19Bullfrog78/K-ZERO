@@ -1,6 +1,6 @@
 {
   "schema": "regolamenti",
-  "schema_versione": 2,
+  "schema_versione": 3,
   "regolamenti": [
     {
       "codice": "R-TN",

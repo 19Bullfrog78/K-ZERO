@@ -1,7 +1,9 @@
 # Genera tests/esempi/k011-orari dal demo (dati inventati): un pacchetto di prova degli orari di lavoro (K-011).
 # Uso, dalla cartella del repository: python3 tests/strumenti/genera_k011.py esempi/demo tests/esempi/k011-orari
-# Il pacchetto generato e' nel repository: dopo un cambio del demo o di questo script si rigenera e si rivedono le prove
-# che lo usano (tests/CMakeLists.txt, sezione K-011). Nessun dato vero: nomi, luoghi e turni sono inventati.
+# Il pacchetto generato e' nel repository. Dal K-012 tests/esempi/k011-orari resta quello fatto con il demo del K-011 (file
+# delle versioni 2: git show 9fe6cfb:esempi/demo) e non si rigenera piu': e' la prova che le versioni 2 si leggono ancora con
+# lo stesso esito. Sul demo di oggi questo script fa la base del pacchetto di prova dei servizi (tests/strumenti/genera_k012.py).
+# Nessun dato vero: nomi, luoghi e turni sono inventati.
 import json, shutil, sys, os, datetime, copy
 SRC, DST = sys.argv[1], sys.argv[2]
 if os.path.exists(DST): shutil.rmtree(DST)

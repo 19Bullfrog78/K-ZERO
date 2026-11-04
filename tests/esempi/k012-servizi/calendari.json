@@ -1,0 +1,917 @@
+{
+  "schema": "calendari",
+  "schema_versione": 2,
+  "calendari": [
+    {
+      "codice": "CAL-SCUOLA",
+      "nome": "Giorni di scuola 2026/27 (da lunedi' a sabato, festivita' nazionali e patrono esclusi)",
+      "codici_esterni": [
+        {
+          "sistema": "Consorzio Valle Alta",
+          "tipo": "periodo",
+          "codice": "o"
+        }
+      ],
+      "dal": "2026-09-14",
+      "al": "2027-06-12",
+      "giorni": [
+        "lunedi",
+        "martedi",
+        "mercoledi",
+        "giovedi",
+        "venerdi",
+        "sabato"
+      ],
+      "date_tolte": [
+        "2026-12-08",
+        "2027-06-02"
+      ],
+      "toglie": {
+        "festivita": [
+          "FEST-IT",
+          "FEST-VALFONDA"
+        ]
+      },
+      "sospensioni": [
+        {
+          "dal": "2026-12-23",
+          "al": "2027-01-06",
+          "motivo": "Vacanze di Natale"
+        },
+        {
+          "dal": "2027-02-08",
+          "al": "2027-02-09",
+          "motivo": "Carnevale"
+        },
+        {
+          "dal": "2027-03-25",
+          "al": "2027-03-30",
+          "motivo": "Vacanze di Pasqua"
+        }
+      ]
+    },
+    {
+      "codice": "CAL-SCUOLA-LV",
+      "nome": "Giorni di scuola escluso il sabato",
+      "codici_esterni": [
+        {
+          "sistema": "Consorzio Valle Alta",
+          "tipo": "periodo",
+          "codice": "f1"
+        }
+      ],
+      "base": "CAL-SCUOLA",
+      "dal": "2026-09-14",
+      "al": "2027-06-12",
+      "giorni": [
+        "lunedi",
+        "martedi",
+        "mercoledi",
+        "giovedi",
+        "venerdi"
+      ]
+    },
+    {
+      "codice": "CAL-INFANZIA",
+      "nome": "Scuola dell'infanzia: attiva dal 21 settembre",
+      "base": "CAL-SCUOLA-LV",
+      "dal": "2026-09-21",
+      "al": "2027-06-12",
+      "giorni": [
+        "lunedi",
+        "martedi",
+        "mercoledi",
+        "giovedi",
+        "venerdi"
+      ]
+    },
+    {
+      "codice": "CAL-CENTRO",
+      "nome": "Centro diurno: lunedi', mercoledi' e giovedi'",
+      "dal": "2026-09-01",
+      "al": "2027-07-30",
+      "giorni": [
+        "lunedi",
+        "mercoledi",
+        "giovedi"
+      ],
+      "date_aggiunte": [
+        "2026-12-22"
+      ],
+      "date_tolte": [
+        "2027-06-02"
+      ],
+      "sospensioni": [
+        {
+          "dal": "2026-12-24",
+          "al": "2026-12-31",
+          "motivo": "Chiusura del centro"
+        }
+      ]
+    },
+    {
+      "codice": "CAL-FERIALI",
+      "nome": "Giorni feriali (da lunedi' a sabato, festivi esclusi)",
+      "codici_esterni": [
+        {
+          "sistema": "Trasporti Provinciali Valfonda",
+          "tipo": "periodo",
+          "codice": "FER"
+        }
+      ],
+      "dal": "2026-09-01",
+      "al": "2027-08-31",
+      "giorni": [
+        "lunedi",
+        "martedi",
+        "mercoledi",
+        "giovedi",
+        "venerdi",
+        "sabato"
+      ],
+      "toglie": {
+        "festivita": [
+          "FEST-IT"
+        ]
+      }
+    },
+    {
+      "codice": "CAL-CENTRO-GIO",
+      "nome": "Centro diurno: solo il giovedi'",
+      "base": "CAL-CENTRO",
+      "dal": "2026-09-01",
+      "al": "2027-07-30",
+      "giorni": [
+        "giovedi"
+      ]
+    },
+    {
+      "codice": "CAL-LV-FER",
+      "nome": "Giorni feriali da lunedi' a venerdi'",
+      "base": "CAL-FERIALI",
+      "dal": "2026-09-01",
+      "al": "2027-08-31",
+      "giorni": [
+        "lunedi",
+        "martedi",
+        "mercoledi",
+        "giovedi",
+        "venerdi"
+      ]
+    },
+    {
+      "codice": "CAL-SAB-FER",
+      "nome": "Sabati feriali",
+      "base": "CAL-FERIALI",
+      "dal": "2026-09-01",
+      "al": "2027-08-31",
+      "giorni": [
+        "sabato"
+      ]
+    },
+    {
+      "codice": "CAL-MER-FER",
+      "nome": "Mercoledi' feriali",
+      "base": "CAL-FERIALI",
+      "dal": "2026-09-01",
+      "al": "2027-08-31",
+      "giorni": [
+        "mercoledi"
+      ]
+    },
+    {
+      "codice": "CAL-MAR-VEN",
+      "nome": "Martedi' e venerdi' di scuola, senza i giorni del centro diurno",
+      "base": "CAL-SCUOLA-LV",
+      "dal": "2026-09-14",
+      "al": "2027-06-12",
+      "giorni": [
+        "martedi",
+        "venerdi"
+      ],
+      "toglie": {
+        "calendari": [
+          "CAL-CENTRO"
+        ]
+      }
+    },
+    {
+      "codice": "CAL-FESTIVI",
+      "nome": "Domeniche e festivita' nazionali",
+      "dal": "2026-09-01",
+      "al": "2027-08-31",
+      "giorni": [
+        "domenica"
+      ],
+      "aggiunge": {
+        "festivita": [
+          "FEST-IT"
+        ]
+      }
+    },
+    {
+      "codice": "CAL-SEMPRE",
+      "nome": "Tutti i giorni",
+      "dal": "2026-09-01",
+      "al": "2027-08-31",
+      "giorni": [
+        "lunedi",
+        "martedi",
+        "mercoledi",
+        "giovedi",
+        "venerdi",
+        "sabato",
+        "domenica"
+      ]
+    },
+    {
+      "codice": "CAL-GITA",
+      "nome": "Giorno della gita della Pro Loco",
+      "dal": "2026-11-15",
+      "al": "2026-11-15",
+      "giorni": [
+        "domenica"
+      ]
+    },
+    {
+      "codice": "CAL-MATRIMONIO",
+      "nome": "Giorno del matrimonio",
+      "dal": "2027-07-01",
+      "al": "2027-07-31",
+      "giorni": [],
+      "date_aggiunte": [
+        "2027-07-10"
+      ]
+    },
+    {
+      "codice": "CAL-PRIVATO-CENTRO",
+      "nome": "Giorno del noleggio privato",
+      "dal": "2027-07-01",
+      "al": "2027-07-31",
+      "giorni": [],
+      "date_aggiunte": [
+        "2027-07-07"
+      ]
+    },
+    {
+      "codice": "CAL-T-PAUSA-A",
+      "nome": "Solo il 2026-11-02",
+      "dal": "2026-11-02",
+      "al": "2026-11-02",
+      "giorni": [
+        "lunedi",
+        "martedi",
+        "mercoledi",
+        "giovedi",
+        "venerdi",
+        "sabato",
+        "domenica"
+      ]
+    },
+    {
+      "codice": "CAL-T-PAUSA-B",
+      "nome": "Solo il 2026-11-03",
+      "dal": "2026-11-03",
+      "al": "2026-11-03",
+      "giorni": [
+        "lunedi",
+        "martedi",
+        "mercoledi",
+        "giovedi",
+        "venerdi",
+        "sabato",
+        "domenica"
+      ]
+    },
+    {
+      "codice": "CAL-T-PAUSA-C",
+      "nome": "Solo il 2026-11-04",
+      "dal": "2026-11-04",
+      "al": "2026-11-04",
+      "giorni": [
+        "lunedi",
+        "martedi",
+        "mercoledi",
+        "giovedi",
+        "venerdi",
+        "sabato",
+        "domenica"
+      ]
+    },
+    {
+      "codice": "CAL-T-L138-GIO",
+      "nome": "Solo il 2026-11-05",
+      "dal": "2026-11-05",
+      "al": "2026-11-05",
+      "giorni": [
+        "lunedi",
+        "martedi",
+        "mercoledi",
+        "giovedi",
+        "venerdi",
+        "sabato",
+        "domenica"
+      ]
+    },
+    {
+      "codice": "CAL-T-L138-VEN",
+      "nome": "Solo il 2026-11-06",
+      "dal": "2026-11-06",
+      "al": "2026-11-06",
+      "giorni": [
+        "lunedi",
+        "martedi",
+        "mercoledi",
+        "giovedi",
+        "venerdi",
+        "sabato",
+        "domenica"
+      ]
+    },
+    {
+      "codice": "CAL-T-561-09",
+      "nome": "Solo il 2026-11-09",
+      "dal": "2026-11-09",
+      "al": "2026-11-09",
+      "giorni": [
+        "lunedi",
+        "martedi",
+        "mercoledi",
+        "giovedi",
+        "venerdi",
+        "sabato",
+        "domenica"
+      ]
+    },
+    {
+      "codice": "CAL-T-561-10",
+      "nome": "Solo il 2026-11-10",
+      "dal": "2026-11-10",
+      "al": "2026-11-10",
+      "giorni": [
+        "lunedi",
+        "martedi",
+        "mercoledi",
+        "giovedi",
+        "venerdi",
+        "sabato",
+        "domenica"
+      ]
+    },
+    {
+      "codice": "CAL-T-561-13",
+      "nome": "Solo il 2026-11-13",
+      "dal": "2026-11-13",
+      "al": "2026-11-13",
+      "giorni": [
+        "lunedi",
+        "martedi",
+        "mercoledi",
+        "giovedi",
+        "venerdi",
+        "sabato",
+        "domenica"
+      ]
+    },
+    {
+      "codice": "CAL-T-561-14",
+      "nome": "Solo il 2026-11-14",
+      "dal": "2026-11-14",
+      "al": "2026-11-14",
+      "giorni": [
+        "lunedi",
+        "martedi",
+        "mercoledi",
+        "giovedi",
+        "venerdi",
+        "sabato",
+        "domenica"
+      ]
+    },
+    {
+      "codice": "CAL-T-561-11",
+      "nome": "Solo il 2026-11-11",
+      "dal": "2026-11-11",
+      "al": "2026-11-11",
+      "giorni": [
+        "lunedi",
+        "martedi",
+        "mercoledi",
+        "giovedi",
+        "venerdi",
+        "sabato",
+        "domenica"
+      ]
+    },
+    {
+      "codice": "CAL-T-561-12",
+      "nome": "Solo il 2026-11-12",
+      "dal": "2026-11-12",
+      "al": "2026-11-12",
+      "giorni": [
+        "lunedi",
+        "martedi",
+        "mercoledi",
+        "giovedi",
+        "venerdi",
+        "sabato",
+        "domenica"
+      ]
+    },
+    {
+      "codice": "CAL-T-561-15",
+      "nome": "Solo il 2026-11-15",
+      "dal": "2026-11-15",
+      "al": "2026-11-15",
+      "giorni": [
+        "lunedi",
+        "martedi",
+        "mercoledi",
+        "giovedi",
+        "venerdi",
+        "sabato",
+        "domenica"
+      ]
+    },
+    {
+      "codice": "CAL-T-52KM-8",
+      "nome": "Solo il 2026-11-18",
+      "dal": "2026-11-18",
+      "al": "2026-11-18",
+      "giorni": [
+        "lunedi",
+        "martedi",
+        "mercoledi",
+        "giovedi",
+        "venerdi",
+        "sabato",
+        "domenica"
+      ]
+    },
+    {
+      "codice": "CAL-T-52KM-9",
+      "nome": "Solo il 2026-11-25",
+      "dal": "2026-11-25",
+      "al": "2026-11-25",
+      "giorni": [
+        "lunedi",
+        "martedi",
+        "mercoledi",
+        "giovedi",
+        "venerdi",
+        "sabato",
+        "domenica"
+      ]
+    },
+    {
+      "codice": "CAL-T-SENZA-KM",
+      "nome": "Solo il 2026-11-19",
+      "dal": "2026-11-19",
+      "al": "2026-11-19",
+      "giorni": [
+        "lunedi",
+        "martedi",
+        "mercoledi",
+        "giovedi",
+        "venerdi",
+        "sabato",
+        "domenica"
+      ]
+    },
+    {
+      "codice": "CAL-T-TITOLARE",
+      "nome": "Solo il 2026-11-20",
+      "dal": "2026-11-20",
+      "al": "2026-11-20",
+      "giorni": [
+        "lunedi",
+        "martedi",
+        "mercoledi",
+        "giovedi",
+        "venerdi",
+        "sabato",
+        "domenica"
+      ]
+    },
+    {
+      "codice": "CAL-T-CHIAMATA-23",
+      "nome": "Solo il 2026-11-23",
+      "dal": "2026-11-23",
+      "al": "2026-11-23",
+      "giorni": [
+        "lunedi",
+        "martedi",
+        "mercoledi",
+        "giovedi",
+        "venerdi",
+        "sabato",
+        "domenica"
+      ]
+    },
+    {
+      "codice": "CAL-T-CHIAMATA-24",
+      "nome": "Solo il 2026-11-24",
+      "dal": "2026-11-24",
+      "al": "2026-11-24",
+      "giorni": [
+        "lunedi",
+        "martedi",
+        "mercoledi",
+        "giovedi",
+        "venerdi",
+        "sabato",
+        "domenica"
+      ]
+    },
+    {
+      "codice": "CAL-T-CHIAMATA-25",
+      "nome": "Solo il 2026-11-25",
+      "dal": "2026-11-25",
+      "al": "2026-11-25",
+      "giorni": [
+        "lunedi",
+        "martedi",
+        "mercoledi",
+        "giovedi",
+        "venerdi",
+        "sabato",
+        "domenica"
+      ]
+    },
+    {
+      "codice": "CAL-T-CHIAMATA-26",
+      "nome": "Solo il 2026-11-26",
+      "dal": "2026-11-26",
+      "al": "2026-11-26",
+      "giorni": [
+        "lunedi",
+        "martedi",
+        "mercoledi",
+        "giovedi",
+        "venerdi",
+        "sabato",
+        "domenica"
+      ]
+    },
+    {
+      "codice": "CAL-T-CHIAMATA-27",
+      "nome": "Solo il 2026-11-27",
+      "dal": "2026-11-27",
+      "al": "2026-11-27",
+      "giorni": [
+        "lunedi",
+        "martedi",
+        "mercoledi",
+        "giovedi",
+        "venerdi",
+        "sabato",
+        "domenica"
+      ]
+    },
+    {
+      "codice": "CAL-T-CONTRATTO-0",
+      "nome": "Solo il 2026-11-30",
+      "dal": "2026-11-30",
+      "al": "2026-11-30",
+      "giorni": [
+        "lunedi",
+        "martedi",
+        "mercoledi",
+        "giovedi",
+        "venerdi",
+        "sabato",
+        "domenica"
+      ]
+    },
+    {
+      "codice": "CAL-T-CONTRATTO-1",
+      "nome": "Solo il 2026-12-01",
+      "dal": "2026-12-01",
+      "al": "2026-12-01",
+      "giorni": [
+        "lunedi",
+        "martedi",
+        "mercoledi",
+        "giovedi",
+        "venerdi",
+        "sabato",
+        "domenica"
+      ]
+    },
+    {
+      "codice": "CAL-T-CONTRATTO-2",
+      "nome": "Solo il 2026-12-02",
+      "dal": "2026-12-02",
+      "al": "2026-12-02",
+      "giorni": [
+        "lunedi",
+        "martedi",
+        "mercoledi",
+        "giovedi",
+        "venerdi",
+        "sabato",
+        "domenica"
+      ]
+    },
+    {
+      "codice": "CAL-T-CONTRATTO-3",
+      "nome": "Solo il 2026-12-03",
+      "dal": "2026-12-03",
+      "al": "2026-12-03",
+      "giorni": [
+        "lunedi",
+        "martedi",
+        "mercoledi",
+        "giovedi",
+        "venerdi",
+        "sabato",
+        "domenica"
+      ]
+    },
+    {
+      "codice": "CAL-T-CONTRATTO-4",
+      "nome": "Solo il 2026-12-04",
+      "dal": "2026-12-04",
+      "al": "2026-12-04",
+      "giorni": [
+        "lunedi",
+        "martedi",
+        "mercoledi",
+        "giovedi",
+        "venerdi",
+        "sabato",
+        "domenica"
+      ]
+    },
+    {
+      "codice": "CAL-T-CONTRATTO-5",
+      "nome": "Solo il 2026-12-05",
+      "dal": "2026-12-05",
+      "al": "2026-12-05",
+      "giorni": [
+        "lunedi",
+        "martedi",
+        "mercoledi",
+        "giovedi",
+        "venerdi",
+        "sabato",
+        "domenica"
+      ]
+    },
+    {
+      "codice": "CAL-T-CONTRATTO-6",
+      "nome": "Solo il 2026-12-06",
+      "dal": "2026-12-06",
+      "al": "2026-12-06",
+      "giorni": [
+        "lunedi",
+        "martedi",
+        "mercoledi",
+        "giovedi",
+        "venerdi",
+        "sabato",
+        "domenica"
+      ]
+    },
+    {
+      "codice": "CAL-T-CONTRATTO-7",
+      "nome": "Solo il 2026-12-07",
+      "dal": "2026-12-07",
+      "al": "2026-12-07",
+      "giorni": [
+        "lunedi",
+        "martedi",
+        "mercoledi",
+        "giovedi",
+        "venerdi",
+        "sabato",
+        "domenica"
+      ]
+    },
+    {
+      "codice": "CAL-T-CONTRATTO-AMPIA",
+      "nome": "Solo il 2026-12-09",
+      "dal": "2026-12-09",
+      "al": "2026-12-09",
+      "giorni": [
+        "lunedi",
+        "martedi",
+        "mercoledi",
+        "giovedi",
+        "venerdi",
+        "sabato",
+        "domenica"
+      ]
+    },
+    {
+      "codice": "CAL-T-ORE",
+      "nome": "Solo il 2026-12-01",
+      "dal": "2026-12-01",
+      "al": "2026-12-01",
+      "giorni": [
+        "lunedi",
+        "martedi",
+        "mercoledi",
+        "giovedi",
+        "venerdi",
+        "sabato",
+        "domenica"
+      ]
+    },
+    {
+      "codice": "CAL-T-MULTI",
+      "nome": "Solo il 2026-11-11",
+      "dal": "2026-11-11",
+      "al": "2026-11-11",
+      "giorni": [
+        "lunedi",
+        "martedi",
+        "mercoledi",
+        "giovedi",
+        "venerdi",
+        "sabato",
+        "domenica"
+      ]
+    },
+    {
+      "codice": "CAL-T-SCUOLA-LUNGA",
+      "nome": "Solo il 2026-11-27",
+      "dal": "2026-11-27",
+      "al": "2026-11-27",
+      "giorni": [
+        "lunedi",
+        "martedi",
+        "mercoledi",
+        "giovedi",
+        "venerdi",
+        "sabato",
+        "domenica"
+      ]
+    },
+    {
+      "codice": "CAL-T-RIENTRO-BETA",
+      "nome": "Solo il 2026-11-05",
+      "dal": "2026-11-05",
+      "al": "2026-11-05",
+      "giorni": [
+        "lunedi",
+        "martedi",
+        "mercoledi",
+        "giovedi",
+        "venerdi",
+        "sabato",
+        "domenica"
+      ]
+    },
+    {
+      "codice": "CAL-T-50KM",
+      "nome": "Solo il 2026-11-16",
+      "dal": "2026-11-16",
+      "al": "2026-11-16",
+      "giorni": [
+        "lunedi",
+        "martedi",
+        "mercoledi",
+        "giovedi",
+        "venerdi",
+        "sabato",
+        "domenica"
+      ]
+    },
+    {
+      "codice": "CAL-T-50KM1",
+      "nome": "Solo il 2026-11-17",
+      "dal": "2026-11-17",
+      "al": "2026-11-17",
+      "giorni": [
+        "lunedi",
+        "martedi",
+        "mercoledi",
+        "giovedi",
+        "venerdi",
+        "sabato",
+        "domenica"
+      ]
+    },
+    {
+      "codice": "CAL-T-DIS-LUNGA",
+      "nome": "Solo il 2026-11-26",
+      "dal": "2026-11-26",
+      "al": "2026-11-26",
+      "giorni": [
+        "lunedi",
+        "martedi",
+        "mercoledi",
+        "giovedi",
+        "venerdi",
+        "sabato",
+        "domenica"
+      ]
+    },
+    {
+      "codice": "CAL-T-DICH-LUNGA",
+      "nome": "Solo il 2026-11-26",
+      "dal": "2026-11-26",
+      "al": "2026-11-26",
+      "giorni": [
+        "lunedi",
+        "martedi",
+        "mercoledi",
+        "giovedi",
+        "venerdi",
+        "sabato",
+        "domenica"
+      ]
+    },
+    {
+      "codice": "CAL-T-FORZATA",
+      "nome": "Solo il 2026-11-24",
+      "dal": "2026-11-24",
+      "al": "2026-11-24",
+      "giorni": [
+        "lunedi",
+        "martedi",
+        "mercoledi",
+        "giovedi",
+        "venerdi",
+        "sabato",
+        "domenica"
+      ]
+    },
+    {
+      "codice": "CAL-T-NONSERVE",
+      "nome": "Solo il 2026-11-23",
+      "dal": "2026-11-23",
+      "al": "2026-11-23",
+      "giorni": [
+        "lunedi",
+        "martedi",
+        "mercoledi",
+        "giovedi",
+        "venerdi",
+        "sabato",
+        "domenica"
+      ]
+    },
+    {
+      "codice": "CAL-T-GITA-SCUOLA",
+      "nome": "Solo il 2026-11-20",
+      "dal": "2026-11-20",
+      "al": "2026-11-20",
+      "giorni": [
+        "lunedi",
+        "martedi",
+        "mercoledi",
+        "giovedi",
+        "venerdi",
+        "sabato",
+        "domenica"
+      ]
+    },
+    {
+      "codice": "CAL-T-NCC-AUTO",
+      "nome": "Solo il 2026-11-07",
+      "dal": "2026-11-07",
+      "al": "2026-11-07",
+      "giorni": [
+        "lunedi",
+        "martedi",
+        "mercoledi",
+        "giovedi",
+        "venerdi",
+        "sabato",
+        "domenica"
+      ]
+    },
+    {
+      "codice": "CAL-T-NCC-BUS",
+      "nome": "Solo il 2026-11-14",
+      "dal": "2026-11-14",
+      "al": "2026-11-14",
+      "giorni": [
+        "lunedi",
+        "martedi",
+        "mercoledi",
+        "giovedi",
+        "venerdi",
+        "sabato",
+        "domenica"
+      ]
+    },
+    {
+      "codice": "CAL-T-NAVETTA",
+      "nome": "Solo il 2026-11-19",
+      "dal": "2026-11-19",
+      "al": "2026-11-19",
+      "giorni": [
+        "lunedi",
+        "martedi",
+        "mercoledi",
+        "giovedi",
+        "venerdi",
+        "sabato",
+        "domenica"
+      ]
+    }
+  ]
+}

@@ -10,6 +10,8 @@
     { "data": "2026-11-03", "turno": "T-B-ASILO", "persona": "P-C" },
     { "data": "2026-11-03", "turno": "T-B-SERA", "persona": "P-C" },
     { "data": "2026-11-13", "turno": "T-PRIMO", "persona": "P-C" },
-    { "data": "2026-11-15", "turno": "T-GITA", "persona": "P-A" }
+    { "data": "2026-11-15", "turno": "T-GITA", "persona": "P-A" },
+    { "data": "2027-07-07", "turno": "T-PRIVATO-CENTRO", "persona": "P-G" },
+    { "data": "2027-07-10", "turno": "T-MATRIMONIO", "persona": "P-G" }
   ]
 }

@@ -326,36 +326,56 @@ TEST(Orari, guida_continua_interruzioni_in_parti) {
     EXPECT_EQ(c.problemi(Check::LawDrivingViolated).size(), 1u);   // 15 + 15 senza servizi occasionali: niente
 }
 
-// 15 + 15 vale per i servizi occasionali del regime (Reg. 561/2006 art. 7: gite e noleggi): con corse di un servizio
-// "altro" e il regime che dice che "altro" e' occasionale, il conto si azzera; senza quella voce no.
-TEST(Orari, guida_continua_15_piu_15_nei_servizi_occasionali) {
-    const auto prova = [](bool occasionali) {
-        Prova p({guida_continua_561()});
-        if (occasionali) p.regime().occasional = {ServiceKind::Other};
-        const auto tratta = [&](const std::string& codice, const std::string& da, const std::string& dalle, const std::string& a,
-                                const std::string& alle) {
-            Trip t;
-            t.code = codice;
-            t.services = {Ref{"S-GITA", {}}};
-            t.calendar = Ref{"CAL-SEMPRE", {}};
-            t.passages.resize(2);
-            t.passages[0].place = Ref{da, {}};
-            t.passages[0].time = ora(dalle);
-            t.passages[1].place = Ref{a, {}};
-            t.passages[1].time = ora(alle);
-            t.passages[1].loaded_km = 60.0;
-            t.src = dove("corse.json", "/corse/" + std::to_string(p.p.trips.size()));
-            p.p.trips.push_back(t);
-        };
-        tratta("C-PROVA-1", "L-RIMESSA-ALFA", "06:00", "F-LAGOBELLO", "08:30");
-        tratta("C-PROVA-2", "F-LAGOBELLO", "08:45", "F-PRADELLO", "09:15");
-        tratta("C-PROVA-3", "F-PRADELLO", "09:30", "L-RIMESSA-ALFA", "11:15");
-        p.giornata("2026-10-05", {corsa("C-PROVA-1"), el("P", "08:30", "08:45", "F-LAGOBELLO"), corsa("C-PROVA-2"),
-                                  el("P", "09:15", "09:30", "F-PRADELLO"), corsa("C-PROVA-3")});
-        return p.problemi(Check::LawDrivingViolated);
+// 15 + 15 vale per i servizi occasionali del regime (Reg. 561/2006 art. 7: gite e noleggi). K-012: le norme dicono i tipi
+// occasionali uno per uno, certi o da confermare. La gita del demo (servizio NCC) con l'NCC occasionale certo: il conto si
+// azzera in tutte e due le letture (nessun errore, nessun avviso); senza la voce un errore. Lo stesso servizio "altro" con
+// "altro" occasionale da confermare: nessun errore, ma un avviso con il motivo (nella lettura prudente il 15 + 15 non vale).
+namespace {
+std::pair<std::vector<Problem>, std::vector<Problem>> gita_con_15_piu_15(std::optional<Applies<ServiceKind>> occasionali,
+                                                                         ServiceKind tipo = ServiceKind::Ncc) {
+    Prova p({guida_continua_561()});
+    if (occasionali) p.regime().occasional = *occasionali;
+    per_codice(p.p.services, "S-GITA").kind = tipo;
+    const auto tratta = [&](const std::string& codice, const std::string& da, const std::string& dalle, const std::string& a,
+                            const std::string& alle) {
+        Trip t;
+        t.code = codice;
+        t.services = {Ref{"S-GITA", {}}};
+        t.calendar = Ref{"CAL-SEMPRE", {}};
+        t.passages.resize(2);
+        t.passages[0].place = Ref{da, {}};
+        t.passages[0].time = ora(dalle);
+        t.passages[1].place = Ref{a, {}};
+        t.passages[1].time = ora(alle);
+        t.passages[1].loaded_km = 60.0;
+        t.src = dove("corse.json", "/corse/" + std::to_string(p.p.trips.size()));
+        p.p.trips.push_back(t);
     };
-    EXPECT_TRUE(prova(true).empty()) << elenco(prova(true));
-    EXPECT_EQ(prova(false).size(), 1u);
+    tratta("C-PROVA-1", "L-RIMESSA-ALFA", "06:00", "F-LAGOBELLO", "08:30");
+    tratta("C-PROVA-2", "F-LAGOBELLO", "08:45", "F-PRADELLO", "09:15");
+    tratta("C-PROVA-3", "F-PRADELLO", "09:30", "L-RIMESSA-ALFA", "11:15");
+    p.giornata("2026-10-05", {corsa("C-PROVA-1"), el("P", "08:30", "08:45", "F-LAGOBELLO"), corsa("C-PROVA-2"),
+                              el("P", "09:15", "09:30", "F-PRADELLO"), corsa("C-PROVA-3")});
+    return {p.problemi(Check::LawDrivingViolated), p.problemi(Check::LawDrivingToConfirm)};
+}
+}  // namespace
+
+TEST(Orari, guida_continua_15_piu_15_nei_servizi_occasionali) {
+    const auto certi = gita_con_15_piu_15(Applies<ServiceKind>{true, {ServiceKind::Ncc}, {ServiceKind::Other}});
+    EXPECT_TRUE(certi.first.empty()) << elenco(certi.first);
+    EXPECT_TRUE(certi.second.empty()) << elenco(certi.second);
+    EXPECT_EQ(gita_con_15_piu_15(std::nullopt).first.size(), 1u);   // regime di prova senza servizi occasionali: un errore
+    EXPECT_EQ(gita_con_15_piu_15(Applies<ServiceKind>{true, {ServiceKind::Other}, {}}).first.size(), 1u);   // l'NCC non c'e
+    // "altro" da confermare: nessun errore, un avviso con il motivo.
+    const auto altro = gita_con_15_piu_15(Applies<ServiceKind>{true, {ServiceKind::Ncc}, {ServiceKind::Other}}, ServiceKind::Other);
+    EXPECT_TRUE(altro.first.empty()) << elenco(altro.first);
+    ASSERT_EQ(altro.second.size(), 1u);
+    const auto& motivi = altro.second.front().params;
+    EXPECT_TRUE(std::any_of(motivi.begin(), motivi.end(), [](const Param& x) { return x.text.find("servizi_occasionali") != std::string::npos; }))
+        << elenco(altro.second);
+    // Sabotaggio del mandato (NCC trattato come "altro" da confermare): darebbe l'avviso anche alla gita NCC.
+    const auto ncc_da_confermare = gita_con_15_piu_15(Applies<ServiceKind>{true, {}, {ServiceKind::Ncc, ServiceKind::Other}});
+    EXPECT_EQ(ncc_da_confermare.second.size(), 1u);
 }
 
 // La disponibilita' non e' un'interruzione per il 561 (art. 4 d): il conto non si azzera.

@@ -490,7 +490,7 @@ const std::vector<std::pair<const char*, Need>> kEsigenze = {
     {"carrozzina", Need::Wheelchair}, {"assistente", Need::Assistant}, {"altro", Need::Other}};
 const std::vector<std::pair<const char*, ServiceKind>> kTipiServizio = {
     {"linea", ServiceKind::Line}, {"scolastico", ServiceKind::School}, {"disabili", ServiceKind::Disability},
-    {"altro", ServiceKind::Other}};
+    {"ncc", ServiceKind::Ncc}, {"altro", ServiceKind::Other}};
 const std::vector<std::pair<const char*, CenterType>> kTipiCentro = {
     {"diurno", CenterType::Day}, {"terapie", CenterType::Therapy}, {"socio_educativo", CenterType::SocioEducational},
     {"altro", CenterType::Other}};
@@ -709,8 +709,17 @@ Regime regime(const JsonDati& o, const std::string& p, const Conversione& c) {
         r.excluded_driving = g;
     }
     if (const auto it = o.find("servizi_occasionali"); it != o.end()) {
-        r.occasional = valori_di(kTipiServizio, *it, "tipi_servizio");
-        r.occasional_to_confirm = c.vero(*it, "da_confermare");
+        if (it->at("tipi_servizio").is_array()) {
+            // Versione 2: un solo "da confermare" per tutto l'elenco.
+            r.occasional.present = true;
+            (c.vero(*it, "da_confermare") ? r.occasional.to_confirm : r.occasional.certain) =
+                valori_di(kTipiServizio, *it, "tipi_servizio");
+        } else {
+            // Versione 3 (K-012): tipo per tipo, certi o da confermare, con la fonte.
+            r.occasional = condizione_regime(*it, "tipi_servizio", &kTipiServizio);
+            if (it->contains("fonte")) r.occasional_source = fonte_documento(it->at("fonte"));
+            r.occasional_note = c.testo(*it, "nota");
+        }
     }
     if (const auto it = o.find("estensione"); it != o.end()) {
         r.week_extension = true;
@@ -1278,8 +1287,13 @@ void committenti(const JsonDati& d, Package& pk) {
     const Conversione c("committenti.json");
     const auto& v = d.at("committenti");
     for (std::size_t i = 0; i < v.size(); ++i)
-        pk.clients.push_back({v[i].at("codice").get<std::string>(), v[i].at("nome").get<std::string>(), c.esterni(v[i]),
+        pk.clients.push_back({v[i].at("codice").get<std::string>(), v[i].at("nome").get<std::string>(), c.esterni(v[i]), false, {},
                               c.src(indice("/committenti", i))});
+    // Versione 2 (K-012): i committenti privati. Nome e nota sono personali: senza il permesso non arrivano dalla cassaforte.
+    const auto& w = c.elenco(d, "committenti_privati");
+    for (std::size_t i = 0; i < w.size(); ++i)
+        pk.clients.push_back({w[i].at("codice").get<std::string>(), c.testo(w[i], "nome"), c.esterni(w[i]), true, c.testo(w[i], "nota"),
+                              c.src(indice("/committenti_privati", i))});
 }
 
 VehicleRules regole(const JsonDati& o, const std::string& p, const Conversione& c) {

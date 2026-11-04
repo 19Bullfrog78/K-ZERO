@@ -109,6 +109,22 @@
       "al": "2027-08-31",
       "giorni": ["lunedi", "martedi", "mercoledi", "giovedi", "venerdi", "sabato", "domenica"]
     },
-    { "codice": "CAL-GITA", "nome": "Giorno della gita della Pro Loco", "dal": "2026-11-15", "al": "2026-11-15", "giorni": ["domenica"] }
+    { "codice": "CAL-GITA", "nome": "Giorno della gita della Pro Loco", "dal": "2026-11-15", "al": "2026-11-15", "giorni": ["domenica"] },
+    {
+      "codice": "CAL-MATRIMONIO",
+      "nome": "Giorno del matrimonio",
+      "dal": "2027-07-01",
+      "al": "2027-07-31",
+      "giorni": [],
+      "date_aggiunte": ["2027-07-10"]
+    },
+    {
+      "codice": "CAL-PRIVATO-CENTRO",
+      "nome": "Giorno del noleggio privato",
+      "dal": "2027-07-01",
+      "al": "2027-07-31",
+      "giorni": [],
+      "date_aggiunte": ["2027-07-07"]
+    }
   ]
 }

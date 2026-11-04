@@ -1,0 +1,33 @@
+{
+  "schema": "pacchetto",
+  "schema_versione": 2,
+  "codice": "K012-SERVIZI",
+  "nome": "Prova dei tipi di servizio (K-012)",
+  "dati_inventati": true,
+  "aziende": [
+    {
+      "codice": "ALFA",
+      "nome": "Autoservizi Alfa"
+    },
+    {
+      "codice": "BETA",
+      "nome": "Trasporti Beta"
+    }
+  ],
+  "periodo": {
+    "dal": "2026-09-01",
+    "al": "2027-08-31"
+  },
+  "origine": {
+    "tipo": "scenario",
+    "nota": "Dati inventati per le prove dei tipi di servizio (K-012), dal pacchetto di prova degli orari (K-011) rifatto sul demo: gita scolastica NCC, NCC con un'auto da 8 posti e con un pullman, un servizio 'altro', committenti privati."
+  },
+  "livello": "completo",
+  "fuso_orario": "Europe/Rome",
+  "valuta": "EUR",
+  "impostazioni": {
+    "margine_trasbordo_minuti": 3,
+    "porta_a_porta_sensibile": true
+  },
+  "cassaforte": false
+}

@@ -1,0 +1,44 @@
+{
+  "schema": "committenti",
+  "schema_versione": 2,
+  "committenti": [
+    {
+      "codice": "CVA",
+      "nome": "Consorzio Valle Alta (inventato)"
+    },
+    {
+      "codice": "TPV",
+      "nome": "Trasporti Provinciali Valfonda (inventato)",
+      "codici_esterni": [
+        {
+          "sistema": "Trasporti Provinciali Valfonda",
+          "tipo": "committente",
+          "codice": "TPV"
+        }
+      ]
+    },
+    {
+      "codice": "PROLOCO",
+      "nome": "Pro Loco di Valfonda (inventata)"
+    },
+    {
+      "codice": "IC-VALFONDA",
+      "nome": "Istituto comprensivo di Valfonda (inventato)"
+    },
+    {
+      "codice": "CARTIERA",
+      "nome": "Cartiera di Valfonda (inventata)"
+    }
+  ],
+  "committenti_privati": [
+    {
+      "codice": "CP-01",
+      "nome": "Galli Marta",
+      "nota": "Conferma il numero degli invitati il giorno prima (inventato)."
+    },
+    {
+      "codice": "CP-02",
+      "nome": "Ferri Bruno"
+    }
+  ]
+}

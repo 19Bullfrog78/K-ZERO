@@ -27,6 +27,7 @@
 #include "errori.hpp"
 #include "formato_dati.hpp"
 #include "lettore.hpp"
+#include "pacchetto_demo.hpp"
 #include "parametri.hpp"
 #include "riservatezza.hpp"
 #include "schemi_dati.hpp"
@@ -290,9 +291,10 @@ TEST(Api, pacchetto_demo_letto) {
     EXPECT_TRUE(l.problemi.empty());
     EXPECT_TRUE(l.forma_valida());
     EXPECT_EQ(l.versioni.size(), 24u);   // tutti i file del formato tranne tempi_sosta.json
-    for (const char* f : {"calendari.json", "regolamenti.json", "servizi.json", "mezzi.json", "luoghi.json"})
-        EXPECT_EQ(l.versioni.at(f), 2) << f;
-    EXPECT_EQ(l.pacchetto.trips.size(), 26u);
+    for (const char* f : {"calendari.json", "luoghi.json", "persone.json", "committenti.json"}) EXPECT_EQ(l.versioni.at(f), 2) << f;
+    // K-012: il tipo di servizio ncc e i servizi occasionali tipo per tipo.
+    for (const char* f : {"regolamenti.json", "servizi.json", "mezzi.json", "aziende.json", "norme.json"}) EXPECT_EQ(l.versioni.at(f), 3) << f;
+    EXPECT_EQ(l.pacchetto.trips.size(), 29u);   // K-012: le corse del matrimonio e del noleggio privato
 }
 
 TEST(Api, K_CTR_001_manca_il_manifesto) {
@@ -877,8 +879,15 @@ TEST(Api, classi_marcate_negli_schemi) {
         EXPECT_TRUE(p.rfind("luoghi/luoghi_privati/", 0) == 0 || p.find("/passeggeri/*/") != std::string::npos ||
                     p.rfind("persone/persone/", 0) == 0 || p.rfind("assenze/assenze/", 0) == 0 ||
                     p == "rotazioni/rotazioni/*/nota" || p == "servizi_fissi/servizi_fissi/*/nota" ||
-                    p == "assegnazioni/assegnazioni/*/nota" || modo_corse_personale(p))
+                    p == "assegnazioni/assegnazioni/*/nota" || modo_corse_personale(p) ||
+                    p == "committenti/committenti_privati/*/nome" || p == "committenti/committenti_privati/*/nota")
             << p;
+    // K-012: dei committenti privati sono personali nome e nota; codice e codici esterni restano comuni (li sceglie l'utente).
+    for (const char* x : {"committenti/committenti_privati/*/nome", "committenti/committenti_privati/*/nota"})
+        EXPECT_TRUE(personali.count(x)) << x;
+    for (const char* x : {"committenti/committenti_privati/*/codice", "committenti/committenti_privati/*/codici_esterni/*/codice",
+                          "committenti/committenti/*/nome", "committenti/committenti/*/nota"})
+        EXPECT_FALSE(personali.count(x) || particolari.count(x)) << x;
     for (const char* nota : {"rotazioni/rotazioni/*/nota", "servizi_fissi/servizi_fissi/*/nota", "assegnazioni/assegnazioni/*/nota"})
         EXPECT_TRUE(personali.count(nota)) << nota;
     EXPECT_TRUE(personali.count("servizi/servizi/*/domanda/gruppi/*/passeggeri/*/nome"));
@@ -1160,8 +1169,84 @@ TEST(Api, legame_con_i_luoghi_sensibili) {
     });
 }
 
+// K-012: i committenti privati seguono la stessa regola dei passeggeri (una sola, LegameSensibile). Nel demo CP-02 noleggia
+// per andare al centro diurno (gruppo verso SC-CENTRO, fermata in L-CENTRO): legato; CP-01 (il matrimonio, luoghi normali):
+// no; gli enti mai (il nome di un ente e' un dato comune). Poi i casi del mandato sul matrimonio: una sua corsa che passa
+// dal centro; un trasbordo con una corsa che va al centro; una casa porta a porta con il porta a porta sensibile (e senza).
+TEST(Api, legame_dei_committenti_privati) {
+    const Lettura base = leggi_pacchetto(Memoria());
+    ASSERT_TRUE(base.forma_valida());
+    const auto legame_di = [](const kzero::Package& p, const auto& prova) {
+        const kzero::Index idx(p);
+        prova(LegameSensibile(&idx));
+    };
+    legame_di(base.pacchetto, [](const LegameSensibile& x) {
+        EXPECT_TRUE(x.committente("CP-02"));
+        EXPECT_TRUE(x.legato("committente", "CP-02"));
+        EXPECT_FALSE(x.committente("CP-01"));
+        for (const char* ente : {"CVA", "TPV", "PROLOCO"}) EXPECT_FALSE(x.committente(ente)) << ente;
+        EXPECT_FALSE(x.legato("passeggero", "CP-02"));
+    });
+    const auto corsa = [](kzero::Package& p, const char* c) -> kzero::Trip& { return kzero::prove::per_codice(p.trips, c); };
+    // Una corsa del matrimonio che passa dal centro diurno (in transito), senza nessun gruppo che ci vada.
+    kzero::Package passa = base.pacchetto;
+    kzero::Passage centro;
+    centro.place = kzero::Ref{"L-CENTRO", {}};
+    centro.time = corsa(passa, "C-MATRIMONIO-R").passages[1].time;
+    centro.transit = true;
+    auto& pr = corsa(passa, "C-MATRIMONIO-R").passages;
+    pr.insert(pr.begin() + 1, centro);
+    legame_di(passa, [](const LegameSensibile& x) { EXPECT_TRUE(x.committente("CP-01")); });
+    // Un trasbordo tra la corsa del matrimonio e quella che va al centro (C-DIS-1).
+    kzero::Package trasbordo = base.pacchetto;
+    kzero::TransferHalf h;
+    h.code = "T-PROVA";
+    h.group = kzero::Ref{"G-MATRIMONIO-A", {}};
+    h.persons = 1;
+    corsa(trasbordo, "C-MATRIMONIO-A").passages[1].transfers.push_back(h);
+    h.action = kzero::TransferAction::Receive;
+    corsa(trasbordo, "C-DIS-1").passages[1].transfers.push_back(h);
+    legame_di(trasbordo, [](const LegameSensibile& x) { EXPECT_TRUE(x.committente("CP-01")); });
+    // Una casa porta a porta tra le fermate di un gruppo del matrimonio: con il porta a porta sensibile (il demo) e' legato;
+    // senza no (la casa e' legata, ma per chi ci abita, non per chi noleggia).
+    kzero::Package casa = base.pacchetto;
+    kzero::prove::per_codice(casa.services, "S-MATRIMONIO").groups[0].stops[0].place = kzero::Ref{"PP-03", {}};
+    legame_di(casa, [](const LegameSensibile& x) { EXPECT_TRUE(x.committente("CP-01")); });
+    casa.manifest.door_to_door_sensitive = false;
+    legame_di(casa, [](const LegameSensibile& x) {
+        EXPECT_FALSE(x.committente("CP-01"));
+        EXPECT_TRUE(x.committente("CP-02"));
+    });
+    // Senza luoghi sensibili e senza porta a porta sensibile nessuno, nemmeno CP-02.
+    kzero::Package nessuno = base.pacchetto;
+    for (kzero::Place& l : nessuno.places) l.sensitive = false;
+    nessuno.manifest.door_to_door_sensitive = false;
+    legame_di(nessuno, [](const LegameSensibile& x) { EXPECT_TRUE(x.nessuno()); });
+}
+
 // Nei messaggi di kzero controlla la casa di un passeggero legato a un luogo sensibile si vede solo con il codice, se non
 // si mostrano i dati particolari; il luogo sensibile si vede.
+// K-012: nei messaggi di kzero controlla il nome di un committente privato segue la stessa regola: personale (CP-01, il
+// matrimonio) con il permesso dei dati personali; legato (CP-02, il noleggio verso il centro diurno) solo con tutti e due;
+// un ente sempre. Il messaggio: K-CTR-019 sul nome del committente privato in un pacchetto "solo numeri".
+TEST(Api, committente_privato_nei_messaggi) {
+    const Memoria m;
+    const Lettura l = leggi_pacchetto(m);
+    const auto messaggio = [&l](const std::string& committente, Visibilita v) {
+        const Presentatore p(&l.pacchetto, &l.versioni, v);
+        return p.messaggio(kzero::Problem{Check::NumbersOnlyPersonalData, 8, kzero::Source{},
+                                          {kzero::ref_param("committente", kzero::Element::Client, committente)}});
+    };
+    EXPECT_NE(messaggio("CP-01", Visibilita{true, false}).find("il committente privato CP-01 (Galli Marta) ha il nome"), std::string::npos);
+    EXPECT_NE(messaggio("CP-01", Visibilita{}).find("il committente privato CP-01 ha il nome"), std::string::npos);
+    EXPECT_EQ(messaggio("CP-01", Visibilita{false, true}).find("Galli Marta"), std::string::npos);
+    EXPECT_NE(messaggio("CP-02", Visibilita{true, false}).find("il committente privato CP-02 ha il nome"), std::string::npos);
+    EXPECT_EQ(messaggio("CP-02", Visibilita{true, false}).find("Ferri Bruno"), std::string::npos);
+    EXPECT_EQ(messaggio("CP-02", Visibilita{false, true}).find("Ferri Bruno"), std::string::npos);
+    EXPECT_NE(messaggio("CP-02", Visibilita{true, true}).find("CP-02 (Ferri Bruno)"), std::string::npos);
+    EXPECT_NE(messaggio("CVA", Visibilita{}).find("CVA (Consorzio Valle Alta (inventato))"), std::string::npos);
+}
+
 TEST(Api, casa_e_luogo_sensibile_nei_messaggi) {
     const Memoria m;
     const Lettura l = leggi_pacchetto(m);

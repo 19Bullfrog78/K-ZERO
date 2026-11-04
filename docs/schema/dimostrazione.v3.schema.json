@@ -1,0 +1,509 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "kzero - dimostrazione, versione 3",
+  "description": "Uscita di 'kzero dimostrazione --formato json': il pacchetto dimostrativo esempi/demo (DATI INVENTATI, incorporato nel programma) e alcune regole del mestiere applicate ai suoi dati. Orari \"HH:MM\" (dopo mezzanotte si continua a contare: \"24:12\"), distanze in km, costi nella valuta del pacchetto. Classi dei dati: di base un dato personale e' sostituito dal codice del suo elemento e un dato particolare vale \"riservato\"; con --includi-dati-personali e --includi-dati-particolari compaiono i valori. Versione 3 (K-012): il tipo di servizio 'ncc', la categoria 'ncc' e 'promiscuo' (fino alla versione 2 'ibrido'), il nome del committente di ogni servizio. Sostituisce le versioni 1 e 2, che non sono piu' prodotte.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "schema_versione",
+    "dati_inventati",
+    "dati_personali_inclusi",
+    "dati_particolari_inclusi",
+    "pacchetto",
+    "controllo",
+    "mezzi",
+    "luoghi",
+    "servizi",
+    "corse",
+    "regole"
+  ],
+  "properties": {
+    "schema": { "const": "dimostrazione" },
+    "schema_versione": { "const": 3 },
+    "dati_inventati": { "description": "Sempre true: questi valori non vanno usati come dati reali.", "const": true },
+    "dati_personali_inclusi": { "type": "boolean" },
+    "dati_particolari_inclusi": { "type": "boolean" },
+    "pacchetto": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["codice", "nome", "periodo", "livello", "fuso_orario", "valuta", "aziende"],
+      "properties": {
+        "codice": { "type": "string", "minLength": 1 },
+        "nome": { "type": "string", "minLength": 1 },
+        "periodo": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["dal", "al"],
+          "properties": { "dal": { "$ref": "#/definitions/data" }, "al": { "$ref": "#/definitions/data" } }
+        },
+        "livello": { "enum": ["solo_numeri", "completo"] },
+        "fuso_orario": { "type": "string", "minLength": 1 },
+        "valuta": { "type": "string", "pattern": "^[A-Z]{3}$" },
+        "aziende": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["codice", "nome", "mezzi"],
+            "properties": {
+              "codice": { "type": "string", "minLength": 1 },
+              "nome": { "type": "string", "minLength": 1 },
+              "mezzi": { "type": "integer", "minimum": 0 }
+            }
+          }
+        }
+      }
+    },
+    "controllo": {
+      "description": "Esito di kzero controlla sul pacchetto: sempre senza errori.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["errori", "avvisi"],
+      "properties": { "errori": { "const": 0 }, "avvisi": { "type": "integer", "minimum": 0 } }
+    },
+    "mezzi": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "codice",
+          "azienda",
+          "targa",
+          "categoria",
+          "posti",
+          "posti_in_piedi",
+          "carrozzine",
+          "posti_persi_per_carrozzina",
+          "pedana",
+          "ausili_bagagliaio",
+          "ausili_tra_i_sedili",
+          "ipotetico",
+          "costo_fisso_giornaliero",
+          "costo_al_km"
+        ],
+        "properties": {
+          "codice": { "type": "string", "minLength": 1 },
+          "azienda": { "type": "string", "minLength": 1 },
+          "targa": { "type": "string", "minLength": 1 },
+          "categoria": { "enum": ["M1", "M2", "M3"] },
+          "posti": { "type": "integer", "minimum": 0 },
+          "posti_in_piedi": { "type": "integer", "minimum": 0 },
+          "carrozzine": { "type": "integer", "minimum": 0 },
+          "posti_persi_per_carrozzina": { "type": "integer", "minimum": 0 },
+          "pedana": { "type": "boolean" },
+          "ausili_bagagliaio": {
+            "description": "Ausili piegati che entrano nel bagagliaio (0 = niente bagagliaio).",
+            "type": "integer",
+            "minimum": 0
+          },
+          "ausili_tra_i_sedili": {
+            "description": "Posti occupati da un ausilio piegato fissato tra i sedili; null = tra i sedili non ammesso.",
+            "type": ["integer", "null"],
+            "minimum": 1
+          },
+          "ipotetico": { "type": "boolean" },
+          "costo_fisso_giornaliero": { "$ref": "#/definitions/euro_o_null" },
+          "costo_al_km": { "$ref": "#/definitions/euro_o_null" }
+        }
+      }
+    },
+    "luoghi": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["codice", "tipo", "nome", "comune"],
+        "properties": {
+          "codice": { "type": "string", "minLength": 1 },
+          "tipo": {
+            "enum": [
+              "fermata",
+              "scuola",
+              "centro",
+              "rimessa",
+              "ricovero_esterno",
+              "punto_sosta",
+              "punto_trasbordo",
+              "porta_a_porta"
+            ]
+          },
+          "nome": {
+            "description": "Per i luoghi privati e' un dato personale: di base al suo posto c'e' il codice.",
+            "type": "string"
+          },
+          "comune": {
+            "description": "Per i luoghi privati e' un dato personale: di base al suo posto c'e' il codice.",
+            "type": "string"
+          }
+        }
+      }
+    },
+    "servizi": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["codice", "nome", "tipo", "contratto", "committente", "nome_committente", "calendario", "gruppi"],
+        "properties": {
+          "codice": { "type": "string", "minLength": 1 },
+          "nome": { "type": "string" },
+          "tipo": {
+            "anyOf": [{ "enum": ["linea", "scolastico", "disabili", "ncc", "altro"] }, { "$ref": "#/definitions/riservato" }]
+          },
+          "contratto": { "type": "string", "minLength": 1 },
+          "committente": { "type": ["string", "null"] },
+          "nome_committente": {
+            "description": "Nome del committente (K-012): di un ente sempre; di un committente privato e' un dato personale (di base il codice), legato a un luogo sensibile come quello dei passeggeri.",
+            "type": ["string", "null"]
+          },
+          "calendario": { "type": "string", "minLength": 1 },
+          "gruppi": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "codice",
+                "tipo",
+                "scuola",
+                "persone",
+                "fermate",
+                "carrozzine",
+                "ausili_piegati",
+                "assistente_richiesto",
+                "passeggeri"
+              ],
+              "properties": {
+                "codice": { "type": "string", "minLength": 1 },
+                "tipo": {
+                  "anyOf": [
+                    { "enum": ["studenti", "disabili", "utenti_linea", "adulti_autorizzati", "altro"] },
+                    { "$ref": "#/definitions/riservato" }
+                  ]
+                },
+                "scuola": { "description": "Scuola o centro di destinazione. Luogo sensibile (K-009): con i dati personali e senza quelli particolari, se servizi e corse mostrano il nome di un passeggero o la sua casa, 'riservato'.", "type": ["string", "null"] },
+                "persone": {
+                  "description": "Persone che salgono; null se i conteggi non sono noti.",
+                  "type": ["integer", "null"],
+                  "minimum": 0
+                },
+                "fermate": { "type": "integer", "minimum": 0 },
+                "carrozzine": {
+                  "description": "Persone che viaggiano sedute sulla carrozzina. Dato particolare: di base \"riservato\".",
+                  "anyOf": [{ "type": "integer", "minimum": 0 }, { "$ref": "#/definitions/riservato" }]
+                },
+                "ausili_piegati": {
+                  "description": "Ausili piegati da caricare (carrozzine piegate comprese). Dato particolare: di base \"riservato\".",
+                  "anyOf": [{ "type": "integer", "minimum": 0 }, { "$ref": "#/definitions/riservato" }]
+                },
+                "assistente_richiesto": { "anyOf": [{ "type": "boolean" }, { "$ref": "#/definitions/riservato" }] },
+                "passeggeri": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": ["codice", "nome", "stato", "salita", "salita_bloccata", "discesa", "motivo", "esigenze"],
+                    "properties": {
+                      "codice": { "type": "string", "minLength": 1 },
+                      "nome": {
+                        "description": "Dato personale: di base al suo posto c'e' il codice.",
+                        "type": "string"
+                      },
+                      "stato": { "enum": ["attivo", "sospeso", "sbloccato"] },
+                      "salita": { "description": "Luogo di salita. Luogo sensibile (K-009): con i dati personali e senza quelli particolari, se servizi e corse mostrano il nome di un passeggero o la sua casa, 'riservato'.", "type": ["string", "null"] },
+                      "salita_bloccata": { "type": "boolean" },
+                      "discesa": { "description": "Luogo di discesa. Luogo sensibile (K-009): con i dati personali e senza quelli particolari, se servizi e corse mostrano il nome di un passeggero o la sua casa, 'riservato'.", "type": ["string", "null"] },
+                      "motivo": {
+                        "description": "Dato personale: di base al suo posto c'e' il codice.",
+                        "type": ["string", "null"]
+                      },
+                      "esigenze": {
+                        "description": "Dato particolare: di base \"riservato\".",
+                        "type": ["string", "null"]
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "corse": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "codice",
+          "nome",
+          "categoria",
+          "servizi",
+          "calendario",
+          "inizio",
+          "fine",
+          "km_pieni",
+          "km_vuoti",
+          "passaggi"
+        ],
+        "properties": {
+          "codice": { "type": "string", "minLength": 1 },
+          "nome": { "type": "string" },
+          "categoria": {
+            "description": "Ricavata dal programma dai tipi dei gruppi e dei servizi: e' un dato particolare.",
+            "anyOf": [
+              { "enum": ["linea", "disabili", "scolastico", "ncc", "promiscuo", "altro", null] },
+              { "$ref": "#/definitions/riservato" }
+            ]
+          },
+          "servizi": { "type": "array", "items": { "type": "string", "minLength": 1 } },
+          "calendario": { "type": "string", "minLength": 1 },
+          "inizio": { "$ref": "#/definitions/orario" },
+          "fine": { "$ref": "#/definitions/orario" },
+          "km_pieni": { "type": "number", "minimum": 0 },
+          "km_vuoti": { "type": "number", "minimum": 0 },
+          "passaggi": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "orario",
+                "luogo",
+                "nome_luogo",
+                "transito",
+                "salgono",
+                "scendono",
+                "assistente",
+                "trasbordi",
+                "a_bordo"
+              ],
+              "properties": {
+                "orario": { "$ref": "#/definitions/orario" },
+                "partenza": { "$ref": "#/definitions/orario" },
+                "luogo": { "description": "Codice del luogo. Luogo sensibile (K-009): con i dati personali e senza quelli particolari, se servizi e corse mostrano il nome di un passeggero o la sua casa, 'riservato'.", "type": "string", "minLength": 1 },
+                "nome_luogo": {
+                  "description": "Per i luoghi privati e' un dato personale: di base al suo posto c'e' il codice. Per un luogo sensibile, come per 'luogo'.",
+                  "type": ["string", "null"]
+                },
+                "transito": { "type": "boolean" },
+                "salgono": { "type": "integer", "minimum": 0 },
+                "scendono": { "type": "integer", "minimum": 0 },
+                "assistente": { "enum": ["sale", "scende", null] },
+                "trasbordi": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": ["codice", "azione", "persone"],
+                    "properties": {
+                      "codice": { "type": "string", "minLength": 1 },
+                      "azione": { "enum": ["consegna", "ricezione"] },
+                      "persone": { "type": "integer", "minimum": 1 }
+                    }
+                  }
+                },
+                "a_bordo": {
+                  "description": "Persone a bordo dopo il passaggio; null se la corsa porta gruppi con conteggi non noti.",
+                  "type": ["integer", "null"],
+                  "minimum": 0
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "regole": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["giri", "carrozzine", "ausili_piegati", "assistente", "costi"],
+      "properties": {
+        "giri": {
+          "description": "Giri necessari quando la domanda non sta sul mezzo piu' grande in flotta.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["servizio", "persone", "mezzi"],
+            "properties": {
+              "servizio": { "type": "string", "minLength": 1 },
+              "persone": { "type": "integer", "minimum": 0 },
+              "mezzi": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["mezzo", "posti", "giri"],
+                  "properties": {
+                    "mezzo": { "type": "string", "minLength": 1 },
+                    "posti": { "type": "integer", "minimum": 0 },
+                    "giri": { "type": "integer", "minimum": 0 }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "carrozzine": {
+          "description": "Posti a sedere dei mezzi con pedana al crescere delle carrozzine.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["mezzo", "casi"],
+            "properties": {
+              "mezzo": { "type": "string", "minLength": 1 },
+              "casi": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["carrozzine", "ammesso", "posti_a_sedere"],
+                  "properties": {
+                    "carrozzine": { "type": "integer", "minimum": 0 },
+                    "ammesso": { "type": "boolean" },
+                    "posti_a_sedere": { "type": ["integer", "null"], "minimum": 0 }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "ausili_piegati": {
+          "description": "Dove vanno gli ausili piegati sui mezzi con bagagliaio o che li ammettono tra i sedili: prima nel bagagliaio, poi tra i sedili se i posti sono liberi, altrimenti non ammesso.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["mezzo", "posti", "bagagliaio", "posti_tra_i_sedili", "casi"],
+            "properties": {
+              "mezzo": { "type": "string", "minLength": 1 },
+              "posti": { "type": "integer", "minimum": 0 },
+              "bagagliaio": { "type": "integer", "minimum": 0 },
+              "posti_tra_i_sedili": { "type": ["integer", "null"], "minimum": 1 },
+              "casi": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["ausili", "seduti", "ammesso", "nel_bagagliaio", "tra_i_sedili", "posti_liberi"],
+                  "properties": {
+                    "ausili": { "type": "integer", "minimum": 0 },
+                    "seduti": { "description": "Passeggeri gia' seduti sul mezzo.", "type": "integer", "minimum": 0 },
+                    "ammesso": { "type": "boolean" },
+                    "nel_bagagliaio": { "type": ["integer", "null"], "minimum": 0 },
+                    "tra_i_sedili": { "type": ["integer", "null"], "minimum": 0 },
+                    "posti_liberi": { "type": ["integer", "null"], "minimum": 0 }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "assistente": {
+          "description": "Assistente a bordo secondo il regolamento del contratto, per grado e posti del mezzo.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["corsa", "regolamento", "gradi", "mezzi"],
+            "properties": {
+              "corsa": { "type": "string", "minLength": 1 },
+              "regolamento": { "type": "string", "minLength": 1 },
+              "gradi": {
+                "type": "array",
+                "items": { "enum": ["infanzia", "primaria", "secondaria_primo_grado", "secondaria_secondo_grado"] }
+              },
+              "mezzi": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["mezzo", "posti", "serve"],
+                  "properties": {
+                    "mezzo": { "type": "string", "minLength": 1 },
+                    "posti": { "type": "integer", "minimum": 0 },
+                    "serve": { "type": "boolean" }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "costi": {
+          "description": "Costo di una giornata dei servizi con un mezzo minimo, con ogni mezzo dell'azienda.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["servizio", "posti_minimi", "posti_massimi", "km_al_giorno", "mezzi"],
+            "properties": {
+              "servizio": { "type": "string", "minLength": 1 },
+              "posti_minimi": { "type": "integer", "minimum": 0 },
+              "posti_massimi": { "type": ["integer", "null"], "minimum": 0 },
+              "km_al_giorno": { "type": "number", "minimum": 0 },
+              "mezzi": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": ["mezzo", "posti", "ipotetico", "ammesso", "costo_giornaliero"],
+                  "properties": {
+                    "mezzo": { "type": "string", "minLength": 1 },
+                    "posti": { "type": "integer", "minimum": 0 },
+                    "ipotetico": { "type": "boolean" },
+                    "ammesso": { "type": "boolean" },
+                    "costo_giornaliero": { "$ref": "#/definitions/euro_o_null" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": { "properties": { "dati_particolari_inclusi": { "const": false } } },
+      "then": {
+        "description": "Senza --includi-dati-particolari i dati particolari valgono \"riservato\".",
+        "properties": {
+          "servizi": {
+            "items": {
+              "properties": {
+                "tipo": { "$ref": "#/definitions/riservato" },
+                "gruppi": {
+                  "items": {
+                    "properties": {
+                      "tipo": { "$ref": "#/definitions/riservato" },
+                      "carrozzine": { "$ref": "#/definitions/riservato" },
+                      "ausili_piegati": { "$ref": "#/definitions/riservato" },
+                      "assistente_richiesto": { "$ref": "#/definitions/riservato" },
+                      "passeggeri": { "items": { "properties": { "esigenze": { "$ref": "#/definitions/riservato" } } } }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "corse": { "items": { "properties": { "categoria": { "$ref": "#/definitions/riservato" } } } }
+        }
+      }
+    }
+  ],
+  "definitions": {
+    "riservato": { "description": "Dato particolare nascosto.", "const": "riservato" },
+    "data": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$" },
+    "orario": {
+      "description": "HH:MM; dopo mezzanotte si continua a contare (24:12 = 00:12 del giorno dopo).",
+      "type": "string",
+      "pattern": "^[0-9]{2,3}:[0-5][0-9]$"
+    },
+    "euro_o_null": { "type": ["number", "null"], "minimum": 0 }
+  }
+}

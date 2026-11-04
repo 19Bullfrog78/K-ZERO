@@ -1,0 +1,282 @@
+{
+  "schema": "servizi_fissi",
+  "schema_versione": 1,
+  "servizi_fissi": [
+    {
+      "codice": "SF-T-PAUSA-A",
+      "turno": "T-PAUSA-A",
+      "persona": "P-PAUSE",
+      "calendario": "CAL-T-PAUSA-A"
+    },
+    {
+      "codice": "SF-T-PAUSA-B",
+      "turno": "T-PAUSA-B",
+      "persona": "P-PAUSE",
+      "calendario": "CAL-T-PAUSA-B"
+    },
+    {
+      "codice": "SF-T-PAUSA-C",
+      "turno": "T-PAUSA-C",
+      "persona": "P-PAUSE",
+      "calendario": "CAL-T-PAUSA-C"
+    },
+    {
+      "codice": "SF-T-L138-GIO",
+      "turno": "T-L138-GIO",
+      "persona": "P-L138",
+      "calendario": "CAL-T-L138-GIO"
+    },
+    {
+      "codice": "SF-T-L138-VEN",
+      "turno": "T-L138-VEN",
+      "persona": "P-L138",
+      "calendario": "CAL-T-L138-VEN"
+    },
+    {
+      "codice": "SF-T-561-09",
+      "turno": "T-561-09",
+      "persona": "P-561-17",
+      "calendario": "CAL-T-561-09"
+    },
+    {
+      "codice": "SF-T-561-10",
+      "turno": "T-561-10",
+      "persona": "P-561-17",
+      "calendario": "CAL-T-561-10"
+    },
+    {
+      "codice": "SF-T-561-13",
+      "turno": "T-561-13",
+      "persona": "P-561-17",
+      "calendario": "CAL-T-561-13"
+    },
+    {
+      "codice": "SF-T-561-14",
+      "turno": "T-561-14",
+      "persona": "P-561-17",
+      "calendario": "CAL-T-561-14"
+    },
+    {
+      "codice": "SF-T-561-11",
+      "turno": "T-561-11",
+      "persona": "P-561-17",
+      "calendario": "CAL-T-561-11"
+    },
+    {
+      "codice": "SF-T-561-12",
+      "turno": "T-561-12",
+      "persona": "P-561-17",
+      "calendario": "CAL-T-561-12"
+    },
+    {
+      "codice": "SF-T-561-15",
+      "turno": "T-561-15",
+      "persona": "P-561-17",
+      "calendario": "CAL-T-561-15"
+    },
+    {
+      "codice": "SF-T-52KM-8",
+      "turno": "T-52KM-8",
+      "persona": "P-561-8",
+      "calendario": "CAL-T-52KM-8"
+    },
+    {
+      "codice": "SF-T-52KM-9",
+      "turno": "T-52KM-9",
+      "persona": "P-561-9",
+      "calendario": "CAL-T-52KM-9"
+    },
+    {
+      "codice": "SF-T-SENZA-KM",
+      "turno": "T-SENZA-KM",
+      "persona": "P-SENZA-KM",
+      "calendario": "CAL-T-SENZA-KM"
+    },
+    {
+      "codice": "SF-T-TITOLARE",
+      "turno": "T-TITOLARE",
+      "persona": "P-TITOLARE",
+      "calendario": "CAL-T-TITOLARE"
+    },
+    {
+      "codice": "SF-T-CHIAMATA-23",
+      "turno": "T-CHIAMATA-23",
+      "persona": "P-CHIAMATA",
+      "calendario": "CAL-T-CHIAMATA-23"
+    },
+    {
+      "codice": "SF-T-CHIAMATA-24",
+      "turno": "T-CHIAMATA-24",
+      "persona": "P-CHIAMATA",
+      "calendario": "CAL-T-CHIAMATA-24"
+    },
+    {
+      "codice": "SF-T-CHIAMATA-25",
+      "turno": "T-CHIAMATA-25",
+      "persona": "P-CHIAMATA",
+      "calendario": "CAL-T-CHIAMATA-25"
+    },
+    {
+      "codice": "SF-T-CHIAMATA-26",
+      "turno": "T-CHIAMATA-26",
+      "persona": "P-CHIAMATA",
+      "calendario": "CAL-T-CHIAMATA-26"
+    },
+    {
+      "codice": "SF-T-CHIAMATA-27",
+      "turno": "T-CHIAMATA-27",
+      "persona": "P-CHIAMATA",
+      "calendario": "CAL-T-CHIAMATA-27"
+    },
+    {
+      "codice": "SF-T-CONTRATTO-0",
+      "turno": "T-CONTRATTO-0",
+      "persona": "P-CONTRATTO",
+      "calendario": "CAL-T-CONTRATTO-0"
+    },
+    {
+      "codice": "SF-T-CONTRATTO-1",
+      "turno": "T-CONTRATTO-1",
+      "persona": "P-CONTRATTO",
+      "calendario": "CAL-T-CONTRATTO-1"
+    },
+    {
+      "codice": "SF-T-CONTRATTO-2",
+      "turno": "T-CONTRATTO-2",
+      "persona": "P-CONTRATTO",
+      "calendario": "CAL-T-CONTRATTO-2"
+    },
+    {
+      "codice": "SF-T-CONTRATTO-3",
+      "turno": "T-CONTRATTO-3",
+      "persona": "P-CONTRATTO",
+      "calendario": "CAL-T-CONTRATTO-3"
+    },
+    {
+      "codice": "SF-T-CONTRATTO-4",
+      "turno": "T-CONTRATTO-4",
+      "persona": "P-CONTRATTO",
+      "calendario": "CAL-T-CONTRATTO-4"
+    },
+    {
+      "codice": "SF-T-CONTRATTO-5",
+      "turno": "T-CONTRATTO-5",
+      "persona": "P-CONTRATTO",
+      "calendario": "CAL-T-CONTRATTO-5"
+    },
+    {
+      "codice": "SF-T-CONTRATTO-6",
+      "turno": "T-CONTRATTO-6",
+      "persona": "P-CONTRATTO",
+      "calendario": "CAL-T-CONTRATTO-6"
+    },
+    {
+      "codice": "SF-T-CONTRATTO-7",
+      "turno": "T-CONTRATTO-7",
+      "persona": "P-CONTRATTO",
+      "calendario": "CAL-T-CONTRATTO-7"
+    },
+    {
+      "codice": "SF-T-CONTRATTO-AMPIA",
+      "turno": "T-CONTRATTO-AMPIA",
+      "persona": "P-CONTRATTO",
+      "calendario": "CAL-T-CONTRATTO-AMPIA"
+    },
+    {
+      "codice": "SF-T-ORE",
+      "turno": "T-ORE",
+      "persona": "P-ORE",
+      "calendario": "CAL-T-ORE"
+    },
+    {
+      "codice": "SF-T-MULTI",
+      "turno": "T-MULTI",
+      "persona": "P-MULTI",
+      "calendario": "CAL-T-MULTI"
+    },
+    {
+      "codice": "SF-T-SCUOLA-LUNGA",
+      "turno": "T-SCUOLA-LUNGA",
+      "persona": "P-GUIDA",
+      "calendario": "CAL-T-SCUOLA-LUNGA"
+    },
+    {
+      "codice": "SF-T-RIENTRO-BETA",
+      "turno": "T-RIENTRO-BETA",
+      "persona": "P-RIENTRO-BETA",
+      "calendario": "CAL-T-RIENTRO-BETA"
+    },
+    {
+      "codice": "SF-T-50KM",
+      "turno": "T-50KM",
+      "persona": "P-50KM",
+      "calendario": "CAL-T-50KM"
+    },
+    {
+      "codice": "SF-T-50KM1",
+      "turno": "T-50KM1",
+      "persona": "P-50KM1",
+      "calendario": "CAL-T-50KM1"
+    },
+    {
+      "codice": "SF-T-DIS-LUNGA",
+      "turno": "T-DIS-LUNGA",
+      "persona": "P-DISABILI",
+      "calendario": "CAL-T-DIS-LUNGA"
+    },
+    {
+      "codice": "SF-T-DICH-LUNGA",
+      "turno": "T-DICH-LUNGA",
+      "persona": "P-DICHIARA",
+      "calendario": "CAL-T-DICH-LUNGA"
+    },
+    {
+      "codice": "SF-T-FORZATA",
+      "turno": "T-FORZATA",
+      "persona": "P-FORZATA",
+      "calendario": "CAL-T-FORZATA"
+    },
+    {
+      "codice": "SF-T-NONSERVE",
+      "turno": "T-NONSERVE",
+      "persona": "P-NONSERVE",
+      "calendario": "CAL-T-NONSERVE"
+    },
+    {
+      "codice": "SF-T-GITA-SCUOLA",
+      "turno": "T-GITA-SCUOLA",
+      "persona": "P-GITA-SCUOLA",
+      "calendario": "CAL-T-GITA-SCUOLA"
+    },
+    {
+      "codice": "SF-T-NCC-AUTO",
+      "turno": "T-NCC-AUTO",
+      "persona": "P-NCC-AUTO",
+      "calendario": "CAL-T-NCC-AUTO"
+    },
+    {
+      "codice": "SF-T-NCC-BUS",
+      "turno": "T-NCC-BUS",
+      "persona": "P-NCC-BUS",
+      "calendario": "CAL-T-NCC-BUS"
+    },
+    {
+      "codice": "SF-T-NAVETTA",
+      "turno": "T-NAVETTA",
+      "persona": "P-NAVETTA",
+      "calendario": "CAL-T-NAVETTA"
+    },
+    {
+      "codice": "SF-T-MATRIMONIO",
+      "turno": "T-MATRIMONIO",
+      "persona": "P-G",
+      "calendario": "CAL-MATRIMONIO"
+    },
+    {
+      "codice": "SF-T-PRIVATO-CENTRO",
+      "turno": "T-PRIVATO-CENTRO",
+      "persona": "P-G",
+      "calendario": "CAL-PRIVATO-CENTRO"
+    }
+  ]
+}

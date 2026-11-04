@@ -261,20 +261,47 @@ std::vector<Piece> pieces(const Ctx& x, const std::vector<TimeCategory>& interru
     return out;
 }
 
-// La corsa di un pezzo di guida e' di un servizio occasionale del regime? 2 = certo, 1 = da confermare, 0 = no.
+// La corsa di un pezzo di guida e' di un servizio occasionale del regime? 2 = certo, 1 = da confermare, 0 = no. Ogni servizio
+// della corsa deve esserlo; la certezza e' la piu' bassa tra i suoi tipi (K-012: es. l'NCC certo, "altro" da confermare). Un
+// trasferimento a vuoto segue la corsa a cui serve, come per la guida delle corse escluse (orari.cpp, link_driving): quella
+// dopo se arriva dove comincia, altrimenti quella prima se parte da dove finisce; se non si capisce, da confermare.
+int occasional_trip(const Regime& r, const Index& idx, const Trip& t) {
+    if (t.services.empty()) return 0;
+    int level = 2;
+    for (const Ref& sr : t.services) {
+        const Service* sv = idx.service(sr.code);
+        if (!sv) return 0;
+        const auto has = [&](const std::vector<ServiceKind>& v) { return std::find(v.begin(), v.end(), sv->kind) != v.end(); };
+        level = std::min(level, has(r.occasional.certain) ? 2 : has(r.occasional.to_confirm) ? 1 : 0);
+    }
+    return level;
+}
+
 int occasional(const Ctx& x, int seg) {
     const Regime& r = *x.rd.regime;
-    if (seg < 0 || r.occasional.empty()) return 0;
+    if (seg < 0 || !r.occasional.present) return 0;
     const Seg& s = x.c.segs[static_cast<std::size_t>(seg)];
     if (s.item < 0) return 0;
-    const WorkItem& it = x.c.plan->days[static_cast<std::size_t>(s.day)].items[static_cast<std::size_t>(s.item)];
-    if (!it.trip || it.trip->services.empty()) return 0;
+    const PersonDay& pd = x.c.plan->days[static_cast<std::size_t>(s.day)];
+    const auto ii = static_cast<std::size_t>(s.item);
+    const WorkItem& it = pd.items[ii];
     const Index& idx = *x.c.index;
-    for (const Ref& sr : it.trip->services) {
-        const Service* sv = idx.service(sr.code);
-        if (!sv || std::find(r.occasional.begin(), r.occasional.end(), sv->kind) == r.occasional.end()) return 0;
-    }
-    return r.occasional_to_confirm ? 1 : 2;
+    if (it.trip) return occasional_trip(r, idx, *it.trip);
+    std::optional<std::size_t> next, prev;
+    for (std::size_t j = ii + 1; j < pd.items.size() && !next; ++j)
+        if (pd.items[j].shift == it.shift && pd.items[j].trip) next = j;
+    for (std::size_t j = ii; j-- > 0 && !prev;)
+        if (pd.items[j].shift == it.shift && pd.items[j].trip) prev = j;
+    if (!it.item) return 0;
+    const ShiftActivity& a = it.item->activity;
+    if (next && a.to_place && a.to_place->code == pd.items[*next].trip->passages[pd.items[*next].from].place.code)
+        return occasional_trip(r, idx, *pd.items[*next].trip);
+    if (prev && a.place.code == pd.items[*prev].trip->passages[pd.items[*prev].to].place.code)
+        return occasional_trip(r, idx, *pd.items[*prev].trip);
+    // Non si sa a quale corsa serve: da confermare, se almeno una corsa vicina e' di un servizio occasionale.
+    const int vicine = std::max(next ? occasional_trip(r, idx, *pd.items[*next].trip) : 0,
+                                prev ? occasional_trip(r, idx, *pd.items[*prev].trip) : 0);
+    return std::min(1, vicine);
 }
 
 // Tutte le soste ai capolinea della giornata (tra due corse guidate) superano N minuti? (L. 138/1958 art. 5 c. 4)

@@ -1,6 +1,6 @@
 {
   "schema": "norme",
-  "schema_versione": 2,
+  "schema_versione": 3,
   "norme": [
     {
       "codice": "N-IT",
@@ -82,11 +82,17 @@
           "nota": "Un mezzo da noleggio puo' fare servizio di linea solo con la distrazione (art. 87, comma 4; circolare del Ministero dei trasporti n. 27690 del 27/11/2013)."
         },
         {
+          "tipi_servizio": ["ncc"],
+          "usi": ["NCC"],
+          "fonte": { "documento": "Codice della strada", "punto": "art. 82" },
+          "nota": "Noleggio con conducente (gite, turismo, eventi): uso di terzi da noleggio. Un autobus di linea lo fa solo con la distrazione (art. 87, comma 4)."
+        },
+        {
           "tipi_servizio": ["altro"],
           "usi": ["NCC"],
           "fonte": { "documento": "Codice della strada", "punto": "art. 82" },
           "da_confermare": true,
-          "nota": "Gite e noleggi occasionali. Un servizio 'altro' di genere diverso va scritto nel regolamento del suo contratto."
+          "nota": "Un servizio 'altro' non e' per forza un noleggio: l'uso giusto va scritto nel regolamento del suo contratto."
         }
       ],
       "regimi": [
@@ -276,7 +282,11 @@
             },
             "nota": "Nelle settimane in cui vale il 561 la guida delle corse escluse (es. linea fino a 50 km) si registra fra le altre mansioni: non conta nei limiti di guida e non e' mai interruzione ne' riposo. Da confermare (la nota INL 61/2021 parla di piena applicazione): nella lettura prudente conta come guida."
           },
-          "servizi_occasionali": { "tipi_servizio": ["altro"], "da_confermare": true },
+          "servizi_occasionali": {
+            "tipi_servizio": { "certi": ["ncc"], "da_confermare": ["altro"] },
+            "fonte": { "documento": "Reg. (CE) n. 1073/2009", "punto": "art. 2", "riferimenti": "Reg. (CE) n. 12/98, art. 2" },
+            "nota": "Servizi occasionali = servizi che non sono regolari ne' regolari specializzati: l'NCC (gruppi formati su iniziativa del cliente o dell'azienda) lo e'. Un servizio 'altro' non e' per forza occasionale (es. una navetta per gli operai con tragitto e orari fissi e' un servizio regolare specializzato): da confermare."
+          },
           "estensione": {
             "ambito": "settimana",
             "famiglie": ["guida", "riposi"],

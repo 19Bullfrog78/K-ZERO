@@ -234,6 +234,8 @@ public:
             if (c && !primo_contratto) primo_contratto = c;
             x["contratto"] = sv ? Json(sv->contract.code) : Json(nullptr);
             x["committente"] = c ? Json(c->client.code) : Json(nullptr);
+            // K-012 (giornata versione 4): il nome del committente; di un privato e' personale (o legato a un luogo sensibile).
+            x["nome_committente"] = c ? vista_.nome_committente(idx_.client(c->client.code)) : Json(nullptr);
             servizi.push_back(x);
             if (sv)
                 for (const auto& g : sv->groups) non_noti = non_noti || g.counts == kzero::CountKind::Unknown;
@@ -569,7 +571,7 @@ void elemento_testo(std::string& t, const Json& e) {
     std::string servizi;
     for (const auto& s : e.at("servizi")) {
         servizi += (servizi.empty() ? "" : "; ") + s.at("codice").get<std::string>() + " (tipo " + testo(s.at("tipo")) +
-                   ", contratto " + testo(s.at("contratto")) + ", committente " + testo(s.at("committente")) + ")";
+                   ", contratto " + testo(s.at("contratto")) + ", committente " + testo_committente(s) + ")";
     }
     const Json& cal = e.at("calendario");
     t += "                servizi " + servizi + "\n";

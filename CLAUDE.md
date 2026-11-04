@@ -2,7 +2,7 @@
 
 K-Zero e' universale: aziende, consorzi ed enti di ogni dimensione e di ogni paese; Alpinabus e' il primo caso di prova.
 
-Software di pianificazione flotta: servizi di linea, handicap, scolastici, ibridi.
+Software di pianificazione flotta: servizi di linea, handicap, scolastici, NCC, promiscui.
 Si parte da Alpinabus (3 minibus + 1 auto) e si deve poter crescere fino a 500 mezzi e oltre.
 
 ## Confini
@@ -38,7 +38,8 @@ Si parte da Alpinabus (3 minibus + 1 auto) e si deve poter crescere fino a 500 m
 - Orari di lavoro (K-011) di un giorno o di un periodo (tempi per categoria, lavoro per regime, riposi, leggi che valgono e
   perche', rientri, problemi): `./build/kzero ore <cartella> (--data AAAA-MM-GG | --dal AAAA-MM-GG --al AAAA-MM-GG)
   [--persona CODICE]` (es. `./build/kzero ore esempi/demo --dal 2026-11-09 --al 2026-11-15 --persona P-A`; `--formato
-  json`; pacchetto di prova degli orari: tests/esempi/k011-orari)
+  json`; pacchetto di prova degli orari: tests/esempi/k011-orari, che resta alle versioni 2 del K-011; dal K-012 pacchetto
+  di prova dei servizi, rifatto sul demo di oggi: tests/esempi/k012-servizi, con tests/strumenti/genera_k012.py)
 - Cassaforte dei dati personali (K-010, docs/cassaforte.md): `./build/kzero chiudi <cartella in chiaro> --scrivi <cartella
   nuova> --utente CODICE --conservazione AAAA-MM-GG`; poi ogni comando su un pacchetto chiuso vuole `--utente CODICE` e la
   password (dal terminale senza eco, oppure dall'ingresso standard con `--password-da-ingresso`; mai come parametro ne' in
@@ -135,7 +136,8 @@ Si parte da Alpinabus (3 minibus + 1 auto) e si deve poter crescere fino a 500 m
   interne (accesso::Ambiente), mai nel programma kzero. I comandi che cambiano la cassaforte vogliono `--scrivi`.
 - Tre classi di dati, marcate campo per campo negli schemi ("x-kzero-classe"): comuni, personali (nomi,
   indirizzi, case, punti porta a porta, motivi scritti a mano), particolari (salute: esigenze, carrozzine,
-  assistente necessario, servizio per disabili). Nelle uscite, testo e JSON allo stesso modo: di base i
+  assistente necessario, servizio per disabili); dal K-012 nome e nota di un committente privato sono personali (legati
+  se un suo servizio va in un luogo sensibile, regola in LegameSensibile). Nelle uscite, testo e JSON allo stesso modo: di base i
   personali sono sostituiti dal codice e i particolari diventano "riservato"; si vedono solo con
   `--includi-dati-personali` e `--includi-dati-particolari`, e con un pacchetto chiuso solo entro i permessi dell'utente
   (oltre i permessi e' un errore K-ERR, mai un'uscita filtrata in silenzio). Vale anche nei messaggi, nelle posizioni (mai dentro un
@@ -160,7 +162,9 @@ Si parte da Alpinabus (3 minibus + 1 auto) e si deve poter crescere fino a 500 m
   contro il programma), livello errore o avviso, posizione = file + percorso JSON. Testi in un unico catalogo.
 
 ## Trappole
-- "Ibrido" non si inserisce a mano: lo ricava derive_service.
+- "Promiscuo" (fino al K-011 "ibrido") non si inserisce a mano: lo ricava derive_service. Per un servizio NCC i gruppi non
+  cambiano la categoria (una gita scolastica e' NCC); il tipo NCC dice la natura del servizio, non la licenza del mezzo
+  (una navetta di operai con tragitto e orari fissi non e' NCC). L'alimentazione "ibrido" dei mezzi e' un'altra cosa.
 - L'assistente occupa un posto. Solo chi viaggia seduto sulla carrozzina toglie posti a sedere e chiede la
   pedana; la carrozzina piegata e gli altri ausili piegati vanno nel bagagliaio, oppure tra i sedili (occupando
   posti liberi) solo se il mezzo lo ammette. Tutto in fits(), una sola regola.

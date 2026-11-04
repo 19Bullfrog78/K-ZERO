@@ -778,6 +778,13 @@ private:
             if (!a.note.empty())
                 add(Check::NumbersOnlyPersonalData, nota(a.src),
                     {date_param("data", a.date), ref_param("turno", Element::Shift, a.shift.code)}, 7);
+        // K-012: un committente privato resta (il codice serve ai contratti), ma senza nome e senza nota.
+        for (const Client& x : p_.clients) {
+            if (!x.is_private) continue;
+            const Param who = ref_param("committente", Element::Client, x.code);
+            if (!x.name.empty()) add(Check::NumbersOnlyPersonalData, Source{x.src.file, x.src.pointer + "/nome", 0, 0}, {who}, 8);
+            if (!x.note.empty()) add(Check::NumbersOnlyPersonalData, nota(x.src), {who}, 9);
+        }
     }
 
     // --- Persone a bordo ----------------------------------------------------------------------

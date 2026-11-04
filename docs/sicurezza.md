@@ -23,7 +23,7 @@ La valutazione d'impatto la fa il titolare; questa sezione gli da' i fatti sul p
 
 | Domanda | Risposta |
 |---|---|
-| Perche' (finalita') | Pianificare il trasporto: servizi di linea, scolastici, per disabili, ibridi; turni di autisti e assistenti; mezzi. |
+| Perche' (finalita') | Pianificare il trasporto: servizi di linea, scolastici, per disabili, NCC (noleggio con conducente), promiscui; turni di autisti e assistenti; mezzi. |
 | Quali dati | Comuni: fermate pubbliche, scuole e centri, orari, calendari, mezzi, contratti, regolamenti, conteggi. Personali: dei passeggeri nome, casa, punto porta a porta, motivi scritti a mano (solo nel livello "completo"); di autisti e assistenti nome, casa, ruoli, rapporto e ore, disponibilita', abilitazioni, autorizzazioni, competenze, preferenze, assenze (tipo e giorni, mai la causa); dal K-011 anche contratto collettivo, ore previste e massime, scelte sugli orari e chiave del rientro della persona, giornate a chiamata, e quale legge sugli orari vale per la persona quando dipende dal rapporto o dal contratto collettivo. Particolari (salute): esigenze dei passeggeri (carrozzina, ausili piegati, assistente necessario), tipo "disabili" di servizi e gruppi, conteggi di carrozzine e ausili, competenze richieste da un servizio o da un turno; dal K-011 anche il tipo di servizio come motivo di un avviso sugli orari ("c'e' un motivo riservato"). Elenco completo, campo per campo: [formato-dati.md](formato-dati.md). |
 | Di chi | Alunni (minori), persone con disabilita' e loro accompagnatori, autisti e assistenti delle aziende. |
 | Quali dati mai | Codice fiscale, telefoni, mail, data di nascita, idoneita' medica, cause delle assenze: il formato non ha campi per scriverli (un campo cosi' aggiunto a mano e' un errore). |

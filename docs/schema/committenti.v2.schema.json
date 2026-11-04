@@ -1,0 +1,102 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "K-Zero - file di dati committenti.json, versione 2",
+  "description": "Committenti: chi affida i servizi (file committenti.json). Versione 2 (K-012): in piu' i committenti privati (persone, es. chi prenota un noleggio per un matrimonio), in un elenco a parte come i luoghi privati: nome e nota sono dati personali. Mai telefono, mail o codice fiscale: il formato non ha questi campi. La versione 1 resta valida.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "schema_versione", "committenti"],
+  "properties": {
+    "schema": { "const": "committenti", "x-kzero-classe": "comune" },
+    "schema_versione": { "const": 2, "x-kzero-classe": "comune" },
+    "committenti": {
+      "description": "Committenti che sono enti, scuole, agenzie, aziende: tutti i loro dati sono comuni.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["codice", "nome"],
+        "properties": {
+          "codice": { "$ref": "#/definitions/codice", "x-kzero-classe": "comune" },
+          "nome": { "$ref": "#/definitions/testo", "x-kzero-classe": "comune" },
+          "codici_esterni": { "$ref": "#/definitions/codici_esterni", "x-kzero-classe": "comune" },
+          "nota": { "$ref": "#/definitions/nota", "x-kzero-classe": "comune" }
+        }
+      }
+    },
+    "committenti_privati": {
+      "description": "Committenti privati (persone, es. chi prenota un noleggio per un matrimonio). Il codice e i codici esterni sono comuni (li sceglie l'utente: non devono contenere il nome della persona); nome e nota sono dati personali, che vanno nella cassaforte e non stanno mai in un pacchetto 'solo numeri'. Se un servizio di un suo contratto va in un luogo sensibile, ci passa con una corsa (anche con i trasbordi) o, con 'porta_a_porta_sensibile', ha case porta a porta, i suoi dati personali sono legati a un luogo sensibile: servono i dati personali e particolari insieme (docs/formato-dati.md).",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "x-kzero-trasportato": "committente",
+        "additionalProperties": false,
+        "required": ["codice"],
+        "properties": {
+          "codice": { "$ref": "#/definitions/codice", "x-kzero-classe": "comune" },
+          "nome": {
+            "description": "Nome e cognome della persona.",
+            "$ref": "#/definitions/testo",
+            "x-kzero-classe": "personale"
+          },
+          "codici_esterni": { "$ref": "#/definitions/codici_esterni", "x-kzero-classe": "comune" },
+          "nota": { "$ref": "#/definitions/nota", "x-kzero-classe": "personale" }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "codice": {
+      "description": "Codice K-Zero: scelto da chi scrive i dati, unico per tipo di elemento. Lettere senza accenti, cifre, '-', '_' e '.'; inizia con una lettera o una cifra; al massimo 64 caratteri.",
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+    },
+    "testo": {
+      "description": "Testo di una riga, non vuoto (al massimo 300 caratteri).",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 300,
+      "pattern": "\\S"
+    },
+    "nota": {
+      "description": "Testo libero, non vuoto (al massimo 2000 caratteri).",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2000,
+      "pattern": "\\S"
+    },
+    "data": {
+      "description": "Data AAAA-MM-GG che esiste nel calendario (es. 2026-09-14; il 29 febbraio solo negli anni bisestili).",
+      "type": "string",
+      "pattern": "^([0-9]{4}-((0[13578]|1[02])-(0[1-9]|[12][0-9]|3[01])|(0[469]|11)-(0[1-9]|[12][0-9]|30)|02-(0[1-9]|1[0-9]|2[0-8]))|([0-9]{2}(0[48]|[2468][048]|[13579][26])|([02468][048]|[13579][26])00)-02-29)$"
+    },
+    "orario": {
+      "description": "Orario HH:MM, ora locale del fuso del pacchetto. Dopo mezzanotte si continua a contare come in GTFS: 24:15 = 00:15 del giorno dopo; al massimo 47:59.",
+      "type": "string",
+      "pattern": "^([0-3][0-9]|4[0-7]):[0-5][0-9]$"
+    },
+    "coordinate": {
+      "description": "Posizione WGS84 in gradi decimali.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["lat", "lon"],
+      "properties": {
+        "lat": { "type": "number", "minimum": -90, "maximum": 90 },
+        "lon": { "type": "number", "minimum": -180, "maximum": 180 }
+      }
+    },
+    "codici_esterni": {
+      "description": "Codici dello stesso elemento in altri sistemi (committenti, orari pubblici, piattaforme).",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["sistema", "tipo", "codice"],
+        "properties": {
+          "sistema": { "$ref": "#/definitions/testo" },
+          "tipo": { "$ref": "#/definitions/testo" },
+          "codice": { "$ref": "#/definitions/testo" }
+        }
+      }
+    }
+  }
+}

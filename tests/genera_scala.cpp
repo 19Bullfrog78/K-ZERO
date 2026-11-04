@@ -1,14 +1,20 @@
 // K-Zero - prova di scala: genera un pacchetto dati inventato e grande, sempre uguale (seme fisso).
-// 10 aziende, 600 mezzi, 5.000 fermate, 200 scuole, 2.000 servizi con la loro domanda, 10.000 corse (K-007);
-// dal K-008 anche 1.320 persone, 1.200 turni del giorno, una rotazione per azienda (lunghezze da 3 a 28 giorni e una a
-// passi di un mese), un anno di festivita', assenze coperte da assegnazioni del singolo giorno.
-// Ogni mezzo fa le sue corse una dopo l'altra (fasce di 40 minuti dalle 06:00): due turni al giorno per mezzo, il
-// mattino e il pomeriggio, ognuno con una pausa di almeno 45 minuti a meta'. Le righe di ogni rotazione si danno il
-// cambio sui turni della loro meta' della giornata (il riposo scorre): chi fa il pomeriggio non fa il mattino dopo.
-// Dal K-011 norme, aziende e persone sono alla versione 2: le leggi sugli orari sono quelle del pacchetto dimostrativo
+// 10 aziende, 600 mezzi (piu' un mezzo di scorta per azienda), 5.000 fermate, 200 scuole, 20 centri diurni, circa 2.000
+// servizi con la loro domanda e 10.000 corse (K-007); dal K-008 anche 1.320 persone, 1.200 turni del giorno, una rotazione per
+// azienda (lunghezze da 3 a 28 giorni e una a passi di un mese), un anno di festivita', assenze coperte da assegnazioni del
+// singolo giorno.
+// Dal K-012 la prova e' mista, come un'azienda vera: in ogni azienda 4 autobus di linea (linee fino a 50 km e linee oltre i 50
+// km, che fanno valere il Reg. 561/2006), 2 auto NCC da 8 posti (noleggi insieme a piccoli servizi scolastici), 4 minibus
+// attrezzati (servizi per disabili verso i centri diurni, luoghi sensibili, e corse promiscue scolastico + disabili), 4
+// pullman NCC (561 certo) e 46 mezzi dello scolastico. Le aziende scelgono il modo delle corse per tipo di servizio (OUT o
+// tachigrafo) e per le linee lunghe il tachigrafo per servizio; alcune assenze sono coperte da persone in prestito da
+// un'altra azienda e un mezzo in revisione dal mezzo di scorta prestato da un'altra azienda.
+// Ogni mezzo fa le sue corse una dopo l'altra (fasce di 40 minuti dalle 06:00; una linea lunga occupa due fasce): due turni al
+// giorno per mezzo, il mattino e il pomeriggio, ognuno con una pausa di almeno 45 minuti a meta'. Le righe di ogni rotazione
+// si danno il cambio sui turni della loro meta' della giornata (il riposo scorre): chi fa il pomeriggio non fa il mattino dopo.
+// Dal K-011 norme, aziende e persone sono alle versioni nuove: le leggi sugli orari sono quelle del pacchetto dimostrativo
 // (incorporate nel programma, cosi' la prova misura le regole vere), con le categorie dei tempi e le scelte delle aziende.
-// I dati sono coerenti: "kzero controlla" deve finire senza errori; restano solo gli avvisi delle regole che non si
-// possono verificare per intero ai bordi del periodo del pacchetto (tests/CMakeLists.txt).
+// I dati sono coerenti: "kzero controlla" deve finire senza errori; gli avvisi che restano sono spiegati in tests/CMakeLists.txt.
 // Uso: genera_scala <cartella>   (la cartella viene creata; i file del pacchetto vengono sostituiti)
 #include <algorithm>
 #include <cmath>
@@ -16,8 +22,10 @@
 #include <filesystem>
 #include <fstream>
 #include <iostream>
+#include <set>
 #include <stdexcept>
 #include <string>
+#include <tuple>
 #include <vector>
 
 #include <nlohmann/json.hpp>
@@ -33,13 +41,12 @@ constexpr int kMezziPerAzienda = 60;    // 600 mezzi
 constexpr int kComuni = 250;
 constexpr int kFermatePerComune = 20;   // 5.000 fermate
 constexpr int kScuole = 200;
-constexpr int kServizi = 2000;
-constexpr int kCorsePerServizio = 5;    // 10.000 corse
+constexpr int kCentri = 20;              // centri diurni (luoghi sensibili), K-012
+constexpr int kCorsePerServizio = 5;
 constexpr int kFermatePerCorsa = 4;
 constexpr int kFermate = kComuni * kFermatePerComune;
-constexpr int kCorsePerAzienda = kServizi / kAziende * kCorsePerServizio;
-static_assert(kCorsePerAzienda == 1000, "la prova di scala ha 1.000 corse per azienda (DIARIO.md)");
-constexpr int kFasciaMinuti = 40;                // ogni corsa sta in una fascia: dura al massimo 36 minuti
+constexpr int kFasce = 17;                       // fasce 0-16 in ogni giornata del mezzo
+constexpr int kFasciaMinuti = 40;                // ogni corsa sta in una fascia: dura al massimo 36 minuti (una linea lunga, due fasce: 76)
 constexpr int kFascePerMattino = 8;              // fasce 0-7 il mattino, 8-16 il pomeriggio
 constexpr int kTurniPerAzienda = 2 * kMezziPerAzienda;   // 120
 constexpr int kRiposiPerGiorno = 12;             // righe della rotazione a riposo ogni giorno
@@ -209,6 +216,17 @@ int main(int argc, char** argv) {
                                      {"comune", comune(c)},
                                      {"coordinate", coordinate(c, 0.02, 0.02)}});
         }
+        // K-012: i centri diurni dei servizi per disabili, luoghi sensibili (luoghi versione 2).
+        for (int c = 0; c < kCentri; ++c) {
+            const int k = c * kComuni / kCentri + 5;
+            elenco_luoghi.push_back({{"codice", "L-CEN-" + cifre(c + 1, 2)},
+                                     {"tipo", "centro"},
+                                     {"nome", comune(k) + ", centro diurno " + cifre(c + 1, 2)},
+                                     {"comune", comune(k)},
+                                     {"coordinate", coordinate(k, 0.01, 0.03)},
+                                     {"sensibile", true}});
+        }
+        luoghi["schema_versione"] = 2;
         scrivi(cartella, "luoghi.json", luoghi);
 
         // Regolamento, calendario, scuole, committenti, contratti.
@@ -270,11 +288,24 @@ int main(int argc, char** argv) {
                                          {"fine", "13:00"},
                                          {"attesa_concordata",
                                           {{"prima_minuti", 20}, {"dopo_minuti", 15}, {"accordo", "Accordo n. " + std::to_string(s + 1)}}}}})}});
+        for (int c = 0; c < kCentri; ++c)
+            elenco_scuole.push_back({{"codice", "SC-CEN-" + cifre(c + 1, 2)},
+                                     {"nome", "Centro diurno di prova " + cifre(c + 1, 2)},
+                                     {"luogo", "L-CEN-" + cifre(c + 1, 2)},
+                                     {"tipo", "centro"},
+                                     {"tipo_centro", {{"valore", "diurno"}}},
+                                     {"orari", Json::array({{{"dal", "2026-09-14"},
+                                                             {"al", "2027-06-12"},
+                                                             {"giorni", kGiorniScuola},
+                                                             {"inizio", "08:30"},
+                                                             {"fine", "16:00"}}})},
+                                     {"durata_massima_a_bordo_minuti", 60}});
         scrivi(cartella, "scuole.json", scuole);
 
         Json committenti = documento("committenti");
         committenti["committenti"] = Json::array({{{"codice", "CM-1"}, {"nome", "Committente di prova 1"}},
-                                                  {{"codice", "CM-2"}, {"nome", "Committente di prova 2"}}});
+                                                  {{"codice", "CM-2"}, {"nome", "Committente di prova 2"}},
+                                                  {{"codice", "CM-AGENZIA"}, {"nome", "Agenzia di viaggi di prova"}}});
         scrivi(cartella, "committenti.json", committenti);
 
         Json contratti = documento("contratti");
@@ -289,102 +320,231 @@ int main(int argc, char** argv) {
                                         {"valido_dal", "2026-09-01"},
                                         {"valido_al", "2027-08-31"},
                                         {"assistente_fornito_da", "committente"}});
+            // K-012: i noleggi con conducente per un'agenzia, con un contratto a parte (fuori dal lotto).
+            elenco_contratti.push_back({{"codice", "CT-NCC-" + cifre(a + 1, 2)},
+                                        {"committente", "CM-AGENZIA"},
+                                        {"azienda", azienda(a)},
+                                        {"regolamento", "R-SCALA"},
+                                        {"valido_dal", "2026-09-01"},
+                                        {"valido_al", "2027-08-31"},
+                                        {"assistente_fornito_da", "committente"}});
             lotti.push_back({{"codice", "LOTTO-" + cifre(a + 1, 2)}, {"contratto", "CT-" + cifre(a + 1, 2)}, {"servizi", Json::array()}});
         }
         scrivi(cartella, "contratti.json", contratti);
 
-        // Servizi con la domanda e le loro corse: la domanda di ogni fermata e' la somma delle sue corse.
-        Json servizi = documento("servizi");
+        // Servizi con la domanda e le loro corse (K-012: tipi di servizio diversi, secondo il mezzo che li fa). In ogni azienda le
+        // fasce dei mezzi sono i posti delle corse: un servizio ha 5 corse in 5 posti dello stesso tipo di mezzo (di solito la
+        // stessa fascia di 5 mezzi diversi). Sulle auto e sui minibus attrezzati i tipi si alternano lungo la giornata, cosi' ogni
+        // turno ne ha piu' d'uno. La domanda di ogni fermata e' la somma delle sue corse.
+        enum class TipoMezzo { Linea, Auto, Attrezzato, Pullman, Scuola };
+        const auto tipo_mezzo = [](int m) {
+            return m < 4    ? TipoMezzo::Linea
+                   : m < 6  ? TipoMezzo::Auto
+                   : m < 10 ? TipoMezzo::Attrezzato
+                   : m < 14 ? TipoMezzo::Pullman
+                            : TipoMezzo::Scuola;
+        };
+        struct Posto {
+            int m = 0, fascia = 0;
+            bool lunga = false;   // linea oltre i 50 km: due fasce
+        };
+        enum class Tipo { Scuola, ScuolaPiccola, Linea, LineaLunga, NccPullman, NccAuto, Disabili, Promiscuo };
+        Json servizi = documento("servizi", 3);
         Json& elenco_servizi = servizi["servizi"] = Json::array();
         Json corse = documento("corse");
         Json& elenco_corse = corse["corse"] = Json::array();
-        int numero_corsa = 0;
-        std::vector<int> corse_azienda(kAziende, 0);
-        // Corse di ogni mezzo, in ordine di fascia: codice, ora di fine, scuola dove finisce.
+        int numero_corsa = 0, numero_servizio = 0, servizi_scritti = 0, corse_promiscue = 0, linee_lunghe_scritte = 0;
+        // Corse di ogni mezzo: codice, fascia, ora di fine, luogo dove finisce.
         struct CorsaDelMezzo {
-            std::string codice, scuola;
-            int fine = 0;
+            std::string codice, arrivo;
+            int fascia = 0, fine = 0;
         };
         std::vector<std::vector<std::vector<CorsaDelMezzo>>> del_mezzo(
             kAziende, std::vector<std::vector<CorsaDelMezzo>>(kMezziPerAzienda));
-        for (int i = 0; i < kServizi; ++i) {
-            const int a = i % kAziende;
-            const int s = i % kScuole;
-            const std::string codice_servizio = "S-" + cifre(i + 1, 4);
-            const std::string codice_gruppo = "G-" + cifre(i + 1, 4);
-            const std::string scuola = "L-SC-" + cifre(s + 1, 3);
-            std::vector<int> salgono;
-            int totale = 0;
-            Json fermate = Json::array();
-            for (int k = 0; k < kFermatePerCorsa; ++k) {
-                salgono.push_back(caso.tra(1, 3));
-                totale += salgono.back();
-                fermate.push_back({{"luogo", fermata((kFermatePerCorsa * i + k) % kFermate)},
-                                   {"salgono", salgono.back() * kCorsePerServizio}});
-            }
-            fermate.push_back({{"luogo", scuola}, {"scendono", totale * kCorsePerServizio}});
-            elenco_servizi.push_back(
-                {{"codice", codice_servizio},
-                 {"nome", "Servizio di prova " + cifre(i + 1, 4)},
-                 {"tipo", "scolastico"},
-                 {"contratto", "CT-" + cifre(a + 1, 2)},
-                 {"calendario", "CAL-SCUOLA"},
-                 {"liberta_oraria", {{"tipo", "libera"}, {"soglia_da_concordare_minuti", 10}}},
-                 {"domanda",
-                  {{"gruppi", Json::array({{{"codice", codice_gruppo},
-                                            {"tipo", "studenti"},
-                                            {"verso", "andata"},
-                                            {"scuola", "SC-" + cifre(s + 1, 3)},
-                                            {"finestra", {{"dalle", "07:30"}, {"alle", "08:30"}}},
-                                            {"conteggi", "esatti"},
-                                            {"fermate", fermate}}})}}}});
-            lotti[static_cast<std::size_t>(a)]["servizi"].push_back(codice_servizio);
-            for (int g = 0; g < kCorsePerServizio; ++g) {
-                // La j-esima corsa dell'azienda va al mezzo j % 60, nella fascia j / 60.
-                const int j = corse_azienda[static_cast<std::size_t>(a)]++;
-                const int m = j % kMezziPerAzienda;
-                int t = inizio_fascia(j / kMezziPerAzienda) + caso.tra(0, 4);
-                Json passaggi = Json::array();
-                passaggi.push_back({{"luogo", "L-RIM-" + cifre(a + 1, 2)}, {"orario", orario(t)}});
-                for (int k = 0; k < kFermatePerCorsa; ++k) {
-                    t += caso.tra(3, 6);
-                    passaggi.push_back({{"luogo", fermata((kFermatePerCorsa * i + k) % kFermate)},
-                                        {"orario", orario(t)},
-                                        {"persone", Json::array({{{"gruppo", codice_gruppo}, {"salgono", salgono[static_cast<std::size_t>(k)]}}})},
-                                        {"km", {{k == 0 ? "vuoti" : "pieni", caso.tra(10, 99) / 10.0}}}});
+        std::vector<std::vector<std::string>> servizi_lunghi(kAziende);   // linee oltre i 50 km: il tachigrafo per servizio
+        for (int a = 0; a < kAziende; ++a) {
+            std::vector<Posto> linee_lunghe, linee, auto_ncc, attrezzati, pullman, scolastici;
+            for (int f = 0; f < kFasce; ++f)
+                for (int m = 0; m < kMezziPerAzienda; ++m) switch (tipo_mezzo(m)) {
+                        case TipoMezzo::Linea:
+                            // Le linee lunghe nelle fasce 0-1, 2-3, 4-5, 8-9 e 12-13 (mai a cavallo di una pausa); le altre
+                            // fasce, linee corte.
+                            if (f == 0 || f == 2 || f == 4 || f == 8 || f == 12) linee_lunghe.push_back({m, f, true});
+                            else if (!(f == 1 || f == 3 || f == 5 || f == 9 || f == 13)) linee.push_back({m, f, false});
+                            break;
+                        case TipoMezzo::Auto: auto_ncc.push_back({m, f, false}); break;
+                        case TipoMezzo::Attrezzato: attrezzati.push_back({m, f, false}); break;
+                        case TipoMezzo::Pullman: pullman.push_back({m, f, false}); break;
+                        case TipoMezzo::Scuola: scolastici.push_back({m, f, false}); break;
+                    }
+            std::vector<std::pair<Tipo, std::vector<Posto>>> piano;
+            const auto a_blocchi = [&](Tipo t, const std::vector<Posto>& v) {
+                for (std::size_t k = 0; k + kCorsePerServizio <= v.size(); k += kCorsePerServizio)
+                    piano.push_back({t, std::vector<Posto>(v.begin() + static_cast<std::ptrdiff_t>(k),
+                                                           v.begin() + static_cast<std::ptrdiff_t>(k + kCorsePerServizio))});
+            };
+            // Tipi che si alternano lungo la giornata di ogni mezzo: la fascia f del mezzo m e' del tipo tipi[(f + m) % n]; poi i
+            // posti di ogni tipo, a blocchi di 5, fanno i servizi (cosi' ogni turno ha piu' tipi, e ogni servizio piu' mezzi).
+            const auto alternati = [&](const std::vector<Tipo>& tipi, const std::vector<Posto>& v) {
+                const std::size_t n = tipi.size();
+                std::vector<std::vector<Posto>> per_tipo(n);
+                for (const Posto& q : v) per_tipo[static_cast<std::size_t>(q.fascia + q.m) % n].push_back(q);
+                std::vector<Posto> unici;
+                std::vector<std::pair<Tipo, std::vector<Posto>>> raccolti;
+                for (std::size_t k = 0; k < n; ++k) {
+                    // Tipi ripetuti nell'elenco (per le proporzioni) mettono insieme i loro posti.
+                    auto it = std::find_if(raccolti.begin(), raccolti.end(), [&](const auto& x) { return x.first == tipi[k]; });
+                    if (it == raccolti.end()) raccolti.push_back({tipi[k], per_tipo[k]});
+                    else it->second.insert(it->second.end(), per_tipo[k].begin(), per_tipo[k].end());
                 }
-                t += caso.tra(4, 8);
-                passaggi.push_back({{"luogo", scuola},
-                                    {"orario", orario(t)},
-                                    {"persone", Json::array({{{"gruppo", codice_gruppo}, {"scendono", totale}}})},
-                                    {"km", {{"pieni", caso.tra(10, 99) / 10.0}}}});
-                const std::string codice_corsa = "C-" + cifre(++numero_corsa, 5);
-                elenco_corse.push_back({{"codice", codice_corsa},
-                                        {"servizi", Json::array({codice_servizio})},
-                                        {"calendario", "CAL-SCUOLA"},
-                                        {"passaggi", passaggi}});
-                del_mezzo[static_cast<std::size_t>(a)][static_cast<std::size_t>(m)].push_back({codice_corsa, scuola, t});
+                for (auto& [t, posti_tipo] : raccolti) {
+                    std::sort(posti_tipo.begin(), posti_tipo.end(),
+                              [](const Posto& x, const Posto& y) { return std::tie(x.fascia, x.m) < std::tie(y.fascia, y.m); });
+                    a_blocchi(t, posti_tipo);
+                }
+            };
+            a_blocchi(Tipo::LineaLunga, linee_lunghe);   // 20 corse: 4 linee oltre i 50 km
+            a_blocchi(Tipo::Linea, linee);                // 5 linee corte
+            alternati({Tipo::NccAuto, Tipo::ScuolaPiccola}, auto_ncc);
+            alternati({Tipo::Disabili, Tipo::Disabili, Tipo::Disabili, Tipo::Disabili, Tipo::Disabili, Tipo::Disabili, Tipo::Promiscuo,
+                       Tipo::Promiscuo, Tipo::Promiscuo, Tipo::Promiscuo, Tipo::Promiscuo, Tipo::Promiscuo, Tipo::Promiscuo},
+                      attrezzati);
+            a_blocchi(Tipo::NccPullman, pullman);
+            a_blocchi(Tipo::Scuola, scolastici);
+
+            for (const auto& [tipo, posti] : piano) {
+                const int i = numero_servizio++;
+                const bool lunga = tipo == Tipo::LineaLunga, piccola = tipo == Tipo::NccAuto || tipo == Tipo::ScuolaPiccola;
+                const bool promiscuo = tipo == Tipo::Promiscuo;
+                const bool a_scuola = tipo == Tipo::Scuola || tipo == Tipo::ScuolaPiccola || promiscuo;
+                const std::string scuola = "SC-" + cifre(i % kScuole + 1, 3), centro = "SC-CEN-" + cifre(i % kCentri + 1, 2);
+                const std::string arrivo = a_scuola                ? "L-SC-" + cifre(i % kScuole + 1, 3)
+                                           : tipo == Tipo::Disabili ? "L-CEN-" + cifre(i % kCentri + 1, 2)
+                                                                    : fermata((kFermatePerCorsa * i + 2500) % kFermate);
+                // I gruppi: uno per servizio; nella corsa promiscua gli studenti salgono alle prime due fermate e i disabili
+                // (verso la stessa scuola) alle altre due, con due servizi sulla stessa corsa.
+                struct Gruppo {
+                    std::string servizio, codice;
+                    int da = 0, a = kFermatePerCorsa;   // fermate di salita [da, a)
+                    std::vector<int> salgono;
+                    int totale = 0;
+                };
+                std::vector<Gruppo> gruppi;
+                const std::string codice_servizio = "S-" + cifre(i + 1, 4);
+                gruppi.push_back({codice_servizio, "G-" + cifre(i + 1, 4), 0, promiscuo ? 2 : kFermatePerCorsa, {}, 0});
+                if (promiscuo) gruppi.push_back({codice_servizio + "-D", "G-" + cifre(i + 1, 4) + "-D", 2, kFermatePerCorsa, {}, 0});
+                for (Gruppo& g : gruppi)
+                    for (int k = g.da; k < g.a; ++k) {
+                        const bool disabile = tipo == Tipo::Disabili || g.servizio != codice_servizio;
+                        g.salgono.push_back(disabile ? 1 : piccola ? caso.tra(1, 2) : caso.tra(1, 3));
+                        g.totale += g.salgono.back();
+                    }
+                for (std::size_t n = 0; n < gruppi.size(); ++n) {
+                    const Gruppo& g = gruppi[n];
+                    const bool disabili = tipo == Tipo::Disabili || n == 1;
+                    const bool linea = tipo == Tipo::Linea || tipo == Tipo::LineaLunga;
+                    const bool ncc = tipo == Tipo::NccAuto || tipo == Tipo::NccPullman;
+                    Json fermate = Json::array();
+                    for (int k = g.da; k < g.a; ++k)
+                        fermate.push_back({{"luogo", fermata((kFermatePerCorsa * i + k) % kFermate)},
+                                           {"salgono", g.salgono[static_cast<std::size_t>(k - g.da)] * kCorsePerServizio}});
+                    fermate.push_back({{"luogo", arrivo}, {"scendono", g.totale * kCorsePerServizio}});
+                    Json gruppo = {{"codice", g.codice}};
+                    if (disabili) gruppo["tipo"] = "disabili";
+                    else if (linea) gruppo["tipo"] = "utenti_linea";
+                    else if (ncc) gruppo.update({{"tipo", "altro"}, {"tipo_descrizione", "Clienti del noleggio"}});
+                    else gruppo["tipo"] = "studenti";
+                    gruppo["verso"] = "andata";
+                    if (a_scuola) gruppo["scuola"] = scuola;
+                    if (tipo == Tipo::Disabili) gruppo["scuola"] = centro;
+                    if (a_scuola || tipo == Tipo::Disabili) gruppo["finestra"] = {{"dalle", "07:30"}, {"alle", "08:30"}};
+                    gruppo["conteggi"] = linea ? "stimati" : "esatti";
+                    gruppo["fermate"] = fermate;
+                    Json servizio = {{"codice", g.servizio},
+                                     {"nome", std::string(linea ? "Linea" : ncc ? "Noleggio" : disabili ? "Trasporto" : "Scuola") +
+                                                  " di prova " + cifre(i + 1, 4) + (n == 1 ? " (disabili)" : "")},
+                                     {"tipo", disabili ? "disabili" : linea ? "linea" : ncc ? "ncc" : "scolastico"},
+                                     {"contratto", (ncc ? "CT-NCC-" : "CT-") + cifre(a + 1, 2)},
+                                     {"calendario", "CAL-SCUOLA"}};
+                    servizio["liberta_oraria"] = linea || ncc ? Json{{"tipo", "fissa"}} : Json{{"tipo", "libera"}, {"soglia_da_concordare_minuti", 10}};
+                    servizio["domanda"] = {{"gruppi", Json::array({gruppo})}};
+                    elenco_servizi.push_back(servizio);
+                    ++servizi_scritti;
+                    if (!ncc) lotti[static_cast<std::size_t>(a)]["servizi"].push_back(g.servizio);
+                }
+                if (lunga) {
+                    servizi_lunghi[static_cast<std::size_t>(a)].push_back(codice_servizio);
+                    ++linee_lunghe_scritte;
+                }
+                if (promiscuo) corse_promiscue += kCorsePerServizio;
+                for (const Posto& q : posti) {
+                    int t = inizio_fascia(q.fascia) + caso.tra(0, 4);
+                    Json passaggi = Json::array();
+                    passaggi.push_back({{"luogo", "L-RIM-" + cifre(a + 1, 2)}, {"orario", orario(t)}});
+                    for (int k = 0; k < kFermatePerCorsa; ++k) {
+                        t += lunga ? caso.tra(11, 13) : caso.tra(3, 6);
+                        Json persone = Json::array();
+                        for (const Gruppo& g : gruppi)
+                            if (k >= g.da && k < g.a)
+                                persone.push_back({{"gruppo", g.codice}, {"salgono", g.salgono[static_cast<std::size_t>(k - g.da)]}});
+                        passaggi.push_back({{"luogo", fermata((kFermatePerCorsa * i + k) % kFermate)},
+                                            {"orario", orario(t)},
+                                            {"persone", persone},
+                                            {"km", {{k == 0 ? "vuoti" : "pieni", (lunga ? caso.tra(105, 130) : caso.tra(10, 99)) / 10.0}}}});
+                    }
+                    t += lunga ? caso.tra(11, 13) : caso.tra(4, 8);
+                    Json scendono = Json::array();
+                    for (const Gruppo& g : gruppi) scendono.push_back({{"gruppo", g.codice}, {"scendono", g.totale}});
+                    passaggi.push_back({{"luogo", arrivo},
+                                        {"orario", orario(t)},
+                                        {"persone", scendono},
+                                        {"km", {{"pieni", (lunga ? caso.tra(105, 130) : caso.tra(10, 99)) / 10.0}}}});
+                    Json servizi_corsa = Json::array();
+                    for (const Gruppo& g : gruppi) servizi_corsa.push_back(g.servizio);
+                    const std::string codice_corsa = "C-" + cifre(++numero_corsa, 5);
+                    elenco_corse.push_back({{"codice", codice_corsa}, {"servizi", servizi_corsa}, {"calendario", "CAL-SCUOLA"}, {"passaggi", passaggi}});
+                    del_mezzo[static_cast<std::size_t>(a)][static_cast<std::size_t>(q.m)].push_back({codice_corsa, arrivo, q.fascia, t});
+                }
             }
+            for (auto& v : del_mezzo[static_cast<std::size_t>(a)])
+                std::sort(v.begin(), v.end(), [](const CorsaDelMezzo& x, const CorsaDelMezzo& y) { return x.fascia < y.fascia; });
         }
         scrivi(cartella, "gruppi_servizi.json", gruppi_servizi);
         scrivi(cartella, "servizi.json", servizi);
         scrivi(cartella, "corse.json", corse);
 
-        // Mezzi e rimesse.
-        Json mezzi = documento("mezzi");
+        // Mezzi e rimesse: il tipo del mezzo secondo il suo lavoro (K-012); un mezzo di scorta per azienda, che si presta
+        // all'azienda dopo (mezzi.json versione 3).
+        Json mezzi = documento("mezzi", 3);
         Json& elenco_mezzi = mezzi["mezzi"] = Json::array();
         Json rimesse = documento("rimesse");
         Json& elenco_rimesse = rimesse["rimesse"] = Json::array();
         const int posti[] = {16, 19, 22, 30, 54};
         for (int a = 0; a < kAziende; ++a) {
-            for (int m = 0; m < kMezziPerAzienda; ++m) {
-                const int p = posti[m % 5];
+            for (int m = 0; m <= kMezziPerAzienda; ++m) {
+                const bool scorta = m == kMezziPerAzienda;
+                const TipoMezzo tm = scorta ? TipoMezzo::Scuola : tipo_mezzo(m);
+                int p = scorta ? 22 : posti[m % 5];
+                std::string uso = "NCC";
+                if (tm == TipoMezzo::Linea) {
+                    p = 54;
+                    uso = "LINEA";
+                } else if (tm == TipoMezzo::Auto) {
+                    p = 8;
+                } else if (tm == TipoMezzo::Attrezzato) {
+                    p = 19;
+                } else if (tm == TipoMezzo::Pullman) {
+                    p = 50;
+                }
                 Json mezzo = {{"codice", ::mezzo(a, m)},
-                              {"uso", "NCC"},
+                              {"uso", uso},
                               {"azienda", azienda(a)},
-                              {"targa", "PR " + cifre(a * kMezziPerAzienda + m + 1, 3) + " SC"},
-                              {"categoria", p <= 22 ? "M2" : "M3"},
+                              {"targa", "PR " + cifre(a * (kMezziPerAzienda + 1) + m + 1, 3) + " SC"},
+                              {"categoria", tm == TipoMezzo::Auto ? "M1" : p <= 22 ? "M2" : "M3"},
                               {"posti", p}};
+                if (tm == TipoMezzo::Linea) mezzo["posti_in_piedi"] = 20;
+                if (tm == TipoMezzo::Attrezzato)
+                    mezzo.update({{"carrozzine", 2}, {"posti_persi_per_carrozzina", 3}, {"pedana", true}, {"tempo_pedana_secondi", 120}});
                 if (m % 10 == 9)
                     mezzo["alimentazione"] = {{"tipo", "elettrico"}, {"batteria_kwh", 300}, {"consumo_kwh_km", 1.1},
                                               {"carica_minima_percento", 20}};
@@ -392,15 +552,21 @@ int main(int argc, char** argv) {
                     mezzo["alimentazione"] = {{"tipo", "gasolio"}};
                 mezzo["costo_fisso_giornaliero"] = 40.0 + caso.tra(0, 50);
                 mezzo["costo_al_km"] = caso.tra(50, 100) / 100.0;
+                if (scorta) {
+                    mezzo["scorta"] = true;
+                    mezzo["prestiti"] = Json::array({{{"azienda", azienda((a + 1) % kAziende)},
+                                                      {"accordo", "Accordo consortile di prova"},
+                                                      {"dal", "2026-09-01"},
+                                                      {"al", "2027-08-31"}}});
+                }
                 elenco_mezzi.push_back(mezzo);
             }
             elenco_rimesse.push_back({{"codice", "RIM-" + cifre(a + 1, 2)},
                                       {"luogo", "L-RIM-" + cifre(a + 1, 2)},
                                       {"azienda", azienda(a)},
                                       {"ricarica", true},
-                                      {"posti_mezzi", kMezziPerAzienda}});
+                                      {"posti_mezzi", kMezziPerAzienda + 1}});
         }
-        mezzi["schema_versione"] = 2;
         scrivi(cartella, "mezzi.json", mezzi);
         scrivi(cartella, "rimesse.json", rimesse);
 
@@ -413,7 +579,7 @@ int main(int argc, char** argv) {
         scrivi(cartella, "tempi_sosta.json", tempi);
 
         // --- K-008: norme, aziende, persone, turni, rotazioni, assenze e sostituzioni -------------------------------
-        Json norme = documento("norme", 2);
+        Json norme = documento("norme", 3);
         const Json fonte_norma = {{"documento", "Norme di prova (inventate)"}};
         const Json demo = norme_della_dimostrazione();
         norme["norme"] = Json::array({{
@@ -423,7 +589,11 @@ int main(int argc, char** argv) {
             {"abilitazioni", Json::array({{{"codice", "B"}, {"nome", "Patente B"}, {"fonte", fonte_norma}},
                                          {{"codice", "D"}, {"nome", "Patente D"}, {"fonte", fonte_norma}},
                                          {{"codice", "CQC-P"}, {"nome", "Carta di qualificazione"}, {"fonte", fonte_norma}}})},
-            {"usi", Json::array({{{"codice", "NCC"}, {"nome", "Noleggio con conducente"}, {"fonte", fonte_norma}}})},
+            {"usi", Json::array({{{"codice", "NCC"}, {"nome", "Noleggio con conducente"}, {"fonte", fonte_norma}},
+                                 {{"codice", "LINEA"}, {"nome", "Servizio di linea"}, {"fonte", fonte_norma}}})},
+            // K-012: le linee con l'uso di linea, l'NCC con l'uso NCC; scolastico e disabili senza un uso richiesto.
+            {"usi_per_servizio", Json::array({{{"tipi_servizio", Json::array({"linea"})}, {"usi", Json::array({"LINEA"})}, {"fonte", fonte_norma}},
+                                              {{"tipi_servizio", Json::array({"ncc"})}, {"usi", Json::array({"NCC"})}, {"fonte", fonte_norma}}})},
             {"requisiti_guida", Json::array({{{"categorie", Json::array({"M2", "M3"})},
                                                {"alternative", Json::array({{{"abilitazioni", Json::array({"D", "CQC-P"})}}})},
                                                {"fonte", fonte_norma}}})},
@@ -432,7 +602,7 @@ int main(int argc, char** argv) {
         }});
         scrivi(cartella, "norme.json", norme);
 
-        Json aziende = documento("aziende", 2);
+        Json aziende = documento("aziende", 3);
         Json& elenco_aziende = aziende["aziende"] = Json::array();
         for (int a = 0; a < kAziende; ++a)
             elenco_aziende.push_back(
@@ -449,6 +619,28 @@ int main(int argc, char** argv) {
                  {"scelte_orari", Json::array({{{"tipo", "ampiezza_massima"}, {"massimo_minuti", 600}, {"forza", "preferenza"}},
                                                {{"tipo", "giorni_consecutivi"}, {"massimo_giorni", 6}, {"forza", "limite"}}})},
                  {"rientro", {{"fermo_minimo_minuti", 45}, {"fattore_guida", 2}, {"forza", "preferenza"}}}});
+        // K-012: il modo delle corse (OUT o tachigrafo). Le aziende pari lavorano OUT linee e scolastico dove la legge lo permette,
+        // con il tachigrafo per l'NCC e, per servizio, per le linee oltre i 50 km (dove vale comunque la legge); le dispari
+        // registrano con il tachigrafo linee e NCC, come preferenza. Un tipo di fermo per la revisione dei mezzi.
+        for (int a = 0; a < kAziende; ++a) {
+            Json& az = elenco_aziende[static_cast<std::size_t>(a)];
+            az["tipi_fermo"] = Json::array({{{"codice", "REVISIONE"}, {"nome", "Revisione"}}});
+            Json modo = {{"regime", "R-561"}};
+            if (a % 2 == 0) {
+                modo["per_tipo_servizio"] = Json::array({{{"tipo_servizio", "linea"}, {"modo", "out"}},
+                                                         {{"tipo_servizio", "scolastico"}, {"modo", "out"}},
+                                                         {{"tipo_servizio", "ncc"}, {"modo", "tachigrafo"}}});
+                Json per_servizio = Json::array();
+                for (const std::string& sl : servizi_lunghi[static_cast<std::size_t>(a)])
+                    per_servizio.push_back({{"servizio", sl}, {"modo", "tachigrafo"}, {"nota", "Linea oltre i 50 km."}});
+                modo["servizi"] = per_servizio;
+            } else {
+                modo["forza"] = "preferenza";
+                modo["per_tipo_servizio"] = Json::array({{{"tipo_servizio", "linea"}, {"modo", "tachigrafo"}},
+                                                         {{"tipo_servizio", "ncc"}, {"modo", "tachigrafo"}}});
+            }
+            az["modo_corse"] = modo;
+        }
         scrivi(cartella, "aziende.json", aziende);
 
         Json persone = documento("persone", 2);
@@ -462,7 +654,6 @@ int main(int argc, char** argv) {
                                           {"rapporto", {{"tipo", "dipendente_tempo_pieno"}}},
                                           {"ore", Json::array({{{"previste", {{"settimana", 39}}}, {"massime", {{"giorno", 10}, {"settimana", 48}}}}})},
                                           {"abilitazioni", Json::array({{{"tipo", "B"}}, {{"tipo", "D"}}, {{"tipo", "CQC-P"}}})}});
-        scrivi(cartella, "persone.json", persone);
 
         // Turni: per ogni mezzo il mattino (fasce 0-7) e il pomeriggio (fasce 8-16), con presa servizio, corse,
         // rientro a vuoto e fine servizio.
@@ -473,16 +664,18 @@ int main(int argc, char** argv) {
                 const int m = t % kMezziPerAzienda;
                 const bool mattino = t < kMezziPerAzienda;
                 const std::string rimessa = "L-RIM-" + cifre(a + 1, 2);
-                const auto& corse_mezzo = del_mezzo[static_cast<std::size_t>(a)][static_cast<std::size_t>(m)];
-                const std::size_t da = mattino ? 0 : kFascePerMattino;
-                const std::size_t a_ = mattino ? std::min<std::size_t>(kFascePerMattino, corse_mezzo.size()) : corse_mezzo.size();
-                if (da >= a_) throw std::runtime_error("mezzo senza corse in un turno");
-                const int presa = inizio_fascia(static_cast<int>(da)) - 15;
+                // Le corse del mezzo nelle fasce della sua meta' della giornata (K-012: le corse sono in ordine di fascia; una
+                // linea lunga occupa due fasce e qualche fascia resta libera).
+                std::vector<const CorsaDelMezzo*> sue;
+                for (const CorsaDelMezzo& c : del_mezzo[static_cast<std::size_t>(a)][static_cast<std::size_t>(m)])
+                    if ((c.fascia < kFascePerMattino) == mattino) sue.push_back(&c);
+                if (sue.empty()) throw std::runtime_error("mezzo senza corse in un turno");
+                const int presa = inizio_fascia(sue.front()->fascia) - 15;
                 Json elementi = Json::array();
                 elementi.push_back({{"attivita", "PRESA"}, {"luogo", rimessa}, {"dalle", orario(presa)}, {"alle", orario(presa + 13)}});
-                for (std::size_t k = da; k < a_; ++k) elementi.push_back({{"corsa", corse_mezzo[k].codice}});
-                const CorsaDelMezzo& ultima = corse_mezzo[a_ - 1];
-                elementi.push_back({{"attivita", "VUOTO"}, {"luogo", ultima.scuola}, {"verso", rimessa},
+                for (const CorsaDelMezzo* c : sue) elementi.push_back({{"corsa", c->codice}});
+                const CorsaDelMezzo& ultima = *sue.back();
+                elementi.push_back({{"attivita", "VUOTO"}, {"luogo", ultima.arrivo}, {"verso", rimessa},
                                     {"dalle", orario(ultima.fine + 1)}, {"alle", orario(ultima.fine + 15)}, {"km_vuoti", 5.0}});
                 elementi.push_back({{"attivita", "FINE"}, {"luogo", rimessa}, {"dalle", orario(ultima.fine + 15)},
                                     {"alle", orario(ultima.fine + 20)}});
@@ -544,29 +737,68 @@ int main(int argc, char** argv) {
             const bool natale = d >= giorno(2026, 12, 23) && d <= giorno(2027, 1, 6);
             if (dow < 5 && !festa && !natale) giorni_di_scuola.push_back(d);
         }
+        // K-012: due assenze per azienda sono coperte da una persona in prestito dall'azienda dopo (anche lei a riposo quel
+        // giorno, nella stessa meta' della giornata), con il prestito dichiarato nelle sue persone.
         Json assenze = documento("assenze");
         Json& elenco_assenze = assenze["assenze"] = Json::array();
         Json assegnazioni = documento("assegnazioni");
         Json& elenco_assegnazioni = assegnazioni["assegnazioni"] = Json::array();
+        std::set<std::string> impegnati;   // "azienda|persona|giorno" e "azienda|turno|giorno" gia' usati
+        const auto chiave = [](int a, int x, int d) { return std::to_string(a) + "|" + std::to_string(x) + "|" + std::to_string(d); };
+        int prestiti_persone = 0, prestiti_mezzi = 0;
         for (int a = 0; a < kAziende; ++a)
             for (int n = 0; n < kAssenzePerAzienda; ++n) {
                 const int d = giorni_di_scuola[static_cast<std::size_t>(17 * n + 3 * a) % giorni_di_scuola.size()];
                 const int k = passo_del_giorno(a, d);
                 int assente = (13 * n + a) % kPersonePerAzienda;
                 while (turno_della_riga(a, assente, k) >= kTurniPerAzienda) assente = (assente + 1) % kPersonePerAzienda;
+                const int turno_assente = turno_della_riga(a, assente, k);
+                const bool prestito = n % 5 == 0;
+                const int b = prestito ? (a + 1) % kAziende : a;   // l'azienda di chi sostituisce
+                const int kb = passo_del_giorno(b, d);
                 int sostituto = assente / kMetaDelleRighe * kMetaDelleRighe;
-                while (turno_della_riga(a, sostituto, k) < kTurniPerAzienda) ++sostituto;
+                while (sostituto / kMetaDelleRighe == assente / kMetaDelleRighe &&
+                       (turno_della_riga(b, sostituto, kb) < kTurniPerAzienda || impegnati.count("p" + chiave(b, sostituto, d))))
+                    ++sostituto;
                 if (sostituto / kMetaDelleRighe != assente / kMetaDelleRighe) throw std::runtime_error("sostituto mancante");
+                impegnati.insert("p" + chiave(b, sostituto, d));
+                impegnati.insert("t" + chiave(a, turno_assente, d));
                 elenco_assenze.push_back({{"persona", persona(a, assente)}, {"tipo", "FERIE"}, {"dal", data(d)}, {"al", data(d)}});
-                elenco_assegnazioni.push_back(
-                    {{"data", data(d)}, {"turno", turno(a, turno_della_riga(a, assente, k))}, {"persona", persona(a, sostituto)}});
+                elenco_assegnazioni.push_back({{"data", data(d)}, {"turno", turno(a, turno_assente)}, {"persona", persona(b, sostituto)}});
+                if (prestito) {
+                    Json& chi = elenco_persone[static_cast<std::size_t>(b * kPersonePerAzienda + sostituto)];
+                    if (!chi.contains("prestiti")) chi["prestiti"] = Json::array();
+                    Json voce = {{"azienda", azienda(a)}, {"accordo", "Accordo consortile di prova"}, {"dal", "2026-09-01"}, {"al", "2027-08-31"}};
+                    if (std::find(chi["prestiti"].begin(), chi["prestiti"].end(), voce) == chi["prestiti"].end()) chi["prestiti"].push_back(voce);
+                    ++prestiti_persone;
+                }
             }
+        // K-012: un mezzo per azienda va in revisione per un giorno di scuola; i suoi due turni prendono il mezzo di scorta
+        // dell'azienda prima, prestato con l'accordo (mezzi.json, prestiti).
+        Json fermi = documento("fermi");
+        Json& elenco_fermi = fermi["fermi"] = Json::array();
+        for (int a = 0; a < kAziende; ++a) {
+            const int b = (a + 1) % kAziende, m = 20;
+            std::size_t g = static_cast<std::size_t>(29 * a + 11);
+            while (impegnati.count("t" + chiave(b, m, giorni_di_scuola[g % giorni_di_scuola.size()])) ||
+                   impegnati.count("t" + chiave(b, m + kMezziPerAzienda, giorni_di_scuola[g % giorni_di_scuola.size()])))
+                ++g;
+            const int d = giorni_di_scuola[g % giorni_di_scuola.size()];
+            elenco_fermi.push_back({{"mezzo", ::mezzo(b, m)}, {"tipo", "REVISIONE"}, {"dal", data(d)}, {"al", data(d)}});
+            for (int t : {m, m + kMezziPerAzienda})
+                elenco_assegnazioni.push_back({{"data", data(d)}, {"turno", turno(b, t)}, {"mezzo", ::mezzo(a, kMezziPerAzienda)}});
+            ++prestiti_mezzi;
+        }
+        scrivi(cartella, "persone.json", persone);
         scrivi(cartella, "assenze.json", assenze);
         scrivi(cartella, "assegnazioni.json", assegnazioni);
+        scrivi(cartella, "fermi.json", fermi);
 
-        std::cout << "Pacchetto di scala in " << cartella.string() << ": " << kAziende * kMezziPerAzienda << " mezzi, "
-                  << kFermate << " fermate, " << kServizi << " servizi, " << numero_corsa << " corse, "
-                  << kAziende * kPersonePerAzienda << " persone, " << kAziende * kTurniPerAzienda << " turni.\n";
+        std::cout << "Pacchetto di scala in " << cartella.string() << ": " << kAziende * (kMezziPerAzienda + 1) << " mezzi ("
+                  << kAziende << " di scorta), " << kFermate << " fermate, " << servizi_scritti << " servizi, " << numero_corsa
+                  << " corse (" << linee_lunghe_scritte << " linee oltre i 50 km, " << corse_promiscue << " corse promiscue), "
+                  << kAziende * kPersonePerAzienda << " persone, " << kAziende * kTurniPerAzienda << " turni, " << prestiti_persone
+                  << " prestiti di persone e " << prestiti_mezzi << " di mezzi.\n";
         return 0;
     } catch (const std::exception& e) {
         std::cerr << "genera_scala: " << e.what() << "\n";

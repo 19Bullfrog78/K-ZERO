@@ -1,0 +1,130 @@
+{
+  "schema": "contratti",
+  "schema_versione": 1,
+  "contratti": [
+    {
+      "codice": "CT-SCU",
+      "nome": "Trasporto scolastico e disabili, lotto 2",
+      "committente": "CVA",
+      "azienda": "ALFA",
+      "regolamento": "R-TN",
+      "valido_dal": "2026-09-01",
+      "valido_al": "2027-08-31",
+      "assistente_fornito_da": "committente",
+      "regole": {
+        "durata_massima_a_bordo_minuti": 60,
+        "categoria_riconosciuta": "M2"
+      }
+    },
+    {
+      "codice": "CT-ASILO",
+      "nome": "Trasporto della scuola dell'infanzia di Lagobello",
+      "committente": "CVA",
+      "azienda": "BETA",
+      "regolamento": "R-TN",
+      "valido_dal": "2026-09-01",
+      "valido_al": "2027-08-31",
+      "assistente_fornito_da": "azienda",
+      "regole": {
+        "durata_massima_a_bordo_minuti": 45
+      }
+    },
+    {
+      "codice": "CT-LIN",
+      "nome": "Linee e supporto alle linee",
+      "committente": "TPV",
+      "azienda": "ALFA",
+      "regolamento": "R-INV",
+      "valido_dal": "2026-09-01",
+      "valido_al": "2027-08-31",
+      "assistente_fornito_da": "committente",
+      "regole": {
+        "posti_minimi": 30,
+        "posti_massimi": 54,
+        "categoria_riconosciuta": "M3"
+      }
+    },
+    {
+      "codice": "CT-LIN-BETA",
+      "nome": "Linea B620 Sorgenta - Montebrino",
+      "committente": "TPV",
+      "azienda": "BETA",
+      "regolamento": "R-INV",
+      "valido_dal": "2026-09-01",
+      "valido_al": "2027-08-31",
+      "assistente_fornito_da": "committente"
+    },
+    {
+      "codice": "CT-GITA",
+      "nome": "Gita sociale della Pro Loco al lago",
+      "committente": "PROLOCO",
+      "azienda": "ALFA",
+      "regolamento": "R-INV",
+      "valido_dal": "2026-11-15",
+      "valido_al": "2026-11-15",
+      "assistente_fornito_da": "committente",
+      "nota": "Noleggio occasionale con conducente: si fa con l'autobus di linea, che ha la distrazione al noleggio."
+    },
+    {
+      "codice": "CT-MATRIMONIO",
+      "nome": "Noleggio con conducente per un matrimonio",
+      "committente": "CP-01",
+      "azienda": "ALFA",
+      "regolamento": "R-INV",
+      "valido_dal": "2027-07-10",
+      "valido_al": "2027-07-10",
+      "assistente_fornito_da": "committente",
+      "nota": "Il nome del contratto e dei servizi non dice chi e' il cliente: e' un dato comune (K-012)."
+    },
+    {
+      "codice": "CT-PRIVATO-CENTRO",
+      "nome": "Noleggio con conducente di un privato",
+      "committente": "CP-02",
+      "azienda": "ALFA",
+      "regolamento": "R-INV",
+      "valido_dal": "2027-07-07",
+      "valido_al": "2027-07-07",
+      "assistente_fornito_da": "committente"
+    },
+    {
+      "codice": "CT-GITE-SCUOLA",
+      "nome": "Gite scolastiche dell'istituto comprensivo",
+      "committente": "IC-VALFONDA",
+      "azienda": "ALFA",
+      "regolamento": "R-TN",
+      "valido_dal": "2026-09-01",
+      "valido_al": "2027-08-31",
+      "assistente_fornito_da": "committente"
+    },
+    {
+      "codice": "CT-NCC-ALFA",
+      "nome": "Noleggi con conducente di Alfa",
+      "committente": "PROLOCO",
+      "azienda": "ALFA",
+      "regolamento": "R-INV",
+      "valido_dal": "2026-09-01",
+      "valido_al": "2027-08-31",
+      "assistente_fornito_da": "committente"
+    },
+    {
+      "codice": "CT-NCC-BETA",
+      "nome": "Noleggi con conducente di Beta",
+      "committente": "PROLOCO",
+      "azienda": "BETA",
+      "regolamento": "R-INV",
+      "valido_dal": "2026-09-01",
+      "valido_al": "2027-08-31",
+      "assistente_fornito_da": "committente"
+    },
+    {
+      "codice": "CT-NAVETTA",
+      "nome": "Navetta degli operai",
+      "committente": "CARTIERA",
+      "azienda": "ALFA",
+      "regolamento": "R-INV",
+      "valido_dal": "2026-09-01",
+      "valido_al": "2027-08-31",
+      "assistente_fornito_da": "committente"
+    }
+  ]
+}

@@ -201,8 +201,9 @@ cripto::Segreto normalizzata(const std::string& t) {
 
 // La cassaforte preparata una volta: tre utenti (tutti i permessi, i soli personali, i soli particolari) e un cambio delle
 // chiavi (un quarto utente tolto), cosi' ci sono buste e storie. Dal K-011 aggiunta 2 i dati sono quelli del pacchetto di
-// prova degli orari (il demo con in piu' la forzatura e la dichiarazione dell'azienda, con motivo e chi tra i legati): i semi
-// coprono ogni sezione, anche i legati che non vengono dai luoghi sensibili.
+// prova degli orari (il demo con in piu' la forzatura e la dichiarazione dell'azienda, con motivo e chi tra i legati); dal
+// K-012 quelli del pacchetto di prova dei servizi, che lo comprende alle versioni nuove con i committenti privati (il nome di
+// chi noleggia per andare al centro diurno tra i legati): i semi coprono ogni sezione e ogni file nuovo o cambiato.
 struct Preparata {
     std::string file;
     std::string registro;
@@ -213,7 +214,7 @@ struct Preparata {
 const Preparata& preparata() {
     static const Preparata p = [] {
         Preparata x;
-        const Lettura l = leggi_pacchetto(CartellaSuDisco(std::string(KZERO_SORGENTI) + "/tests/esempi/k011-orari"));
+        const Lettura l = leggi_pacchetto(CartellaSuDisco(std::string(KZERO_SORGENTI) + "/tests/esempi/k012-servizi"));
         chiusura::Separazione s = chiusura::separa(l);
         x.normali = s.normali;
         x.sezione_personali = cassaforte::formato::testo_sezione(s.contenuto.personali);

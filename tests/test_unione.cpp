@@ -583,7 +583,7 @@ TEST(Unione, StessaRegolaDelConteggio) {
 // riceve chi ha solo i dati personali, chi ha solo i particolari (niente legati) e chi li ha tutti, e lancia kzero controlla,
 // kzero giornata e kzero ore: mai un errore interno. Perche' valga anche per i campi futuri, controlla prima che ogni campo
 // personale o particolare degli schemi compaia in almeno uno dei pacchetti (altrimenti: aggiungerlo al pacchetto di prova
-// degli orari, tests/strumenti/genera_k011.py).
+// dei servizi del K-012, tests/strumenti/genera_k012.py, che comprende quello degli orari del K-011).
 
 namespace {
 
@@ -603,7 +603,8 @@ struct PacchettoDiProva {
 std::vector<PacchettoDiProva> pacchetti_delle_prove() {
     const std::string prove = KZERO_CARTELLA_PROVE;
     std::vector<PacchettoDiProva> out;
-    for (const char* c : {"/../esempi/demo", "/../esempi/demo-numeri", "/esempi/k011-orari", "/esempi/k007-demo", "/esempi/k007-demo-numeri"})
+    for (const char* c : {"/../esempi/demo", "/../esempi/demo-numeri", "/esempi/k011-orari", "/esempi/k012-servizi", "/esempi/k007-demo",
+                          "/esempi/k007-demo-numeri"})
         out.push_back({c, da_cartella(prove + c)});
     return out;
 }
@@ -711,6 +712,40 @@ TEST(Unione, ElementiInteriSenzaCampiDiUnAltraClasse) {
     EXPECT_TRUE(errori.empty()) << errori;
 }
 
+// K-012: il nome e la nota di un committente privato vanno nella cassaforte; quelli di chi noleggia per andare in un luogo
+// sensibile (nel demo CP-02, verso il centro diurno) tra i legati, gli altri (CP-01, il matrimonio) tra i personali. Riaperti,
+// chi ha tutti e due i permessi li ha tutti; chi ha solo i personali solo quelli di CP-01; chi ha solo i particolari nessuno.
+// Il codice resta nel file normale.
+TEST(Unione, CommittentiPrivatiNellaCassaforte) {
+    const std::string prove = KZERO_CARTELLA_PROVE;
+    const Chiuso c = chiudi(da_cartella(prove + "/../esempi/demo"));
+    std::map<std::string, std::string> trovate;   // "<codice>/<campo>" -> classe e legato
+    for (const Voce& v : c.voci) {
+        if (v.file != "committenti.json") continue;
+        ASSERT_FALSE(v.percorso.empty());
+        ASSERT_TRUE(v.percorso.front() == "committenti_privati") << v.percorso.dump();
+        const std::string chiave = v.percorso.back().at("codice").get<std::string>() + "/" + v.campo;
+        trovate[chiave] = std::string(v.classe == Classe::Particolare ? "particolare" : "personale") + (v.legato ? " legato" : "");
+    }
+    const std::map<std::string, std::string> attese = {
+        {"CP-01/nome", "personale"}, {"CP-01/nota", "personale"}, {"CP-02/nome", "particolare legato"}};
+    EXPECT_EQ(trovate, attese);
+    const JsonDati normale = JsonDati::parse(c.normali.file.at("committenti.json"));
+    EXPECT_EQ(normale.at("committenti_privati").dump(), R"([{"codice":"CP-01"},{"codice":"CP-02"}])");
+    for (const auto& [v, nomi] : std::vector<std::pair<Visibilita, std::string>>{
+             {Visibilita{true, true}, "CP-01:Galli Marta CP-02:Ferri Bruno "},
+             {Visibilita{true, false}, "CP-01:Galli Marta CP-02: "},
+             {Visibilita{false, true}, "CP-01: CP-02: "}}) {
+        const ValoriCassaforte x = valori(c, v);
+        const Lettura l = leggi_pacchetto(c.normali, &x);
+        ASSERT_TRUE(l.forma_valida()) << elenco(l.problemi);
+        std::string visti;
+        for (const kzero::Client& k : l.pacchetto.clients)
+            if (k.is_private) visti += k.code + ":" + k.name + " ";
+        EXPECT_EQ(visti, nomi);
+    }
+}
+
 // K-011 aggiunta 2: la dichiarazione del modo delle corse e' un dato particolare; motivo e chi, personali dentro un dato
 // particolare, stanno tra i legati (tutti e due i permessi). La forzatura resta comune: motivo e chi solo personali.
 TEST(Unione, DichiarazioneParticolareConMotivoLegato) {
@@ -754,6 +789,45 @@ TEST(Unione, DichiarazioneParticolareConMotivoLegato) {
     }
 }
 
+// K-012: nel pacchetto di prova dei servizi la gita scolastica (studenti delle medie, servizio NCC) ha la categoria NCC, non
+// scolastico; l'auto e il pullman del noleggio NCC; la navetta degli operai (servizio "altro") altro.
+TEST(Unione, CategorieDelPacchettoDeiServizi) {
+    const std::string prove = KZERO_CARTELLA_PROVE;
+    const Lettura l = leggi_pacchetto(da_cartella(prove + "/esempi/k012-servizi"));
+    ASSERT_TRUE(l.forma_valida());
+    const kzero::Index idx(l.pacchetto);
+    const auto categoria = [&](const char* corsa) { return idx.category(*idx.trip(corsa)); };
+    for (const char* c : {"C-GITA-SCUOLA-A", "C-GITA-SCUOLA-R", "C-NCC-AUTO-A", "C-NCC-BUS-1", "C-GITA-A"})
+        EXPECT_EQ(categoria(c), kzero::ServiceType::Ncc) << c;
+    EXPECT_EQ(categoria("C-NAVETTA-1"), kzero::ServiceType::Other);
+    EXPECT_EQ(categoria("C-RM-1"), kzero::ServiceType::Mixed);
+}
+
+// K-012: i servizi occasionali del Reg. 561 nelle norme. Versione 3 (il demo): l'NCC certo, "altro" da confermare. Versione 2
+// (il pacchetto di prova del K-011, che resta alla versione 2): un solo "da confermare" per tutto l'elenco, letto tipo per tipo
+// come allora: "altro" da confermare, nessun NCC (mai trasformato da solo).
+TEST(Unione, ServiziOccasionaliNelleVersioni) {
+    const std::string prove = KZERO_CARTELLA_PROVE;
+    const auto occasionali = [&](const std::string& cartella) {
+        const Lettura l = leggi_pacchetto(da_cartella(prove + cartella));
+        EXPECT_TRUE(l.forma_valida()) << cartella;
+        for (const kzero::Norms& n : l.pacchetto.norms)
+            for (const kzero::Regime& r : n.regimes)
+                if (r.code == "R-561") return std::make_pair(l.versioni.at("norme.json"), r.occasional);
+        return std::make_pair(0, kzero::Applies<kzero::ServiceKind>{});
+    };
+    const auto [v3, demo] = occasionali("/../esempi/demo");
+    EXPECT_EQ(v3, 3);
+    EXPECT_TRUE(demo.present);
+    EXPECT_EQ(demo.certain, std::vector<kzero::ServiceKind>{kzero::ServiceKind::Ncc});
+    EXPECT_EQ(demo.to_confirm, std::vector<kzero::ServiceKind>{kzero::ServiceKind::Other});
+    const auto [v2, k011] = occasionali("/esempi/k011-orari");
+    EXPECT_EQ(v2, 2);
+    EXPECT_TRUE(k011.present);
+    EXPECT_TRUE(k011.certain.empty());
+    EXPECT_EQ(k011.to_confirm, std::vector<kzero::ServiceKind>{kzero::ServiceKind::Other});
+}
+
 TEST(Unione, OgniCampoRiservatoDegliSchemiCompareNeiPacchettiDelleProve) {
     std::map<std::string, std::set<std::string>> usati;   // schema -> percorsi usati nei file dell'ultima versione
     for (const PacchettoDiProva& p : pacchetti_delle_prove())
@@ -775,7 +849,7 @@ TEST(Unione, OgniCampoRiservatoDegliSchemiCompareNeiPacchettiDelleProve) {
             if (!usati[f.schema].count(c)) mancanti += f.file + " " + c + "\n";
     }
     EXPECT_TRUE(mancanti.empty()) << "Campi personali o particolari degli schemi che nessun pacchetto delle prove usa (vanno "
-                                     "aggiunti al pacchetto di prova degli orari, tests/strumenti/genera_k011.py):\n"
+                                     "aggiunti al pacchetto di prova dei servizi, tests/strumenti/genera_k012.py):\n"
                                   << mancanti;
 }
 

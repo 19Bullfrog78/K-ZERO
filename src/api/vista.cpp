@@ -24,6 +24,11 @@ Json Vista::campo(const kzero::Source& elemento, const std::string& campo, Json 
     return filtra(c, std::move(valore), codice);
 }
 
+Json Vista::nome_committente(const kzero::Client* c) const {
+    if (!c) return Json(nullptr);
+    return campo(c->src, "nome", c->name.empty() ? Json(nullptr) : Json(c->name), c->code);
+}
+
 Json Vista::filtra(Classe c, Json valore, const std::string& codice) const {
     if (visibile(c, visibilita_)) return valore;
     return c == Classe::Personale ? Json(codice) : Json(kRiservato);
@@ -71,6 +76,13 @@ Json Vista::modo_corsa(const kzero::TripMode& m) const {
     return j;
 }
 
+std::string testo_committente(const Json& servizio) {
+    const Json& c = servizio.at("committente");
+    if (!c.is_string()) return "nessuno";
+    const Json& n = servizio.at("nome_committente");
+    return c.get<std::string>() + (n.is_string() && n != c ? " \"" + n.get<std::string>() + "\"" : std::string());
+}
+
 std::string testo_modo_corsa(const Json& m) {
     const auto txt = [](const Json& v) { return v.is_string() ? v.get<std::string>() : v.dump(); };
     if (m.is_string()) return "per un dato particolare";   // riservato: dipende dalle scelte per tipo di servizio
@@ -114,7 +126,8 @@ const char* nome_categoria(kzero::ServiceType t) {
         case kzero::ServiceType::Line: return "linea";
         case kzero::ServiceType::Disability: return "disabili";
         case kzero::ServiceType::School: return "scolastico";
-        case kzero::ServiceType::Hybrid: return "ibrido";
+        case kzero::ServiceType::Ncc: return "ncc";
+        case kzero::ServiceType::Mixed: return "promiscuo";
         case kzero::ServiceType::Other: return "altro";
     }
     return "?";
@@ -125,6 +138,7 @@ const char* nome_tipo_servizio(kzero::ServiceKind k) {
         case kzero::ServiceKind::Line: return "linea";
         case kzero::ServiceKind::School: return "scolastico";
         case kzero::ServiceKind::Disability: return "disabili";
+        case kzero::ServiceKind::Ncc: return "ncc";
         case kzero::ServiceKind::Other: return "altro";
     }
     return "?";

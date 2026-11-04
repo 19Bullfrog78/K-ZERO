@@ -16,7 +16,9 @@ con dati inventati. Dal K-008 il demo ha anche persone e turni: in Alfa la rotaz
 quella di Alpinabus, un servizio fisso solo il mercoledi', sostituzioni, un mezzo in revisione sostituito dal mezzo di
 scorta, un autobus di linea con la distrazione al noleggio usato per una gita, il cambio dell'autista a meta' corsa,
 turni notturni, spezzati, di riserva e di reperibilita'; in Beta una linea 7 su 7 con orario feriale e festivo e un
-ciclo di 3 giorni. La giornata di un giorno si vede con `kzero giornata esempi/demo --data 2026-10-22`.
+ciclo di 3 giorni. Dal K-012 la gita della Pro Loco e' un servizio NCC e ci sono due committenti privati: il matrimonio di
+CP-01 (sabato 2027-07-10) e il noleggio di CP-02 verso il centro diurno (mercoledi' 2027-07-07). La giornata di un giorno si
+vede con `kzero giornata esempi/demo --data 2026-10-22`.
 
 ## Il pacchetto dati
 
@@ -390,9 +392,11 @@ cassaforte" e "il porta a porta non e' sensibile"). Per passare alla 2 si scrive
 
 L'organizzazione la sceglie ogni azienda: qui stanno i suoi elenchi, con i suoi nomi, e le sue impostazioni.
 In un consorzio ogni azienda del manifesto ha la sua riga. Le `impostazioni` del manifesto sono un'altra cosa:
-scelte di chi pianifica, valide per tutto il pacchetto. Schemi: versione 2 (K-011, orari di lavoro)
-[docs/schema/aziende.v2.schema.json](schema/aziende.v2.schema.json); versione 1, che si legge ancora (senza le categorie
-di tempo: avviso K-CTR-101), [docs/schema/aziende.v1.schema.json](schema/aziende.v1.schema.json).
+scelte di chi pianifica, valide per tutto il pacchetto. Schemi: versione 3 (K-012: il tipo di servizio `ncc` nel modo delle
+corse) [docs/schema/aziende.v3.schema.json](schema/aziende.v3.schema.json); versione 2 (K-011, orari di lavoro), che si
+legge ancora, [docs/schema/aziende.v2.schema.json](schema/aziende.v2.schema.json); versione 1, che si legge ancora (senza
+le categorie di tempo: avviso K-CTR-101), [docs/schema/aziende.v1.schema.json](schema/aziende.v1.schema.json). Per passare
+alla 3 si scrive `"schema_versione": 3`: nient'altro cambia.
 
 | Campo | Obbl. | Classe | Significato |
 |---|---|---|---|
@@ -427,8 +431,11 @@ consorzio le aziende che si scambiano persone usano gli stessi codici per le ste
 Le norme di un paese che servono a controllare chi guida cosa e quale mezzo fa quale servizio e, dalla versione 2
 (K-011), le leggi e i contratti collettivi sugli orari di lavoro. **Nessuna patente, nessun uso e nessun limite di
 orario e' scritto nel programma**: tutto e' un dato con la fonte, e cio' che non e' certo si segna `da_confermare`.
-Schemi: versione 2 [docs/schema/norme.v2.schema.json](schema/norme.v2.schema.json); versione 1, che si legge ancora
-(nessun regime: per i dipendenti l'avviso K-CTR-107), [docs/schema/norme.v1.schema.json](schema/norme.v1.schema.json).
+Schemi: versione 3 (K-012) [docs/schema/norme.v3.schema.json](schema/norme.v3.schema.json): il tipo di servizio `ncc` e i
+servizi occasionali di un regime tipo per tipo; versione 2, che si legge ancora (un solo `da_confermare` per tutti i
+servizi occasionali: vale per ogni tipo dell'elenco, e `altro` resta `altro`),
+[docs/schema/norme.v2.schema.json](schema/norme.v2.schema.json); versione 1, che si legge ancora (nessun regime: per i
+dipendenti l'avviso K-CTR-107), [docs/schema/norme.v1.schema.json](schema/norme.v1.schema.json).
 
 | Campo | Obbl. | Classe | Significato |
 |---|---|---|---|
@@ -442,6 +449,7 @@ Schemi: versione 2 [docs/schema/norme.v2.schema.json](schema/norme.v2.schema.jso
 | `norme[].usi_per_servizio[]` | no | comune | Usi dei mezzi ammessi per tipo di servizio: `tipi_servizio`, `usi` (ne basta uno), `fonte`, `da_confermare`, `nota` |
 | `norme[].regimi[]` | no | comune | Versione 2: leggi e contratti collettivi sugli orari (sopra, "Orari di lavoro"): `codice`, `nome`, `tipo` (`legge`, `contratto_collettivo`), `fonte`, `valido_dal`, `valido_al`, `da_confermare`, `nota`, `si_applica`, `esclusioni`, `servizi_occasionali`, `estensione`, `esclude`, `casi_non_trattati`, `regole` |
 | `regimi[].si_applica` | no | comune | `ruoli`, `rapporti`, `contratti_collettivi`, `tipi_servizio` (ognuno con i valori `certi` e quelli `da_confermare`), `mezzi` (`persone_trasportabili_oltre`), `percorso` (`fino_a_km`, `oltre_km`), `come_regime` (le condizioni sulla corsa di un altro regime) con `estensione_come_regime` (`vale` o `da_confermare`, di base); senza una condizione vale per tutti |
+| `regimi[].servizi_occasionali` | no | comune | Tipi di servizio che sono servizi occasionali per le regole che valgono solo per loro (es. l'interruzione di 15 + 15 minuti del Reg. 561/2006, art. 7). Versione 3 (K-012): `tipi_servizio` con i `certi` e quelli `da_confermare`, come in `si_applica`, e la `fonte`; un servizio occasionale da confermare da' avvisi con il motivo, mai un errore. Versione 2: `tipi_servizio` (elenco) e un solo `da_confermare` per tutti |
 | `regimi[].esclusioni[]` | no | comune | Corse escluse: `tipi_servizio` (ogni tipo della corsa deve essere escluso), `insieme_a` (la voce vale solo se la corsa ha anche uno di questi tipi), `percorso_fino_a_km`, `da_confermare`, `fonte`, `nota` |
 | `regimi[].guida_delle_corse_escluse` | no | comune | Versione 2 (K-011 aggiunta 1): come contano per le regole di guida del regime i minuti di guida delle corse escluse: `conta_come` (lettura certa) e `prudente` (`guida`, `altre_mansioni`), `fonte`, `nota` |
 | `regimi[].estensione` | no | comune | `ambito` `settimana` e le `famiglie` di regole (`guida`, `riposi`, `lavoro`, `notturno`, `giornate`) per cui una corsa vale tutta la settimana |
@@ -522,7 +530,10 @@ Chi e' legato (calcolato sul pacchetto, dai dati comuni; una regola sola nel cod
 - le case (punti porta a porta) dei passeggeri legati e quelle tra le fermate di un gruppo legato; le case toccate da
   una corsa che, da sola o con i suoi trasbordi, passa da un luogo sensibile; e i passeggeri che salgono o scendono in
   una casa legata;
-- con `porta_a_porta_sensibile: true` nel manifesto (versione 2): tutte le case porta a porta e i loro passeggeri.
+- con `porta_a_porta_sensibile: true` nel manifesto (versione 2): tutte le case porta a porta e i loro passeggeri;
+- (K-012) i committenti privati con un servizio legato: gruppi, fermate o passeggeri in un luogo sensibile, una corsa che
+  passa da un luogo sensibile (da sola o con i trasbordi) o, con `porta_a_porta_sensibile`, case porta a porta (vedi
+  committenti.json).
 
 Non riguarda il personale (lavorare in un centro, o il garage presso la casa di un autista, non e' un dato sulla salute
 di nessuno) ne' i conteggi. Nel demo il centro diurno `L-CENTRO` e' sensibile e il porta a porta e' sensibile. I nomi e
@@ -570,8 +581,10 @@ Tratti di strada tra due luoghi con i loro limiti (es. un sottopasso, una strada
 
 Un regolamento e' l'insieme dei parametri di un territorio o di un committente (es. il testo unico di una
 Provincia). **Il programma non conosce nessun valore: li legge da qui.** Ogni contratto indica il
-regolamento che vale per i suoi servizi. Schemi: [docs/schema/regolamenti.v2.schema.json](schema/regolamenti.v2.schema.json)
-(versione attuale) e [docs/schema/regolamenti.v1.schema.json](schema/regolamenti.v1.schema.json) (versione 1, ancora
+regolamento che vale per i suoi servizi. Schemi: [docs/schema/regolamenti.v3.schema.json](schema/regolamenti.v3.schema.json)
+(versione attuale, K-012: il tipo di servizio `ncc` negli elenchi dei tipi; per passare alla 3 si cambia solo
+`"schema_versione"`), [docs/schema/regolamenti.v2.schema.json](schema/regolamenti.v2.schema.json) (versione 2, ancora
+letta) e [docs/schema/regolamenti.v1.schema.json](schema/regolamenti.v1.schema.json) (versione 1, ancora
 letta: e' la versione 2 senza `usi_dei_mezzi` e `autorizzazione_del_committente`).
 
 | Campo | Obbl. | Classe | Significato |
@@ -737,14 +750,42 @@ Scuole e centri (prima "destinazioni"). Schema: [docs/schema/scuole.v1.schema.js
 
 ### committenti.json
 
-Schema: [docs/schema/committenti.v1.schema.json](schema/committenti.v1.schema.json).
+Chi affida i servizi: un **ente** (un consorzio, una Provincia, un Comune, una scuola, un'associazione, un'agenzia) oppure,
+dalla versione 2 (K-012), un **privato** (una persona, es. chi prenota un noleggio per un matrimonio). Schemi:
+[docs/schema/committenti.v2.schema.json](schema/committenti.v2.schema.json) (versione attuale) e
+[docs/schema/committenti.v1.schema.json](schema/committenti.v1.schema.json) (versione 1, ancora letta: e' la versione 2 senza
+`committenti_privati`; per passare alla 2 si cambia solo `"schema_versione"`).
 
 | Campo | Obbl. | Classe | Significato |
 |---|---|---|---|
-| `committenti[].codice` | si' | comune | Codice del committente |
+| `committenti[].codice` | si' | comune | Codice del committente (un ente) |
 | `committenti[].nome` | si' | comune | Nome (es. un consorzio, una Provincia, un Comune, un'associazione) |
 | `committenti[].codici_esterni[]` | no | comune | Codici in altri sistemi |
 | `committenti[].nota` | no | comune | Note |
+| `committenti_privati[].codice` | si' | comune | Versione 2. Codice del committente privato: resta visibile al posto del nome (unico con i codici degli enti) |
+| `committenti_privati[].nome` | no | personale | Nome e cognome della persona |
+| `committenti_privati[].codici_esterni[]` | no | comune | Codici in altri sistemi |
+| `committenti_privati[].nota` | no | personale | Note |
+
+**Committenti privati** (K-012). Per un privato il nome e la nota sono **dati personali**: nella cassaforte, di base sostituiti
+dal codice nelle uscite (`kzero giornata` e `kzero dimostrazione` mostrano il nome del committente dal K-012), mai nel pacchetto
+"solo numeri" (lo dice K-CTR-019: il committente resta, con il solo codice). Per un ente restano comuni, come prima. Il formato
+non ha campi per telefono, mail o codice fiscale e non li avra'. Il nome **non si perde mai**: chi ha il permesso dei dati
+personali lo vede sempre (se il privato e' legato a un luogo sensibile, chi ha i permessi dei dati personali e particolari);
+gli altri vedono il codice. Le classi restano campo per campo, ricavate dagli schemi: i privati stanno in un **elenco a parte**,
+come i luoghi privati, invece di un campo che cambia classe secondo un altro valore (DECISIONI.md, K-012).
+
+**Il legame con la salute**: il nome di un privato segue la stessa regola dei passeggeri (sotto, "Luoghi sensibili" in
+luoghi.json): se un servizio di un suo contratto ha gruppi, fermate o passeggeri in un luogo sensibile, ha una corsa che passa
+da un luogo sensibile (anche con i trasbordi) o, con `porta_a_porta_sensibile`, ha case porta a porta, i suoi dati personali
+sono **legati**: si vedono solo con i dati personali e particolari insieme (nella cassaforte, la sezione dei legati).
+Altrimenti sono solo personali, come il nome di un passeggero di un servizio per disabili diretto a una scuola (il tipo del
+servizio resta un dato particolare).
+
+**Restano dati comuni, scelti dall'utente**: il codice del committente e i suoi codici esterni, il codice e il nome dei suoi
+servizi e dei suoi contratti. **Non devono contenere il nome del privato** (es. non "Matrimonio Rossi", ma "Noleggio per un
+matrimonio"; non il codice "ROSSI"): sono dati comuni e si vedono in tutte le uscite. L'avviso automatico sui nomi liberi
+arrivera' con il suo mandato.
 
 ### contratti.json
 
@@ -787,7 +828,9 @@ scambia una corsa alla volta, a volte un intero lotto. Schema:
 Il **servizio** e' il lavoro che un committente affida con un contratto: si paga, si perde, si rinuncia,
 si scambia. La sua **domanda** dice chi deve andare da dove a dove ed entro quando, indipendente dalle corse
 di oggi: cosi' un calcolo futuro potra' rifare i giri con mezzi diversi. Schema:
-[docs/schema/servizi.v2.schema.json](schema/servizi.v2.schema.json) (versione attuale) e
+[docs/schema/servizi.v3.schema.json](schema/servizi.v3.schema.json) (versione attuale, K-012: il tipo `ncc`; per passare alla
+3 si cambia solo `"schema_versione"`), [docs/schema/servizi.v2.schema.json](schema/servizi.v2.schema.json) (versione 2,
+ancora letta: un servizio `altro` resta `altro`, mai `ncc` da solo) e
 [docs/schema/servizi.v1.schema.json](schema/servizi.v1.schema.json) (versione 1, ancora letta: e' la versione 2 senza
 `competenze_richieste`).
 
@@ -796,7 +839,7 @@ di oggi: cosi' un calcolo futuro potra' rifare i giri con mezzi diversi. Schema:
 | `servizi[].codice` | si' | comune | Codice del servizio |
 | `servizi[].nome` | no | comune | Nome |
 | `servizi[].codici_esterni[]` | no | comune | Es. sistema "CTA", tipo "servizio", codice "1050002/3"; scheda handicap "38177" |
-| `servizi[].tipo` | si' | particolare | Tipo dichiarato dal committente: `linea`, `scolastico`, `disabili`, `altro` (con `tipo_descrizione`). "Ibrido" non si dichiara: lo ricava il programma sulla corsa |
+| `servizi[].tipo` | si' | particolare | Tipo dichiarato dal committente: `linea`, `scolastico`, `disabili`, `ncc` (versione 3, sotto), `altro` (con `tipo_descrizione`). "Promiscuo" non si dichiara: lo ricava il programma sulla corsa |
 | `servizi[].tipo_descrizione` | con `altro` | particolare | Descrizione del tipo |
 | `servizi[].contratto` | si' | comune | Contratto |
 | `servizi[].calendario` | si' | comune | Calendario |
@@ -807,6 +850,25 @@ di oggi: cosi' un calcolo futuro potra' rifare i giri con mezzi diversi. Schema:
 | `servizi[].domanda.gruppi[]` | si' | | Gruppi di passeggeri (sotto) |
 | `servizi[].competenze_richieste[]` | no | particolare | Versione 2. Competenze richieste a chi fa il servizio (codici dell'elenco dell'azienda del contratto). Dato particolare: una competenza come "formato per la pedana" fa capire che a bordo viaggia una carrozzina |
 | `servizi[].nota` | no | comune | Note |
+
+**Il tipo `ncc`** (versione 3, K-012). Noleggio con conducente: servizi per **gruppi formati su iniziativa del cliente o
+dell'azienda** (gite, turismo, eventi, matrimoni), anche se si ripetono. Il tipo dice la **natura del servizio, non la
+licenza del mezzo**: un trasporto con tragitto e frequenza fissi per una categoria di persone (es. gli operai casa-lavoro)
+e' un servizio regolare specializzato anche se si fa con un mezzo da noleggio, e non e' `ncc` (va `altro`, o il tipo giusto)
+[Probabile: Reg. (CE) n. 1073/2009 art. 2, stesse definizioni del Reg. (CE) n. 12/98 art. 2]. La differenza conta per le
+leggi sugli orari: per il Reg. 561/2006 un servizio NCC e' un servizio occasionale, mai escluso (norme del demo), mentre una
+navetta di operai scritta `ncc` diventerebbe un servizio occasionale certo. Una gita scolastica e' NCC anche se porta
+studenti: chi sale non cambia il tipo (categoria della corsa, sotto "Corsa"). Nelle versioni 1 e 2 il tipo non c'e': un
+servizio `altro` resta `altro`, mai trasformato in `ncc` dal programma.
+
+**Categoria della corsa** (ricavata, mai dichiarata; dato particolare). `linea`, `disabili` (handicap), `scolastico`, `ncc`,
+`promiscuo` (fino al K-011 "ibrido") o `altro`:
+- piu' servizi sulla stessa corsa: promiscuo, anche se uno e' NCC;
+- un solo servizio NCC: NCC, qualunque siano i gruppi (studenti, disabili, verso una scuola o un centro);
+- altrimenti dai gruppi che salgono e scendono (o da quelli del servizio, o dal tipo dichiarato): gruppi di tipi diversi
+  o studenti verso un centro = promiscuo; un tipo solo = linea, disabili, scolastico o altro.
+Una corsa senza servizi (un errore, K-CTR-034) prende i servizi dei suoi gruppi solo per riconoscere l'NCC: i gruppi di un
+solo servizio NCC = NCC, di piu' servizi con un NCC = promiscuo.
 
 Gruppo di passeggeri (`servizi[].domanda.gruppi[]`):
 
@@ -868,7 +930,7 @@ caricate dalle corse possono differire (avviso K-CTR-042). Un passeggino non si 
 ### corse.json
 
 La **corsa** e' il viaggio vero di un mezzo. Puo' soddisfare piu' servizi, anche di contratti diversi:
-allora e' una corsa ibrida (es. medie del consorzio + superiori a supporto di una linea). Schema:
+allora e' una corsa promiscua (es. medie del consorzio + superiori a supporto di una linea). Schema:
 [docs/schema/corse.v1.schema.json](schema/corse.v1.schema.json).
 
 | Campo | Obbl. | Classe | Significato |
@@ -876,7 +938,7 @@ allora e' una corsa ibrida (es. medie del consorzio + superiori a supporto di un
 | `corse[].codice` | si' | comune | Codice della corsa |
 | `corse[].nome` | no | comune | Nome |
 | `corse[].codici_esterni[]` | no | comune | Es. sistema "Trentino Trasporti": linea "B634", corsa "533"; turno "2666" |
-| `corse[].servizi[]` | si' | comune | Servizi che la corsa soddisfa (piu' di uno = ibrida; nessuno: avviso K-CTR-040) |
+| `corse[].servizi[]` | si' | comune | Servizi che la corsa soddisfa (piu' di uno = promiscua; nessuno: avviso K-CTR-040) |
 | `corse[].calendario` | si' | comune | Calendario |
 | `corse[].passaggi[]` | si' | comune | Sequenza dei passaggi (sotto) |
 | `corse[].km_totali` | no | comune | `pieni`, `vuoti`: totali come li scrive il committente sulla sua scheda (un dato, non un calcolo) |
@@ -917,7 +979,9 @@ tra corse di aziende diverse e' ammesso. Controlli: K-CTR-023 ... K-CTR-027.
 
 ### mezzi.json
 
-Schemi: [docs/schema/mezzi.v2.schema.json](schema/mezzi.v2.schema.json) (versione attuale) e
+Schemi: [docs/schema/mezzi.v3.schema.json](schema/mezzi.v3.schema.json) (versione attuale, K-012: il tipo di servizio `ncc`
+nel vincolo di destinazione; per passare alla 3 si cambia solo `"schema_versione"`),
+[docs/schema/mezzi.v2.schema.json](schema/mezzi.v2.schema.json) (versione 2, ancora letta) e
 [docs/schema/mezzi.v1.schema.json](schema/mezzi.v1.schema.json) (versione 1, ancora letta: e' la versione 2 senza
 `uso`, `autorizzazioni_uso`, `vincolo_destinazione`, `scorta` e `prestiti`). I posti non cambiano con l'eta' dei
 passeggeri.
@@ -1577,8 +1641,11 @@ scambio). I nomi di K-Zero sono italiani semplici, ma i concetti dei turni corri
   linea, adulti autorizzati), la stessa scuola o centro e la stessa finestra oraria. Puo' essere anonimo
   (solo numeri); per le linee il numero puo' essere stimato o non noto.
 - **Corsa** - il viaggio vero di un mezzo, con i suoi passaggi. Soddisfa uno o piu' servizi.
-- **Corsa ibrida** - corsa che soddisfa piu' servizi, o che porta gruppi di tipi diversi, o studenti verso
-  un centro. Non si dichiara: la ricava il programma.
+- **Corsa promiscua** (fino al K-011 "ibrida") - corsa che soddisfa piu' servizi (anche se uno e' NCC), o che porta
+  gruppi di tipi diversi, o studenti verso un centro; non per un servizio NCC, i cui gruppi non cambiano la categoria. Non
+  si dichiara: la ricava il programma.
+- **NCC** - noleggio con conducente: servizi per gruppi formati su iniziativa del cliente o dell'azienda (gite, turismo,
+  eventi, matrimoni), anche se si ripetono (`servizi[].tipo` = `ncc`, sotto).
 - **Giro** - nel linguaggio dell'azienda, una delle corse con cui si porta la domanda di un servizio
   (es. "tre giri" per 38 ragazzi con un 16 posti).
 - **Passaggio** - un punto della corsa: luogo, orario, persone che salgono e scendono.
