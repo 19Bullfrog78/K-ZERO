@@ -1100,13 +1100,53 @@ kzero_rotto(rotto_autista_senza_abilitazione FORMATO testo MODIFICA TOGLI person
 kzero_rotto(rotto_autista_senza_abilitazione_json FORMATO json MODIFICA TOGLI persone.json /persone/10/abilitazioni/1
             PROBLEMI "K-CTR-068|servizi_fissi.json|/servizi_fissi/4")
 # Senza la distrazione il mezzo di linea ALFA-05 non puo' fare la gita, che chiede l'uso noleggio. Sparisce anche
-# l'avviso sulla distrazione che scade.
+# l'avviso sulla distrazione che scade. K-014: gli usi richiesti dipendono dal tipo di servizio (dato particolare): di base
+# l'errore si conta soltanto, con --includi-dati-particolari si vede.
 kzero_rotto(rotto_mezzo_senza_uso_richiesto FORMATO testo MODIFICA TOGLI mezzi.json /mezzi/6/autorizzazioni_uso/0
+            CONTIENE "Problemi sui dati particolari (salute), non elencati uno per uno: 1 errore e 13 avvisi."
+                     "1 errore, 30 avvisi."
+            NON_CONTIENE "K-CTR-069" "chiede l'uso" "S-GITA")
+kzero_prova(rotto_mezzo_senza_uso_richiesto_dati_particolari USCITA 1 FORMATO testo RESOCONTO BASE ${KZERO_DEMO}
+            MODIFICA TOGLI mezzi.json /mezzi/6/autorizzazioni_uso/0
             PROBLEMI "K-CTR-069|turni.json|/turni/11/mezzo"
             CONTIENE "Nel turno T-GITA (Gita) il mezzo ALFA-05 (AA 105 AA) (uso LINEA) fa il servizio S-GITA (Gita della Pro Loco al lago di Lagobello), che chiede l'uso NCC, e non ha un'autorizzazione a quell'uso (distrazione), il 2026-11-15."
-                     "1 errore, 30 avvisi.")
-kzero_rotto(rotto_mezzo_senza_uso_richiesto_json FORMATO json MODIFICA TOGLI mezzi.json /mezzi/6/autorizzazioni_uso/0
-            PROBLEMI "K-CTR-069|turni.json|/turni/11/mezzo")
+                     "1 errore, 30 avvisi."
+            ARGOMENTI controlla @PACCHETTO@ --includi-dati-particolari)
+kzero_prova(rotto_mezzo_senza_uso_richiesto_json USCITA 1 FORMATO json SCHEMA controlla RESOCONTO BASE ${KZERO_DEMO}
+            MODIFICA TOGLI mezzi.json /mezzi/6/autorizzazioni_uso/0
+            PROBLEMI "K-CTR-069|turni.json|/turni/11/mezzo"
+            ARGOMENTI controlla @PACCHETTO@ --includi-dati-particolari --formato json)
+# K-014: requisiti che dipendono dal tipo di servizio (le varianti del demo viste dall'arbitro). S-SCU-AM come servizio per
+# disabili: R-TN chiede l'autorizzazione del committente CVA, che P-F e P-G non hanno (K-CTR-068). S-DIS come scolastico: il
+# vincolo di destinazione di ALFA-03 ammette solo i servizi per disabili (K-CTR-072). S-DIS come linea: le norme chiedono
+# l'uso LINEA (K-CTR-069). Senza i dati particolari, anche con i dati personali, si contano soltanto; con il parametro si vedono.
+kzero_rotto(tipo_scu_am_disabili FORMATO testo MODIFICA IMPOSTA servizi.json /servizi/0/tipo "\"disabili\""
+            CONTIENE "Problemi sui dati particolari (salute), non elencati uno per uno: 2 errori e 13 avvisi."
+            NON_CONTIENE "K-CTR-068" "autorizzazione del committente")
+kzero_prova(tipo_scu_am_disabili_dati_personali USCITA 1 FORMATO json SCHEMA controlla RESOCONTO BASE ${KZERO_DEMO}
+            MODIFICA IMPOSTA servizi.json /servizi/0/tipo "\"disabili\""
+            CONTIENE "\"errori\": 2" NON_CONTIENE "K-CTR-068" "autorizzazione del committente"
+            ARGOMENTI controlla @PACCHETTO@ --includi-dati-personali --formato json)
+kzero_prova(tipo_scu_am_disabili_dati_particolari USCITA 1 FORMATO testo RESOCONTO BASE ${KZERO_DEMO}
+            MODIFICA IMPOSTA servizi.json /servizi/0/tipo "\"disabili\""
+            PROBLEMI "K-CTR-068|servizi_fissi.json|/servizi_fissi/4" "K-CTR-068|servizi_fissi.json|/servizi_fissi/5"
+            CONTIENE "Nel turno T-SCUOLA-2 (Scuola 2) la persona P-F guida per il servizio S-SCU-AM (Andata mattina Pradello - Valfonda, medie e primaria) senza l'autorizzazione del committente CVA"
+            ARGOMENTI controlla @PACCHETTO@ --includi-dati-particolari)
+kzero_rotto(tipo_dis_scolastico FORMATO testo MODIFICA IMPOSTA servizi.json /servizi/3/tipo "\"scolastico\""
+            CONTIENE "Problemi sui dati particolari (salute), non elencati uno per uno: 1 errore e 12 avvisi."
+            NON_CONTIENE "K-CTR-072" "vincolo di destinazione")
+kzero_prova(tipo_dis_scolastico_dati_particolari USCITA 1 FORMATO testo RESOCONTO BASE ${KZERO_DEMO}
+            MODIFICA IMPOSTA servizi.json /servizi/3/tipo "\"scolastico\""
+            PROBLEMI "K-CTR-072|turni.json|/turni/2/mezzo"
+            CONTIENE "il mezzo ALFA-03 (AA 103 AA) fa il servizio S-DIS (Trasporto al centro diurno Il Faro), che il suo vincolo di destinazione non ammette"
+            ARGOMENTI controlla @PACCHETTO@ --includi-dati-particolari)
+kzero_rotto(tipo_dis_linea FORMATO testo MODIFICA IMPOSTA servizi.json /servizi/3/tipo "\"linea\""
+            NON_CONTIENE "K-CTR-069" "K-CTR-072" "chiede l'uso" "vincolo di destinazione")
+kzero_prova(tipo_dis_linea_dati_particolari USCITA 1 FORMATO testo RESOCONTO BASE ${KZERO_DEMO}
+            MODIFICA IMPOSTA servizi.json /servizi/3/tipo "\"linea\""
+            PROBLEMI "K-CTR-069|turni.json|/turni/2/mezzo" "K-CTR-072|turni.json|/turni/2/mezzo"
+            CONTIENE "fa il servizio S-DIS (Trasporto al centro diurno Il Faro), che chiede l'uso LINEA"
+            ARGOMENTI controlla @PACCHETTO@ --includi-dati-particolari)
 kzero_rotto(rotto_trasbordo_non_autorizzato FORMATO testo MODIFICA TOGLI luoghi.json /luoghi/16/trasbordo
             PROBLEMI "K-CTR-023|corse.json|/corse/4/passaggi/2/trasbordi/0" "K-CTR-023|corse.json|/corse/5/passaggi/3/trasbordi/0")
 kzero_rotto(rotto_trasbordo_senza_meta FORMATO testo MODIFICA IMPOSTA corse.json /corse/5/passaggi/3/trasbordi/0/codice "\"T-02\""

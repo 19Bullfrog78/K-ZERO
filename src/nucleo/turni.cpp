@@ -127,6 +127,24 @@ std::optional<std::vector<Code>> allowed_uses(const Service& s, const Index& idx
     return std::nullopt;
 }
 
+KindRequirements kind_requirements(const Package& p) {
+    KindRequirements k;
+    const auto with_kinds = [](const std::optional<ConditionsRule>& r) {
+        return r && std::any_of(r->conditions.begin(), r->conditions.end(),
+                                [](const PassengerCondition& c) { return !c.service_kinds.empty(); });
+    };
+    for (const Regulation& r : p.regulations) {
+        if (r.vehicle_uses && !r.vehicle_uses->values.empty()) k.vehicle_uses.push_back(&r);
+        if (r.client_authorization && !r.client_authorization->kinds.empty()) k.client_authorization.push_back(&r);
+        if (with_kinds(r.assistant) || with_kinds(r.adult_at_dropoff)) k.conditions.push_back(&r);
+    }
+    for (const Norms& n : p.norms)
+        if (!n.service_uses.empty()) k.service_uses.push_back(&n);
+    for (const Vehicle& v : p.vehicles)
+        if (v.constraint && !v.constraint->kinds.empty()) k.constraints.push_back(&v);
+    return k;
+}
+
 namespace {
 
 bool has_licence(const Person& p, const Code& type) {

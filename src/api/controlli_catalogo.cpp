@@ -1037,6 +1037,14 @@ const std::vector<DefinizioneControllo>& catalogo_controlli() {
             d.richiede_personali = it->second.personali;
             d.richiede_particolari = it->second.particolari;
         }
+        // K-014: controlli sui turni che possono nascere da un requisito che dipende dal tipo di servizio (kind_requirements,
+        // turni.hpp): l'autorizzazione del committente (K-CTR-068, e scaduta su un'assegnazione del giorno: K-CTR-067), gli usi
+        // dei mezzi (K-CTR-069, e un'autorizzazione all'uso che non vale su un'assegnazione del giorno: K-CTR-067), il vincolo
+        // di destinazione che nomina tipi di servizio (K-CTR-072). Il nucleo lo dice problema per problema (by_service_kind).
+        for (DefinizioneControllo& d : c)
+            if (d.controllo == Check::DayAssignmentAgainstFact || d.controllo == Check::DriverWithoutLicence ||
+                d.controllo == Check::VehicleWithoutUseForService || d.controllo == Check::VehicleAgainstConstraint)
+                d.dal_tipo = true;
         std::sort(c.begin(), c.end(), [](const DefinizioneControllo& a, const DefinizioneControllo& b) { return a.codice < b.codice; });
         return c;
     }();

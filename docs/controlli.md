@@ -109,8 +109,12 @@ comunque la regola qui sopra):
 | K-CTR-047 | particolare | tutti i casi | l'assistente di cui ha bisogno un passeggero |
 | K-CTR-050 | personale | alcuni casi | la scadenza di un'abilitazione o di un'autorizzazione di una persona |
 | K-CTR-067 | personale | alcuni casi | assenza, disponibilita', abilitazione o autorizzazione scaduta di una persona |
+| K-CTR-067 | particolare | alcuni casi | che il servizio chieda l'autorizzazione del committente o un uso del mezzo: li chiedono i dati per tipo di servizio (K-014) |
 | K-CTR-068 | personale | tutti i casi | l'abilitazione o l'autorizzazione che una persona non ha |
+| K-CTR-068 | particolare | alcuni casi | che il servizio chieda l'autorizzazione del committente: la chiede il regolamento per tipo di servizio (K-014) |
+| K-CTR-069 | particolare | alcuni casi | gli usi del mezzo che il servizio chiede: li dicono i dati per tipo di servizio (K-014; succede sempre) |
 | K-CTR-071 | particolare | tutti i casi | la competenza richiesta da un turno o da un servizio (puo' far capire chi viaggia) |
+| K-CTR-072 | particolare | alcuni casi | che il vincolo di destinazione non ammetta il servizio, quando il vincolo nomina tipi di servizio (K-014) |
 | K-CTR-076 | personale | tutti i casi | i ruoli di una persona |
 | K-CTR-078 | personale | alcuni casi | assenza, disponibilita', abilitazione o autorizzazione scaduta di una persona |
 | K-CTR-081 | personale | tutti i casi | le preferenze di una persona |
