@@ -1777,3 +1777,70 @@ TEST(Unione, RequisitiConDatiParticolariLeCauseSiVedono) {
                           "e' assente", "e' scaduta. Rimedio", "K-CTR-069", "K-CTR-072"})
         EXPECT_NE(tutte.find(c), std::string::npos) << c;
 }
+
+// --- K-014, punto 4: la prova mancante del K-013 (sabotaggio B2) ----------------------------------------------------------
+// "Nessuna legge vale" (K-CTR-107) dipende dal tipo di servizio quando una legge sugli orari ne dipende (KindDependence::law).
+// Una legge sugli orari ha regole sul lavoro, sulla guida o sui riposi: nel demo le leggi che dipendono dal tipo hanno sempre
+// anche regole sul lavoro (L. 138, D.Lgs. 234), quindi una "law" calcolata guardando solo il lavoro non si vedeva. Qui le norme
+// del demo hanno una sola legge che dipende dal tipo, il Reg. 561, con regole solo su guida e riposi: senza i dati particolari
+// "nessuna legge vale" e' riservato (K-CTR-107 si conta soltanto, in kzero ore "riservato").
+TEST(Unione, NessunaLeggeRiservataConLaSolaLeggeDelTipoSuGuidaERiposi) {
+    InMemoria m = da_cartella(std::string(KZERO_CARTELLA_PROVE) + "/../esempi/demo");
+    JsonDati n = JsonDati::parse(m.file.at("norme.json"));
+    JsonDati regimi = JsonDati::array();
+    for (JsonDati& r : n.at("norme").at(0).at("regimi")) {
+        const std::string c = r.at("codice").get<std::string>();
+        if (c == "R-L138" || c == "R-234") continue;   // le leggi che dipendono dal tipo con regole sul lavoro
+        r.erase("esclude");                            // il Reg. 561 escludeva la L. 138
+        regimi.push_back(r);
+    }
+    n.at("norme").at(0)["regimi"] = regimi;
+    m.file["norme.json"] = n.dump(2);
+    const Lettura l = leggi_pacchetto(m);
+    ASSERT_TRUE(l.forma_valida());
+
+    // Nel nucleo: il solo regime che dipende dal tipo e' il Reg. 561, una legge sugli orari senza regole sul lavoro.
+    const kzero::KindDependence k = kzero::kind_dependence(l.pacchetto.norms.at(0));
+    ASSERT_EQ(k.regimes.size(), 1u);
+    EXPECT_EQ(k.regimes.front()->code, "R-561");
+    for (const kzero::WorkRule& w : k.regimes.front()->rules) EXPECT_NE(w.family, kzero::RuleFamily::Work) << w.code;
+    EXPECT_FALSE(k.work);
+    EXPECT_TRUE(k.law);
+    int nessuna_legge = 0;
+    for (const kzero::Problem& x : kzero::check_package(l.pacchetto))
+        if (x.check == Check::EmployeeWithoutLaw) {
+            ++nessuna_legge;
+            EXPECT_TRUE(x.by_service_kind);
+        }
+    EXPECT_GT(nessuna_legge, 0);
+
+    // Nelle uscite.
+    const Resoconto r = controlla_lettura(l, Visibilita{true, true});
+    ASSERT_EQ(r.errori_nei_dati(), 0);
+    for (const bool personali : {false, true}) {
+        const Resoconto base = controlla_lettura(l, Visibilita{personali, false});
+        for (const ProblemaPresentato& p : base.problemi) EXPECT_NE(p.codice, "K-CTR-107") << p.messaggio;
+        EXPECT_GE(base.avvisi_riservati, nessuna_legge);
+        const DefinizioneComando* ore = trova_comando("ore");
+        accesso::LetturaPerComando lc;
+        lc.lettura = l;
+        lc.visibilita = Visibilita{personali, false};
+        Parametri par;
+        par.formato = Formato::Json;
+        par.includi_dati_personali = personali;
+        par.argomenti = {"pacchetto in memoria"};
+        par.dal = kzero::day_from_ymd(2026, 11, 9);
+        par.al = kzero::day_from_ymd(2026, 11, 15);
+        const JsonDati j = JsonDati::parse(ore_su(*ore, par, std::move(lc)).uscita);
+        int giornate = 0;
+        for (const JsonDati& p : j.at("persone"))
+            for (const JsonDati& g : p.at("giornate")) {
+                ++giornate;
+                EXPECT_EQ(g.at("nessuna_legge"), "riservato") << p.at("codice") << " " << g.at("data");
+            }
+        EXPECT_GT(giornate, 0);
+    }
+    bool visibile = false;
+    for (const ProblemaPresentato& p : r.problemi) visibile = visibile || p.codice == "K-CTR-107";
+    EXPECT_TRUE(visibile);   // con i dati particolari si vede
+}
