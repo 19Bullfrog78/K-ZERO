@@ -67,12 +67,12 @@ Resoconto controlla_lettura(Lettura lettura, const Visibilita& visibilita, const
         const Classe posizione = classe_della_posizione(p.where, r.lettura);
         // Cassaforte (K-010): un problema che l'utente non puo' calcolare con le classi che apre non si mostra e non si conta
         // (sarebbe fatto su dati mancanti): il resoconto dice quali controlli non sono verificati.
-        if (!verificabile(d, p.variant, posizione, in_trasportato(p.where, r.lettura), leggibili)) continue;
+        if (!verificabile(d, p, posizione, in_trasportato(p.where, r.lettura), leggibili)) continue;
         (d.livello == Livello::Errore ? r.errori : r.avvisi) += 1;
         if (d.livello == Livello::Errore && d.piano) r.errori_del_piano += 1;
         // Il problema rivela il piu' riservato tra cio' che dice in se' e il dato in cui sta la sua posizione. Se e' un
         // dato particolare (salute), di base si conta soltanto: niente codice, messaggio, posizione.
-        const Classe rivela = piu_riservata(d.rivela_variante(p.variant), posizione);
+        const Classe rivela = piu_riservata(d.rivela_problema(p), posizione);
         if (rivela == Classe::Particolare && !visibile(Classe::Particolare, visibilita)) {
             (d.livello == Livello::Errore ? r.errori_riservati : r.avvisi_riservati) += 1;
             continue;

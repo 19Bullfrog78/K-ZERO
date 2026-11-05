@@ -89,6 +89,8 @@ struct RegimeData {
     // giorno la forza della scelta (0 nessuna, 1 preferenza, 2 limite). Le sue violazioni non sono la legge.
     bool chosen = false;
     std::vector<char> chosen_strength;
+    // K-013: il regime dipende dal tipo di servizio delle corse (KindDependence; per scelta: anche chosen_by_kind).
+    bool by_kind = false;
     bool own_drive = false;
     std::array<std::vector<int>, kWorlds> drive_weight;
     std::array<std::vector<long long>, kWorlds> drive_prefix;
@@ -109,6 +111,7 @@ struct PersonCtx {
     const PersonPlan* plan = nullptr;
     const Norms* norms = nullptr;
     bool chosen_by_kind = false;       // regimi per scelta da scelte per tipo di servizio (K-011 aggiunta 2)
+    const KindDependence* kinds = nullptr;   // K-013: i regimi delle norme della persona che dipendono dal tipo di servizio
     std::vector<Seg> segs;
     long long h0 = 0, h1 = 0;          // periodo noto: dall'inizio del primo giorno alla fine dell'ultimo del pacchetto
     Day d0 = 0, d1 = 0;                // periodo del pacchetto
@@ -144,6 +147,22 @@ bool applies(const RegimeData& rd, const PersonCtx& c, RuleFamily f, Day d, int 
 bool applies_any(const RegimeData& rd, const PersonCtx& c, RuleFamily f, Day from, Day to, int world);
 // La giornata (o un'unita' di piu' giorni) ha un turno da un'assegnazione del singolo giorno?
 bool has_day_assignment(const PersonCtx& c, Day from, Day to);
+
+// A quale corsa serve un elemento senza passeggeri della giornata (es. un trasferimento a vuoto), tra le corse dello stesso
+// turno: a quella dopo se arriva dove comincia; altrimenti a quella prima se parte da dove finisce; altrimenti non si sa
+// (K-013: una regola sola, per la guida delle corse escluse, K-011 aggiunta 1, e per i servizi occasionali, K-012). L'elemento
+// e' un'attivita' (WorkItem::item non nullo, nessuna corsa). Le corse vicine (indici in PersonDay::items) ci sono sempre,
+// se il turno le ha: servono a chi deve decidere quando non si sa.
+struct ServedTrip {
+    enum class Which { Next, Previous, Unknown };
+    Which which = Which::Unknown;
+    std::optional<std::size_t> next, previous;
+    // L'indice della corsa a cui serve; vuoto se non si sa.
+    std::optional<std::size_t> trip() const {
+        return which == Which::Next ? next : which == Which::Previous ? previous : std::nullopt;
+    }
+};
+ServedTrip served_trip(const PersonDay& pd, std::size_t item);
 
 // Ogni tipo di regola: le violazioni trovate nel mondo dato e i giorni verificati solo in parte.
 struct RuleOut {

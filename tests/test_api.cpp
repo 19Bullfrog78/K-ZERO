@@ -1024,7 +1024,11 @@ TEST(Api, problemi_sui_dati_particolari_contati_e_non_elencati) {
     const Resoconto base = controlla_pacchetto(m, Visibilita{});
     EXPECT_EQ(base.errori, 1);
     EXPECT_EQ(base.errori_riservati, 1);
-    EXPECT_EQ(base.avvisi_riservati, 0);
+    // K-013: gli avvisi degli orari dei regimi che dipendono dal tipo di servizio (nel demo R-L138, R-561, R-234) si contano
+    // soltanto, gia' nel demo; l'errore nuovo non ne aggiunge.
+    const Resoconto demo = controlla_pacchetto(Memoria{}, Visibilita{});
+    EXPECT_EQ(demo.avvisi_riservati, 13);
+    EXPECT_EQ(base.avvisi_riservati, demo.avvisi_riservati);
     for (const auto& p : base.problemi) EXPECT_NE(p.codice, "K-CTR-047");
     const Resoconto personali = controlla_pacchetto(m, Visibilita{true, false});
     EXPECT_EQ(personali.errori_riservati, 1);   // i dati personali non bastano
@@ -1055,7 +1059,8 @@ TEST(Api, controlli_dichiarano_cosa_rivelano) {
         for (const Classe c : {Classe::Personale, Classe::Particolare}) {
             std::size_t quante = 0;
             for (std::size_t v = 0; v < d.messaggi.size(); ++v) quante += d.rivela_variante(static_cast<int>(v)) == c;
-            if (quante == 0) continue;
+            // K-013: un controllo che puo' dipendere dal tipo di servizio rivela un dato particolare in alcuni casi.
+            if (quante == 0 && !(c == Classe::Particolare && d.dal_tipo)) continue;
             attese[d.codice + " | " + (c == Classe::Personale ? "personale" : "particolare")] =
                 quante == d.messaggi.size() ? "tutti i casi" : "alcuni casi";
         }
@@ -1073,7 +1078,12 @@ TEST(Api, controlli_dichiarano_cosa_rivelano) {
         std::smatch m;
         if (std::regex_match(r, m, riga)) trovate[m[1].str() + " | " + m[2].str()] = m[3].str();
     }
-    EXPECT_EQ(trovate, attese);
+    std::string differenze;
+    for (const auto& [k, v] : attese)
+        if (!trovate.count(k) || trovate.at(k) != v) differenze += "\n  nel catalogo, non nel documento: " + k + " | " + v;
+    for (const auto& [k, v] : trovate)
+        if (!attese.count(k) || attese.at(k) != v) differenze += "\n  nel documento, non nel catalogo: " + k + " | " + v;
+    EXPECT_TRUE(differenze.empty()) << differenze;
 }
 
 // Luoghi sensibili (K-010, regola nuova): il nome di un passeggero legato a un luogo sensibile (nel demo chi va al centro

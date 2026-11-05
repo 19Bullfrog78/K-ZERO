@@ -12,6 +12,7 @@
 //
 // Il nucleo non contiene testi: i problemi hanno il loro tipo (Check) e i valori; i testi stanno nel catalogo dell'API.
 
+#include <algorithm>
 #include <array>
 #include <map>
 #include <optional>
@@ -109,6 +110,22 @@ bool kind_tachograph(const CompanySettings* s);
 // particolare): la sua azienda, o quella di un turno che fa nel periodo del pacchetto (plan, puo' mancare), ha una scelta del
 // tachigrafo per tipo. Allora, senza i dati particolari, quei regimi sono riservati tutti, sempre (decisione dell'arbitro).
 bool chosen_by_kind(const Person& p, const PersonPlan* plan, const Index& idx);
+
+// K-013: i regimi delle norme che dipendono dal tipo di servizio delle corse (dato particolare). Lo dicono i dati, mai il nome:
+// un regime con condizioni sul tipo di servizio (si_applica.tipi_servizio), con esclusioni (per tipo di servizio), con servizi
+// occasionali, che prende le condizioni sulla corsa da uno di questi (come_regime) o che uno di questi esclude per alcune
+// famiglie (esclude: quando vale dipende allora da quando vale l'altro). Gli altri regimi (es. un contratto collettivo, il
+// lavoro a chiamata) non dipendono dal tipo. Il regime seguito per scelta dell'azienda (tachigrafo) dipende dal tipo se ne
+// dipende quello di legge oppure se la scelta viene anche dal tipo di servizio (chosen_by_kind).
+// Senza i dati particolari tutto quello che viene da questi regimi e' riservato (DECISIONI.md, K-013).
+struct KindDependence {
+    std::vector<const Regime*> regimes;   // nell'ordine delle norme
+    bool work = false;   // almeno uno conta il lavoro: allora ne dipendono il lavoro per il contratto e le scelte sul lavoro
+    bool law = false;    // almeno uno e' una legge sugli orari: allora ne dipende "nessuna legge vale"
+    bool contains(const Regime* r) const { return std::find(regimes.begin(), regimes.end(), r) != regimes.end(); }
+    bool any() const { return !regimes.empty(); }
+};
+KindDependence kind_dependence(const Norms& n);
 
 // Perche' un regime vale (o vale solo da confermare, o non vale) in un giorno per la persona. Dati strutturati: l'API li
 // scrive seguendo le classi dei dati (il tipo di servizio e' un dato particolare, il rapporto e il contratto personali).

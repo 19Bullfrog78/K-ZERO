@@ -106,6 +106,41 @@ TripMode trip_mode(const Trip& t, const CompanySettings* s, const Index& idx, Da
     return m;
 }
 
+KindDependence kind_dependence(const Norms& n) {
+    const auto by_code = [&](const Code& c) -> const Regime* {
+        for (const Regime& r : n.regimes)
+            if (r.code == c) return &r;
+        return nullptr;
+    };
+    std::set<const Regime*> in;
+    for (const Regime& r : n.regimes)
+        if (r.service_kinds.present || !r.exclusions.empty() || r.occasional.present) in.insert(&r);
+    // come_regime verso uno di questi, oppure escluso (per alcune famiglie) da uno di questi: fino a quando non cambia piu'.
+    for (bool changed = true; changed;) {
+        changed = false;
+        for (const Regime& r : n.regimes) {
+            if (in.count(&r)) {
+                for (const RegimeOverride& o : r.overrides)
+                    if (const Regime* t = by_code(o.regime.code); t && in.insert(t).second) changed = true;
+                continue;
+            }
+            if (r.like)
+                if (const Regime* t = by_code(r.like->code); t && in.count(t)) changed = in.insert(&r).second || changed;
+        }
+    }
+    KindDependence k;
+    for (const Regime& r : n.regimes) {
+        if (!in.count(&r)) continue;
+        k.regimes.push_back(&r);
+        for (const WorkRule& w : r.rules) {
+            if (w.type == RuleType::WorkCount) k.work = true;
+            if (w.family == RuleFamily::Work || w.family == RuleFamily::Driving || w.family == RuleFamily::Rest)
+                k.law = k.law || r.kind == RegimeKind::Law;
+        }
+    }
+    return k;
+}
+
 bool kind_tachograph(const CompanySettings* s) {
     if (!s || !s->trip_modes) return false;
     return std::any_of(s->trip_modes->by_kind.begin(), s->trip_modes->by_kind.end(),
@@ -281,6 +316,21 @@ bool applies_any(const RegimeData& rd, const PersonCtx& c, RuleFamily f, Day fro
     return n[static_cast<std::size_t>(to - c.d0) + 1] - n[static_cast<std::size_t>(from - c.d0)] > 0;
 }
 
+ServedTrip served_trip(const PersonDay& pd, std::size_t item) {
+    ServedTrip s;
+    const WorkItem& it = pd.items[item];
+    for (std::size_t j = item + 1; j < pd.items.size() && !s.next; ++j)
+        if (pd.items[j].shift == it.shift && pd.items[j].trip) s.next = j;
+    for (std::size_t j = item; j-- > 0 && !s.previous;)
+        if (pd.items[j].shift == it.shift && pd.items[j].trip) s.previous = j;
+    const ShiftActivity& a = it.item->activity;
+    if (s.next && a.to_place && a.to_place->code == pd.items[*s.next].trip->passages[pd.items[*s.next].from].place.code)
+        s.which = ServedTrip::Which::Next;
+    else if (s.previous && a.place.code == pd.items[*s.previous].trip->passages[pd.items[*s.previous].to].place.code)
+        s.which = ServedTrip::Which::Previous;
+    return s;
+}
+
 bool has_day_assignment(const PersonCtx& c, Day from, Day to) {
     for (Day d = std::max(from, c.d0); d <= std::min(to, c.d1); ++d)
         if (const PersonDay* p = c.pd(d); p && p->day_assignment) return true;
@@ -340,6 +390,7 @@ public:
     HoursChecker(const Package& p, const Index& idx, std::vector<Problem>& out, const HoursRequest& req, HoursReport* rep)
         : p_(p), idx_(idx), out_(out), req_(req), rep_(rep) {
         for (const Depot& d : p.depots) depot_places_.insert(d.place.code);
+        for (const Norms& n : p.norms) kinds_.emplace(&n, kind_dependence(n));
     }
 
     void run(const PlanData& plans) {
@@ -464,7 +515,10 @@ private:
         why.declared = declared;
         if (&r == &tc && !chosen) {
             // Un solo avviso per corsa e giorno, dal regime che ha le condizioni (non da chi le prende con come_regime).
-            if (m.mode == TripModeKind::Out && !m.forcing && law == Certainty::Certain) out_not_valid_[{m.modes, m.entry, it.trip}].insert(day);
+            if (m.mode == TripModeKind::Out && !m.forcing && law == Certainty::Certain) {
+                out_not_valid_[{m.modes, m.entry, it.trip}].insert(day);
+                if (by_kind(&r)) out_not_valid_by_kind_.insert({m.modes, m.entry, it.trip});
+            }
             if (m.mixed) mixed_[{m.modes, it.trip}].insert(day);
             // K-011 aggiunta 2: se la forzatura e la dichiarazione cambiano qualcosa (1: valgono quel giorno, 2: cambiano il
             // risultato). La forzatura cambia solo dove la legge, con i dati scritti, vuole il regime con certezza (se e' da
@@ -472,6 +526,7 @@ private:
             if (m.mode == TripModeKind::Out && m.forcing) {
                 char& u = forcing_use_[m.forcing];
                 u = std::max<char>(u, law == Certainty::Certain ? 2 : 1);
+                if (by_kind(&r)) forcing_use_by_kind_.insert(m.forcing);
             }
             if (declared) {
                 ApplyReason senza = why;
@@ -961,33 +1016,22 @@ private:
         }
     }
 
-    // La guida senza passeggeri (es. un trasferimento a vuoto) e' legata alla corsa a cui serve, nello stesso turno: a
-    // quella dopo se il trasferimento arriva dove comincia; altrimenti a quella prima se parte da dove finisce. Se non si sa
-    // (nessuna delle due), da confermare: nella lettura certa conta come la guida esclusa, nella prudente come guida.
+    // La guida senza passeggeri (es. un trasferimento a vuoto) e' legata alla corsa a cui serve (served_trip). Se non si sa,
+    // da confermare: nella lettura certa conta come la guida esclusa, nella prudente come guida.
     static void link_driving(const PersonCtx& c, RegimeData& rd) {
         for (std::size_t di = 0; di < c.plan->days.size(); ++di) {
             const PersonDay& pd = c.plan->days[di];
-            const auto level_of_item = [&](std::size_t j) {
-                const int si = c.item_seg[di][j];
-                return si >= 0 ? rd.seg_level[static_cast<std::size_t>(si)] : Certainty::ToConfirm;
-            };
             for (std::size_t ii = 0; ii < pd.items.size(); ++ii) {
                 const WorkItem& it = pd.items[ii];
                 const int si = c.item_seg[di][ii];
                 if (it.trip || si < 0) continue;
                 const Seg& sg = c.segs[static_cast<std::size_t>(si)];
                 if (sg.cat[0] != TimeCategory::Driving && sg.cat[1] != TimeCategory::Driving) continue;
-                std::optional<std::size_t> next, prev;
-                for (std::size_t j = ii + 1; j < pd.items.size() && !next; ++j)
-                    if (pd.items[j].shift == it.shift && pd.items[j].trip) next = j;
-                for (std::size_t j = ii; j-- > 0 && !prev;)
-                    if (pd.items[j].shift == it.shift && pd.items[j].trip) prev = j;
-                const ShiftActivity& a = it.item->activity;
                 Certainty lv = Certainty::ToConfirm;
-                if (next && a.to_place && a.to_place->code == pd.items[*next].trip->passages[pd.items[*next].from].place.code)
-                    lv = level_of_item(*next);
-                else if (prev && a.place.code == pd.items[*prev].trip->passages[pd.items[*prev].to].place.code)
-                    lv = level_of_item(*prev);
+                if (const std::optional<std::size_t> j = served_trip(pd, ii).trip()) {
+                    const int sj = c.item_seg[di][*j];
+                    lv = sj >= 0 ? rd.seg_level[static_cast<std::size_t>(sj)] : Certainty::ToConfirm;
+                }
                 rd.seg_level[static_cast<std::size_t>(si)] = lv;
             }
         }
@@ -1058,6 +1102,8 @@ private:
             r.second = k + 1;
         }
         applicability(c);
+        if (c.norms) c.kinds = &kinds_.at(c.norms);
+        for (RegimeData& rd : c.regimes) rd.by_kind = c.kinds && (c.kinds->contains(rd.regime) || (rd.chosen && c.chosen_by_kind));
         measures(c);
 
         const CompanySettings* settings = idx_.settings(pp.person->company.code);
@@ -1275,8 +1321,9 @@ private:
                 std::sort(motives.begin(), motives.end());
                 motives.erase(std::unique(motives.begin(), motives.end()), motives.end());
             }
-            // K-011 aggiunta 2: con scelte del tachigrafo per tipo di servizio le varianti +30 rivelano un dato particolare.
-            b.variant += offset(b.certain_check) + (c.chosen_by_kind ? 30 : 0);
+            // Se il regime per scelta dipende dal tipo di servizio (K-013: quello di legge ne dipende, oppure la scelta viene anche
+            // dal tipo, K-011 aggiunta 2), il problema rivela un dato particolare: lo dice by_service_kind (add).
+            b.variant += offset(b.certain_check);
             add(c, b, error ? Check::ChosenRegimeLimit : Check::ChosenRegimeNotRespected, motives);
         };
         for (int w = 0; w < 2; ++w) {   // il mondo 2 non da' problemi
@@ -1308,7 +1355,24 @@ private:
         days.days = b.days.empty() ? std::vector<Day>{b.day} : b.days;
         params.push_back(days);
         params.push_back(reasons_param("motivi", motives));   // vuoto per gli errori: i loro testi non lo usano
-        out_.push_back(Problem{check, b.variant, c.person->src, std::move(params)});
+        out_.push_back(Problem{check, b.variant, c.person->src, std::move(params), breach_by_kind(c, b)});
+    }
+
+    // K-013: la violazione viene da un regime che dipende dal tipo di servizio, oppure (contratto e scelte sul lavoro) dal lavoro
+    // contato, quando almeno uno di quei regimi conta il lavoro.
+    static bool breach_by_kind(const PersonCtx& c, const Breach& b) {
+        if (b.work_measure) return c.kinds && c.kinds->work;
+        if (!b.regime) return false;
+        for (const RegimeData& rd : c.regimes)
+            if (rd.regime == b.regime && rd.chosen == b.chosen) return rd.by_kind;
+        return false;
+    }
+
+    // K-013: il regime dipende dal tipo di servizio nelle sue norme.
+    bool by_kind(const Regime* r) const {
+        for (const auto& [n, k] : kinds_)
+            if (k.contains(r)) return true;
+        return false;
     }
 
     void emit_near(const PersonCtx& c, const Breach& b) {
@@ -1321,7 +1385,7 @@ private:
         days.kind = Param::Kind::Days;
         days.days = b.days.empty() ? std::vector<Day>{b.day} : b.days;
         params.push_back(days);
-        out_.push_back(Problem{Check::DaysNearLimit, 0, c.person->src, std::move(params)});
+        out_.push_back(Problem{Check::DaysNearLimit, 0, c.person->src, std::move(params), breach_by_kind(c, b)});
     }
 
     // --- Contratto della persona (livello 2) e scelte dell'azienda e della persona (livello 3) -----------------------------
@@ -1551,7 +1615,8 @@ private:
                             }
                             out_.push_back(Problem{Check::UntreatedLawCase, 0, it.shift->src,
                                                    {ref_param("turno", Element::Shift, it.shift->code), ref_param("corsa", Element::Trip, it.trip->code),
-                                                    regime, fonte, days_param("giorni", pd.day)}});
+                                                    regime, fonte, days_param("giorni", pd.day)},
+                                                   rd.by_kind});
                         }
                 }
             }
@@ -1563,7 +1628,9 @@ private:
             days.name = "giorni";
             days.kind = Param::Kind::Days;
             days.days = no_law;
-            out_.push_back(Problem{Check::EmployeeWithoutLaw, 0, x.src, {ref_param("persona", Element::Person, x.code), days}});
+            // K-013: se una legge sugli orari dipende dal tipo di servizio, anche "nessuna legge vale" ne dipende.
+            out_.push_back(Problem{Check::EmployeeWithoutLaw, 0, x.src, {ref_param("persona", Element::Person, x.code), days},
+                                   c.kinds && c.kinds->law});
         }
     }
 
@@ -1678,7 +1745,8 @@ private:
             days.days.erase(std::unique(days.days.begin(), days.days.end()), days.days.end());
             out_.push_back(Problem{Check::PartialVerification, 0, w->src,
                                    {text_param("regola", r->code + " " + w->code), text_param("fonte", source_text(w->source, r->source)),
-                                    number_param("persone", static_cast<long long>(persons.size())), days}});
+                                    number_param("persone", static_cast<long long>(persons.size())), days},
+                                   by_kind(r)});
         }
     }
 
@@ -1713,7 +1781,8 @@ private:
                                          ref_param("corsa", Element::Trip, trip->code), text_param("regime", modes->regime.code),
                                          days_of(days)};
             if (entry && entry->service) params.push_back(ref_param("servizio", Element::Service, entry->service->code));
-            out_.push_back(Problem{Check::ModeOutNotValid, variant, entry ? entry->src : modes->src, std::move(params)});
+            out_.push_back(Problem{Check::ModeOutNotValid, variant, entry ? entry->src : modes->src, std::move(params),
+                                   out_not_valid_by_kind_.count(k) > 0});
         }
         // Corsa con scelte diverse tra i servizi o i tipi di servizio, con il tachigrafo da una parte sola.
         for (const auto& [k, days] : mixed_) {
@@ -1736,7 +1805,9 @@ private:
                     std::set<std::string> rules;
                     std::set<Code> persons;
                     std::set<Day> days;
+                    bool kinds = false;
                     for (const Risk& r : it->second) {
+                        kinds = kinds || by_kind(r.regime);
                         uniq.insert({r.regime->code + " " + r.rule->code, r.day, r.person});
                         rules.insert(r.regime->code + " " + r.rule->code);
                         persons.insert(r.person);
@@ -1750,7 +1821,8 @@ private:
                                                    : ref_param("servizio", Element::Service, e.service->code),
                                             text_param("regime", s.trip_modes->regime.code),
                                             number_param("violazioni", static_cast<long long>(uniq.size())), text_param("regole", list),
-                                            number_param("persone", static_cast<long long>(persons.size())), days_of(days)}});
+                                            number_param("persone", static_cast<long long>(persons.size())), days_of(days)},
+                                           kinds});
                 }
         }
         // K-011 aggiunta 2: le forzature e le dichiarazioni che non cambiano niente nel periodo del pacchetto. Varianti: sulla
@@ -1767,12 +1839,15 @@ private:
                         const auto it = uso.find(&e);
                         const char u = it == uso.end() ? 0 : it->second;
                         if (u == 2) continue;
+                        // K-013: "vale ma non cambia niente" (u == 1) dipende da dove la legge vale con certezza, quindi dal tipo
+                        // di servizio se il regime ne dipende; "nessun giorno con una persona" (u == 0) no.
                         out_.push_back(Problem{forzatura ? Check::ModeForcedUseless : Check::ModeDeclaredUseless,
                                                (e.trip ? 0 : 1) + (u == 0 ? 2 : 0), g->src,
                                                {ref_param("azienda", Element::Company, s.company.code),
                                                 e.trip ? ref_param("corsa", Element::Trip, e.trip->code)
                                                        : ref_param("servizio", Element::Service, e.service->code),
-                                                text_param("regime", s.trip_modes->regime.code)}});
+                                                text_param("regime", s.trip_modes->regime.code)},
+                                               forzatura && u == 1 && forcing_use_by_kind_.count(&e) > 0});
                     }
         }
     }
@@ -1947,6 +2022,10 @@ private:
     // K-011 aggiunta 2: per ogni voce con la forzatura o la dichiarazione, se vale in qualche giorno (1) e se cambia il
     // risultato (2); se non cambia niente nel periodo del pacchetto, un avviso.
     mutable std::map<const ModeEntry*, char> forcing_use_, declaration_use_;
+    // K-013: le norme con i regimi che dipendono dal tipo di servizio; le voci dei problemi del modo che ne dipendono.
+    std::map<const Norms*, KindDependence> kinds_;
+    mutable std::set<std::tuple<const TripModes*, const ModeEntry*, const Trip*>> out_not_valid_by_kind_;
+    mutable std::set<const ModeEntry*> forcing_use_by_kind_;
     struct Risk {
         const Regime* regime;
         const WorkRule* rule;

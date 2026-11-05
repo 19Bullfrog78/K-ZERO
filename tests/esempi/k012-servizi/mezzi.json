@@ -320,6 +320,24 @@
       },
       "costo_fisso_giornaliero": 45.0,
       "costo_al_km": 0.55
+    },
+    {
+      "codice": "V-BETA-PRESTITO",
+      "uso": "LINEA",
+      "azienda": "BETA",
+      "targa": "BB 926 BB",
+      "categoria": "M3",
+      "posti": 41,
+      "posti_in_piedi": 25,
+      "misure": {
+        "lunghezza_m": 10.2,
+        "altezza_m": 3.1
+      },
+      "alimentazione": {
+        "tipo": "gasolio"
+      },
+      "costo_fisso_giornaliero": 92.0,
+      "costo_al_km": 1.0
     }
   ]
 }

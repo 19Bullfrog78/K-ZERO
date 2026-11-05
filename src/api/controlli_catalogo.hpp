@@ -49,11 +49,17 @@ struct DefinizioneControllo {
     // Il modello "personali" vale solo se il problema ha davvero un valore personale nascosto (es. una regola sugli orari che
     // vale per la persona per il suo rapporto); altrimenti si usa il modello completo.
     bool personali_se_nascosti = false;
+    // K-013: il problema puo' dipendere dal tipo di servizio delle corse (orari di lavoro: un regime che dipende dal tipo, il
+    // lavoro contato da quei regimi). Il nucleo lo dice problema per problema (Problem::by_service_kind): allora rivela un
+    // dato particolare, qualunque sia la variante. Una prova controlla che il nucleo lo dica solo per questi controlli.
+    bool dal_tipo = false;
 
     Classe rivela_variante(int variante) const {
         const auto it = rivela_varianti.find(variante);
         return it == rivela_varianti.end() ? rivela : it->second;
     }
+    // Cosa rivela il problema in se': la sua variante, e un dato particolare se dipende dal tipo di servizio (K-013).
+    Classe rivela_problema(const kzero::Problem& p) const { return p.by_service_kind ? Classe::Particolare : rivela_variante(p.variant); }
 };
 
 // Catalogo completo, in ordine di codice.
@@ -65,7 +71,7 @@ const std::vector<DefinizioneControllo>& catalogo_controlli();
 // una casa, i cui dati personali, se sono legati a un luogo sensibile, stanno nella sezione dei legati e si decifrano
 // solo con tutti e due i permessi. Con tutte le classi
 // leggibili: sempre si'.
-bool verificabile(const DefinizioneControllo& d, int variante, Classe classe_posizione, bool in_trasportato,
+bool verificabile(const DefinizioneControllo& d, const kzero::Problem& p, Classe classe_posizione, bool in_trasportato,
                   const Visibilita& leggibili);
 const DefinizioneControllo& definizione_controllo(kzero::Check c);
 

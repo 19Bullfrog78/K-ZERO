@@ -448,6 +448,60 @@
   "solo numeri" 1; nome del privato legato a chi ha solo i dati personali nei messaggi: 0 al primo giro, quindi la prova
   nuova Api.committente_privato_nei_messaggi, poi 1; linee oltre i 50 km escluse dal 561 27 (anche la scala); committenti
   privati non letti 123; formato-dati senza il riferimento a committenti 2: 1. Tutti scoperti.
+- 2026-11-04 - K-013 (programma, proposta "K-013: orari senza i dati particolari e prove mancanti"). **1. Orari senza i dati
+  particolari** (decisione dell'arbitro, DECISIONI.md): senza i dati particolari, per permesso o per parametro, tutto cio' che
+  negli orari dipende dal tipo di servizio delle corse e' riservato: i regimi che ne dipendono (dai dati: tipi di servizio,
+  esclusioni, servizi occasionali, come_regime, esclude; il regime per scelta se ne dipende quello di legge o se la scelta e'
+  per tipo), quando valgono e perche', "Non valgono", estensioni, lavoro contato, notturno, tipo dei riposi, verifiche
+  parziali, il lavoro per il contratto e "senza regime" (se uno di loro conta il lavoro), "nessuna legge" (se uno di loro e'
+  una legge sugli orari) e i problemi, che si contano soltanto (`Problem::by_service_kind`, `dal_tipo` nel catalogo; tolte le
+  varianti +30 di K-CTR-127 e 128). Niente casi a meta': in kzero ore una riga fissa per persona (schema ore 3,
+  `regimi_dal_tipo_di_servizio`), senza i codici dei regimi; mai piu' "Problemi degli orari: nessuno" senza i dati
+  particolari. Domanda fatta prima di scrivere il codice (cassaforte: le due richieste del mandato non stavano insieme),
+  risposta "uguali sul tipo": il titolare senza il parametro legge "riservato", chi ha i soli dati personali "non verificato"
+  (anche nella riga dei regimi per scelta). **Prova per differenza** (tests/test_unione.cpp): 30 coppie (le 10 coppie di
+  tipi su tre servizi: escursione NCC con il pullman, disabili del centro diurno fino a 50 km, noleggio con l'auto da 9
+  persone), tutte senza errori nei dati, nessuna differenza fuori dai totali; con i dati particolari ogni coppia di tipi
+  cambia l'esito delle leggi in almeno un servizio. Con il programma di main le stesse coppie avevano uscite diverse in 28
+  su 30 (le due che no, NCC e "altro" nel centro diurno e con l'auto, hanno lo stesso esito delle leggi). Trovati
+  fuori dagli orari e non corretti (domanda per l'arbitro): K-CTR-068 e K-CTR-069 dicono il tipo di servizio senza i dati
+  particolari (in "Bug e limiti noti"). **2. Persona in prestito**: Gamma (inventata, nel pacchetto dei servizi) senza scelte
+  del tachigrafo per tipo; P-GAMMA-PRESTITO in prestito a Beta ha la riga fissa e il regime per scelta riservato, P-GAMMA no;
+  chosen_by_kind resta (DECISIONI.md). **3. Prove mancanti dei servizi occasionali**: corsa promiscua NCC + scolastico nei due
+  ordini, trasferimento che non si sa a quale corsa serve vicino a una corsa NCC, norme 2 senza da_confermare o con false.
+  **4. Una funzione sola** per la corsa a cui serve un trasferimento a vuoto (`served_trip`), uscite identiche. **5.
+  Documenti**: DECISIONI.md (al posto della nota del K-011 aggiunta 2), docs/controlli.md, docs/cassaforte.md,
+  docs/architettura.md, CLAUDE.md. Nessun codice K-CTR o K-ERR nuovo.
+  Demo: 0 errori, 31 avvisi (uguali); di base 13 avvisi ora si contano soltanto (prima 0). k011-orari: 11 errori e 107 avvisi
+  (uguali), di base 8 errori e 27 avvisi contati soltanto. k012-servizi: 11 errori, 108 avvisi (uno in piu': K-CTR-045, Gamma
+  senza mezzi), di base 8 errori e 29 avvisi contati soltanto. Prove: 929 su 929 (prima del K-013: 906), 23 nuove. Prove di
+  prima cambiate: le prove del calcolo delle leggi che guardavano le leggi senza i dati particolari ora le chiedono
+  (--includi-dati-particolari: 52 km, 50 km, 50,1 km, senza km, guida delle corse escluse, D.Lgs. 234 nei giorni estesi,
+  titolare, forzatura, forzatura che non serve, errori del piano, controlla_orari_dati_personali, k012_controlla,
+  scala_controlla), con il testo delle corse che ora dice il tipo; le prove della riservatezza seguono la regola nuova
+  (settimana della gita, controlla_orari, controlla_non_serve_di_base, 15 + 15 "altro", tachigrafo per tipo, riga fissa,
+  rientri giustificati, i conteggi "Problemi sui dati particolari" del demo e di tre pacchetti rotti, la variante +30 di
+  K-CTR-128, la tabella di docs/controlli.md); k012_controlla 107 -> 108 avvisi. Nessuna prova tolta.
+  Sabotaggi sul codice finale, uno alla volta, ricompilato, con tutte le prove (prove rosse): riga di un regime che dipende
+  dal tipo visibile 12; segno dei problemi ignorato nel catalogo 14; segno mai messo dal nucleo 14; lavoro per il contratto
+  visibile 8; "nessuna legge" visibile: 0 al primo giro, quindi il terzo servizio della prova per differenza e due prove sul
+  programma, poi 4; come_regime non seguito 11; esclude non seguito: 0 al primo giro (nel demo il regime escluso
+  dipende gia' dal tipo), quindi la prova del nucleo criterio per criterio, poi 1; K-CTR-104 senza il segno 9;
+  K-CTR-132 senza il segno: 0 al primo giro (nessuna scelta OUT per corsa dove vale il 561), quindi due prove, poi
+  1; riga fissa solo per chi lavora 1; "nessuno in questo periodo" 2; "riservato" a chi non ha il permesso 1;
+  regime per scelta che dipende dal tipo solo con le scelte per tipo 1; riga del prestito tolta (M4) 3; certezza piu' alta
+  tra i servizi di una corsa 1; trasferimento che non si sa trattato come certo 1; norme 2 senza da_confermare lette da
+  confermare 1; la funzione sola cambiata in un punto 14 (rosse le prove di tutte e due le regole). Tutti scoperti.
+  Con i sanitizer 927 su 927 (senza le 2 prove sul programma di rilascio), 2 prove insieme; al primo giro AddressSanitizer ha trovato un uso di memoria liberata nella prova per
+  differenza (le corse lette da un resoconto gia' distrutto: un errore della prova, non del programma), corretto.
+  Fuzzing in locale sul codice finale, i 32 bersagli 60 secondi ciascuno, 2 alla volta, con i semi anche del pacchetto dei
+  servizi rigenerato: 19.166 file del pacchetto, 15.931 righe di comando, 2.051.694 date e orari, 67.793 cassaforti e 37.265
+  contenuti, 543.762 registri e 361.217 elenchi di voci, 343.263 password. Nessun guasto. Tempi della prova di scala non
+  rimisurati: il calcolo non cambia, cambia solo cosa si mostra.
+- 2026-11-05 - Regola di Mauro, registrata in CLAUDE.md (nella proposta del K-013, perche' CLAUDE.md passa da una proposta):
+  ogni resoconto per l'arbitro e ogni documento utile al progetto si consegna sempre come file da scaricare; Mauro lo mette
+  nella cartella giusta del suo PC (i resoconti in C:\Users\BULLFROG\Desktop\LAVORO\K-ZERO\K-ZERO CC). Una sessione nel
+  cloud non raggiunge il PC: il resoconto del K-013 e' stato consegnato da scaricare.
 
 ## Bug e limiti noti
 - I pesi del calcolo (ObjectiveWeights) hanno ancora valori provvisori nel codice, non usati: andranno nei dati con il
@@ -505,9 +559,15 @@
   oggi un avviso (K-CTR-107) e quegli orari non si giudicano. Il contratto collettivo vero (es. IC35) arrivera' dal
   consulente del lavoro, come regime nei dati. Il registro di servizio (art. 16 del Reg. 561, per le linee fino a 50 km)
   arrivera' con le stampe. Le letture "da confermare" sono in REGOLE.md, da portare al consulente.
-- Orari di lavoro (K-011 aggiunta 2), nota dell'arbitro per dopo: le righe dei regimi di legge di kzero ore ("vale da
-  confermare (per un dato particolare)", e "Non valgono: R-561" quando una dichiarazione rende certa l'esclusione) dipendono
-  dal tipo di servizio delle corse e restano come sono: dipendono dalla legge, non dalle scelte dell'azienda.
+- (K-013) Trovati dalla prova per differenza, fuori dagli orari, non corretti (da decidere): senza i dati particolari, gia'
+  di base, l'errore K-CTR-068 (l'autista non ha l'autorizzazione del committente che il regolamento chiede per un tipo di servizio:
+  in R-TN solo per i servizi per disabili) e l'errore K-CTR-069 (il mezzo non ha l'uso che il tipo di servizio chiede, es.
+  "chiede l'uso NCC") si elencano, e dicono o lasciano capire il tipo di servizio. Sono errori nei dati (il pacchetto non
+  si puo' usare finche' non si correggono), per questo le coppie della prova che li fanno nascere non si possono fare
+  senza errori; la fuga resta nel resoconto di kzero controlla.
+- (K-013) Senza i dati particolari i problemi degli orari dei regimi che dipendono dal tipo di servizio si contano
+  soltanto: chi pianifica e non chiede --includi-dati-particolari non vede, per esempio, le violazioni del Reg. 561 (come
+  per tutti i dati sulla salute dal K-009); kzero ore lo dice in una riga fissa per persona.
 - kzero ore e kzero controlla rifanno tutti i controlli a ogni richiesta. Con la prova di scala mista del K-012 (1.320
   persone, un anno, 9.800 corse): kzero controlla circa 13 secondi; kzero ore di una persona per l'anno 13 secondi, di tutti
   per una settimana 14, per un mese 17; di tutti per l'anno 44 secondi in testo (243 MB di uscita, 1,9 GB di memoria) e circa

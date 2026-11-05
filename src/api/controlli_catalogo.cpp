@@ -136,6 +136,7 @@ void aggiungi_orari(std::vector<DefinizioneControllo>& c) {
         for (DefinizioneControllo* d : {&e, &a}) {
             d->piano = true;
             d->personali_se_nascosti = true;
+            d->dal_tipo = true;
         }
         c.push_back(e);
         c.push_back(a);
@@ -166,6 +167,7 @@ void aggiungi_orari(std::vector<DefinizioneControllo>& c) {
                                 "escono dal periodo del pacchetto e i dati di fuori non ci sono. Non vuol dire \"regolare\": va "
                                 "controllato con i turni di prima o di dopo."});
         d.piano = true;
+        d.dal_tipo = true;
         c.push_back(d);
     }
     {
@@ -205,6 +207,7 @@ void aggiungi_orari(std::vector<DefinizioneControllo>& c) {
                                     "(dati personali: riservati): il programma non giudica gli orari di quei giorni (non vuol dire "
                                     "\"regolare\")."}});
         d.piano = true;
+        d.dal_tipo = true;
         c.push_back(d);
     }
     {
@@ -217,6 +220,7 @@ void aggiungi_orari(std::vector<DefinizioneControllo>& c) {
                                     "mano."}});
         d.piano = true;
         d.personali_se_nascosti = true;
+        d.dal_tipo = true;
         c.push_back(d);
     }
     {
@@ -228,6 +232,7 @@ void aggiungi_orari(std::vector<DefinizioneControllo>& c) {
                                     "(dati personali: riservati), {giorni}."}});
         d.piano = true;
         d.personali_se_nascosti = true;
+        d.dal_tipo = true;
         c.push_back(d);
     }
     regola(Check::LawWorkViolated, "K-CTR-110", Check::LawWorkToConfirm, "K-CTR-111", "Lavoro oltre una regola sugli orari",
@@ -247,6 +252,7 @@ void aggiungi_orari(std::vector<DefinizioneControllo>& c) {
         DefinizioneControllo d(Check::LawOvertime, "K-CTR-112", A, PE, "Straordinario", m, {}, pers);
         d.piano = true;
         d.personali_se_nascosti = true;
+        d.dal_tipo = true;
         c.push_back(d);
     }
     regola(Check::LawDrivingViolated, "K-CTR-113", Check::LawDrivingToConfirm, "K-CTR-114", "Guida oltre una regola sugli orari",
@@ -268,6 +274,7 @@ void aggiungi_orari(std::vector<DefinizioneControllo>& c) {
                                "Ore massime del contratto della persona forse superate (da confermare)", componi(tf, kContratto, motivi),
                                {}, componi_personali(rf, kContratto, motivi));
         e.piano = a.piano = true;
+        e.dal_tipo = a.dal_tipo = true;   // K-013: il lavoro contato dai regimi che dipendono dal tipo di servizio
         c.push_back(e);
         c.push_back(a);
     }
@@ -291,6 +298,7 @@ void aggiungi_orari(std::vector<DefinizioneControllo>& c) {
         DefinizioneControllo a(Check::ChoiceNotRespected, "K-CTR-122", A, PE, "Scelta dell'azienda o della persona non rispettata",
                                ma, {}, pa);
         e.piano = a.piano = true;
+        e.dal_tipo = a.dal_tipo = true;   // K-013: le scelte sul lavoro, con il lavoro contato dai regimi che dipendono dal tipo
         c.push_back(e);
         c.push_back(a);
     }
@@ -338,38 +346,25 @@ void aggiungi_orari(std::vector<DefinizioneControllo>& c) {
         std::vector<Pezzo> pezzi;
         for (const std::vector<Pezzo>* v : {&kLavoro, &kGuida, &kRiposoGiornaliero, &kRiposoSettimanale}) pezzi.insert(pezzi.end(), v->begin(), v->end());
         const std::string scelta = ", che l'azienda segue per scelta con il tachigrafo";
-        // K-011 aggiunta 2 (decisione dell'arbitro): per chi lavora per un'azienda con scelte del tachigrafo per tipo di servizio
-        // le stesse varianti +30 rivelano un dato particolare (il regime per scelta e' riservato tutto, sempre).
-        const auto doppie = [](std::vector<std::string> v) {
-            const std::size_t n = v.size();
-            for (std::size_t i = 0; i < n; ++i) v.push_back(v[i]);
-            return v;
-        };
-        const auto doppie_personali = [](std::map<int, std::string> m, int n) {
-            std::map<int, std::string> out = m;
-            for (const auto& [k, t] : m) out[k + n] = t;
-            return out;
-        };
-        const int n = static_cast<int>(componi("", pezzi, "").size());
-        std::map<int, Classe> particolari;
-        for (int k = n; k < 2 * n; ++k) particolari[k] = Classe::Particolare;
+        // Se il regime per scelta dipende dal tipo di servizio (quello di legge ne dipende, oppure la scelta viene anche dal tipo
+        // di servizio: K-011 aggiunta 2, decisione dell'arbitro) il problema rivela un dato particolare: dal_tipo (K-013; prima
+        // varianti doppie, +30).
         DefinizioneControllo e(Check::ChosenRegimeLimit, "K-CTR-127", E, PE, "Regola seguita per scelta (tachigrafo) superata: limite rigido",
-                               doppie(componi("La persona {persona} non rispetta la regola {regola} ({fonte})" + scelta + " (limite rigido): ", pezzi, "")),
-                               particolari,
-                               doppie_personali(componi_personali("La persona {persona} non rispetta una regola sugli orari" + scelta +
-                                                                      " (limite rigido; dati personali: riservati)",
-                                                                  pezzi, ""),
-                                                n));
+                               componi("La persona {persona} non rispetta la regola {regola} ({fonte})" + scelta + " (limite rigido): ", pezzi, ""),
+                               {},
+                               componi_personali("La persona {persona} non rispetta una regola sugli orari" + scelta +
+                                                     " (limite rigido; dati personali: riservati)",
+                                                 pezzi, ""));
         DefinizioneControllo a(Check::ChosenRegimeNotRespected, "K-CTR-128", A, PE, "Regola seguita per scelta (tachigrafo) non rispettata",
-                               doppie(componi("La persona {persona} non rispetta la regola {regola} ({fonte})" + scelta + ": ", pezzi, motivi)),
-                               particolari,
-                               doppie_personali(componi_personali("La persona {persona} non rispetta una regola sugli orari" + scelta +
-                                                                      " (dati personali: riservati)",
-                                                                  pezzi, motivi),
-                                                n));
+                               componi("La persona {persona} non rispetta la regola {regola} ({fonte})" + scelta + ": ", pezzi, motivi),
+                               {},
+                               componi_personali("La persona {persona} non rispetta una regola sugli orari" + scelta +
+                                                     " (dati personali: riservati)",
+                                                 pezzi, motivi));
         for (DefinizioneControllo* d : {&e, &a}) {
             d->piano = true;
             d->personali_se_nascosti = true;
+            d->dal_tipo = true;
             c.push_back(*d);
         }
     }
@@ -407,6 +402,7 @@ void aggiungi_orari(std::vector<DefinizioneControllo>& c) {
                    "personali, riservati), {giorni}.";
         DefinizioneControllo d(Check::ModeForcedRisk, "K-CTR-130", A, PE, "Rischio di una forzatura dell'azienda", m, {}, r);
         d.piano = true;
+        d.dal_tipo = true;   // K-013: quando il regime dipende dal tipo di servizio
         c.push_back(d);
     }
     {
@@ -440,6 +436,7 @@ void aggiungi_orari(std::vector<DefinizioneControllo>& c) {
                                 "Il modo OUT della corsa {corsa} (tipi di servizio con scelte diverse, impostazione dell'azienda {azienda})" + vince},
                                {{0, Classe::Particolare}, {4, Classe::Particolare}});   // 4: K-011 aggiunta 2
         d.piano = true;
+        d.dal_tipo = true;   // K-013: quando il regime dipende dal tipo di servizio
         c.push_back(d);
     }
     {
@@ -476,6 +473,7 @@ void aggiungi_orari(std::vector<DefinizioneControllo>& c) {
                                 "La forzatura dell'azienda {azienda} sul servizio {servizio} (regime {regime}) non cambia niente nel periodo del "
                                 "pacchetto" + nessun});
         f.piano = true;
+        f.dal_tipo = true;   // K-013: quando il regime dipende dal tipo di servizio
         c.push_back(f);
         // La dichiarazione e' un dato particolare: anche il suo avviso.
         DefinizioneControllo d(Check::ModeDeclaredUseless, "K-CTR-135", A, Classe::Particolare, "Dichiarazione che non serve",
@@ -1045,7 +1043,7 @@ const std::vector<DefinizioneControllo>& catalogo_controlli() {
     return catalogo;
 }
 
-bool verificabile(const DefinizioneControllo& d, int variante, Classe classe_posizione, bool in_trasportato,
+bool verificabile(const DefinizioneControllo& d, const kzero::Problem& p, Classe classe_posizione, bool in_trasportato,
                   const Visibilita& leggibili) {
     if ((d.richiede_personali && !leggibili.personali) || (d.richiede_particolari && !leggibili.particolari)) return false;
     // I dati personali dei passeggeri e delle case legati a un luogo sensibile si decifrano solo con tutti e due i permessi
@@ -1055,7 +1053,7 @@ bool verificabile(const DefinizioneControllo& d, int variante, Classe classe_pos
         if (c == Classe::Personale) return leggibili.personali && (leggibili.particolari || !in_trasportato);
         return leggibili.particolari;
     };
-    return legge(d.rivela_variante(variante)) && legge(classe_posizione);
+    return legge(d.rivela_problema(p)) && legge(classe_posizione);
 }
 
 const DefinizioneControllo& definizione_controllo(Check c) {
