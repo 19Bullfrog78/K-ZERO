@@ -498,6 +498,10 @@
   servizi rigenerato: 19.166 file del pacchetto, 15.931 righe di comando, 2.051.694 date e orari, 67.793 cassaforti e 37.265
   contenuti, 543.762 registri e 361.217 elenchi di voci, 343.263 password. Nessun guasto. Tempi della prova di scala non
   rimisurati: il calcolo non cambia, cambia solo cosa si mostra.
+- 2026-11-05 - Regola di Mauro, registrata in CLAUDE.md (nella proposta del K-013, perche' CLAUDE.md passa da una proposta):
+  i resoconti per l'arbitro si salvano anche sul PC di Mauro, in C:\Users\BULLFROG\Desktop\LAVORO\K-ZERO\K-ZERO CC.
+  Il resoconto del K-013 non e' stato scritto li': la sessione era nel cloud e non raggiungeva il PC; consegnato da
+  scaricare.
 
 ## Bug e limiti noti
 - I pesi del calcolo (ObjectiveWeights) hanno ancora valori provvisori nel codice, non usati: andranno nei dati con il

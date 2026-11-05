@@ -20,6 +20,10 @@ Si parte da Alpinabus (3 minibus + 1 auto) e si deve poter crescere fino a 500 m
 - Programma (codice, CMakeLists.txt, test) e CLAUDE.md: ramo di lavoro, poi proposta
   (pull request), poi controllo dell'arbitro, poi Mauro approva con Merge.
   Non unire mai una proposta da solo.
+- IMPORTANTE (Mauro, 5/11): i resoconti per l'arbitro (es. K-013-resoconto-per-l-arbitro.md) si salvano anche sul PC di
+  Mauro, nella cartella `C:\Users\BULLFROG\Desktop\LAVORO\K-ZERO\K-ZERO CC`. Se la sessione raggiunge quella cartella
+  (sessione sul PC di Mauro, o cartella collegata), il file si scrive li'; se non la raggiunge (sessione nel cloud), si
+  consegna il file da scaricare e si dice chiaramente a Mauro di metterlo in quella cartella: mai dire "salvato" se non lo e'.
 
 ## Comandi
 - Compilare: `cmake -S . -B build && cmake --build build`
