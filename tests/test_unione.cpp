@@ -1844,3 +1844,32 @@ TEST(Unione, NessunaLeggeRiservataConLaSolaLeggeDelTipoSuGuidaERiposi) {
     for (const ProblemaPresentato& p : r.problemi) visibile = visibile || p.codice == "K-CTR-107";
     EXPECT_TRUE(visibile);   // con i dati particolari si vede
 }
+
+// K-014: lo stesso turno scoperto per cause diverse (qui T-SECONDO: un'assenza di P-C il 2027-06-30 e la sua CQC scaduta dal
+// 2027-07-07), senza i dati particolari, e' un problema solo con tutti i giorni, e il riepilogo lo conta una volta: contarlo due
+// volte direbbe quante cause diverse ci sono. Con i dati particolari due problemi, ognuno con la sua causa.
+TEST(Unione, TurnoScopertoPerCauseDiverseUnProblemaSolo) {
+    InMemoria m = da_cartella(std::string(KZERO_CARTELLA_PROVE) + "/../esempi/demo");
+    JsonDati a = JsonDati::parse(m.file.at("assenze.json"));
+    a.at("assenze").push_back({{"persona", "P-C"}, {"tipo", "FERIE"}, {"dal", "2027-06-30"}, {"al", "2027-06-30"}});
+    m.file["assenze.json"] = a.dump(2);
+    const Lettura l = leggi_pacchetto(m);
+    ASSERT_TRUE(l.forma_valida());
+    const auto del_secondo = [](const Resoconto& r) {
+        std::vector<const ProblemaPresentato*> v;
+        for (const ProblemaPresentato& p : r.problemi)
+            if (p.codice == "K-CTR-078" && p.messaggio.find("T-SECONDO") != std::string::npos) v.push_back(&p);
+        return v;
+    };
+    const Resoconto tutti = controlla_lettura(l, Visibilita{true, true});
+    const auto due = del_secondo(tutti);
+    ASSERT_EQ(due.size(), 2u);
+    for (const bool personali : {false, true}) {
+        const Resoconto r = controlla_lettura(l, Visibilita{personali, false});
+        const auto uno = del_secondo(r);
+        ASSERT_EQ(uno.size(), 1u) << personali;
+        EXPECT_EQ(uno.front()->tutti_i_giorni.size(), due[0]->tutti_i_giorni.size() + due[1]->tutti_i_giorni.size());
+        EXPECT_NE(uno.front()->messaggio.find("il motivo e' riservato"), std::string::npos);
+        EXPECT_EQ(r.avvisi, tutti.avvisi - 1);
+    }
+}
