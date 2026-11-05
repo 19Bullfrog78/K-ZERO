@@ -7,9 +7,11 @@
 #include <algorithm>
 #include <fstream>
 #include <functional>
+#include <iostream>
 #include <sstream>
 #include <map>
 #include <optional>
+#include <regex>
 #include <set>
 #include <string>
 #include <vector>
@@ -29,6 +31,7 @@
 #include "orari.hpp"
 #include "schemi_dati.hpp"
 #include "tempo.hpp"
+#include "turni.hpp"
 
 using namespace kzero::api;
 using kzero::Check;
@@ -1320,4 +1323,457 @@ TEST(Unione, TurniSenzaMezzoSenzaIlMotivo) {
                            "i dati particolari, che l'utente non puo' aprire)."),
               std::string::npos)
         << ufficio;
+}
+
+// --- K-014: requisiti che dipendono dal tipo di servizio, prova per differenza -----------------------------------------------
+// Criterio di accettazione del K-014 (arbitro): due pacchetti uguali tranne il tipo dichiarato di un servizio, con i requisiti
+// veri del demo (mezzi e autisti come sono, senza usi, autorizzazioni o vincoli aggiunti apposta). Senza i dati particolari (di
+// base e con i dati personali), in testo e JSON, kzero controlla, kzero giornata e kzero ore danno la stessa uscita tranne:
+// - i totali dell'intero pacchetto (anche i problemi che si contano soltanto, e se giornata e ore si fermano per gli errori nei
+//   dati: K-ERR-018);
+// - per la scelta A di Mauro, il piano e quello che ne segue: in kzero giornata, per i turni il cui piano cambia quel giorno,
+//   chi li fa, chi era previsto, il mezzo (anche "a bordo di"), se sono scoperti o senza mezzo, e i totali del giorno; in kzero
+//   ore le persone il cui piano cambia nel periodo e la media tra le persone; in kzero controlla i problemi dei controlli fatti
+//   sul piano del giorno (quelli che il catalogo dichiara bisognosi delle due classi) che nominano un turno, una persona o un
+//   mezzo il cui piano cambia.
+// In piu' nelle uscite senza i dati particolari non ci devono essere i testi e le posizioni delle cause dei requisiti del tipo
+// (autorizzazione del committente, uso o distrazione del mezzo, vincolo di destinazione) ne' quelli delle altre cause dei turni
+// scoperti o senza mezzo (assenza, disponibilita', scadenza, fermo, prestito).
+
+namespace {
+
+const std::vector<std::string> kTipi = {"linea", "scolastico", "disabili", "ncc", "altro"};
+
+// Il demo con il tipo di un servizio cambiato. La descrizione del tipo (obbligatoria per "altro", ammessa per gli altri) c'e'
+// in tutte le varianti, cosi' resta uguale nelle due uscite.
+InMemoria demo_con_il_tipo(const std::string& servizio, const std::string& tipo) {
+    InMemoria m = da_cartella(std::string(KZERO_CARTELLA_PROVE) + "/../esempi/demo");
+    JsonDati s = JsonDati::parse(m.file.at("servizi.json"));
+    bool trovato = false;
+    for (JsonDati& x : s.at("servizi"))
+        if (x.at("codice") == servizio) {
+            x["tipo"] = tipo;
+            x["tipo_descrizione"] = "Servizio della prova per differenza";
+            trovato = true;
+        }
+    EXPECT_TRUE(trovato) << servizio;
+    m.file["servizi.json"] = s.dump(2);
+    return m;
+}
+
+// Il piano di un turno in un giorno: chi lo fa, chi era previsto e se un fatto glielo impedisce, il mezzo, quello previsto e
+// se un fatto glielo impedisce, il mezzo su cui e' a bordo; con i codici di persone e mezzi.
+struct FirmaDelTurno {
+    std::string testo;
+    std::set<std::string> codici;
+};
+
+std::map<std::pair<kzero::Day, std::string>, FirmaDelTurno> piano_di(const kzero::Package& p) {
+    std::map<std::pair<kzero::Day, std::string>, FirmaDelTurno> out;
+    const kzero::Planner piano(p);
+    for (kzero::Day d = p.manifest.period.from; d <= p.manifest.period.to; ++d)
+        for (const kzero::ShiftDay& sd : piano.day(d)) {
+            FirmaDelTurno f;
+            const auto codice = [&f](const auto* x) {
+                if (!x) return std::string("-");
+                f.codici.insert(x->code);
+                return x->code;
+            };
+            f.testo = codice(sd.person) + "|" + codice(sd.planned) + "|" + std::to_string(static_cast<int>(sd.person_impediment)) + "|" +
+                      codice(sd.vehicle) + "|" + codice(sd.planned_vehicle) + "|" + std::to_string(static_cast<int>(sd.vehicle_impediment)) +
+                      "|" + codice(sd.aboard);
+            out[{d, sd.shift->code}] = std::move(f);
+        }
+    return out;
+}
+
+// Dove il piano dei due pacchetti cambia: i giorni, i turni di quei giorni e i codici dei turni, delle persone e dei mezzi
+// coinvolti.
+struct PianoCambiato {
+    std::set<kzero::Day> giorni;
+    std::set<std::pair<kzero::Day, std::string>> turni;
+    std::set<std::string> codici;
+    bool vuoto() const { return turni.empty(); }
+};
+
+PianoCambiato piano_cambiato(const kzero::Package& a, const kzero::Package& b) {
+    const auto pa = piano_di(a), pb = piano_di(b);
+    PianoCambiato c;
+    const auto segna = [&c](const std::pair<kzero::Day, std::string>& k, const FirmaDelTurno* x) {
+        c.giorni.insert(k.first);
+        c.turni.insert(k);
+        c.codici.insert(k.second);
+        if (x) c.codici.insert(x->codici.begin(), x->codici.end());
+    };
+    for (const auto& [k, f] : pa) {
+        const auto it = pb.find(k);
+        if (it == pb.end() || it->second.testo != f.testo) {
+            segna(k, &f);
+            if (it != pb.end()) segna(k, &it->second);
+        }
+    }
+    for (const auto& [k, f] : pb)
+        if (!pa.count(k)) segna(k, &f);
+    return c;
+}
+
+// Il testo nomina uno dei codici (come parola intera: "P-C" non e' in "P-CONTRATTO")?
+bool nomina(const std::string& testo, const std::set<std::string>& codici) {
+    const auto parte = [](char c) { return std::isalnum(static_cast<unsigned char>(c)) || c == '-' || c == '_'; };
+    for (const std::string& c : codici)
+        for (std::size_t i = testo.find(c); i != std::string::npos; i = testo.find(c, i + 1)) {
+            const bool prima = i == 0 || !parte(testo[i - 1]);
+            const bool dopo = i + c.size() == testo.size() || !parte(testo[i + c.size()]);
+            if (prima && dopo) return true;
+        }
+    return false;
+}
+
+// I controlli fatti sul piano del giorno: quelli che il catalogo dichiara bisognosi di tutte e due le classi (chi fa i turni
+// dipende dai dati personali, i mezzi anche dagli usi richiesti per tipo di servizio).
+const std::set<std::string>& controlli_del_piano() {
+    static const std::set<std::string> c = [] {
+        std::set<std::string> out;
+        for (const DefinizioneControllo& d : catalogo_controlli())
+            if (d.richiede_personali && d.richiede_particolari) out.insert(d.codice);
+        return out;
+    }();
+    return c;
+}
+
+std::vector<std::string> righe(const std::string& testo) {
+    std::vector<std::string> v;
+    std::istringstream in(testo);
+    for (std::string r; std::getline(in, r);) v.push_back(r);
+    return v;
+}
+
+// kzero controlla senza i totali e senza i problemi del piano che nominano un turno, una persona o un mezzo il cui piano cambia.
+std::string controlla_da_confrontare(const std::string& uscita, Formato f, const PianoCambiato& c) {
+    const auto del_piano = [&c](const std::string& codice, const std::string& testo) {
+        return controlli_del_piano().count(codice) && nomina(testo, c.codici);
+    };
+    if (f == Formato::Json) {
+        JsonDati j = JsonDati::parse(uscita);
+        for (const char* k : {"riepilogo", "problemi_riservati"}) j.erase(k);
+        JsonDati problemi = JsonDati::array();
+        for (const JsonDati& x : j.at("problemi"))
+            if (!del_piano(x.at("codice").get<std::string>(), x.at("messaggio").get<std::string>())) problemi.push_back(x);
+        j["problemi"] = problemi;
+        return j.dump(1);
+    }
+    static const std::regex problema(R"(^(Errore|Avviso) (K-CTR-[0-9]{3}) .*)");
+    std::string out;
+    for (const std::string& r : righe(uscita)) {
+        if (r.rfind("Riepilogo:", 0) == 0 || r.rfind("Problemi sui dati particolari (salute), non elencati", 0) == 0) continue;
+        std::smatch m;
+        if (std::regex_match(r, m, problema) && del_piano(m[2].str(), r)) continue;
+        out += r + "\n";
+    }
+    return out;
+}
+
+// kzero giornata senza i totali e senza il piano dei turni che cambiano quel giorno.
+std::string giornata_da_confrontare(const std::string& uscita, Formato f, kzero::Day d, const PianoCambiato& c) {
+    const bool cambia = c.giorni.count(d) > 0;
+    if (f == Formato::Json) {
+        JsonDati j = JsonDati::parse(uscita);
+        j.erase("controllo");
+        if (cambia) j.erase("totali");
+        for (JsonDati& t : j.at("turni"))
+            if (c.turni.count({d, t.at("codice").get<std::string>()}))
+                for (const char* k : {"persona", "assegnazione", "persona_prevista", "scoperto", "motivo_scoperto", "mezzo", "mezzo_da",
+                                      "mezzo_del_turno", "posizione_mezzo", "mezzo_previsto", "senza_mezzo", "motivo_senza_mezzo",
+                                      "a_bordo_di"})
+                    t.erase(k);
+        return j.dump(1);
+    }
+    std::string out, turno;
+    for (const std::string& r : righe(uscita)) {
+        if (r.rfind("Controllo del pacchetto:", 0) == 0) continue;
+        if (cambia && r.rfind("Totali:", 0) == 0) continue;
+        if (!r.empty() && r[0] != ' ') turno = r.substr(0, r.find(' '));
+        if (c.turni.count({d, turno}))
+            if (r.rfind("   Persona:", 0) == 0 || r.rfind("   Prevista:", 0) == 0 || r.rfind("   Mezzo:", 0) == 0 ||
+                r.rfind("   A bordo del mezzo:", 0) == 0)
+                continue;
+        out += r + "\n";
+    }
+    return out;
+}
+
+// kzero ore senza i totali e senza le persone il cui piano cambia (con la media tra le persone).
+std::string ore_da_confrontare(const std::string& uscita, Formato f, const PianoCambiato& c) {
+    if (f == Formato::Json) {
+        JsonDati j = JsonDati::parse(uscita);
+        j.erase("controllo");
+        if (!c.vuoto()) j.erase("media_tra_le_persone");
+        JsonDati persone = JsonDati::array();
+        for (const JsonDati& p : j.at("persone"))
+            if (!c.codici.count(p.at("codice").get<std::string>())) persone.push_back(p);
+        j["persone"] = persone;
+        return j.dump(1);
+    }
+    std::string out;
+    bool salta = false;
+    for (const std::string& r : righe(uscita)) {
+        if (r.rfind("Controllo del pacchetto:", 0) == 0) continue;
+        if (!c.vuoto() && r.rfind("Media tra le ", 0) == 0) continue;
+        if (r.rfind("Persona ", 0) == 0) {
+            const std::string codice = r.substr(8, r.find_first_of(" ,", 8) - 8);   // "Persona P-C (Verdi Carlo), ...": P-C
+            salta = c.codici.count(codice) > 0;
+        } else if (!r.empty() && r[0] != ' ') {
+            salta = false;
+        }
+        if (!salta) out += r + "\n";
+    }
+    return out;
+}
+
+// I testi e le posizioni delle cause dei turni scoperti o senza mezzo e dei requisiti del tipo che compaiono nell'uscita.
+const std::vector<std::string> kCause = {
+    // Requisiti che dipendono dal tipo di servizio.
+    "autorizzazione del committente", "che chiede l'uso", "non ha un'autorizzazione a quell'uso", "(distrazione) non vale",
+    "vincolo di destinazione", "K-CTR-069", "K-CTR-072",
+    // Le altre cause dei turni scoperti o senza mezzo.
+    "e' in fermo", "e' assente", "non e' disponibile in quegli orari", "e' scaduta. Rimedio", "non vale. Rimedio",
+    "non vale quel giorno", "il prestito della persona prevista", "il prestito del mezzo", "fermi.json"};
+
+std::string cause_visibili(const std::string& uscita, Formato f) {
+    std::string out;
+    for (const std::string& c : kCause)
+        if (uscita.find(c) != std::string::npos) out += " [" + c + "]";
+    // Le posizioni di K-CTR-078 e 079: la persona o il mezzo previsto, mai il fatto.
+    if (f == Formato::Json && !uscita.empty() && uscita.front() == '{') {
+        const JsonDati j = JsonDati::parse(uscita);
+        std::vector<const JsonDati*> problemi;
+        if (j.contains("problemi") && j.at("problemi").is_array())
+            for (const JsonDati& x : j.at("problemi")) problemi.push_back(&x);
+        if (j.contains("persone"))
+            for (const JsonDati& p : j.at("persone"))
+                if (p.at("problemi").is_array())
+                    for (const JsonDati& x : p.at("problemi")) problemi.push_back(&x);
+        static const std::regex posizione(R"(^/(persone|mezzi)/[0-9]+$)");
+        for (const JsonDati* x : problemi) {
+            const std::string codice = x->at("codice").get<std::string>();
+            if (codice != "K-CTR-078" && codice != "K-CTR-079") continue;
+            if (!x->contains("posizione")) continue;   // kzero ore: i problemi della persona non hanno la posizione
+            const std::string p = x->at("posizione").at("puntatore").get<std::string>();
+            if (!std::regex_match(p, posizione) || x->value("posizione_completa_con", "") != "--includi-dati-particolari")
+                out += " [posizione " + codice + " " + p + "]";
+        }
+    } else {
+        static const std::regex riga(R"((K-CTR-07[89]) \(([^)]*)\))");
+        static const std::regex buona(R"(^(persone\.json, /persone|mezzi\.json, /mezzi)/[0-9]+; il punto preciso con --includi-dati-particolari$)");
+        for (auto it = std::sregex_iterator(uscita.begin(), uscita.end(), riga); it != std::sregex_iterator(); ++it)
+            if (!std::regex_match((*it)[2].str(), buona)) out += " [posizione " + (*it)[1].str() + " " + (*it)[2].str() + "]";
+    }
+    return out;
+}
+
+// L'esito dei requisiti con tutti i dati: i problemi dei requisiti e dei turni scoperti o senza mezzo.
+std::string esito_dei_requisiti(const Lettura& l) {
+    const Resoconto r = controlla_lettura(l, Visibilita{true, true});
+    std::string out;
+    for (const ProblemaPresentato& p : r.problemi)
+        if (p.codice == "K-CTR-067" || p.codice == "K-CTR-068" || p.codice == "K-CTR-069" || p.codice == "K-CTR-072" ||
+            p.codice == "K-CTR-078" || p.codice == "K-CTR-079")
+            out += p.codice + " " + p.messaggio + "\n";
+    return out;
+}
+
+struct EsitoDelServizio {
+    int coppie = 0;
+    std::map<std::string, bool> con_effetto;   // coppia di tipi -> i requisiti o il piano cambiano
+    std::string fughe;
+};
+
+// Le 10 coppie di tipi su un servizio.
+EsitoDelServizio prova_per_differenza_dei_requisiti(const std::string& servizio) {
+    const DefinizioneComando* controlla = trova_comando("controlla");
+    const DefinizioneComando* giornata = trova_comando("giornata");
+    const DefinizioneComando* ore = trova_comando("ore");
+    EsitoDelServizio esito;
+    // Ogni variante si legge una volta sola.
+    std::map<std::string, Lettura> letture;
+    for (const std::string& t : kTipi) letture.emplace(t, leggi_pacchetto(demo_con_il_tipo(servizio, t)));
+    const auto esegui = [&](const Lettura& l, const DefinizioneComando& c, Parametri par) {
+        accesso::LetturaPerComando lc;
+        lc.lettura = l;
+        lc.visibilita = Visibilita{par.includi_dati_personali, par.includi_dati_particolari};
+        par.argomenti = {"pacchetto in memoria"};
+        try {
+            if (&c == controlla) return controlla_su(c, par, std::move(lc));
+            if (&c == ore) return ore_su(c, par, std::move(lc));
+            return giornata_su(c, par, std::move(lc));
+        } catch (const ErroreKZero& e) {   // es. K-ERR-018: il pacchetto ha errori nei dati
+            return Risultato{e.definizione().codice + " " + e.messaggio(), 1};
+        }
+    };
+    // I giorni delle corse del servizio (il primo e l'ultimo, nel piano del primo tipo).
+    std::vector<kzero::Day> giorni_del_servizio;
+    {
+        const kzero::Package& p = letture.at(kTipi.front()).pacchetto;
+        const kzero::Planner piano(p);
+        for (kzero::Day d = p.manifest.period.from; d <= p.manifest.period.to; ++d)
+            for (const kzero::ShiftDay& sd : piano.day(d))
+                for (const kzero::PlannedItem& it : sd.items)
+                    if (it.trip)
+                        for (const kzero::Ref& s : it.trip->services)
+                            if (s.code == servizio && (giorni_del_servizio.empty() || giorni_del_servizio.back() != d))
+                                giorni_del_servizio.push_back(d);
+        EXPECT_FALSE(giorni_del_servizio.empty()) << servizio;
+        if (giorni_del_servizio.size() > 2) giorni_del_servizio.erase(giorni_del_servizio.begin() + 1, giorni_del_servizio.end() - 1);
+    }
+    for (std::size_t i = 0; i < kTipi.size(); ++i)
+        for (std::size_t k = i + 1; k < kTipi.size(); ++k) {
+            ++esito.coppie;
+            const std::string tipi_coppia = kTipi[i] + " <-> " + kTipi[k];
+            const std::string coppia = servizio + " " + tipi_coppia;
+            const Lettura& a = letture.at(kTipi[i]);
+            const Lettura& b = letture.at(kTipi[k]);
+            EXPECT_TRUE(a.forma_valida() && b.forma_valida()) << coppia;
+            const PianoCambiato cambiato = piano_cambiato(a.pacchetto, b.pacchetto);
+            // Con i dati particolari il tipo cambia i requisiti o il piano (altrimenti la coppia non proverebbe niente).
+            esito.con_effetto[tipi_coppia] = esito_dei_requisiti(a) != esito_dei_requisiti(b) || !cambiato.vuoto();
+            std::vector<kzero::Day> giorni = giorni_del_servizio;
+            if (!cambiato.vuoto()) {
+                giorni.push_back(*cambiato.giorni.begin());
+                giorni.push_back(*cambiato.giorni.rbegin());
+            }
+            std::sort(giorni.begin(), giorni.end());
+            giorni.erase(std::unique(giorni.begin(), giorni.end()), giorni.end());
+            for (const bool personali : {false, true})
+                for (const Formato formato : {Formato::Testo, Formato::Json}) {
+                    Parametri par;
+                    par.formato = formato;
+                    par.includi_dati_personali = personali;
+                    const std::string come = std::string(personali ? ", --includi-dati-personali" : "") + (formato == Formato::Json ? ", json" : ", testo");
+                    const auto confronta = [&](const std::string& nome, const std::string& x, const std::string& y) {
+                        if (x != y) esito.fughe += "\n  " + coppia + ", " + nome + come + ": " + prima_differenza(x, y);
+                    };
+                    const auto cause = [&](const std::string& nome, const Risultato& r, const std::string& tipo) {
+                        const std::string c = cause_visibili(r.uscita, formato);
+                        if (!c.empty()) esito.fughe += "\n  " + servizio + " " + tipo + ", " + nome + come + ": cause visibili" + c;
+                    };
+                    const Risultato ca = esegui(a, *controlla, par), cb = esegui(b, *controlla, par);
+                    cause("controlla", ca, kTipi[i]);
+                    cause("controlla", cb, kTipi[k]);
+                    confronta("controlla", controlla_da_confrontare(ca.uscita, formato, cambiato), controlla_da_confrontare(cb.uscita, formato, cambiato));
+                    Parametri po = par;
+                    po.dal = a.pacchetto.manifest.period.from;
+                    po.al = a.pacchetto.manifest.period.to;
+                    const Risultato oa = esegui(a, *ore, po), ob = esegui(b, *ore, po);
+                    cause("ore", oa, kTipi[i]);
+                    cause("ore", ob, kTipi[k]);
+                    // Con errori nei dati giornata e ore si fermano (K-ERR-018): se si fermano tutti e due o no e' un totale.
+                    const bool fermi = oa.codice != 0 || ob.codice != 0;
+                    if (!fermi) confronta("ore", ore_da_confrontare(oa.uscita, formato, cambiato), ore_da_confrontare(ob.uscita, formato, cambiato));
+                    for (const kzero::Day d : giorni) {
+                        Parametri pg = par;
+                        pg.data = d;
+                        const Risultato ga = esegui(a, *giornata, pg), gb = esegui(b, *giornata, pg);
+                        const std::string nome = "giornata del " + kzero::text_from_day(d);
+                        cause(nome, ga, kTipi[i]);
+                        cause(nome, gb, kTipi[k]);
+                        if (!fermi)
+                            confronta(nome, giornata_da_confrontare(ga.uscita, formato, d, cambiato),
+                                      giornata_da_confrontare(gb.uscita, formato, d, cambiato));
+                    }
+                }
+        }
+    return esito;
+}
+
+// Le coppie della prova sono quelle in cui, con i dati particolari, il tipo cambia i requisiti o il piano (altrimenti non
+// proverebbero niente): devono essere esattamente quelle attese, cosi' un requisito non riconosciuto si vede. Le altre coppie
+// (nel demo NCC e "altro" chiedono lo stesso uso, e scolastico e disabili gli stessi usi) girano lo stesso, come controllo in
+// piu' delle fughe, ma non contano.
+void controlla_esito(const std::string& servizio, const EsitoDelServizio& e, const std::set<std::string>& attese) {
+    EXPECT_EQ(e.coppie, 10) << servizio;
+    std::set<std::string> con_effetto;
+    std::string senza_effetto;
+    for (const auto& [c, si] : e.con_effetto) {
+        if (si) con_effetto.insert(c);
+        else senza_effetto += " [" + c + "]";
+    }
+    std::cout << "[ " << servizio << " ] coppie della prova (il tipo cambia i requisiti o il piano): " << con_effetto.size()
+              << "; altre coppie provate:" << (senza_effetto.empty() ? " nessuna" : senza_effetto)
+              << "; fughe: " << (e.fughe.empty() ? "nessuna" : "SI") << "\n";
+    EXPECT_EQ(con_effetto, attese) << servizio;
+    EXPECT_TRUE(e.fughe.empty()) << "Uscite diverse senza i dati particolari (fughe del tipo di servizio):" << e.fughe;
+}
+
+}  // namespace
+
+// S-SCU-AM (scolastico): come servizio per disabili R-TN chiede l'autorizzazione del committente CVA, che P-F e P-G non hanno
+// (K-CTR-068); come linea le norme chiedono l'uso LINEA, che i minibus non hanno (K-CTR-069).
+TEST(Unione, RequisitiSenzaDatiParticolariScuolaAndataMattina) {
+    const EsitoDelServizio e = prova_per_differenza_dei_requisiti("S-SCU-AM");
+    controlla_esito("S-SCU-AM", e,
+                    {"linea <-> scolastico", "linea <-> disabili", "linea <-> ncc", "linea <-> altro", "scolastico <-> disabili",
+                     "disabili <-> ncc", "disabili <-> altro"});
+    const Lettura disabili = leggi_pacchetto(demo_con_il_tipo("S-SCU-AM", "disabili"));
+    const std::string r = esito_dei_requisiti(disabili);
+    EXPECT_NE(r.find("K-CTR-068 Nel turno T-SCUOLA-2 (Scuola 2) la persona P-F (Moretti Luca) guida per il servizio S-SCU-AM"), std::string::npos) << r;
+    EXPECT_NE(r.find("che chiede un'autorizzazione del committente CVA"), std::string::npos) << r;
+}
+
+// S-DIS (disabili) sul minibus ALFA-03, il cui vincolo di destinazione ammette solo i servizi per disabili: con ogni altro tipo
+// K-CTR-072; come linea anche l'uso LINEA, che ALFA-03 non ha (K-CTR-069).
+TEST(Unione, RequisitiSenzaDatiParticolariCentroDiurno) {
+    const EsitoDelServizio e = prova_per_differenza_dei_requisiti("S-DIS");
+    controlla_esito("S-DIS", e,
+                    {"linea <-> scolastico", "linea <-> disabili", "linea <-> ncc", "linea <-> altro", "scolastico <-> disabili",
+                     "disabili <-> ncc", "disabili <-> altro"});
+    const std::string scolastico = esito_dei_requisiti(leggi_pacchetto(demo_con_il_tipo("S-DIS", "scolastico")));
+    EXPECT_NE(scolastico.find("K-CTR-072 Nel turno T-DIS (Centro diurno) il mezzo ALFA-03 (AA 103 AA) fa il servizio S-DIS"), std::string::npos)
+        << scolastico;
+    const std::string linea = esito_dei_requisiti(leggi_pacchetto(demo_con_il_tipo("S-DIS", "linea")));
+    EXPECT_NE(linea.find("che chiede l'uso LINEA"), std::string::npos) << linea;
+}
+
+// S-LIN-B610 (linea) sull'autobus ALFA-05, che ha l'uso NCC solo fino al 2027-06-30 (distrazione): come NCC dal 2027-07-01 i
+// turni con ALFA-05 restano senza mezzo (K-CTR-079). Il piano cambia: il 2027-07-07 T-PRIMO, T-SECONDO e T-NOTTE sono senza
+// mezzo e T-SECONDO non e' piu' scoperto (senza mezzo non serve la CQC scaduta di P-C).
+TEST(Unione, RequisitiSenzaDatiParticolariLineaB610) {
+    const EsitoDelServizio e = prova_per_differenza_dei_requisiti("S-LIN-B610");
+    controlla_esito("S-LIN-B610", e,
+                    {"linea <-> ncc", "linea <-> altro", "scolastico <-> ncc", "scolastico <-> altro", "disabili <-> ncc",
+                     "disabili <-> altro"});
+    const Lettura linea = leggi_pacchetto(demo_con_il_tipo("S-LIN-B610", "linea"));
+    const Lettura ncc = leggi_pacchetto(demo_con_il_tipo("S-LIN-B610", "ncc"));
+    const kzero::Day d = kzero::day_from_ymd(2027, 7, 7);
+    const auto turno = [d](const kzero::Package& p, const std::string& codice) {
+        for (const kzero::ShiftDay& sd : kzero::Planner(p).day(d))
+            if (sd.shift->code == codice) return std::make_pair(sd.person != nullptr, sd.vehicle != nullptr);
+        ADD_FAILURE() << codice;
+        return std::make_pair(false, false);
+    };
+    for (const char* t : {"T-PRIMO", "T-SECONDO", "T-NOTTE"}) {
+        EXPECT_TRUE(turno(linea.pacchetto, t).second) << t;
+        EXPECT_FALSE(turno(ncc.pacchetto, t).second) << t;
+    }
+    EXPECT_FALSE(turno(linea.pacchetto, "T-SECONDO").first);   // scoperto: la CQC di P-C e' scaduta
+    EXPECT_TRUE(turno(ncc.pacchetto, "T-SECONDO").first);      // senza mezzo nessuno controlla la CQC
+    EXPECT_NE(esito_dei_requisiti(ncc).find("all'uso NCC (distrazione) non vale"), std::string::npos);
+}
+
+// La ricerca delle cause non e' vuota: con i dati particolari (e personali) le cause si vedono.
+TEST(Unione, RequisitiConDatiParticolariLeCauseSiVedono) {
+    const DefinizioneComando* controlla = trova_comando("controlla");
+    std::string tutte;
+    for (const auto& [s, t] : std::vector<std::pair<std::string, std::string>>{
+             {"S-SCU-AM", "disabili"}, {"S-DIS", "scolastico"}, {"S-DIS", "linea"}, {"S-LIN-B610", "ncc"}}) {
+        accesso::LetturaPerComando lc;
+        lc.lettura = leggi_pacchetto(demo_con_il_tipo(s, t));
+        lc.visibilita = Visibilita{true, true};
+        Parametri par;
+        par.includi_dati_personali = par.includi_dati_particolari = true;
+        par.argomenti = {"pacchetto in memoria"};
+        tutte += controlla_su(*controlla, par, std::move(lc)).uscita;
+    }
+    for (const char* c : {"autorizzazione del committente", "che chiede l'uso", "(distrazione) non vale", "vincolo di destinazione",
+                          "e' assente", "e' scaduta. Rimedio", "K-CTR-069", "K-CTR-072"})
+        EXPECT_NE(tutte.find(c), std::string::npos) << c;
 }
