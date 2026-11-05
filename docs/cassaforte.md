@@ -295,6 +295,14 @@ rientri) resta come prima: il titolare lo vede, per l'utente con i soli dati per
 suo piano dei turni lo e' (gli usi dei mezzi dipendono dal tipo di servizio). Decisione chiesta prima di scrivere il codice:
 DECISIONI.md, K-013.
 
+Turni scoperti o senza mezzo (K-014): senza i dati particolari, se il pacchetto ha almeno un requisito che dipende dal tipo di
+servizio, il perche' di un turno scoperto o senza mezzo non si dice (stesso testo e stessa posizione per ogni causa). Per il
+titolare senza `--includi-dati-particolari` il motivo e' **"riservato"** (lo vede con il parametro); per chi non ha il permesso
+dei dati particolari e' **"non verificato"** in `kzero giornata` (il suo piano dei turni non e' verificato), e K-CTR-078 e 079
+restano tra i controlli non verificati, come prima. I problemi dei requisiti del tipo (K-CTR-067, 068, 069, 072) si contano
+soltanto per il titolare senza il parametro; per l'altro restano non verificati. Il titolare senza il parametro vede come il
+pacchetto in chiaro senza il parametro (una prova).
+
 Gli avvisi della cassaforte (K-CTR-097 data di conservazione passata, K-CTR-098 ... K-CTR-100 password da cambiare) hanno
 i testi del catalogo dei controlli, uguali in testo ("Avviso K-CTR-nnn: ...") e in JSON (`codice` e `messaggio`): in
 `kzero controlla` stanno tra i problemi; in `kzero giornata` nel campo `cassaforte.avvisi`; in `kzero registro` e nei
