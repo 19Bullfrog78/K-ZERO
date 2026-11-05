@@ -559,12 +559,16 @@
   oggi un avviso (K-CTR-107) e quegli orari non si giudicano. Il contratto collettivo vero (es. IC35) arrivera' dal
   consulente del lavoro, come regime nei dati. Il registro di servizio (art. 16 del Reg. 561, per le linee fino a 50 km)
   arrivera' con le stampe. Le letture "da confermare" sono in REGOLE.md, da portare al consulente.
-- (K-013) Trovati dalla prova per differenza, fuori dagli orari, non corretti (da decidere): senza i dati particolari, gia'
-  di base, l'errore K-CTR-068 (l'autista non ha l'autorizzazione del committente che il regolamento chiede per un tipo di servizio:
-  in R-TN solo per i servizi per disabili) e l'errore K-CTR-069 (il mezzo non ha l'uso che il tipo di servizio chiede, es.
-  "chiede l'uso NCC") si elencano, e dicono o lasciano capire il tipo di servizio. Sono errori nei dati (il pacchetto non
-  si puo' usare finche' non si correggono), per questo le coppie della prova che li fanno nascere non si possono fare
-  senza errori; la fuga resta nel resoconto di kzero controlla.
+- (K-013, chiuso dal K-014) Senza i dati particolari K-CTR-068 (autorizzazione del committente) e K-CTR-069 (uso del mezzo)
+  dicevano il tipo di servizio: ora si contano soltanto, con K-CTR-072 (vincolo per tipo) e K-CTR-067 varianti 4 e 6.
+- (K-014) Senza i dati particolari si vede che un turno e' scoperto o senza mezzo, ma non il perche' (scelta A di Mauro): chi
+  conosce bene assenze, fermi e scadenze (es. la distrazione di ALFA-05 che scade il 2027-06-30, K-CTR-050, sempre visibile)
+  puo' a volte intuire che il motivo e' un requisito del tipo di servizio (docs/sicurezza.md). Il testo senza il motivo vale per
+  ogni causa appena il pacchetto ha un requisito che dipende dal tipo, anche un vincolo di destinazione che non toglie mai un
+  mezzo: una regola piu' stretta (solo autorizzazione del committente e usi) nasconderebbe meno, da decidere se servira'.
+- (K-014) Le condizioni dei regolamenti con tipi di servizio (assistente a bordo, adulto alla fermata) sono riconosciute tra i
+  requisiti del tipo, ma oggi nessuna uscita le usa: la verifica delle regole dovra' contare soltanto i loro problemi senza i
+  dati particolari.
 - (K-013) Senza i dati particolari i problemi degli orari dei regimi che dipendono dal tipo di servizio si contano
   soltanto: chi pianifica e non chiede --includi-dati-particolari non vede, per esempio, le violazioni del Reg. 561 (come
   per tutti i dati sulla salute dal K-009); kzero ore lo dice in una riga fissa per persona.

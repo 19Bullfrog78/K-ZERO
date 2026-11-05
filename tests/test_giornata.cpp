@@ -133,7 +133,11 @@ TEST(Giornata, persona_assente_e_dati_personali) {
     const Json tutti = giornata({"--data", "2026-11-20", "--persona", "P-B", "--includi-dati-personali"});
     EXPECT_EQ(tutti.at("persona").at("nome"), "Bianco Anna");
     EXPECT_EQ(tutti.at("persona").at("assenze")[0].at("tipo"), "FORMAZIONE");
-    EXPECT_NE(tutti.at("turni")[0].at("motivo_scoperto").get<std::string>().find("FORMAZIONE"), std::string::npos);
+    // K-014: con i soli dati personali il motivo resta riservato (puo' dipendere dal tipo di servizio); con tutti e due si vede.
+    EXPECT_EQ(tutti.at("turni")[0].at("motivo_scoperto").get<std::string>().find("FORMAZIONE"), std::string::npos);
+    EXPECT_NE(tutti.at("turni")[0].at("motivo_scoperto").get<std::string>().find("il motivo e' riservato"), std::string::npos);
+    const Json completi = giornata({"--data", "2026-11-20", "--persona", "P-B", "--includi-dati-personali", "--includi-dati-particolari"});
+    EXPECT_NE(completi.at("turni")[0].at("motivo_scoperto").get<std::string>().find("FORMAZIONE"), std::string::npos);
     EXPECT_EQ(base.at("totali").at("scoperti"), 1);
 }
 

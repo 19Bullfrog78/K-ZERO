@@ -74,6 +74,11 @@ dell'elemento, un dato particolare diventa "riservato"; si vedono solo con `--in
   quei dati stanno in una sezione a parte che si decifra solo con tutti e due i permessi (personali e particolari): chi
   ne ha uno solo non li puo' decifrare, nemmeno lavorando sul file (aggiunta 1 del K-010). Una regola sola nel codice
   (`LegameSensibile`, src/api/riservatezza.hpp);
+- **tipo di servizio** (K-013, K-014): il tipo di un servizio e' un dato particolare, perche' dice chi viaggia (il servizio
+  per disabili). Senza i dati particolari non lo lasciano capire ne' le leggi sugli orari che dipendono dal tipo (K-013) ne'
+  i requisiti dei turni che dipendono dal tipo (usi dei mezzi, autorizzazione del committente, vincolo di destinazione,
+  K-014): i loro problemi si contano soltanto, e di un turno scoperto o senza mezzo si vede il fatto ma non il perche'
+  (rischio che resta: sezione 4). Lo controlla una prova per differenza su pacchetti uguali tranne il tipo di un servizio;
 - gli errori del programma (K-ERR) non nominano mai un file di soli dati personali.
 
 **Cassaforte dei dati personali** (K-010, [cassaforte.md](cassaforte.md)). I dati veri stanno solo nella cassaforte:
@@ -223,6 +228,19 @@ non ha una password; non protegge da tutto. Detto onestamente:
 - **Collegamenti tra i codici.** Chi ha i soli dati personali non legge mai nome e casa di chi e' legato a un luogo
   sensibile (sono dati particolari in tutte le uscite), e nemmeno chi ha i soli dati particolari (nella cassaforte si
   decifrano solo con tutti e due i permessi). Restano gli orari e i km, per chi conosce la zona, e i nomi liberi.
+- **Turni scoperti o senza mezzo** (K-014). Un turno puo' restare scoperto o senza mezzo per un requisito che dipende dal
+  tipo di servizio: un'autorizzazione del committente scaduta (nel demo il regolamento la chiede per i servizi per
+  disabili), un uso del mezzo autorizzato solo per una parte del periodo (es. la distrazione di un autobus di linea per
+  l'NCC). Senza i dati particolari si vede che il turno e' scoperto o senza mezzo, in quali giorni e con quale persona o
+  mezzo previsti, e quello che ne segue nel piano (chi fa i turni, con quale mezzo, i tempi e i km; per esempio senza il
+  mezzo non si controlla la patente per quel mezzo, e un turno puo' non essere piu' scoperto); il perche' no, con lo stesso
+  testo e la stessa posizione per ogni causa, anche per un'assenza o un fermo. Chi conosce bene gli altri dati puo' a volte
+  intuire che il motivo e' un requisito del tipo di servizio: per esempio se la persona prevista quel giorno non ha assenze
+  (la giornata della persona le mostra, senza il tipo), se il mezzo non ha fermi (la giornata del mezzo li mostra) o se la
+  distrazione del mezzo scade proprio il giorno prima (l'avviso K-CTR-050 si vede sempre). Scelta di Mauro (5/11): nascondere
+  il perche' e lasciare visibile il fatto, perche' chi pianifica deve sapere quali turni vanno coperti e quando, anche senza
+  i dati sulla salute; nascondere anche il fatto renderebbe il piano inutilizzabile, e un testo a parte solo per le cause del
+  tipo direbbe proprio quello. Chi deve vedere il perche' usa `--includi-dati-particolari`, con il permesso di quei dati.
 - **"Non verificato".** Chi non puo' aprire una classe vede meno controlli e una giornata "non verificata" in alcune
   parti: e' voluto (mai un risultato su dati mancanti come se fossero completi), ma chi ha tutti i permessi deve guardare
   anche lui il pacchetto.

@@ -2035,7 +2035,14 @@ void leggi_file(const std::string& file, const std::string& testo, Lettura& out,
                 dettaglio.sensitivity = classe == Classe::Personale ? Param::Sensitivity::Personal : Param::Sensitivity::Particular;
                 dettaglio.hidden = e.messaggio_senza_valore;
             }
-            out.problemi.push_back(problema(Check::SchemaViolation, f.file, e.puntatore, {dettaglio}));
+            // K-014: un campo obbligatorio particolare che manca rivela un dato particolare (variante 1): puo' essere obbligatorio
+            // solo per alcuni valori di un altro dato particolare (es. la descrizione del tipo per un servizio "altro", che dice il
+            // tipo di servizio). Come per un valore sbagliato, conta la classe del campo, ricavata dallo schema.
+            const bool particolare_mancante =
+                !e.campo_mancante.empty() && SchemiDati::incorporati().classe(f.schema, static_cast<int>(v),
+                                                                              e.puntatore + "/" + escape(e.campo_mancante)) ==
+                                                 Classe::Particolare;
+            out.problemi.push_back(problema(Check::SchemaViolation, f.file, e.puntatore, {dettaglio}, particolare_mancante ? 1 : 0));
         }
         return;
     }

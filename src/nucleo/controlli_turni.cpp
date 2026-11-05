@@ -65,8 +65,10 @@ public:
     }
 
 private:
-    void add(Check c, const Source& where, std::vector<Param> params, int variant = 0) {
-        out_.push_back(Problem{c, variant, where, std::move(params)});
+    // by_kind: il problema nasce da un requisito che dipende dal tipo di servizio (K-014, KindRequirements): senza i dati
+    // particolari si conta soltanto.
+    void add(Check c, const Source& where, std::vector<Param> params, int variant = 0, bool by_kind = false) {
+        out_.push_back(Problem{c, variant, where, std::move(params), by_kind});
     }
 
     static Param personal(Param p, const std::string& hidden = "riservato") {
@@ -244,9 +246,10 @@ private:
         // Fatti con le date: avviso sul turno ricorrente, errore sull'assegnazione del giorno.
         if (sd.person_impediment != PersonImpediment::None) {
             const auto [variant, where, detail] = person_fact(sd);
+            // L'autorizzazione del committente serve solo per alcuni tipi di servizio (K-014).
             if (sd.person_source == PersonSource::Day)
                 add(Check::DayAssignmentAgainstFact, sd.person_assignment->src, {shift_param(s), person_param(p), detail, date_param("data", sd.day)},
-                    variant);
+                    variant, sd.person_impediment == PersonImpediment::AuthorizationExpired);
             else
                 add(Check::RecurringShiftPersonFact, where, {shift_param(s), person_param(p), detail, days()}, variant);
         }
@@ -292,7 +295,7 @@ private:
                     add(Check::DriverWithoutLicence, where,
                         {shift_param(s), person_param(p), ref_param("committente", Element::Client, ra.contract->client.code),
                          ref_param("servizio", Element::Service, ra.service->code), days()},
-                        1);
+                        1, true);   // K-014: l'autorizzazione la chiede il regolamento per tipo di servizio
             }
         preferences(sd, p);
         pairing(sd, p);
@@ -408,9 +411,10 @@ private:
                     break;
                 case VehicleImpediment::None: break;
             }
+            // Gli usi richiesti dipendono dal tipo di servizio (K-014).
             if (sd.vehicle_source == VehicleSource::Day)
                 add(Check::DayAssignmentAgainstFact, sd.vehicle_assignment->src, {shift_param(s), vehicle_param(v), detail, date_param("data", sd.day)},
-                    5 + variant);
+                    5 + variant, sd.vehicle_impediment == VehicleImpediment::UseNotAuthorized);
             else
                 add(Check::RecurringShiftVehicleFact, where, {shift_param(s), vehicle_param(v), detail, days()}, variant);
         }
@@ -441,7 +445,8 @@ private:
                         for (const Code& u : *allowed) uses += (uses.empty() ? "" : ", ") + u;
                         add(Check::VehicleWithoutUseForService, where,
                             {shift_param(s), vehicle_param(v), text_param("uso", v.use->code), ref_param("servizio", Element::Service, sv->code),
-                             text_param("usi", uses), days()});
+                             text_param("usi", uses), days()},
+                            0, true);   // K-014: gli usi richiesti dipendono dal tipo di servizio
                     }
                 }
                 if (constrained) {
@@ -449,8 +454,10 @@ private:
                     const bool kind_ok = std::find(c.kinds.begin(), c.kinds.end(), sv->kind) != c.kinds.end();
                     const bool contract_ok = std::any_of(c.contracts.begin(), c.contracts.end(),
                                                          [sv](const Ref& r) { return r.code == sv->contract.code; });
+                    // K-014: se il vincolo nomina tipi di servizio, l'esito dipende dal tipo.
                     if (!kind_ok && !contract_ok)
-                        add(Check::VehicleAgainstConstraint, where, {shift_param(s), vehicle_param(v), ref_param("servizio", Element::Service, sv->code), days()});
+                        add(Check::VehicleAgainstConstraint, where, {shift_param(s), vehicle_param(v), ref_param("servizio", Element::Service, sv->code), days()},
+                            0, !c.kinds.empty());
                 }
             }
         }
