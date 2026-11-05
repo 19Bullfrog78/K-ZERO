@@ -499,9 +499,9 @@
   contenuti, 543.762 registri e 361.217 elenchi di voci, 343.263 password. Nessun guasto. Tempi della prova di scala non
   rimisurati: il calcolo non cambia, cambia solo cosa si mostra.
 - 2026-11-05 - Regola di Mauro, registrata in CLAUDE.md (nella proposta del K-013, perche' CLAUDE.md passa da una proposta):
-  i resoconti per l'arbitro si salvano anche sul PC di Mauro, in C:\Users\BULLFROG\Desktop\LAVORO\K-ZERO\K-ZERO CC.
-  Il resoconto del K-013 non e' stato scritto li': la sessione era nel cloud e non raggiungeva il PC; consegnato da
-  scaricare.
+  ogni resoconto per l'arbitro e ogni documento utile al progetto si consegna sempre come file da scaricare; Mauro lo mette
+  nella cartella giusta del suo PC (i resoconti in C:\Users\BULLFROG\Desktop\LAVORO\K-ZERO\K-ZERO CC). Una sessione nel
+  cloud non raggiunge il PC: il resoconto del K-013 e' stato consegnato da scaricare.
 
 ## Bug e limiti noti
 - I pesi del calcolo (ObjectiveWeights) hanno ancora valori provvisori nel codice, non usati: andranno nei dati con il
