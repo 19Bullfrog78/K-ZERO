@@ -239,10 +239,20 @@ foreach(pacchetto demo demo-numeri)
               PROBLEMI ${AVVISI_DEMO} NON_CONTIENE "abilitazioni" "assenze.json"
               ARGOMENTI controlla ${PROJECT_SOURCE_DIR}/esempi/${pacchetto} --formato json)
 endforeach()
-kzero_prova(controlla_demo_dati_personali USCITA 0 FORMATO testo PROBLEMI ${AVVISI_DEMO_COMPLETI} NON_CONTIENE "il punto preciso"
+# K-014: senza i dati particolari, anche con i dati personali, il perche' di un turno scoperto non si dice (il demo ha requisiti
+# che dipendono dal tipo di servizio): stesso testo e stessa posizione, la persona prevista. Con tutti e due i parametri si vede.
+kzero_prova(controlla_demo_dati_personali USCITA 0 FORMATO testo
+            PROBLEMI "K-CTR-050|persone.json|/persone/2/abilitazioni/2" "K-CTR-078|persone.json|/persone/2" "K-CTR-078|persone.json|/persone/1"
+            NON_CONTIENE "il punto preciso con --includi-dati-personali" "FORMAZIONE" "e' scaduta"
             CONTIENE "Dati personali e particolari nel pacchetto: 262 valori personali e 43 particolari: luoghi.json 25 personali"
                      "assenze.json 9 personali e 0 particolari"
+                     # In CMake il punto e virgola separa gli elementi di un elenco: il messaggio in pezzi.
+                     "Avviso K-CTR-078 (persone.json, /persone/1" " il punto preciso con --includi-dati-particolari): Il turno T-PRIMO (Primo) e' scoperto il 2026-11-20: la persona prevista P-B (Bianco Anna) non puo' farlo"
+                     " il motivo e' riservato, perche' puo' dipendere dal tipo di servizio (dato particolare" " --includi-dati-particolari). Rimedio: un'assegnazione del singolo giorno."
             ARGOMENTI controlla ${PROJECT_SOURCE_DIR}/esempi/demo --includi-dati-personali)
+kzero_prova(controlla_demo_tutti_i_dati_testo USCITA 0 FORMATO testo PROBLEMI ${AVVISI_DEMO_COMPLETI} NON_CONTIENE "il punto preciso"
+            CONTIENE "la persona prevista P-B (Bianco Anna) e' assente (FORMAZIONE)"
+            ARGOMENTI controlla ${PROJECT_SOURCE_DIR}/esempi/demo --includi-dati-personali --includi-dati-particolari)
 # Quali dati personali e particolari ci sono nel pacchetto (es. se va perso): di base solo i totali.
 kzero_prova(controlla_demo_dati_presenti USCITA 0 FORMATO testo
             CONTIENE "Dati personali e particolari nel pacchetto: 262 valori personali e 43 particolari (file per file: --includi-dati-personali)."
@@ -529,18 +539,44 @@ kzero_prova(avviso_assenza_senza_sostituzione USCITA 0 FORMATO testo BASE ${KZER
             ARGOMENTI controlla @PACCHETTO@)
 kzero_prova(giornata_assenza_senza_sostituzione USCITA 0 FORMATO testo BASE ${KZERO_DEMO}
             MODIFICA TOGLI assegnazioni.json /assegnazioni/3
-            CONTIENE "Persona: nessuna - TURNO SCOPERTO: la persona prevista P-A non puo' farlo (dati personali: riservati)."
+            CONTIENE "Persona: nessuna - TURNO SCOPERTO: la persona prevista P-A non puo' farlo"
+                     " il motivo e' riservato, perche' puo' dipendere dal tipo di servizio (dato particolare" " --includi-dati-particolari). Rimedio: un'assegnazione del singolo giorno."
                      "Prevista: P-A, rotazione ROT-ALFA, passo 11"
-            NON_CONTIENE "FERIE"
+            NON_CONTIENE "FERIE" "assente"
             ARGOMENTI giornata @PACCHETTO@ --data 2026-10-22 --persona P-A)
+# K-014: con i dati personali ma senza quelli particolari il motivo resta riservato; con tutti e due si vede.
+kzero_prova(giornata_assenza_senza_sostituzione_dati_personali USCITA 0 FORMATO testo BASE ${KZERO_DEMO}
+            MODIFICA TOGLI assegnazioni.json /assegnazioni/3
+            CONTIENE "Persona: nessuna - TURNO SCOPERTO: la persona prevista P-A (Rossi Mario) non puo' farlo" " il motivo e' riservato"
+            NON_CONTIENE "e' assente"
+            ARGOMENTI giornata @PACCHETTO@ --data 2026-10-22 --persona P-A --includi-dati-personali)
+kzero_prova(giornata_assenza_senza_sostituzione_tutti_i_dati USCITA 0 FORMATO testo BASE ${KZERO_DEMO}
+            MODIFICA TOGLI assegnazioni.json /assegnazioni/3
+            CONTIENE "Persona: nessuna - TURNO SCOPERTO: la persona prevista P-A (Rossi Mario) e' assente (FERIE)."
+            ARGOMENTI giornata @PACCHETTO@ --data 2026-10-22 --persona P-A --includi-dati-personali --includi-dati-particolari)
+# K-014: senza i dati particolari anche il fermo (una causa che non dipende dal tipo di servizio) ha il testo senza il motivo e
+# la posizione del mezzo previsto: un testo a parte solo per le cause del tipo direbbe proprio quello. Con il parametro si vede.
 kzero_prova(avviso_fermo_senza_sostituzione USCITA 0 FORMATO testo BASE ${KZERO_DEMO}
             MODIFICA TOGLI assegnazioni.json /assegnazioni/0
-            PROBLEMI "K-CTR-079|fermi.json|/fermi/0" CONTIENE " 0 errori, 32 avvisi."
+            PROBLEMI "K-CTR-079|mezzi.json|/mezzi/0" CONTIENE " 0 errori, 32 avvisi."
+                     "Avviso K-CTR-079 (mezzi.json, /mezzi/0" " il punto preciso con --includi-dati-particolari): Il turno T-SCUOLA-1 (Scuola 1) e' senza mezzo il 2026-10-19: il mezzo previsto ALFA-01 (AA 101 AA) non puo' farlo"
+                     " il motivo e' riservato"
+            NON_CONTIENE "fermi.json" "REVISIONE" "in fermo"
             ARGOMENTI controlla @PACCHETTO@)
+kzero_prova(avviso_fermo_senza_sostituzione_dati_particolari USCITA 0 FORMATO testo BASE ${KZERO_DEMO}
+            MODIFICA TOGLI assegnazioni.json /assegnazioni/0
+            PROBLEMI "K-CTR-079|fermi.json|/fermi/0" CONTIENE "e' in fermo (REVISIONE)"
+            ARGOMENTI controlla @PACCHETTO@ --includi-dati-particolari)
 kzero_prova(giornata_fermo_senza_sostituzione USCITA 0 FORMATO testo BASE ${KZERO_DEMO}
             MODIFICA TOGLI assegnazioni.json /assegnazioni/0
-            CONTIENE "Mezzo: nessuno - TURNO SENZA MEZZO: il mezzo ALFA-01 (AA 101 AA) e' in fermo (REVISIONE)."
+            CONTIENE "Mezzo: nessuno - TURNO SENZA MEZZO: il mezzo previsto ALFA-01 (AA 101 AA) non puo' farlo"
+                     " il motivo e' riservato, perche' puo' dipendere dal tipo di servizio (dato particolare" " --includi-dati-particolari). Rimedio: un'assegnazione del singolo giorno con un altro mezzo."
+            NON_CONTIENE "in fermo"
             ARGOMENTI giornata @PACCHETTO@ --data 2026-10-19 --mezzo ALFA-01)
+kzero_prova(giornata_fermo_senza_sostituzione_dati_particolari USCITA 0 FORMATO testo BASE ${KZERO_DEMO}
+            MODIFICA TOGLI assegnazioni.json /assegnazioni/0
+            CONTIENE "Mezzo: nessuno - TURNO SENZA MEZZO: il mezzo ALFA-01 (AA 101 AA) e' in fermo (REVISIONE)."
+            ARGOMENTI giornata @PACCHETTO@ --data 2026-10-19 --mezzo ALFA-01 --includi-dati-particolari)
 kzero_rotto(rotto_assegnazione_su_persona_assente FORMATO testo MODIFICA IMPOSTA assegnazioni.json /assegnazioni/2/persona "\"P-A\""
             PROBLEMI "K-CTR-067|assegnazioni.json|/assegnazioni/2" NON_CONTIENE "FERIE")
 kzero_prova(giornata_pacchetto_con_errori USCITA 1 FORMATO testo ERRORE K-ERR-018 BASE ${KZERO_DEMO}
@@ -1147,6 +1183,36 @@ kzero_prova(tipo_dis_linea_dati_particolari USCITA 1 FORMATO testo RESOCONTO BAS
             PROBLEMI "K-CTR-069|turni.json|/turni/2/mezzo" "K-CTR-072|turni.json|/turni/2/mezzo"
             CONTIENE "fa il servizio S-DIS (Trasporto al centro diurno Il Faro), che chiede l'uso LINEA"
             ARGOMENTI controlla @PACCHETTO@ --includi-dati-particolari)
+# K-014, scelta A di Mauro: S-LIN-B610 come NCC chiede l'uso NCC, che ALFA-05 ha solo fino al 2027-06-30 (distrazione). Dopo,
+# i turni con ALFA-05 restano senza mezzo: si vede che lo sono e in quali giorni (serve per lavorare), il perche' no, nemmeno con
+# i dati personali (stesso testo e stessa posizione, il mezzo previsto, per ogni causa). Con i dati particolari si vede.
+kzero_prova(tipo_lin_ncc_controlla USCITA 1 FORMATO testo RESOCONTO BASE ${KZERO_DEMO}
+            MODIFICA IMPOSTA servizi.json /servizi/5/tipo "\"ncc\""
+            PROBLEMI "K-CTR-079|mezzi.json|/mezzi/6"
+            CONTIENE "Il turno T-PRIMO (Primo) e' senza mezzo in 44 giorni tra il 2027-07-01 e il 2027-08-31"
+                     "il mezzo previsto ALFA-05 (AA 105 AA) non puo' farlo" " il motivo e' riservato"
+            NON_CONTIENE "non vale. Rimedio" "K-CTR-079 (mezzi.json, /mezzi/6/autorizzazioni_uso/0)"
+            ARGOMENTI controlla @PACCHETTO@ --includi-dati-personali)
+kzero_prova(tipo_lin_ncc_controlla_dati_particolari USCITA 1 FORMATO testo RESOCONTO BASE ${KZERO_DEMO}
+            MODIFICA IMPOSTA servizi.json /servizi/5/tipo "\"ncc\""
+            PROBLEMI "K-CTR-079|mezzi.json|/mezzi/6/autorizzazioni_uso/0"
+            CONTIENE "l'autorizzazione del mezzo ALFA-05 (AA 105 AA) all'uso NCC (distrazione) non vale. Rimedio"
+            ARGOMENTI controlla @PACCHETTO@ --includi-dati-particolari)
+kzero_prova(tipo_lin_ncc_giornata USCITA 0 FORMATO testo BASE ${KZERO_DEMO}
+            MODIFICA IMPOSTA servizi.json /servizi/5/tipo "\"ncc\""
+            CONTIENE "Totali: 9 turni (nessuno scoperto, 3 senza mezzo)"
+                     "Mezzo: nessuno - TURNO SENZA MEZZO: il mezzo previsto ALFA-05 (AA 105 AA) non puo' farlo" " il motivo e' riservato"
+            NON_CONTIENE "distrazione" "non vale quel giorno"
+            ARGOMENTI giornata @PACCHETTO@ --data 2027-07-07 --includi-dati-personali)
+kzero_prova(tipo_lin_ncc_giornata_json USCITA 0 FORMATO json SCHEMA giornata BASE ${KZERO_DEMO}
+            MODIFICA IMPOSTA servizi.json /servizi/5/tipo "\"ncc\""
+            CONTIENE "\"senza_mezzo\": 3" "il mezzo previsto ALFA-05 (AA 105 AA) non puo' farlo"
+            NON_CONTIENE "distrazione" "non vale quel giorno"
+            ARGOMENTI giornata @PACCHETTO@ --data 2027-07-07 --formato json)
+kzero_prova(tipo_lin_ncc_giornata_dati_particolari USCITA 0 FORMATO testo BASE ${KZERO_DEMO}
+            MODIFICA IMPOSTA servizi.json /servizi/5/tipo "\"ncc\""
+            CONTIENE "TURNO SENZA MEZZO: l'autorizzazione del mezzo ALFA-05 (AA 105 AA) all'uso NCC (distrazione) non vale quel giorno."
+            ARGOMENTI giornata @PACCHETTO@ --data 2027-07-07 --includi-dati-particolari)
 kzero_rotto(rotto_trasbordo_non_autorizzato FORMATO testo MODIFICA TOGLI luoghi.json /luoghi/16/trasbordo
             PROBLEMI "K-CTR-023|corse.json|/corse/4/passaggi/2/trasbordi/0" "K-CTR-023|corse.json|/corse/5/passaggi/3/trasbordi/0")
 kzero_rotto(rotto_trasbordo_senza_meta FORMATO testo MODIFICA IMPOSTA corse.json /corse/5/passaggi/3/trasbordi/0/codice "\"T-02\""

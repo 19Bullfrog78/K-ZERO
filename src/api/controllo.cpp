@@ -59,6 +59,8 @@ Resoconto controlla_lettura(Lettura lettura, const Visibilita& visibilita, const
         r.contenuto_controllato = true;
         std::vector<kzero::Problem> contenuto = kzero::check_package(r.lettura.pacchetto, richiesta, orari);
         problemi.insert(problemi.end(), contenuto.begin(), contenuto.end());
+        // K-014: senza i dati particolari, il perche' dei turni scoperti o senza mezzo non si dice (riservatezza.hpp).
+        if (motivo_dei_turni_riservato(r.lettura.pacchetto, visibilita)) problemi = turni_senza_motivo(std::move(problemi), r.lettura.pacchetto);
     }
     const Presentatore presentatore(r.contenuto_controllato ? &r.lettura.pacchetto : nullptr, &r.lettura.versioni, visibilita);
     const Visibilita& leggibili = r.lettura.leggibili;
@@ -95,7 +97,11 @@ Resoconto controlla_lettura(Lettura lettura, const Visibilita& visibilita, const
             if (del_modo && x.kind == kzero::Param::Kind::Ref && x.element == kzero::Element::Service && x.name == "servizio")
                 servizio = x.text;
         }
-        const PosizioneMostrata dove = mostra_posizione(p.where, r.lettura, visibilita);
+        PosizioneMostrata dove = mostra_posizione(p.where, r.lettura, visibilita);
+        // K-014: il punto preciso del fatto che rende il turno scoperto o senza mezzo si vede con i dati particolari.
+        if ((p.check == kzero::Check::RecurringShiftPersonFact && p.variant == kScopertoSenzaMotivo) ||
+            (p.check == kzero::Check::RecurringShiftVehicleFact && p.variant == kSenzaMezzoSenzaMotivo))
+            dove.ridotta = Classe::Particolare;
         r.problemi.push_back({d.livello, d.piano, d.codice, presentatore.messaggio(p), dove.posizione, dove.ridotta, giorni, p.where, persona,
                               tutti, corsa, servizio});
     }

@@ -69,10 +69,13 @@ const char* modo_mezzo(kzero::VehicleSource s) {
 
 // --- Il documento JSON ------------------------------------------------------------------------------------------
 
+// K-014: il perche' di un turno scoperto o senza mezzo per un fatto con le date (riservatezza.hpp).
+enum class Motivo { Visibile, Riservato, NonVerificato };
+
 class Giornata {
 public:
-    Giornata(const kzero::Planner& piano, const Vista& vista, kzero::Day giorno)
-        : piano_(piano), idx_(piano.index()), vista_(vista), giorno_(giorno) {}
+    Giornata(const kzero::Planner& piano, const Vista& vista, kzero::Day giorno, Motivo motivo)
+        : piano_(piano), idx_(piano.index()), vista_(vista), giorno_(giorno), motivo_(motivo) {}
 
     // Dove e' scritta un'assegnazione, filtrata come le posizioni dei problemi (riservatezza.hpp): di base non entra mai
     // in un dato personale o particolare; null se non si puo' mostrare.
@@ -136,9 +139,19 @@ public:
 
     // Perche' la persona prevista non fa il turno quel giorno. I fatti sulle persone (assenze, disponibilita',
     // abilitazioni, autorizzazioni) sono dati personali: di base il motivo non si dice.
+    // Senza i dati particolari, il motivo di un fatto con le date non si dice (K-014): lo stesso testo per tutti.
+    std::string senza_motivo() const {
+        return motivo_ == Motivo::NonVerificato
+                   ? " non puo' farlo; il motivo non e' verificato (servono i dati particolari, che l'utente non puo' aprire)."
+                   : " non puo' farlo; il motivo e' riservato, perche' puo' dipendere dal tipo di servizio (dato particolare; "
+                     "--includi-dati-particolari).";
+    }
+
     std::string motivo_persona(const kzero::ShiftDay& sd) const {
         if (!sd.planned) return "nessuna rotazione, servizio fisso o assegnazione del singolo giorno lo assegna a una persona.";
         const std::string chi = "la persona prevista " + rif_persona(*sd.planned);
+        if (motivo_ != Motivo::Visibile && sd.person_impediment != kzero::PersonImpediment::None)
+            return chi + senza_motivo() + " Rimedio: un'assegnazione del singolo giorno.";
         const bool personali = vista_.visibilita().personali;
         switch (sd.person_impediment) {
             case kzero::PersonImpediment::LoanNotValid:
@@ -169,6 +182,8 @@ public:
     std::string motivo_mezzo(const kzero::ShiftDay& sd) const {
         const kzero::Vehicle* v = sd.planned_vehicle;
         const std::string rimedio = " Rimedio: un'assegnazione del singolo giorno con un altro mezzo.";
+        if (motivo_ != Motivo::Visibile && sd.vehicle_impediment != kzero::VehicleImpediment::None)
+            return "il mezzo previsto " + rif_mezzo(*v) + senza_motivo() + rimedio;
         switch (sd.vehicle_impediment) {
             case kzero::VehicleImpediment::Stopped:
                 return "il mezzo " + rif_mezzo(*v) + " e' in fermo (" + sd.stop->type.code + ")." + rimedio;
@@ -356,6 +371,7 @@ private:
     const kzero::Index& idx_;
     const Vista& vista_;
     kzero::Day giorno_;
+    Motivo motivo_ = Motivo::Visibile;
 };
 
 // Dettaglio di una persona (assenze) da mostrare solo con i dati personali.
@@ -381,7 +397,10 @@ Json in_json(const DefinizioneComando& comando, const Resoconto& r, const Parame
     const kzero::Planner piano(p);
     const kzero::Index& idx = piano.index();
     const kzero::Day d = *par.data;
-    const Giornata g(piano, vista, d);
+    const Motivo motivo = !motivo_dei_turni_riservato(p, vista.visibilita()) ? Motivo::Visibile
+                          : r.lettura.leggibili.particolari                    ? Motivo::Riservato
+                                                                               : Motivo::NonVerificato;
+    const Giornata g(piano, vista, d, motivo);
 
     Json j = documento(comando.schema);
     j["dati_inventati"] = p.manifest.invented;

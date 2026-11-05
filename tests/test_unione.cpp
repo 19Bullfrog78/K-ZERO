@@ -1225,3 +1225,99 @@ TEST(Unione, OrariSenzaDatiParticolariConLaCassaforte) {
         }
     }
 }
+
+// --- K-014: turni scoperti o senza mezzo senza il motivo (scelta A di Mauro, 5/11) ------------------------------------------
+
+namespace {
+
+// Il demo senza nessun requisito che dipende dal tipo di servizio (usi dei mezzi, autorizzazione del committente, vincolo di
+// destinazione).
+InMemoria senza_requisiti_del_tipo(InMemoria m) {
+    JsonDati r = JsonDati::parse(m.file.at("regolamenti.json"));
+    for (JsonDati& x : r.at("regolamenti")) {
+        x.at("parametri").erase("usi_dei_mezzi");
+        x.at("parametri").erase("autorizzazione_del_committente");
+    }
+    m.file["regolamenti.json"] = r.dump(2);
+    JsonDati n = JsonDati::parse(m.file.at("norme.json"));
+    for (JsonDati& x : n.at("norme")) x.erase("usi_per_servizio");
+    m.file["norme.json"] = n.dump(2);
+    JsonDati v = JsonDati::parse(m.file.at("mezzi.json"));
+    for (JsonDati& x : v.at("mezzi")) x.erase("vincolo_destinazione");
+    m.file["mezzi.json"] = v.dump(2);
+    return m;
+}
+
+}  // namespace
+
+// Senza i dati particolari, se il pacchetto ha almeno un requisito che dipende dal tipo di servizio, il motivo di un turno senza
+// mezzo non si dice nemmeno per un fermo (una causa che non dipende dal tipo); senza nessun requisito del tipo si dice come
+// prima. Con la cassaforte il titolare senza il parametro vede come il pacchetto in chiaro senza il parametro; chi non ha il
+// permesso dei dati particolari legge "non verificato" (il suo piano non e' verificato).
+TEST(Unione, TurniSenzaMezzoSenzaIlMotivo) {
+    const DefinizioneComando* giornata = trova_comando("giornata");
+    const DefinizioneComando* controlla = trova_comando("controlla");
+    ASSERT_TRUE(giornata && controlla);
+    // Il 2026-10-19 ALFA-01 e' in revisione: senza l'assegnazione del mezzo di scorta T-SCUOLA-1 resta senza mezzo.
+    InMemoria demo = da_cartella(std::string(KZERO_CARTELLA_PROVE) + "/../esempi/demo");
+    JsonDati a = JsonDati::parse(demo.file.at("assegnazioni.json"));
+    a.at("assegnazioni").erase(0);
+    demo.file["assegnazioni.json"] = a.dump(2);
+    const InMemoria senza = senza_requisiti_del_tipo(demo);
+    ASSERT_TRUE(leggi_pacchetto(senza).forma_valida());
+    const auto esegui = [&](const DefinizioneComando& c, accesso::LetturaPerComando lc, Visibilita mostra, Formato f) {
+        lc.visibilita = mostra;
+        Parametri par;
+        par.formato = f;
+        par.includi_dati_personali = mostra.personali;
+        par.includi_dati_particolari = mostra.particolari;
+        par.argomenti = {"pacchetto in memoria"};
+        if (&c == controlla) return controlla_su(c, par, std::move(lc)).uscita;
+        par.data = kzero::day_from_ymd(2026, 10, 19);
+        par.mezzo = "ALFA-01";
+        return giornata_su(c, par, std::move(lc)).uscita;
+    };
+    const auto in_chiaro = [&](const InMemoria& m, const DefinizioneComando& c, Visibilita mostra, Formato f = Formato::Testo) {
+        accesso::LetturaPerComando lc;
+        lc.lettura = leggi_pacchetto(m);
+        return esegui(c, std::move(lc), mostra, f);
+    };
+    const std::string senza_motivo = "il mezzo previsto ALFA-01 (AA 101 AA) non puo' farlo; il motivo e' riservato, perche' puo' "
+                                     "dipendere dal tipo di servizio (dato particolare; --includi-dati-particolari).";
+    for (const bool personali : {false, true}) {
+        const std::string g = in_chiaro(demo, *giornata, Visibilita{personali, false});
+        EXPECT_NE(g.find("TURNO SENZA MEZZO: " + senza_motivo), std::string::npos) << g;
+        EXPECT_EQ(g.find("REVISIONE) "), std::string::npos) << g;   // il fermo dell'elenco del mezzo si vede, il motivo no
+        const std::string c = in_chiaro(demo, *controlla, Visibilita{personali, false});
+        EXPECT_NE(c.find("Avviso K-CTR-079 (mezzi.json, /mezzi/0; il punto preciso con --includi-dati-particolari): Il turno T-SCUOLA-1 "
+                         "(Scuola 1) e' senza mezzo il 2026-10-19: " +
+                         senza_motivo),
+                  std::string::npos)
+            << c;
+        // Senza requisiti che dipendono dal tipo, il motivo si dice come prima.
+        EXPECT_NE(in_chiaro(senza, *giornata, Visibilita{personali, false}).find("TURNO SENZA MEZZO: il mezzo ALFA-01 (AA 101 AA) e' in fermo (REVISIONE)."),
+                  std::string::npos);
+        EXPECT_NE(in_chiaro(senza, *controlla, Visibilita{personali, false}).find("Avviso K-CTR-079 (fermi.json, /fermi/0): Il turno T-SCUOLA-1"),
+                  std::string::npos);
+    }
+    EXPECT_NE(in_chiaro(demo, *giornata, Visibilita{false, true}).find("e' in fermo (REVISIONE)."), std::string::npos);
+
+    // Cassaforte.
+    const Chiuso c = chiudi(demo);
+    const auto chiuso = [&](Visibilita permessi, const DefinizioneComando& cmd, Visibilita mostra, Formato f) {
+        accesso::LetturaPerComando lc;
+        const ValoriCassaforte v = valori(c, permessi);
+        lc.lettura = leggi_pacchetto(c.normali, &v);
+        return esegui(cmd, std::move(lc), mostra, f);
+    };
+    for (const bool personali : {false, true})
+        for (const Formato f : {Formato::Testo, Formato::Json})
+            for (const DefinizioneComando* cmd : {giornata, controlla})
+                EXPECT_EQ(chiuso(Visibilita{true, true}, *cmd, Visibilita{personali, false}, f), in_chiaro(demo, *cmd, Visibilita{personali, false}, f))
+                    << cmd->nome << " " << personali;
+    const std::string ufficio = chiuso(Visibilita{true, false}, *giornata, Visibilita{true, false}, Formato::Testo);
+    EXPECT_NE(ufficio.find("TURNO SENZA MEZZO: il mezzo previsto ALFA-01 (AA 101 AA) non puo' farlo; il motivo non e' verificato (servono "
+                           "i dati particolari, che l'utente non puo' aprire)."),
+              std::string::npos)
+        << ufficio;
+}

@@ -806,7 +806,11 @@ const std::vector<DefinizioneControllo>& catalogo_controlli() {
               "Il turno {turno} e' scoperto {giorni}: l'abilitazione {tipo} della persona prevista {persona} e' scaduta. Rimedio: "
               "un'assegnazione del singolo giorno.",
               "Il turno {turno} e' scoperto {giorni}: l'autorizzazione del committente {tipo} della persona prevista {persona} e' "
-              "scaduta. Rimedio: un'assegnazione del singolo giorno."},
+              "scaduta. Rimedio: un'assegnazione del singolo giorno.",
+              // K-014: senza i dati particolari, se il pacchetto ha requisiti che dipendono dal tipo di servizio (riservatezza.hpp).
+              "Il turno {turno} e' scoperto {giorni}: la persona prevista {persona} non puo' farlo; il motivo e' riservato, perche' "
+              "puo' dipendere dal tipo di servizio (dato particolare; --includi-dati-particolari). Rimedio: un'assegnazione del "
+              "singolo giorno."},
              {{0, PE}, {1, PE}, {3, PE}, {4, PE}},
              {{0, "Il turno {turno} e' scoperto {giorni}: la persona prevista {persona} non puo' farlo (dati personali: riservati). "
                   "Rimedio: un'assegnazione del singolo giorno."},
@@ -822,7 +826,11 @@ const std::vector<DefinizioneControllo>& catalogo_controlli() {
               "Il turno {turno} e' senza mezzo {giorni}: l'autorizzazione del mezzo {mezzo} all'uso {tipo} (distrazione) non vale. "
               "Rimedio: un'assegnazione del singolo giorno con un altro mezzo.",
               "Il turno {turno} e' senza mezzo {giorni}: il prestito del mezzo {mezzo} all'azienda {tipo} non vale. Rimedio: "
-              "un'assegnazione del singolo giorno con un altro mezzo."}},
+              "un'assegnazione del singolo giorno con un altro mezzo.",
+              // K-014: senza i dati particolari, se il pacchetto ha requisiti che dipendono dal tipo di servizio (riservatezza.hpp).
+              "Il turno {turno} e' senza mezzo {giorni}: il mezzo previsto {mezzo} non puo' farlo; il motivo e' riservato, perche' "
+              "puo' dipendere dal tipo di servizio (dato particolare; --includi-dati-particolari). Rimedio: un'assegnazione del "
+              "singolo giorno con un altro mezzo."}},
             {Check::TripWithoutShift, "K-CTR-080", A, N, "Corsa senza turno",
              {"La corsa {corsa} non e' in nessun turno da autista {giorni}."}},
             {Check::PreferenceNotRespected, "K-CTR-081", A, PE, "Preferenza di una persona non rispettata",
