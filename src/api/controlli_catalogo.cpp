@@ -541,7 +541,10 @@ const std::vector<DefinizioneControllo>& catalogo_controlli() {
               "Manca il numero intero \"schema_versione\" (versioni lette da questo programma: {supportate}). "
               "Il file non e' stato letto."}},
             {Check::SchemaViolation, "K-CTR-007", E, N, "File non conforme allo schema",
-             {"Non rispetta lo schema: {dettaglio}. Il file non e' stato usato."}},
+             {"Non rispetta lo schema: {dettaglio}. Il file non e' stato usato.",
+              // K-014: manca un campo obbligatorio particolare (es. la descrizione del tipo di un servizio "altro").
+              "Non rispetta lo schema: {dettaglio}. Il file non e' stato usato."},
+             {{1, PA}}},
             {Check::UnknownFile, "K-CTR-008", A, N, "File non riconosciuto",
              {"Il file {file} non fa parte del formato e non e' stato letto (nome scritto male?).",
               "La cartella {file} non fa parte del formato e non e' stata letta."}},

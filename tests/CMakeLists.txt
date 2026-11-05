@@ -1213,6 +1213,15 @@ kzero_prova(tipo_lin_ncc_giornata_dati_particolari USCITA 0 FORMATO testo BASE $
             MODIFICA IMPOSTA servizi.json /servizi/5/tipo "\"ncc\""
             CONTIENE "TURNO SENZA MEZZO: l'autorizzazione del mezzo ALFA-05 (AA 105 AA) all'uso NCC (distrazione) non vale quel giorno."
             ARGOMENTI giornata @PACCHETTO@ --data 2027-07-07 --includi-dati-particolari)
+# K-014: un servizio "altro" deve avere la descrizione del tipo (schema): l'errore di forma che dice che manca rivela il tipo di
+# servizio, quindi di base si conta soltanto (un campo obbligatorio particolare che manca, variante 1 di K-CTR-007).
+kzero_rotto(tipo_altro_senza_descrizione FORMATO testo MODIFICA IMPOSTA servizi.json /servizi/3/tipo "\"altro\""
+            CONTIENE "Problemi sui dati particolari (salute), non elencati uno per uno: 1 errore e nessun avviso."
+            NON_CONTIENE "K-CTR-007" "tipo_descrizione")
+kzero_prova(tipo_altro_senza_descrizione_dati_particolari USCITA 1 FORMATO json SCHEMA controlla RESOCONTO BASE ${KZERO_DEMO}
+            MODIFICA IMPOSTA servizi.json /servizi/3/tipo "\"altro\""
+            PROBLEMI "K-CTR-007|servizi.json|/servizi/3" CONTIENE "manca il campo obbligatorio 'tipo_descrizione'"
+            ARGOMENTI controlla @PACCHETTO@ --includi-dati-particolari --formato json)
 kzero_rotto(rotto_trasbordo_non_autorizzato FORMATO testo MODIFICA TOGLI luoghi.json /luoghi/16/trasbordo
             PROBLEMI "K-CTR-023|corse.json|/corse/4/passaggi/2/trasbordi/0" "K-CTR-023|corse.json|/corse/5/passaggi/3/trasbordi/0")
 kzero_rotto(rotto_trasbordo_senza_meta FORMATO testo MODIFICA IMPOSTA corse.json /corse/5/passaggi/3/trasbordi/0/codice "\"T-02\""

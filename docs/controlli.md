@@ -104,6 +104,7 @@ comunque la regola qui sopra):
 
 | Codice | Rivela | Quando | Cosa |
 |---|---|---|---|
+| K-CTR-007 | particolare | alcuni casi | che manchi un campo obbligatorio particolare, che puo' essere obbligatorio solo per alcuni valori di un altro dato particolare (es. la descrizione del tipo di un servizio "altro", che dice il tipo di servizio; K-014) |
 | K-CTR-019 | personale | alcuni casi | il nome, la casa o una nota scritta a mano di una persona; il nome o la nota di un committente privato (K-012) |
 | K-CTR-031 | particolare | alcuni casi | carrozzine e ausili piegati che non corrispondono ai passeggeri |
 | K-CTR-047 | particolare | tutti i casi | l'assistente di cui ha bisogno un passeggero |
