@@ -58,7 +58,7 @@ Si parte da Alpinabus (3 minibus + 1 auto) e si deve poter crescere fino a 500 m
   e poi `export PATH=~/.kzero-strumenti/bin:$PATH`. Senza lo strumento quelle prove non vengono registrate
   (CMake lo segnala); il controllo GitHub le rende obbligatorie (`-DKZERO_SCHEMI_OBBLIGATORI=ON`).
 - Prove con i sanitizer (AddressSanitizer e UndefinedBehaviorSanitizer, si fermano al primo problema; clang come nel
-  controllo GitHub): `CC=clang CXX=clang++ cmake -S . -B build-san -DKZERO_SANITIZER=ON -DKZERO_WERROR=ON
+  controllo GitHub; su Ubuntu serve il pacchetto libclang-rt-18-dev): `CC=clang CXX=clang++ cmake -S . -B build-san -DKZERO_SANITIZER=ON -DKZERO_WERROR=ON
   -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build-san && ctest --test-dir build-san --output-on-failure`
 - Fuzzing (prove con dati casuali e deformati, libFuzzer, solo clang; su Ubuntu serve il pacchetto libclang-rt-18-dev):
   `CC=clang CXX=clang++ cmake -S . -B build-fuzz -DKZERO_FUZZ=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo &&
