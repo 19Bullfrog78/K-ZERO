@@ -1037,7 +1037,7 @@ TEST(Orari, due_riposi_settimanali_ridotti_di_fila) {
 
 // Persona in prestito (K-011 aggiunta 1, punto 4): P-A di Alfa fa un turno di Beta. Valgono le scelte sugli orari
 // (scelte_orari) della sua azienda (Alfa), le soste non scritte e la chiave del rientro dell'azienda del turno (Beta).
-// E' il comportamento di oggi, scritto in docs/formato-dati.md e DECISIONI.md: Mauro decidera' se cambiarlo (modo consorzio).
+// E' il comportamento di oggi, scritto in docs/formato-dati.md e DECISIONI.md: il supervisore decidera' se cambiarlo (modo consorzio).
 TEST(Orari, persona_in_prestito_scelte_della_sua_azienda) {
     Prova p({conteggio(kGAD)});
     alfa(p.p).choices = {scelta(480, ChoiceStrength::Limit)};
@@ -1146,7 +1146,7 @@ TEST(Orari, trasferimenti_legati_alla_corsa_a_cui_servono) {
     EXPECT_TRUE(con_motivo(v[0], "guida_esclusa")) << elenco(v);
 }
 
-// --- K-011 aggiunta 1: OUT o tachigrafo (Mauro, 28/10) -------------------------------------------------------------------
+// --- K-011 aggiunta 1: OUT o tachigrafo (supervisore, 28/10) -------------------------------------------------------------------
 
 namespace {
 ModeEntry voce(TripModeKind modo) {

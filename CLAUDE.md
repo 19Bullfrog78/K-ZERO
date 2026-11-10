@@ -1,16 +1,16 @@
 # K-Zero
 
-K-Zero e' universale: aziende, consorzi ed enti di ogni dimensione e di ogni paese; Alpinabus e' il primo caso di prova.
+K-Zero e' universale: aziende, consorzi ed enti di ogni dimensione e di ogni paese; ALP e' il primo caso di prova.
 
 Software di pianificazione flotta: servizi di linea, handicap, scolastici, NCC, promiscui.
-Si parte da Alpinabus (3 minibus + 1 auto) e si deve poter crescere fino a 500 mezzi e oltre.
+Si parte da ALP (3 minibus + 1 auto) e si deve poter crescere fino a 500 mezzi e oltre.
 
 ## Confini
 - IMPORTANTE: questo repository riguarda SOLO K-Zero. Sullo stesso account GitHub esiste un
   progetto musicale separato: non leggerlo, non modificarlo, non citarlo, non mescolare file.
 
 ## Ruoli
-- Mauro: supervisore. Decide le regole del mestiere e approva i risultati.
+- Il supervisore: decide le regole del mestiere e approva i risultati.
 - Claude Code: programmatore, unico che scrive nel repository GitHub.
 - Claude in chat (progetto K-Zero): arbitro. Rivede piani e modifiche, non scrive codice nel repository.
 
@@ -18,13 +18,13 @@ Si parte da Alpinabus (3 minibus + 1 auto) e si deve poter crescere fino a 500 m
 - Solo documenti (DIARIO.md, REGOLE.md, DECISIONI.md, altre note): salva direttamente
   su main e annota nel diario. L'arbitro controlla dopo.
 - Programma (codice, CMakeLists.txt, test) e CLAUDE.md: ramo di lavoro, poi proposta
-  (pull request), poi controllo dell'arbitro, poi Mauro approva con Merge.
+  (pull request), poi controllo dell'arbitro, poi il supervisore approva con Merge.
   Non unire mai una proposta da solo.
-- IMPORTANTE (Mauro, 5/11): ogni resoconto per l'arbitro (es. K-013-resoconto-per-l-arbitro.md) e ogni documento utile al
-  progetto si consegna a Mauro sempre come file da scaricare (non solo come testo nel messaggio), con il suo nome: Mauro lo
-  mette nella cartella giusta del suo PC (i resoconti in `C:\Users\BULLFROG\Desktop\LAVORO\K-ZERO\K-ZERO CC`). Una sessione
-  nel cloud non raggiunge il PC di Mauro: mai dire "salvato sul PC" se non lo e'. Solo se la sessione gira sul PC di Mauro (o
-  la cartella e' collegata) il file si scrive anche direttamente li'.
+- IMPORTANTE (supervisore, 5/11): ogni resoconto per l'arbitro (es. K-013-resoconto-per-l-arbitro.md) e ogni documento utile al
+  progetto si consegna al supervisore sempre come file da scaricare (non solo come testo nel messaggio), con il suo nome: il
+  supervisore lo mette nella cartella giusta del suo PC (i resoconti in `C:\Users\BULLFROG\Desktop\LAVORO\K-ZERO\K-ZERO CC`).
+  Una sessione nel cloud non raggiunge il PC del supervisore: mai dire "salvato sul PC" se non lo e'. Solo se la sessione gira
+  sul PC del supervisore (o la cartella e' collegata) il file si scrive anche direttamente li'.
 
 ## Comandi
 - Compilare: `cmake -S . -B build && cmake --build build`
@@ -73,17 +73,17 @@ Si parte da Alpinabus (3 minibus + 1 auto) e si deve poter crescere fino a 500 m
   docs/componenti.cdx.json (CycloneDX), da aggiornare a ogni libreria nuova o cambiata (una prova lo controlla).
 
 ## Principi guida
-- IMPORTANTE (Mauro, 13/10): K-Zero non si calibra su un'azienda ed e' personalizzabile dall'azienda il piu'
+- IMPORTANTE (supervisore, 13/10): K-Zero non si calibra su un'azienda ed e' personalizzabile dall'azienda il piu'
   possibile. L'organizzazione (rotazioni, giorni, chi fa cosa, nomi, tipi di attivita', assenze, fermi,
   competenze, impostazioni) la scrive e la cambia l'utente nei dati; il programma la registra, la controlla e
-  piu' avanti la proporra', ma non decide niente da solo e ogni scelta dell'utente vince. Alpinabus e' solo un
+  piu' avanti la proporra', ma non decide niente da solo e ogni scelta dell'utente vince. ALP e' solo un
   esempio nei dati.
-- IMPORTANTE (Mauro, risposta 43), domande e AI: le domande all'utente le fara' il programma stesso, a scelta multipla,
+- IMPORTANTE (supervisore, risposta 43), domande e AI: le domande all'utente le fara' il programma stesso, a scelta multipla,
   senza AI, con le risposte salvate nei dati. Un assistente AI e' solo un aiuto facoltativo e di base non riceve ne'
   nomi ne' dati sulla salute (le uscite di base sono gia' filtrate).
 - IMPORTANTE (K-011): le regole sugli orari sono dati (legge, contratto collettivo, azienda, persona); il programma conosce
   solo i tipi di regola; la legge certa e' un errore, quella da confermare un avviso; senza dati mai "regolare".
-- IMPORTANTE (Mauro, 18/10), sicurezza: il programma lavora sul PC e oggi nessun comando usa la rete; quando
+- IMPORTANTE (supervisore, 18/10), sicurezza: il programma lavora sul PC e oggi nessun comando usa la rete; quando
   servira' (es. le distanze da Google Maps) lo fara' solo un adattatore separato, acceso con un parametro
   esplicito, che manda fuori il minimo (coordinate, mai nomi o altri dati delle persone), con un suo mandato.
   Non scrive file senza --scrivi; controlla ogni dato in ingresso con limiti di buon senso e rifiuta i file
@@ -95,7 +95,7 @@ Si parte da Alpinabus (3 minibus + 1 auto) e si deve poter crescere fino a 500 m
 - IMPORTANTE: K-Zero è un software professionale: stabile, solido, preciso.
   Niente pezze né scorciatoie: solo soluzioni che durano nel tempo.
   Se una soluzione rapida e una solida divergono, scegli la solida e spiega perché.
-- IMPORTANTE: Mauro non e' un tecnico. Spiegazioni in italiano semplice, brevi, senza gergo.
+- IMPORTANTE: Il supervisore non e' un tecnico. Spiegazioni in italiano semplice, brevi, senza gergo.
 - Prima di dire "fatto": compilare senza warning, eseguire, mostrare l'output.
 - Ogni modifica va annotata in DIARIO.md. Le scelte di fondo vanno in DECISIONI.md.
 - Le regole del mestiere sono in REGOLE.md: leggerle prima di toccare il calcolo.
@@ -105,7 +105,7 @@ Si parte da Alpinabus (3 minibus + 1 auto) e si deve poter crescere fino a 500 m
 ## Scelte tecniche
 - C++17, CMake 3.25 o successivo, Google OR-Tools (non ancora collegato).
 - Orari in minuti dalla mezzanotte, distanze in km.
-- Fonte delle distanze intercambiabile: Google Maps per Alpinabus, OSRM per la scala provinciale.
+- Fonte delle distanze intercambiabile: Google Maps per ALP, OSRM per la scala provinciale.
 - Un solo modello dati per 4 o 500 mezzi; cambia solo il metodo di calcolo.
 - Tre piani (docs/architettura.md): nucleo in src/nucleo (modello, regole, calcolo: niente stampa, niente
   riga di comando); API in src/api (il contratto: riga di comando con uscita testo/JSON); adattatori sopra l'API.
@@ -158,17 +158,17 @@ Si parte da Alpinabus (3 minibus + 1 auto) e si deve poter crescere fino a 500 m
   da li' e la prova per differenza (tests/test_unione.cpp) lo controlla. Dal K-014 vale anche per i requisiti che dipendono
   dal tipo (usi dei mezzi, autorizzazione del committente, vincolo di destinazione, condizioni dei regolamenti:
   `kind_requirements` nel nucleo): i loro problemi si contano soltanto e, se il pacchetto ne ha uno, di ogni turno scoperto o
-  senza mezzo si vede il fatto ma non il perche', con lo stesso testo per ogni causa (scelta A di Mauro,
+  senza mezzo si vede il fatto ma non il perche', con lo stesso testo per ogni causa (scelta A del supervisore,
   `motivo_dei_turni_riservato` in src/api/riservatezza.hpp); ogni nuovo requisito o uscita sul piano passa da li'.
 - Cassaforte (K-010): i dati personali e particolari veri stanno solo nella cassaforte del pacchetto; ogni nuovo lettore
-  (es. il file del CTA) li scrive solo li', mai in file in chiaro. Dati decifrati mai su disco ne' in file temporanei
+  (es. il file del consorzio) li scrive solo li', mai in file in chiaro. Dati decifrati mai su disco ne' in file temporanei
   (l'unica eccezione e' l'uscita in chiaro esplicita di `kzero esporta --scrivi`). Ogni nuova uscita prende la visibilita'
   dai permessi e dai parametri insieme; un controllo o un calcolo che ha bisogno di una classe che l'utente non puo'
   aprire dice "non verificato", mai un risultato fatto su dati mancanti. Ogni apertura scrive prima la voce del registro:
   senza voce, nessun dato.
 - Ogni nuova uscita, messaggio, posizione o registro passa dal filtro delle classi; nessun dato personale nei registri
   del programma. La lettura dei file e' blindata (solo file normali dentro la cartella del pacchetto, mai oltre il
-  massimo di byte): ogni nuovo lettore di file esterni (es. il file del CTA) la usa.
+  massimo di byte): ogni nuovo lettore di file esterni (es. il file del consorzio) la usa.
 - Due livelli di pacchetto: "solo numeri" (consigliato: conteggi, niente nomi, case, porta a porta, motivi)
   e "completo". Mai codice fiscale, telefoni, mail: il formato non ha campi per questi dati.
 - Problemi nei dati: codice fisso K-CTR-nnn (catalogo separato dai K-ERR, in docs/controlli.md, provato

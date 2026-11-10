@@ -60,7 +60,7 @@ struct Ref {
     Source src;
 };
 
-// Codice dello stesso elemento in un altro sistema, es. sistema "Trentino Trasporti", tipo "fermata", codice "6220PF".
+// Codice dello stesso elemento in un altro sistema, es. sistema "Trasporti Provinciali", tipo "fermata", codice "6220PF".
 struct ExternalCode {
     std::string system;
     std::string type;
@@ -577,7 +577,7 @@ struct WorkChoice {
     Source src;
 };
 
-// La chiave della pausa fuori dal posto (rientro), decisa da Mauro il 20/10: fermo minimo, fattore della guida a vuoto
+// La chiave della pausa fuori dal posto (rientro), decisa dal supervisore il 20/10: fermo minimo, fattore della guida a vuoto
 // in piu', km a vuoto in piu' al massimo (facoltativo), forza. Ogni campo della persona vince su quello dell'azienda.
 struct ReturnKey {
     std::optional<int> min_stop;          // minuti
@@ -1468,7 +1468,7 @@ struct ListEntry {
     Source src;
 };
 
-// --- Modo delle corse: OUT o tachigrafo (K-011 aggiunta 1, Mauro 28/10) ---------------------------------------------
+// --- Modo delle corse: OUT o tachigrafo (K-011 aggiunta 1, supervisore 28/10) ---------------------------------------------
 // L'azienda sceglie, per tipo di servizio, per servizio o per corsa, se una corsa si fa "out" (con le regole nazionali, dove
 // la legge lo permette) oppure "tachigrafo" (seguendo le regole del regime che la legge esclude, es. il Reg. 561/2006, anche
 // dove la legge non lo chiede). Il programma non impone un modo: la legge resta sopra e il programma dice cosa si rischia.

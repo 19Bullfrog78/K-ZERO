@@ -349,7 +349,7 @@ TEST(Turni, ciclo_6_piu_2_attraverso_le_settimane) {
     EXPECT_EQ(turni_di(piano, "P-C", "2026-10-13"), "riposo");   // prima della partenza la rotazione non vale (senza dal)
 }
 
-// Rotazione di 14 giorni di Alpinabus (REGOLE.md, "Turni del giorno e rotazione"), controllata a mano contro la
+// Rotazione di 14 giorni di ALP (REGOLE.md, "Turni del giorno e rotazione"), controllata a mano contro la
 // tabella: lunedi' 12/10/2026 = giorno 1; il sabato un solo autista fa tutto il giorno; la domenica nessuno.
 TEST(Turni, rotazione_di_14_giorni_della_tabella) {
     Package p = base();

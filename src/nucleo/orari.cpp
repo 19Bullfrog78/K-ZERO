@@ -500,7 +500,7 @@ private:
         }
     }
 
-    // Il regime sulla corsa con il modo dell'azienda (K-011 aggiunta 1, Mauro 28/10). La dichiarazione rende certe le esclusioni
+    // Il regime sulla corsa con il modo dell'azienda (K-011 aggiunta 1, supervisore 28/10). La dichiarazione rende certe le esclusioni
     // da confermare; la forzatura toglie la corsa nella lettura certa (nella prudente resta la legge come la calcolano i dati:
     // le violazioni sono avvisi con il motivo); "out" dove la legge vuole il regime non vale (la legge vince, un avviso); il
     // tachigrafo, nel calcolo "per scelta" (chosen), fa valere il regime anche dove la legge lo esclude o e' da confermare.

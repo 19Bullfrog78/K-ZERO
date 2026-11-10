@@ -20,7 +20,7 @@
   },
   "origine": {
     "tipo": "scenario",
-    "nota": "Dati inventati per le prove degli orari di lavoro (K-011), dal pacchetto demo: i tre esempi della pausa di Mauro, una violazione per tipo di regola, la corsa di 52 km con mezzi da 17, 8 e 9 posti, una corsa senza km, un titolare."
+    "nota": "Dati inventati per le prove degli orari di lavoro (K-011), dal pacchetto demo: i tre esempi della pausa del supervisore, una violazione per tipo di regola, la corsa di 52 km con mezzi da 17, 8 e 9 posti, una corsa senza km, un titolare."
   },
   "livello": "completo",
   "fuso_orario": "Europe/Rome",

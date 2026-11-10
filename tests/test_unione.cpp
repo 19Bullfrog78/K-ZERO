@@ -1229,7 +1229,7 @@ TEST(Unione, OrariSenzaDatiParticolariConLaCassaforte) {
     }
 }
 
-// --- K-014: turni scoperti o senza mezzo senza il motivo (scelta A di Mauro, 5/11) ------------------------------------------
+// --- K-014: turni scoperti o senza mezzo senza il motivo (scelta A del supervisore, 5/11) ------------------------------------------
 
 namespace {
 
@@ -1331,7 +1331,7 @@ TEST(Unione, TurniSenzaMezzoSenzaIlMotivo) {
 // base e con i dati personali), in testo e JSON, kzero controlla, kzero giornata e kzero ore danno la stessa uscita tranne:
 // - i totali dell'intero pacchetto (anche i problemi che si contano soltanto, e se giornata e ore si fermano per gli errori nei
 //   dati: K-ERR-018);
-// - per la scelta A di Mauro, il piano e quello che ne segue: in kzero giornata, per i turni il cui piano cambia quel giorno,
+// - per la scelta A del supervisore, il piano e quello che ne segue: in kzero giornata, per i turni il cui piano cambia quel giorno,
 //   chi li fa, chi era previsto, il mezzo (anche "a bordo di"), se sono scoperti o senza mezzo, e i totali del giorno; in kzero
 //   ore le persone il cui piano cambia nel periodo e la media tra le persone; in kzero controlla i problemi dei controlli fatti
 //   sul piano del giorno (quelli che il catalogo dichiara bisognosi delle due classi) che nominano un turno, una persona o un

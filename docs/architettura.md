@@ -85,7 +85,7 @@ Il programma e' diviso in tre piani, uno sopra l'altro:
 - **I file incorporati**: gli schemi di `docs/schema` e il pacchetto dimostrativo `esempi/demo` entrano
   nel programma quando si compila (`cmake/incorpora.cmake`). Cosi' `kzero` controlla i dati sempre con
   gli schemi con cui e' stato compilato e `kzero dimostrazione` funziona da qualunque cartella.
-- I futuri **lettori di file esterni** (es. il file alunni del CTA, i dati aperti GTFS) staranno in questo
+- I futuri **lettori di file esterni** (es. il file alunni del consorzio, i dati aperti GTFS) staranno in questo
   piano: trasformeranno quei file nel formato K-Zero.
 
 ## Piano 3 - Adattatori
@@ -147,7 +147,7 @@ Scelte di dettaglio:
 ## Sicurezza
 
 Spiegazione completa in [sicurezza.md](sicurezza.md): cosa protegge K-Zero e da chi, le misure, i rischi che restano,
-i consigli per chi lo usa, cosa fare in caso di violazione. In breve, principi decisi da Mauro (12/10 e 18/10), scritti
+i consigli per chi lo usa, cosa fare in caso di violazione. In breve, principi decisi dal supervisore (12/10 e 18/10), scritti
 anche in CLAUDE.md:
 - il programma lavora sul PC e **nessun comando usa la rete** (due prove: simboli del programma compilato e sorgenti).
   Quando servira' (es. le distanze da Google Maps), lo fara' solo un adattatore separato, acceso con un parametro

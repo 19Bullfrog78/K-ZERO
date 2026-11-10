@@ -1,7 +1,7 @@
 # Sicurezza e protezione dei dati in K-Zero
 
 K-Zero trattera' dati di minori e dati sulla salute (persone con disabilita'), cioe' dati "particolari" (GDPR art. 9).
-Mauro, 12/10 e 18/10: "il software dev'essere blindato"; "creare un software fallace dal punto di vista privacy e
+Il supervisore, 12/10 e 18/10: "il software dev'essere blindato"; "creare un software fallace dal punto di vista privacy e
 sicurezza, trattando dati sensibili, e' un suicidio". Questo documento dice cosa protegge K-Zero, da chi, con quali
 misure, quali rischi restano e cosa fare se qualcosa va storto.
 
@@ -14,7 +14,7 @@ ingiustificato ritardo), 35 (valutazione d'impatto); Linee guida EDPB 4/2019 sul
 progettazione e per impostazione predefinita.
 
 **Il caso piu' stretto.** Il titolare dei dati degli alunni e' con ogni probabilita' la Provincia; le aziende li
-ricevono dal CTA senza un accordo scritto noto. K-Zero quindi si progetta per il caso piu' stretto: **nessun dato
+ricevono dal consorzio senza un accordo scritto noto. K-Zero quindi si progetta per il caso piu' stretto: **nessun dato
 personale esce dal PC** di chi pianifica. Il programma lo potra' usare chiunque, anche in aziende con piu' persone.
 
 ## 1. Cosa tratta K-Zero, dove e perche' (base per la valutazione d'impatto, art. 35)
@@ -237,7 +237,7 @@ non ha una password; non protegge da tutto. Detto onestamente:
   testo e la stessa posizione per ogni causa, anche per un'assenza o un fermo. Chi conosce bene gli altri dati puo' a volte
   intuire che il motivo e' un requisito del tipo di servizio: per esempio se la persona prevista quel giorno non ha assenze
   (la giornata della persona le mostra, senza il tipo), se il mezzo non ha fermi (la giornata del mezzo li mostra) o se la
-  distrazione del mezzo scade proprio il giorno prima (l'avviso K-CTR-050 si vede sempre). Scelta di Mauro (5/11): nascondere
+  distrazione del mezzo scade proprio il giorno prima (l'avviso K-CTR-050 si vede sempre). Scelta del supervisore (5/11): nascondere
   il perche' e lasciare visibile il fatto, perche' chi pianifica deve sapere quali turni vanno coperti e quando, anche senza
   i dati sulla salute; nascondere anche il fatto renderebbe il piano inutilizzabile, e un testo a parte solo per le cause del
   tipo direbbe proprio quello. Chi deve vedere il perche' usa `--includi-dati-particolari`, con il permesso di quei dati.
