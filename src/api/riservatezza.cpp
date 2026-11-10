@@ -6,6 +6,7 @@
 #include <vector>
 
 #include "formato_dati.hpp"
+#include "turni.hpp"
 
 namespace kzero::api {
 
@@ -234,6 +235,36 @@ bool in_trasportato(const kzero::Source& posizione, const Lettura& lettura) {
     for (const auto& l : SchemiDati::incorporati().livelli(sv->first, sv->second, posizione.pointer))
         if (l.previsto && l.trasportato) return true;
     return false;
+}
+
+bool motivo_dei_turni_riservato(const kzero::Package& pacchetto, const Visibilita& visibilita) {
+    return !visibile(Classe::Particolare, visibilita) && kzero::kind_requirements(pacchetto).any();
+}
+
+std::vector<kzero::Problem> turni_senza_motivo(std::vector<kzero::Problem> problemi, const kzero::Package& pacchetto) {
+    std::map<kzero::Code, const kzero::Source*> persone, mezzi;
+    for (const kzero::Person& x : pacchetto.persons) persone.emplace(x.code, &x.src);
+    for (const kzero::Vehicle& x : pacchetto.vehicles) mezzi.emplace(x.code, &x.src);
+    for (kzero::Problem& x : problemi) {
+        const bool persona = x.check == kzero::Check::RecurringShiftPersonFact;
+        if (!persona && x.check != kzero::Check::RecurringShiftVehicleFact) continue;
+        const char* chi = persona ? "persona" : "mezzo";
+        std::vector<kzero::Param> tenuti;
+        const kzero::Source* dove = nullptr;
+        for (const kzero::Param& p : x.params) {
+            if (p.name != "turno" && p.name != chi && p.kind != kzero::Param::Kind::Days) continue;
+            if (p.name == chi) {
+                const auto& elenco = persona ? persone : mezzi;
+                const auto it = elenco.find(p.text);
+                if (it != elenco.end()) dove = it->second;
+            }
+            tenuti.push_back(p);
+        }
+        x.variant = persona ? kScopertoSenzaMotivo : kSenzaMezzoSenzaMotivo;
+        x.params = std::move(tenuti);
+        x.where = dove ? *dove : kzero::Source{};   // la persona o il mezzo ci sono sempre: il piano li ha trovati
+    }
+    return kzero::group_by_days(std::move(problemi));
 }
 
 }  // namespace kzero::api

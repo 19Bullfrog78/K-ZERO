@@ -3,6 +3,8 @@
 // Si parte dal pacchetto demo e si aggiungono turni, rotazioni e assegnazioni scritti qui: le rotazioni di prova
 // (3 giorni, 6+2, 14 giorni, mensile...) non possono stare tutte nel demo.
 #include <algorithm>
+#include <functional>
+#include <map>
 #include <string>
 #include <vector>
 
@@ -960,4 +962,151 @@ TEST(Turni, piano_stabile) {
     const auto b = check_package(p);
     ASSERT_EQ(a.size(), b.size());
     for (std::size_t i = 0; i < a.size(); ++i) EXPECT_EQ(a[i].where.pointer, b[i].where.pointer);
+}
+
+// --- K-014: requisiti che dipendono dal tipo di servizio -------------------------------------------------------------------
+
+// I requisiti che dipendono dal tipo di servizio li dicono i dati (kind_requirements): nel demo gli usi dei mezzi del
+// regolamento R-TN e delle norme N-IT, l'autorizzazione del committente di R-TN, il vincolo di destinazione di ALFA-03.
+// Ogni famiglia si riconosce da sola: togliendo le altre resta.
+TEST(Turni, requisiti_che_dipendono_dal_tipo_di_servizio) {
+    const auto codici = [](const auto& v) {
+        std::vector<std::string> out;
+        for (const auto* x : v) out.push_back(x->code);
+        return out;
+    };
+    const KindRequirements d = kind_requirements(demo());
+    EXPECT_TRUE(d.any());
+    EXPECT_EQ(codici(d.vehicle_uses), std::vector<std::string>{"R-TN"});
+    EXPECT_EQ(codici(d.service_uses), std::vector<std::string>{"N-IT"});
+    EXPECT_EQ(codici(d.client_authorization), std::vector<std::string>{"R-TN"});
+    EXPECT_EQ(codici(d.constraints), std::vector<std::string>{"ALFA-03"});
+    EXPECT_TRUE(d.conditions.empty());   // le condizioni di R-TN sono sul grado e sui posti
+
+    // Senza nessun requisito: niente.
+    Package nessuno = demo();
+    for (Regulation& r : nessuno.regulations) {
+        r.vehicle_uses.reset();
+        r.client_authorization.reset();
+    }
+    for (Norms& n : nessuno.norms) n.service_uses.clear();
+    for (Vehicle& v : nessuno.vehicles) v.constraint.reset();
+    EXPECT_FALSE(kind_requirements(nessuno).any());
+    // Un vincolo solo per contratto non dipende dal tipo.
+    Package contratto = nessuno;
+    per_codice(contratto.vehicles, "ALFA-03").constraint = DestinationConstraint{{}, {Ref{"CT-SCU", {}}}, std::nullopt, "", "", {}};
+    EXPECT_FALSE(kind_requirements(contratto).any());
+    // Ogni famiglia da sola.
+    const auto una = [&](const std::function<void(Package&)>& metti) {
+        Package p = nessuno;
+        metti(p);
+        return kind_requirements(p);
+    };
+    EXPECT_EQ(una([](Package& p) { p.regulations[0].vehicle_uses = demo().regulations[0].vehicle_uses; }).vehicle_uses.size(), 1u);
+    EXPECT_EQ(una([](Package& p) { p.norms[0].service_uses = demo().norms[0].service_uses; }).service_uses.size(), 1u);
+    EXPECT_EQ(una([](Package& p) { p.regulations[0].client_authorization = demo().regulations[0].client_authorization; })
+                  .client_authorization.size(),
+              1u);
+    EXPECT_EQ(una([](Package& p) { per_codice(p.vehicles, "ALFA-03").constraint = per_codice(demo().vehicles, "ALFA-03").constraint; })
+                  .constraints.size(),
+              1u);
+    for (const bool assistente : {true, false}) {
+        const KindRequirements k = una([assistente](Package& p) {
+            PassengerCondition c;
+            c.service_kinds = {ServiceKind::Disability};
+            ConditionsRule r;
+            r.conditions = {c};
+            (assistente ? p.regulations[0].assistant : p.regulations[0].adult_at_dropoff) = r;
+        });
+        EXPECT_EQ(k.conditions.size(), 1u) << assistente;
+        EXPECT_TRUE(k.any());
+    }
+    // Una condizione senza tipi di servizio (es. sul grado) non dipende dal tipo.
+    EXPECT_FALSE(una([](Package& p) {
+                     PassengerCondition c;
+                     c.grades = {Grade::Kindergarten};
+                     ConditionsRule r;
+                     r.conditions = {c};
+                     p.regulations[0].assistant = r;
+                 }).any());
+}
+
+namespace {
+
+std::vector<const Problem*> del_controllo(const std::vector<Problem>& v, Check c) {
+    std::vector<const Problem*> out;
+    for (const Problem& x : v)
+        if (x.check == c) out.push_back(&x);
+    return out;
+}
+
+}  // namespace
+
+// I problemi che nascono da un requisito che dipende dal tipo di servizio hanno il segno by_service_kind (K-014): senza i
+// dati particolari si contano soltanto. Gli altri casi degli stessi controlli no.
+TEST(Turni, problemi_dei_requisiti_del_tipo_con_il_segno) {
+    // S-SCU-AM come servizio per disabili: R-TN chiede l'autorizzazione del committente, che P-F e P-G non hanno (K-CTR-068
+    // variante 1). La patente che manca (variante 0) non dipende dal tipo.
+    {
+        Package p = demo();
+        per_codice(p.services, "S-SCU-AM").kind = ServiceKind::Disability;
+        per_codice(p.persons, "P-E").licences.clear();
+        const auto v = check_package(p);
+        const auto x = del_controllo(v, Check::DriverWithoutLicence);
+        int autorizzazione = 0, patente = 0;
+        for (const Problem* q : x) {
+            if (q->variant == 1) {
+                ++autorizzazione;
+                EXPECT_TRUE(q->by_service_kind);
+            } else {
+                ++patente;
+                EXPECT_FALSE(q->by_service_kind);
+            }
+        }
+        EXPECT_EQ(autorizzazione, 2);
+        EXPECT_GT(patente, 0);
+    }
+    // S-DIS come servizio di linea: le norme chiedono l'uso LINEA (K-CTR-069) e ALFA-03 ha il vincolo di destinazione per i
+    // servizi per disabili (K-CTR-072): tutti e due dal tipo. Con un vincolo solo per contratto, K-CTR-072 non dipende dal tipo.
+    {
+        Package p = demo();
+        per_codice(p.services, "S-DIS").kind = ServiceKind::Line;
+        const auto v = check_package(p);
+        const auto usi = del_controllo(v, Check::VehicleWithoutUseForService);
+        const auto vincolo = del_controllo(v, Check::VehicleAgainstConstraint);
+        ASSERT_FALSE(usi.empty());
+        ASSERT_FALSE(vincolo.empty());
+        for (const Problem* q : usi) EXPECT_TRUE(q->by_service_kind);
+        for (const Problem* q : vincolo) EXPECT_TRUE(q->by_service_kind);
+        per_codice(p.vehicles, "ALFA-03").constraint->kinds.clear();
+        per_codice(p.vehicles, "ALFA-03").constraint->contracts = {Ref{"CT-LIN", {}}};
+        const auto w = check_package(p);
+        const auto solo_contratto = del_controllo(w, Check::VehicleAgainstConstraint);
+        ASSERT_FALSE(solo_contratto.empty());
+        for (const Problem* q : solo_contratto) EXPECT_FALSE(q->by_service_kind);
+    }
+    // Assegnazione del singolo giorno contro un fatto (K-CTR-067): l'autorizzazione del committente scaduta (variante 4) e
+    // l'autorizzazione all'uso che non vale (variante 6) dipendono dal tipo; l'assenza (variante 0) no.
+    {
+        Package p = demo();
+        // Il 2026-10-22 P-C fa T-DIS (servizio per disabili, chiede l'autorizzazione del committente CVA).
+        per_codice(p.persons, "P-C").authorizations.at(0).expiry = giorno("2026-10-01");
+        // Il 2026-11-15 l'assegnazione di T-GITA da' anche il mezzo ALFA-05, la cui distrazione (uso NCC) comincia dopo.
+        for (DayAssignment& a : p.day_assignments)
+            if (a.shift.code == "T-GITA") a.vehicle = Ref{"ALFA-05", {}};
+        per_codice(p.vehicles, "ALFA-05").use_authorizations.at(0).period.from = giorno("2026-12-01");
+        Absence assente;
+        assente.person = Ref{"P-G", {}};
+        assente.type = Ref{"FERIE", {}};
+        assente.days = DateRange{giorno("2027-07-07"), giorno("2027-07-07")};
+        assente.src = dove("assenze.json", "/assenze/" + std::to_string(p.absences.size()));
+        p.absences.push_back(assente);
+        const auto v = check_package(p);
+        std::map<int, bool> varianti;
+        for (const Problem* q : del_controllo(v, Check::DayAssignmentAgainstFact)) varianti[q->variant] = q->by_service_kind;
+        ASSERT_TRUE(varianti.count(0) && varianti.count(4) && varianti.count(6)) << varianti.size();
+        EXPECT_FALSE(varianti.at(0));
+        EXPECT_TRUE(varianti.at(4));
+        EXPECT_TRUE(varianti.at(6));
+    }
 }

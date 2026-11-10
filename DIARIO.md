@@ -502,6 +502,46 @@
   ogni resoconto per l'arbitro e ogni documento utile al progetto si consegna sempre come file da scaricare; Mauro lo mette
   nella cartella giusta del suo PC (i resoconti in C:\Users\BULLFROG\Desktop\LAVORO\K-ZERO\K-ZERO CC). Una sessione nel
   cloud non raggiunge il PC: il resoconto del K-013 e' stato consegnato da scaricare.
+- 2026-11-05 - K-014 (programma, proposta "K-014: requisiti per tipo senza i dati particolari"). **1. Requisiti che dipendono
+  dal tipo di servizio** fuori dagli orari, dai dati e mai dal nome (`kind_requirements`, src/nucleo/turni.hpp): usi dei mezzi
+  per tipo (regolamenti e norme), autorizzazione del committente per tipo, vincolo di destinazione con tipi di servizio,
+  condizioni dei regolamenti con tipi di servizio (oggi nessuna uscita le usa). Cercando chi legge il tipo fuori dagli orari
+  trovati anche la categoria della corsa (gia' particolare in kzero dimostrazione) e lo schema dei servizi (sotto). **2. Senza i
+  dati particolari** (per permesso o per parametro) si contano soltanto, con il segno del K-013 (`by_service_kind`, `dal_tipo`):
+  K-CTR-068 dell'autorizzazione del committente, K-CTR-069, K-CTR-072 con un vincolo per tipo, K-CTR-067 varianti 4 e 6. Scelta A
+  di Mauro (5/11): se il pacchetto ha almeno un requisito che dipende dal tipo, di ogni turno scoperto o senza mezzo per un fatto
+  con le date si vedono il fatto, i giorni e la persona o il mezzo previsto, il perche' no, con lo stesso testo e la stessa
+  posizione per ogni causa (K-CTR-078 variante 5, K-CTR-079 variante 3, kzero giornata, kzero ore; `motivo_dei_turni_riservato`
+  in src/api/riservatezza.hpp); lo stesso turno scoperto per cause diverse e' un problema solo; per chi non ha il permesso dei
+  dati particolari la giornata dice "il motivo non e' verificato". Con i dati particolari tutto come prima. Trovata e chiusa
+  una fuga in piu': "manca il campo obbligatorio 'tipo_descrizione'" (K-CTR-007) diceva il tipo "altro"; ora un campo
+  obbligatorio particolare che manca si conta soltanto (variante 1, dalla classe del campo nello schema). **3. Prova per
+  differenza estesa** (tests/test_unione.cpp), con i requisiti veri del demo: S-SCU-AM, S-DIS, S-LIN-B610, le 10 coppie di tipi
+  ciascuno; 20 coppie della prova (con i dati particolari cambiano i requisiti o il piano; elenco atteso nella prova), 10 in
+  piu' come controllo; differenze ammesse in DECISIONI.md (totali; il piano e quello che ne segue), ricerca dei testi e delle
+  posizioni delle cause. Nessuna fuga; con il programma di main fughe in tutte le 20 coppie (14 nel confronto, le 6 di
+  S-LIN-B610 con la ricerca delle cause). **4. Prova mancante del K-013 (B2)**: norme con il solo Reg. 561 come legge che
+  dipende dal tipo, con regole solo su guida e riposi: "nessuna legge vale" riservato. **5. Documenti**: DECISIONI.md,
+  docs/controlli.md, docs/sicurezza.md (rischio che resta), docs/cassaforte.md, docs/architettura.md, CLAUDE.md. Nessun codice
+  K-CTR o K-ERR nuovo (varianti nuove di K-CTR-007, 078, 079).
+  Demo: 0 errori, 31 avvisi, di base 13 contati soltanto (uguali). k011-orari: 11 errori e 107 avvisi; k012-servizi: 11 errori e
+  108 avvisi (uguali). Prove: 961 su 961 (prima del K-014: 929), 32 nuove. Prove di prima cambiate: quelle che si aspettavano
+  di base K-CTR-069 (mezzo senza l'uso richiesto) o il motivo di un turno scoperto o senza mezzo (assenza, fermo, demo con i
+  dati personali, giornata della persona assente), ora con la versione di base e quella con i dati particolari. Nessuna prova
+  tolta.
+  Con i sanitizer 959 su 959 (senza le 2 prove sul programma di rilascio); le tre prove per differenza nuove con i sanitizer
+  durano da 3 a 7 minuti ciascuna (49 secondi la piu' lunga senza). Per farle girare in locale con clang serve il pacchetto
+  libclang-rt-18-dev anche per i sanitizer, non solo per il fuzzing (qui mancava: AddressSanitizer non si collegava).
+  Fuzzing in locale sul codice finale, i 32 bersagli 60 secondi ciascuno, 2 alla volta: 19.445 file del pacchetto, 15.457 righe
+  di comando, 2.505.643 date e orari, 71.806 cassaforti e 36.169 contenuti, 555.537 registri e 370.954 elenchi di voci, 312.778
+  password. Nessun guasto. Nessun file di dati nuovo o cambiato: i semi sono quelli di prima.
+  Sabotaggi sul codice finale, uno alla volta, ricompilato, con tutte le prove (prove rosse): K-CTR-068 dell'autorizzazione del
+  committente visibile di base 5; K-CTR-069 visibile 5; K-CTR-072 con un vincolo per tipo visibile 4; K-CTR-067 varianti 4 e 6
+  visibili 1; il perche' del turno senza mezzo visibile in kzero giornata 6; la causa di K-CTR-078 visibile con i dati personali
+  7; il testo senza causa solo per le cause del tipo e non per il fermo 2 (e in kzero giornata solo per l'uso del mezzo 2); un
+  requisito del punto 1 non riconosciuto (l'autorizzazione del committente) 1; B2 (law solo dalle regole sul lavoro) 1, prima 0;
+  K-CTR-007 del campo particolare che manca visibile 1; il testo senza motivo anche senza requisiti del tipo 1; la posizione del
+  fatto tenuta nel testo senza motivo 8. Tutti scoperti.
 
 ## Bug e limiti noti
 - I pesi del calcolo (ObjectiveWeights) hanno ancora valori provvisori nel codice, non usati: andranno nei dati con il
@@ -559,12 +599,16 @@
   oggi un avviso (K-CTR-107) e quegli orari non si giudicano. Il contratto collettivo vero (es. IC35) arrivera' dal
   consulente del lavoro, come regime nei dati. Il registro di servizio (art. 16 del Reg. 561, per le linee fino a 50 km)
   arrivera' con le stampe. Le letture "da confermare" sono in REGOLE.md, da portare al consulente.
-- (K-013) Trovati dalla prova per differenza, fuori dagli orari, non corretti (da decidere): senza i dati particolari, gia'
-  di base, l'errore K-CTR-068 (l'autista non ha l'autorizzazione del committente che il regolamento chiede per un tipo di servizio:
-  in R-TN solo per i servizi per disabili) e l'errore K-CTR-069 (il mezzo non ha l'uso che il tipo di servizio chiede, es.
-  "chiede l'uso NCC") si elencano, e dicono o lasciano capire il tipo di servizio. Sono errori nei dati (il pacchetto non
-  si puo' usare finche' non si correggono), per questo le coppie della prova che li fanno nascere non si possono fare
-  senza errori; la fuga resta nel resoconto di kzero controlla.
+- (K-013, chiuso dal K-014) Senza i dati particolari K-CTR-068 (autorizzazione del committente) e K-CTR-069 (uso del mezzo)
+  dicevano il tipo di servizio: ora si contano soltanto, con K-CTR-072 (vincolo per tipo) e K-CTR-067 varianti 4 e 6.
+- (K-014) Senza i dati particolari si vede che un turno e' scoperto o senza mezzo, ma non il perche' (scelta A di Mauro): chi
+  conosce bene assenze, fermi e scadenze (es. la distrazione di ALFA-05 che scade il 2027-06-30, K-CTR-050, sempre visibile)
+  puo' a volte intuire che il motivo e' un requisito del tipo di servizio (docs/sicurezza.md). Il testo senza il motivo vale per
+  ogni causa appena il pacchetto ha un requisito che dipende dal tipo, anche un vincolo di destinazione che non toglie mai un
+  mezzo: una regola piu' stretta (solo autorizzazione del committente e usi) nasconderebbe meno, da decidere se servira'.
+- (K-014) Le condizioni dei regolamenti con tipi di servizio (assistente a bordo, adulto alla fermata) sono riconosciute tra i
+  requisiti del tipo, ma oggi nessuna uscita le usa: la verifica delle regole dovra' contare soltanto i loro problemi senza i
+  dati particolari.
 - (K-013) Senza i dati particolari i problemi degli orari dei regimi che dipendono dal tipo di servizio si contano
   soltanto: chi pianifica e non chiede --includi-dati-particolari non vede, per esempio, le violazioni del Reg. 561 (come
   per tutti i dati sulla salute dal K-009); kzero ore lo dice in una riga fissa per persona.

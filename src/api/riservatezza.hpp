@@ -14,7 +14,9 @@
 #include <optional>
 #include <set>
 #include <string>
+#include <vector>
 
+#include "controlli.hpp"
 #include "lettore.hpp"
 #include "pacchetto.hpp"
 #include "schemi_dati.hpp"
@@ -89,5 +91,27 @@ private:
 std::string trasportato(const kzero::Source& elemento, const Lettura& lettura);
 // La posizione sta dentro un passeggero o una casa (un livello del percorso marcato "x-kzero-trasportato")?
 bool in_trasportato(const kzero::Source& posizione, const Lettura& lettura);
+
+// --- Turni scoperti o senza mezzo (K-014, scelta A di Mauro del 5/11) ---------------------------------------------------
+// Un turno ricorrente resta scoperto o senza mezzo per un fatto con le date (assenza, disponibilita', patente o autorizzazione
+// scaduta, fermo, uso del mezzo non autorizzato quel giorno, prestito). Due di questi fatti contano solo per alcuni tipi di
+// servizio: l'autorizzazione del committente e l'uso del mezzo (kind_requirements, turni.hpp). Senza i dati particolari (per
+// permesso o per parametro), se il pacchetto ha almeno un requisito che dipende dal tipo, resta visibile che il turno e'
+// scoperto o senza mezzo, in quali giorni e con quale persona o mezzo previsti (serve per lavorare), il perche' no: per ogni
+// turno scoperto o senza mezzo per un fatto con le date lo stesso testo e la stessa posizione (la persona o il mezzo
+// previsto), anche per le cause che non dipendono dal tipo, perche' un testo a parte solo per le cause del tipo direbbe
+// proprio quello. Con i dati particolari tutto come prima. Una regola sola per kzero controlla (K-CTR-078 e 079, anche in
+// kzero ore) e kzero giornata. I turni scoperti perche' nessun modo da' una persona (K-CTR-077) o con il mezzo da assegnare
+// (K-CTR-083) restano come sono: dipendono solo da dati comuni (turni, rotazioni, servizi fissi, assegnazioni).
+bool motivo_dei_turni_riservato(const kzero::Package& pacchetto, const Visibilita& visibilita);
+
+// Varianti del catalogo senza il motivo: K-CTR-078 (turno scoperto) e K-CTR-079 (turno senza mezzo).
+constexpr int kScopertoSenzaMotivo = 5;
+constexpr int kSenzaMezzoSenzaMotivo = 3;
+
+// I problemi K-CTR-078 e K-CTR-079 senza il motivo: la variante senza motivo, la posizione della persona o del mezzo previsto,
+// solo il turno, la persona o il mezzo e i giorni; poi di nuovo raggruppati per giorni (lo stesso turno scoperto per cause
+// diverse diventa un problema solo).
+std::vector<kzero::Problem> turni_senza_motivo(std::vector<kzero::Problem> problemi, const kzero::Package& pacchetto);
 
 }  // namespace kzero::api

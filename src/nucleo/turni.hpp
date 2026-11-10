@@ -107,6 +107,30 @@ PartResolution resolve_part(const ShiftTrip& part, const Trip& trip);
 // del contratto. Nessun valore = nessuna regola (nessun uso richiesto).
 std::optional<std::vector<Code>> allowed_uses(const Service& s, const Index& idx);
 
+// K-014: i requisiti dei dati che dipendono dal tipo di servizio (dato particolare: rivela il servizio per disabili), fuori
+// dagli orari (per gli orari: kind_dependence, orari.hpp). Lo dicono i dati, mai il nome:
+// - gli usi dei mezzi per tipo di servizio: regolamenti (usi_dei_mezzi) e norme (usi_per_servizio), allowed_uses;
+// - l'autorizzazione del committente per tipo di servizio: regolamenti (autorizzazione_del_committente),
+//   required_authorizations;
+// - il vincolo di destinazione di un mezzo che nomina tipi di servizio (ammessi.tipi_servizio);
+// - le condizioni dei regolamenti con tipi di servizio (assistente a bordo, adulto alla fermata). Oggi nessuna uscita le usa:
+//   kzero dimostrazione guarda solo le condizioni sul grado e sui posti.
+// Senza i dati particolari i problemi che nascono da questi requisiti si contano soltanto (Problem::by_service_kind) e, se il
+// pacchetto ne ha almeno uno, i turni scoperti o senza mezzo per un fatto con le date si mostrano tutti con lo stesso testo,
+// senza la causa (DECISIONI.md, K-014).
+struct KindRequirements {
+    std::vector<const Regulation*> vehicle_uses;           // regolamenti con usi dei mezzi per tipo
+    std::vector<const Norms*> service_uses;                // norme con usi per tipo di servizio
+    std::vector<const Regulation*> client_authorization;   // regolamenti con l'autorizzazione del committente per tipo
+    std::vector<const Vehicle*> constraints;               // mezzi con un vincolo di destinazione per tipo
+    std::vector<const Regulation*> conditions;             // regolamenti con condizioni per tipo
+    bool any() const {
+        return !vehicle_uses.empty() || !service_uses.empty() || !client_authorization.empty() || !constraints.empty() ||
+               !conditions.empty();
+    }
+};
+KindRequirements kind_requirements(const Package& p);
+
 // Requisiti di guida: la persona puo' guidare il mezzo secondo le norme? Missing = manca un'abilitazione (sempre
 // sbagliato); Expired = le avrebbe, ma quel giorno una e' scaduta (fatto con la data).
 enum class LicenceStatus { Ok, Missing, Expired };

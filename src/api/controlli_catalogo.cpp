@@ -541,7 +541,10 @@ const std::vector<DefinizioneControllo>& catalogo_controlli() {
               "Manca il numero intero \"schema_versione\" (versioni lette da questo programma: {supportate}). "
               "Il file non e' stato letto."}},
             {Check::SchemaViolation, "K-CTR-007", E, N, "File non conforme allo schema",
-             {"Non rispetta lo schema: {dettaglio}. Il file non e' stato usato."}},
+             {"Non rispetta lo schema: {dettaglio}. Il file non e' stato usato.",
+              // K-014: manca un campo obbligatorio particolare (es. la descrizione del tipo di un servizio "altro").
+              "Non rispetta lo schema: {dettaglio}. Il file non e' stato usato."},
+             {{1, PA}}},
             {Check::UnknownFile, "K-CTR-008", A, N, "File non riconosciuto",
              {"Il file {file} non fa parte del formato e non e' stato letto (nome scritto male?).",
               "La cartella {file} non fa parte del formato e non e' stata letta."}},
@@ -806,7 +809,11 @@ const std::vector<DefinizioneControllo>& catalogo_controlli() {
               "Il turno {turno} e' scoperto {giorni}: l'abilitazione {tipo} della persona prevista {persona} e' scaduta. Rimedio: "
               "un'assegnazione del singolo giorno.",
               "Il turno {turno} e' scoperto {giorni}: l'autorizzazione del committente {tipo} della persona prevista {persona} e' "
-              "scaduta. Rimedio: un'assegnazione del singolo giorno."},
+              "scaduta. Rimedio: un'assegnazione del singolo giorno.",
+              // K-014: senza i dati particolari, se il pacchetto ha requisiti che dipendono dal tipo di servizio (riservatezza.hpp).
+              "Il turno {turno} e' scoperto {giorni}: la persona prevista {persona} non puo' farlo; il motivo e' riservato, perche' "
+              "puo' dipendere dal tipo di servizio (dato particolare; --includi-dati-particolari). Rimedio: un'assegnazione del "
+              "singolo giorno."},
              {{0, PE}, {1, PE}, {3, PE}, {4, PE}},
              {{0, "Il turno {turno} e' scoperto {giorni}: la persona prevista {persona} non puo' farlo (dati personali: riservati). "
                   "Rimedio: un'assegnazione del singolo giorno."},
@@ -822,7 +829,11 @@ const std::vector<DefinizioneControllo>& catalogo_controlli() {
               "Il turno {turno} e' senza mezzo {giorni}: l'autorizzazione del mezzo {mezzo} all'uso {tipo} (distrazione) non vale. "
               "Rimedio: un'assegnazione del singolo giorno con un altro mezzo.",
               "Il turno {turno} e' senza mezzo {giorni}: il prestito del mezzo {mezzo} all'azienda {tipo} non vale. Rimedio: "
-              "un'assegnazione del singolo giorno con un altro mezzo."}},
+              "un'assegnazione del singolo giorno con un altro mezzo.",
+              // K-014: senza i dati particolari, se il pacchetto ha requisiti che dipendono dal tipo di servizio (riservatezza.hpp).
+              "Il turno {turno} e' senza mezzo {giorni}: il mezzo previsto {mezzo} non puo' farlo; il motivo e' riservato, perche' "
+              "puo' dipendere dal tipo di servizio (dato particolare; --includi-dati-particolari). Rimedio: un'assegnazione del "
+              "singolo giorno con un altro mezzo."}},
             {Check::TripWithoutShift, "K-CTR-080", A, N, "Corsa senza turno",
              {"La corsa {corsa} non e' in nessun turno da autista {giorni}."}},
             {Check::PreferenceNotRespected, "K-CTR-081", A, PE, "Preferenza di una persona non rispettata",
@@ -1037,6 +1048,14 @@ const std::vector<DefinizioneControllo>& catalogo_controlli() {
             d.richiede_personali = it->second.personali;
             d.richiede_particolari = it->second.particolari;
         }
+        // K-014: controlli sui turni che possono nascere da un requisito che dipende dal tipo di servizio (kind_requirements,
+        // turni.hpp): l'autorizzazione del committente (K-CTR-068, e scaduta su un'assegnazione del giorno: K-CTR-067), gli usi
+        // dei mezzi (K-CTR-069, e un'autorizzazione all'uso che non vale su un'assegnazione del giorno: K-CTR-067), il vincolo
+        // di destinazione che nomina tipi di servizio (K-CTR-072). Il nucleo lo dice problema per problema (by_service_kind).
+        for (DefinizioneControllo& d : c)
+            if (d.controllo == Check::DayAssignmentAgainstFact || d.controllo == Check::DriverWithoutLicence ||
+                d.controllo == Check::VehicleWithoutUseForService || d.controllo == Check::VehicleAgainstConstraint)
+                d.dal_tipo = true;
         std::sort(c.begin(), c.end(), [](const DefinizioneControllo& a, const DefinizioneControllo& b) { return a.codice < b.codice; });
         return c;
     }();
