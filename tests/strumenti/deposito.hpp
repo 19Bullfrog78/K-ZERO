@@ -61,8 +61,21 @@ struct Resoconto {
     std::vector<std::string> collegamenti; // collegamenti simbolici: non seguiti, percorso controllato
 };
 
-// Controlla tutti i file della cartella, tranne .git (a ogni livello), le cartelle in cima che cominciano con "build" e
-// le cartelle "escluse" (es. la cartella della costruzione, se sta dentro). Un file e' binario se contiene un byte zero e
+// Le cartelle che il controllo salta a ogni livello, oltre a .git e alle cartelle escluse (K-016): esattamente quelle che
+// .gitignore ignora, "build" e "build-*" (l'asterisco vale per qualsiasi fila di caratteri, anche vuota). Chi cambia una
+// delle due cambia anche l'altra: la prova Deposito.CartelleSaltateComeGitignore le confronta.
+const std::vector<std::string>& cartelle_saltate();
+
+// Vero se il nome di una cartella (solo il nome, senza percorso) e' tra le cartelle saltate. Maiuscole e minuscole
+// contano, come per git su Linux.
+bool cartella_saltata(std::string_view nome);
+
+// Le righe di un .gitignore che riguardano le cartelle: tutte le righe attive (non vuote, non commenti) tranne le
+// eccezioni ("!...") e i formati dei file ("*...."), senza gli spazi in fondo, nell'ordine del file.
+std::vector<std::string> righe_delle_cartelle(std::string_view gitignore);
+
+// Controlla tutti i file della cartella, tranne .git (a ogni livello), le cartelle saltate (a ogni livello) e le cartelle
+// "escluse" (es. la cartella della costruzione, se sta dentro). Un file e' binario se contiene un byte zero e
 // non e' UTF-8: di un file binario si controlla solo il percorso. Fuori da tests/ ed esempi/ (in cima) i formati dei dati
 // e i manifesti di un pacchetto sono un problema. Ordine stabile: file in ordine di percorso, poi riga.
 Resoconto controlla_cartella(const std::filesystem::path& radice, const std::vector<std::filesystem::path>& escluse,

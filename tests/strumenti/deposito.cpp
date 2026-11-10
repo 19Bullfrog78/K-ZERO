@@ -159,6 +159,22 @@ void controlla_file(const std::string& relativo, Resoconto& r) {
         r.problemi.push_back({relativo, 0, "file di un formato di dati (" + estensione + ") " + k_regola_file});
 }
 
+// Un nome corrisponde a un modello in cui "*" vale per qualsiasi fila di caratteri, anche vuota (come in .gitignore).
+bool corrisponde(std::string_view modello, std::string_view nome) {
+    if (modello.empty()) return nome.empty();
+    if (modello.front() == '*') {
+        for (std::size_t i = 0; i <= nome.size(); ++i)
+            if (corrisponde(modello.substr(1), nome.substr(i))) return true;
+        return false;
+    }
+    return !nome.empty() && modello.front() == nome.front() && corrisponde(modello.substr(1), nome.substr(1));
+}
+
+std::string_view senza_spazi_in_fondo(std::string_view riga) {
+    while (!riga.empty() && (riga.back() == ' ' || riga.back() == '\t' || riga.back() == '\r')) riga.remove_suffix(1);
+    return riga;
+}
+
 bool escluso(const fs::path& p, const std::vector<fs::path>& escluse) {
     std::error_code e;
     for (const fs::path& x : escluse)
@@ -177,6 +193,30 @@ Impronta impronta(std::string_view testo) {
     Impronta i{};
     crypto_hash_sha256(i.data(), reinterpret_cast<const unsigned char*>(testo.data()), testo.size());
     return i;
+}
+
+const std::vector<std::string>& cartelle_saltate() {
+    static const std::vector<std::string> c = {"build", "build-*"};
+    return c;
+}
+
+bool cartella_saltata(std::string_view nome) {
+    for (const std::string& modello : cartelle_saltate())
+        if (corrisponde(modello, nome)) return true;
+    return false;
+}
+
+std::vector<std::string> righe_delle_cartelle(std::string_view gitignore) {
+    std::vector<std::string> righe;
+    while (!gitignore.empty()) {
+        const std::size_t a_capo = gitignore.find('\n');
+        const std::string_view riga = senza_spazi_in_fondo(gitignore.substr(0, a_capo));
+        gitignore.remove_prefix(a_capo == std::string_view::npos ? gitignore.size() : a_capo + 1);
+        if (riga.empty() || riga.front() == '#' || riga.front() == '!') continue;
+        if (riga.size() > 2 && riga.substr(0, 2) == "*.") continue;
+        righe.emplace_back(riga);
+    }
+    return righe;
 }
 
 const std::vector<Nome>& nomi_del_deposito() {
@@ -232,7 +272,7 @@ Resoconto controlla_cartella(const fs::path& radice, const std::vector<fs::path>
             continue;
         }
         if (it->is_directory()) {
-            if (nome == ".git" || (it.depth() == 0 && nome.rfind("build", 0) == 0) || escluso(p, escluse))
+            if (nome == ".git" || cartella_saltata(nome) || escluso(p, escluse))
                 it.disable_recursion_pending();
             continue;
         }

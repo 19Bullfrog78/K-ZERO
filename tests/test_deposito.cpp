@@ -1,13 +1,15 @@
 // K-Zero - prova del controllo del deposito pubblico (K-015, tests/strumenti/deposito.hpp) con una lista finta: nomi
 // inventati, scritti qui in chiaro, al posto dei quattro nomi veri (di cui il controllo conosce solo le impronte).
 // Un caso per ogni regola: parola intera, maiuscole e minuscole, nome di due parole anche a capo e nei commenti, percorsi,
-// file binari, formati dei dati e manifesti fuori da tests/ ed esempi/, cartelle escluse, testo dei messaggi.
+// file binari, formati dei dati e manifesti fuori da tests/ ed esempi/, cartelle saltate (le stesse di .gitignore, K-016)
+// ed escluse, testo dei messaggi.
 #include <gtest/gtest.h>
 
 #include <algorithm>
 #include <cctype>
 #include <filesystem>
 #include <fstream>
+#include <iterator>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -170,22 +172,32 @@ TEST(Deposito, CartellaFileFormatiManifestiEsclusioni) {
     c.scrivi("docs/binario.dat", std::string("\0\xff\xfe zorbalino", 14));       // binario: non letto
     c.scrivi("docs/argomenti", std::string("controlla\0zorbalino\0", 20));       // byte zero ma UTF-8: letto
     c.scrivi("docs/latino.txt", "caff\xe8 zorbalino\n");                         // non UTF-8, senza byte zero: letto
-    c.scrivi("build/note.md", "zorbalino\n");                        // escluse: build*/ in cima, .git, --escludi
+    // Saltate: build/ e build-*/ a ogni livello (come .gitignore), .git, --escludi.
+    c.scrivi("build/note.md", "zorbalino\n");
     c.scrivi("build-san/dati.xlsx", "");
+    c.scrivi("docs/build/note.md", "zorbalino\n");
+    c.scrivi("tests/a/build-x/note.md", "zorbalino\n");
+    c.scrivi("src/build-/note.md", "zorbalino\n");
     c.scrivi(".git/config", "zorbalino\n");
     c.scrivi("costruzione/x.md", "zorbalino\n");
-    c.scrivi("docs/build/note.md", "zorbalino\n");                  // non in cima: controllata
+    // Controllate: nomi che .gitignore non ignora, e un file (non una cartella) che si chiama build.
+    c.scrivi("buildx/note.md", "zorbalino\n");
+    c.scrivi("Build/note.md", "zorbalino\n");
+    c.scrivi("docs/build.vecchio/note.md", "zorbalino\n");
+    c.scrivi("docs/altro/build", "zorbalino\n");
     c.scrivi("docs/elenco.csv.md", "va bene\n");
     std::error_code e;
     fs::create_symlink(c.radice() / "docs" / "note.md", c.radice() / "docs" / "collegamento.pdf", e);
     const bool collegamento = !e;
 
     const Resoconto r = controlla_cartella(c.radice(), {c.radice() / "costruzione"}, finti());
-    std::vector<std::string> attesi = {"Pacchetto.json:0", "cassaforte.kzc:0", "docs/ELENCO.PDF:0",
-                                       "docs/argomenti:1",  "docs/build/note.md:1",
-                                       "docs/dati.xlsx:0",  "docs/latino.txt:1", "docs/note.md:3",
-                                       "docs/pacchetto.json:0", "docs/zorbalino/vuoto.txt:0", "src/codice.cpp:1"};
-    if (collegamento) attesi.insert(attesi.begin() + 5, "docs/collegamento.pdf:0");
+    std::vector<std::string> attesi = {"Build/note.md:1", "Pacchetto.json:0", "buildx/note.md:1", "cassaforte.kzc:0",
+                                       "docs/ELENCO.PDF:0", "docs/altro/build:1", "docs/argomenti:1",
+                                       "docs/build.vecchio/note.md:1", "docs/dati.xlsx:0", "docs/latino.txt:1",
+                                       "docs/note.md:3", "docs/pacchetto.json:0", "docs/zorbalino/vuoto.txt:0",
+                                       "src/codice.cpp:1"};
+    if (collegamento)
+        attesi.insert(std::find(attesi.begin(), attesi.end(), "docs/dati.xlsx:0"), "docs/collegamento.pdf:0");
     EXPECT_EQ(dove_e_riga(r), attesi);
     EXPECT_EQ(r.binari, (std::vector<std::string>{"cassaforte.kzc", "docs/binario.dat", "tests/esempi/p/cassaforte.kzc"}));
     if (collegamento) { EXPECT_EQ(r.collegamenti, (std::vector<std::string>{"docs/collegamento.pdf"})); }
@@ -203,6 +215,41 @@ TEST(Deposito, CartellaFileFormatiManifestiEsclusioni) {
     for (const Problema& q : r.problemi)
         if (q.dove != "docs/zorbalino/vuoto.txt") senza_percorso.push_back(q);
     senza_nomi(senza_percorso);
+}
+
+TEST(Deposito, CartellaSaltata) {
+    for (const char* si : {"build", "build-", "build-san", "build-fuzz", "build-x-y"})
+        EXPECT_TRUE(cartella_saltata(si)) << si;
+    for (const char* no : {"buildx", "Build", "BUILD", "xbuild", "build.vecchio", "build_san", "costruzione", ""})
+        EXPECT_FALSE(cartella_saltata(no)) << no;
+}
+
+TEST(Deposito, RigheDelleCartelle) {
+    const std::string gitignore =
+        "build/\r\n"
+        "# commento con build/\n"
+        "\n"
+        "   \n"
+        "*.[cC][sS][vV]\n"
+        "!/tests/**/*.[cC][sS][vV]\n"
+        "build-*/   \n"
+        "node_modules\n"
+        "/altro/\n";
+    EXPECT_EQ(righe_delle_cartelle(gitignore), (std::vector<std::string>{"build/", "build-*/", "node_modules", "/altro/"}));
+    EXPECT_TRUE(righe_delle_cartelle("").empty());
+}
+
+// La rete del .gitignore e quella del controllo saltano le stesse cartelle: legge il .gitignore del deposito (basta
+// l'albero dei file, anche senza .git) e confronta le sue righe sulle cartelle con le cartelle saltate dal controllo.
+TEST(Deposito, CartelleSaltateComeGitignore) {
+    std::ifstream in(fs::path(KZERO_SORGENTI) / ".gitignore", std::ios::binary);
+    ASSERT_TRUE(in) << ".gitignore non si legge";
+    const std::string testo((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
+    std::vector<std::string> attese;
+    for (const std::string& c : cartelle_saltate()) attese.push_back(c + "/");
+    EXPECT_EQ(righe_delle_cartelle(testo), attese)
+        << "le cartelle ignorate da .gitignore e quelle saltate dal controllo (cartelle_saltate in "
+           "tests/strumenti/deposito.cpp) devono essere le stesse: chi cambia una delle due cambia anche l'altra";
 }
 
 TEST(Deposito, ProgrammaCodiciDiUscita) {
