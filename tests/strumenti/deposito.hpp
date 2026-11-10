@@ -4,7 +4,8 @@
 //   - quattro nomi che non si scrivono nei file del deposito ne' nei messaggi dei commit e nei titoli delle proposte
 //     (a, b, c, d: chi sono e cosa si scrive al loro posto e' detto nella tabella di deposito.cpp);
 //   - fuori da tests/ ed esempi/, i file dei formati dei dati (fogli di calcolo, documenti, cassaforte, registro) e i
-//     manifesti di un pacchetto (pacchetto.json).
+//     manifesti di un pacchetto (pacchetto.json);
+//   - (K-016) i file che non sono testo UTF-8 ne' binari dell'elenco dei binari ammessi.
 // I nomi non sono scritti in chiaro: il controllo conosce solo l'impronta SHA-256 di ogni nome in minuscolo (libsodium).
 // Ogni parola dei testi (lettere e cifre sono parole diverse) si porta in minuscolo e se ne calcola l'impronta; per un
 // nome di due parole l'impronta delle due parole vicine, anche a capo o con un segno di commento in mezzo. I messaggi dicono file, riga e quale nome (a-d), mai
@@ -54,11 +55,23 @@ struct Problema {
 // parole vale anche a capo o con in mezzo soli spazi e segni di commento (/ * # - > e le virgolette).
 std::vector<Problema> cerca_nomi(std::string_view testo, std::string_view dove, const std::vector<Nome>& nomi);
 
+// I binari ammessi (K-016): ogni file del deposito e' testo UTF-8 valido, tranne i file con una di queste estensioni
+// (scritte cosi', in minuscolo) dentro una di queste cartelle in cima. L'elenco si allarga solo con un mandato
+// (CLAUDE.md, Confini).
+struct BinarioAmmesso {
+    std::string estensione;
+    std::vector<std::string> cartelle;
+};
+const std::vector<BinarioAmmesso>& binari_ammessi();
+
+// Vero se il file (percorso relativo alla cima del deposito, con "/") sta nell'elenco dei binari ammessi.
+bool binario_ammesso(std::string_view relativo);
+
 // Resoconto del controllo di una cartella.
 struct Resoconto {
     std::vector<Problema> problemi;
-    std::size_t letti = 0;                 // file letti come testo
-    std::vector<std::string> binari;       // file saltati perche' binari (contenuto non letto, percorso controllato)
+    std::size_t letti = 0;                 // file letti come testo (anche i testi UTF-16 e UTF-32 con BOM, decodificati)
+    std::vector<std::string> binari;       // binari ammessi non UTF-8 (contenuto non letto, percorso controllato)
     std::vector<std::string> collegamenti; // collegamenti simbolici: non seguiti, percorso controllato
 };
 
@@ -76,9 +89,12 @@ bool cartella_saltata(std::string_view nome);
 std::vector<std::string> righe_delle_cartelle(std::string_view gitignore);
 
 // Controlla tutti i file della cartella, tranne .git (a ogni livello), le cartelle saltate (a ogni livello) e le cartelle
-// "escluse" (es. la cartella della costruzione, se sta dentro). Un file e' binario se contiene un byte zero e
-// non e' UTF-8: di un file binario si controlla solo il percorso. Fuori da tests/ ed esempi/ (in cima) i formati dei dati
-// e i manifesti di un pacchetto sono un problema. Ordine stabile: file in ordine di percorso, poi riga.
+// "escluse" (es. la cartella della costruzione, se sta dentro). Ogni file che e' UTF-8 valido si legge come testo (K-016),
+// anche se ha un byte zero o un'estensione dei binari ammessi. Un file che non e' UTF-8 valido: se e' un binario ammesso
+// se ne controlla solo il percorso (i byte casuali di una cassaforte possono contenere per caso una sigla); altrimenti e'
+// un problema, e se comincia con il BOM di UTF-16 o UTF-32 lo si decodifica e si cercano anche i nomi. Fuori da tests/
+// ed esempi/ (in cima) i formati dei dati e i manifesti di un pacchetto sono un problema. Ordine stabile: file in ordine
+// di percorso, poi riga.
 Resoconto controlla_cartella(const std::filesystem::path& radice, const std::vector<std::filesystem::path>& escluse,
                              const std::vector<Nome>& nomi);
 

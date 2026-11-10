@@ -7,6 +7,7 @@
 
 #include <algorithm>
 #include <cctype>
+#include <cstdint>
 #include <filesystem>
 #include <fstream>
 #include <iterator>
@@ -216,14 +217,15 @@ TEST(Deposito, CartellaFileFormatiManifestiEsclusioni) {
 
     const Resoconto r = controlla_cartella(c.radice(), {c.radice() / "costruzione"}, finti());
     std::vector<std::string> attesi = {"Build/note.md:1", "Pacchetto.json:0", "buildx/note.md:1", "cassaforte.kzc:0",
-                                       "docs/ELENCO.PDF:0", "docs/altro/build:1", "docs/argomenti:1",
-                                       "docs/build.vecchio/note.md:1", "docs/dati.xlsx:0", "docs/latino.txt:1",
-                                       "docs/note.md:3", "docs/pacchetto.json:0", "docs/zorbalino/vuoto.txt:0",
-                                       "src/codice.cpp:1"};
+                                       "cassaforte.kzc:0", "docs/ELENCO.PDF:0", "docs/altro/build:1",
+                                       "docs/argomenti:1", "docs/binario.dat:0", "docs/build.vecchio/note.md:1",
+                                       "docs/dati.xlsx:0", "docs/latino.txt:0", "docs/note.md:3",
+                                       "docs/pacchetto.json:0", "docs/zorbalino/vuoto.txt:0", "src/codice.cpp:1"};
     if (collegamento)
         attesi.insert(std::find(attesi.begin(), attesi.end(), "docs/dati.xlsx:0"), "docs/collegamento.pdf:0");
     EXPECT_EQ(dove_e_riga(r), attesi);
-    EXPECT_EQ(r.binari, (std::vector<std::string>{"cassaforte.kzc", "docs/binario.dat", "tests/esempi/p/cassaforte.kzc"}));
+    // Binario ammesso solo la cassaforte dentro tests/; quella in cima e docs/binario.dat non sono testo UTF-8 (K-016).
+    EXPECT_EQ(r.binari, (std::vector<std::string>{"tests/esempi/p/cassaforte.kzc"}));
     if (collegamento) { EXPECT_EQ(r.collegamenti, (std::vector<std::string>{"docs/collegamento.pdf"})); }
     for (const Problema& q : r.problemi) {
         std::string atteso;
@@ -232,6 +234,8 @@ TEST(Deposito, CartellaFileFormatiManifestiEsclusioni) {
         if (q.dove == "docs/pacchetto.json") atteso = "manifesto di un pacchetto";
         if (q.dove == "docs/zorbalino/vuoto.txt") atteso = "nel percorso c'e' il nome x";
         if (q.dove == "src/codice.cpp") atteso = "c'e' il nome z";
+        if (q.dove == "docs/binario.dat" || q.dove == "docs/latino.txt")
+            atteso = "non e' testo UTF-8 ne' un binario ammesso";
         EXPECT_NE(q.cosa.find(atteso), std::string::npos) << q.dove << ": " << q.cosa;
     }
     // Il messaggio non ripete il nome, tranne nel percorso del file, che e' il dato da correggere.
@@ -239,6 +243,116 @@ TEST(Deposito, CartellaFileFormatiManifestiEsclusioni) {
     for (const Problema& q : r.problemi)
         if (q.dove != "docs/zorbalino/vuoto.txt") senza_percorso.push_back(q);
     senza_nomi(senza_percorso);
+}
+
+namespace {
+
+// Un testo in UTF-16 o UTF-32, con il suo BOM; in UTF-16 un carattere oltre U+FFFF diventa una coppia di surrogati.
+std::string codificato(const std::u32string& testo, std::size_t passo, bool grande) {
+    std::string t;
+    auto unita = [&](std::uint32_t u) {
+        for (std::size_t j = 0; j < passo; ++j) {
+            const std::size_t spostamento = 8 * (grande ? passo - 1 - j : j);
+            t.push_back(static_cast<char>((u >> spostamento) & 0xFF));
+        }
+    };
+    unita(0xFEFF);
+    for (const char32_t c : testo) {
+        const std::uint32_t u = c;
+        if (passo == 2 && u > 0xFFFF) {
+            unita(0xD800 + ((u - 0x10000) >> 10));
+            unita(0xDC00 + ((u - 0x10000) & 0x3FF));
+        } else {
+            unita(u);
+        }
+    }
+    return t;
+}
+
+}  // namespace
+
+// K-016: ogni file e' testo UTF-8, tranne i binari ammessi (.kzc e .kzr in tests/ ed esempi/); un testo UTF-16 o UTF-32
+// con il BOM e' un problema e se ne cercano anche i nomi; ogni altro file non UTF-8 e' un problema.
+TEST(Deposito, TestiUtf8EBinariAmmessi) {
+    Cartella c;
+    c.scrivi("docs/utf16le.txt", codificato(U"zorbalino\r\nriga di vrk\r\n", 2, false));
+    c.scrivi("docs/utf16be.md", codificato(U"prima\nVallerossa\nTrasportini\n", 2, true));
+    c.scrivi("docs/utf32le.txt", codificato(U"nessun nome\n", 4, false));
+    c.scrivi("docs/utf32be.txt", codificato(U"ZORBALINO\n", 4, true));
+    // Un carattere oltre U+FFFF (U+1D400, una lettera) attaccato al nome: decodificata la coppia di surrogati, e' una
+    // parola sola e il nome non c'e'; la cifra U+1D7CE invece separa.
+    c.scrivi("docs/surrogati16.txt", codificato(U"zorbalino\U0001D400\n\U0001D7CEvrk\n", 2, false));
+    c.scrivi("docs/surrogati32.txt", codificato(U"zorbalino\U0001D400\n\U0001D7CEvrk\n", 4, true));
+    // UTF-16 rovinato: un surrogato senza coppia e un byte a meta' in fondo; si decodifica quello che si puo'.
+    c.scrivi("docs/rotto16.txt", std::string("\xff\xfe" "z\0\x00\xd8" "v\0r\0k\0" "\x41", 13));
+    c.scrivi("docs/immagine.png", std::string("\x89PNG\r\n\x1a\n\0\0\0\rIHDR", 16));
+    c.scrivi("docs/latino.txt", "caff\xe8 zorbalino\n");                    // Latin-1: problema, nomi non cercati
+    c.scrivi("docs/finto.kzc", std::string("\0\xff", 2));                  // fuori da tests/ ed esempi/: due problemi
+    c.scrivi("tests/esempi/p/cassaforte.kzc", std::string("\0\xff zorbalino", 12));   // ammessi: solo il percorso
+    c.scrivi("tests/esempi/p/registro.kzr", std::string("\xff\0", 2));
+    c.scrivi("esempi/q/cassaforte.kzc", "\xfe");
+    c.scrivi("tests/esempi/p/testo.kzc", "zorbalino\n");          // UTF-8 valido: si legge come testo
+    c.scrivi("tests/X.KZC", "\xff");                               // estensione in maiuscolo: non ammessa
+    c.scrivi("tests/immagine.png", "\x89PNG\xff");                  // anche in tests/ solo .kzc e .kzr
+    c.scrivi("testsx/a.kzr", "\xff");                              // cartella diversa: due problemi
+    c.scrivi("docs/argomenti", std::string("controlla\0esempi\0", 18));   // byte zero ma UTF-8: testo, va bene
+
+    const Resoconto r = controlla_cartella(c.radice(), {}, finti());
+    EXPECT_EQ(dove_e_riga(r), (std::vector<std::string>{
+                                  "docs/finto.kzc:0", "docs/finto.kzc:0", "docs/immagine.png:0", "docs/latino.txt:0",
+                                  "docs/rotto16.txt:0", "docs/rotto16.txt:1", "docs/surrogati16.txt:0",
+                                  "docs/surrogati16.txt:2", "docs/surrogati32.txt:0", "docs/surrogati32.txt:2",
+                                  "docs/utf16be.md:0", "docs/utf16be.md:2",
+                                  "docs/utf16le.txt:0", "docs/utf16le.txt:1", "docs/utf16le.txt:2", "docs/utf32be.txt:0",
+                                  "docs/utf32be.txt:1", "docs/utf32le.txt:0", "tests/X.KZC:0",
+                                  "tests/esempi/p/testo.kzc:1", "tests/immagine.png:0", "testsx/a.kzr:0",
+                                  "testsx/a.kzr:0"}));
+    EXPECT_EQ(r.binari, (std::vector<std::string>{"esempi/q/cassaforte.kzc", "tests/esempi/p/cassaforte.kzc",
+                                                  "tests/esempi/p/registro.kzr"}));
+    for (const Problema& q : r.problemi) {
+        if (q.riga > 0) {
+            EXPECT_EQ(q.cosa.rfind("c'e' il nome ", 0), 0u) << q.dove << ": " << q.cosa;
+            continue;
+        }
+        if (q.cosa.find("file di un formato di dati") != std::string::npos) {   // fuori da tests/ ed esempi/
+            EXPECT_TRUE(q.dove == "docs/finto.kzc" || q.dove == "testsx/a.kzr") << q.dove;
+            continue;
+        }
+        EXPECT_NE(q.cosa.find("non e' testo UTF-8 ne' un binario ammesso (binari ammessi: .kzc in tests/ o esempi/, "
+                              ".kzr in tests/ o esempi/)"),
+                  std::string::npos)
+            << q.dove << ": " << q.cosa;
+        const bool bom = q.dove.find("utf") != std::string::npos || q.dove.find("16") != std::string::npos ||
+                         q.dove.find("32") != std::string::npos;
+        EXPECT_EQ(q.cosa.find(" con BOM: ") != std::string::npos, bom) << q.dove << ": " << q.cosa;
+    }
+    auto cosa = [&r](const std::string& dove, std::size_t riga) {
+        for (const Problema& q : r.problemi)
+            if (q.dove == dove && q.riga == riga) return q.cosa;
+        return std::string();
+    };
+    EXPECT_NE(cosa("docs/utf16le.txt", 0).find("testo UTF-16 little endian con BOM"), std::string::npos);
+    EXPECT_NE(cosa("docs/utf16be.md", 0).find("testo UTF-16 big endian con BOM"), std::string::npos);
+    EXPECT_NE(cosa("docs/utf32le.txt", 0).find("testo UTF-32 little endian con BOM"), std::string::npos);
+    EXPECT_NE(cosa("docs/utf32be.txt", 0).find("testo UTF-32 big endian con BOM"), std::string::npos);
+    EXPECT_NE(cosa("docs/utf16le.txt", 1).find("nome x"), std::string::npos);
+    EXPECT_NE(cosa("docs/utf16le.txt", 2).find("nome y"), std::string::npos);
+    EXPECT_NE(cosa("docs/utf16be.md", 2).find("nome z"), std::string::npos);
+    EXPECT_NE(cosa("docs/utf32be.txt", 1).find("nome x"), std::string::npos);
+    EXPECT_NE(cosa("docs/rotto16.txt", 1).find("nome y"), std::string::npos);
+    EXPECT_NE(cosa("docs/surrogati16.txt", 2).find("nome y"), std::string::npos);
+    EXPECT_NE(cosa("docs/surrogati32.txt", 2).find("nome y"), std::string::npos);
+    EXPECT_EQ(r.letti, 9u);   // i 7 testi con BOM, testo.kzc e argomenti
+    senza_nomi(r.problemi);
+}
+
+TEST(Deposito, BinariAmmessi) {
+    for (const char* si : {"tests/esempi/k010-cassaforte/cassaforte.kzc", "tests/esempi/k010-cassaforte/registro.kzr",
+                           "esempi/x/cassaforte.kzc", "tests/a.kzr"})
+        EXPECT_TRUE(binario_ammesso(si)) << si;
+    for (const char* no : {"cassaforte.kzc", "docs/cassaforte.kzc", "tests/X.KZC", "tests/immagine.png",
+                           "testsx/a.kzc", "tests/a.kzc.txt", "tests/.kzc", "src/tests/a.kzc"})
+        EXPECT_FALSE(binario_ammesso(no)) << no;
 }
 
 TEST(Deposito, CartellaSaltata) {
@@ -289,7 +403,9 @@ TEST(Deposito, ProgrammaCodiciDiUscita) {
     c.scrivi("docs/note.md", "niente\n");
     std::ostringstream pulita;
     EXPECT_EQ(esegui({"--cartella", c.radice().string()}, vuoto, finti(), pulita), 0);
-    EXPECT_NE(pulita.str().find("Nessun nome e nessun file di dati."), std::string::npos);
+    EXPECT_NE(pulita.str().find("Nessun nome, nessun file di dati e nessun file che non e' testo UTF-8 ne' un binario "
+                                "ammesso."),
+              std::string::npos);
     c.scrivi("docs/altro.md", "riga\nZORBALINO\n");
     std::ostringstream sporca;
     EXPECT_EQ(esegui({"--cartella", c.radice().string()}, vuoto, finti(), sporca), 1);
