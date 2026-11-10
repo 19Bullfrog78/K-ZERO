@@ -6,6 +6,7 @@
 #include <cstdio>
 #include <fstream>
 #include <iterator>
+#include <map>
 #include <sstream>
 #include <system_error>
 
@@ -264,6 +265,14 @@ std::string elenco_dei_binari() {
     return e;
 }
 
+std::string messaggio_byte_zero() {
+    std::string elenco;
+    for (const std::string& c : cartelle_con_byte_zero()) elenco += (elenco.empty() ? "" : ", ") + c;
+    return "testo con un byte zero fuori dalle cartelle ammesse (" + elenco +
+           "): un testo con byte zero (es. UTF-16 o UTF-32 senza BOM) si salva di nuovo in UTF-8 (CLAUDE.md, Confini); "
+           "i nomi si cercano anche senza i byte zero";
+}
+
 std::string messaggio_non_utf8() {
     return "non e' testo UTF-8 ne' un binario ammesso (binari ammessi: " + elenco_dei_binari() +
            "): i testi del deposito si salvano in UTF-8 (CLAUDE.md, Confini)";
@@ -332,6 +341,18 @@ bool binario_ammesso(std::string_view relativo) {
     return false;
 }
 
+const std::vector<std::string>& cartelle_con_byte_zero() {
+    // I semi e i casi del fuzzing: argomenti della riga di comando separati da byte zero, file deformati apposta.
+    static const std::vector<std::string> c = {"tests/fuzz/"};
+    return c;
+}
+
+bool byte_zero_ammesso(std::string_view relativo) {
+    for (const std::string& c : cartelle_con_byte_zero())
+        if (relativo.size() > c.size() && relativo.substr(0, c.size()) == c) return true;
+    return false;
+}
+
 const std::vector<Nome>& nomi_del_deposito() {
     // Impronte SHA-256 dei nomi in minuscolo; per d le due parole con uno spazio, e anche attaccate (es. in un indirizzo).
     static const std::vector<Nome> nomi = {
@@ -367,6 +388,24 @@ std::vector<Problema> cerca_nomi(std::string_view testo, std::string_view dove, 
             if (n.parole == 2 && n.impronta == coppia)
                 trovati.push_back({std::string(dove), parole[i].riga, messaggio_nome(n)});
     }
+    return trovati;
+}
+
+std::vector<Problema> cerca_nomi_anche_senza_zeri(std::string_view testo, std::string_view dove,
+                                                  const std::vector<Nome>& nomi) {
+    std::vector<Problema> trovati = cerca_nomi(testo, dove, nomi);
+    if (testo.find('\0') == std::string_view::npos) return trovati;
+    std::string senza;
+    senza.reserve(testo.size());
+    for (const char c : testo)
+        if (c != '\0') senza.push_back(c);
+    // Per ogni riga e nome conta il numero piu' alto dei due modi: dal testo senza zeri si aggiungono solo quelli in piu'.
+    std::map<std::pair<std::size_t, std::string>, std::size_t> com_e, senza_zeri;
+    for (const Problema& q : trovati) ++com_e[{q.riga, q.cosa}];
+    for (Problema& q : cerca_nomi(senza, dove, nomi))
+        if (++senza_zeri[{q.riga, q.cosa}] > com_e[{q.riga, q.cosa}]) trovati.push_back(std::move(q));
+    std::stable_sort(trovati.begin(), trovati.end(),
+                     [](const Problema& x, const Problema& y) { return x.riga < y.riga; });
     return trovati;
 }
 
@@ -411,7 +450,9 @@ Resoconto controlla_cartella(const fs::path& radice, const std::vector<fs::path>
         const std::string contenuto((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
         if (utf8_valido(contenuto)) {
             ++r.letti;
-            for (Problema& q : cerca_nomi(contenuto, relativo, nomi)) r.problemi.push_back(std::move(q));
+            if (contenuto.find('\0') != std::string::npos && !byte_zero_ammesso(relativo))
+                r.problemi.push_back({relativo, 0, messaggio_byte_zero()});
+            for (Problema& q : cerca_nomi_anche_senza_zeri(contenuto, relativo, nomi)) r.problemi.push_back(std::move(q));
             continue;
         }
         if (binario_ammesso(relativo)) {
@@ -426,7 +467,8 @@ Resoconto controlla_cartella(const fs::path& radice, const std::vector<fs::path>
         r.problemi.push_back({relativo, 0, std::string("testo ") + nome_di(k) + " con BOM: " + messaggio_non_utf8() +
                                                "; i nomi si cercano anche nel testo decodificato"});
         ++r.letti;
-        for (Problema& q : cerca_nomi(decodifica(contenuto, k), relativo, nomi)) r.problemi.push_back(std::move(q));
+        for (Problema& q : cerca_nomi_anche_senza_zeri(decodifica(contenuto, k), relativo, nomi))
+            r.problemi.push_back(std::move(q));
     }
     std::stable_sort(r.problemi.begin(), r.problemi.end(), [](const Problema& x, const Problema& y) {
         return x.dove != y.dove ? x.dove < y.dove : x.riga < y.riga;

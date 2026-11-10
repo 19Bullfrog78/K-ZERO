@@ -627,6 +627,26 @@
   senza maiuscole e minuscole 2, cartelle saltate solo in cima 1, niente BOM UTF-16, UTF-32 letto come UTF-16, big endian
   letto come little, surrogati non uniti 1 ciascuno (quest'ultimo all'inizio non era scoperto: aggiunto il caso dei
   surrogati alla prova). Tutti scoperti; nessun messaggio ha scritto un nome.
+- 2026-11-10 - K-016 aggiunta 1 (byte zero nei testi, stessa proposta). Il controllo dell'arbitro ha confermato il buco
+  segnalato: un testo UTF-16 senza BOM di lettere semplici e' anche UTF-8 valido e passava (uscita 0). **1. Byte zero solo
+  in un elenco di cartelle**, nello strumento come i binari ammessi: conta l'inizio del percorso, oggi solo tests/fuzz/;
+  fuori di li' un testo UTF-8 con un byte zero e' un problema ("un testo con byte zero (es. UTF-16 o UTF-32 senza BOM) si
+  salva di nuovo in UTF-8"). Gli 8 testi con byte zero di oggi stanno tutti sotto tests/fuzz/ (7 semi dei parametri e un
+  caso del fuzzing; gli altri due file con byte zero sono la cassaforte e il registro, binari ammessi). **2. Nomi anche
+  senza i byte zero**: in ogni testo con byte zero (anche in tests/fuzz/) i nomi si cercano nel testo com'e' e con i byte
+  zero tolti, con le righe del file; un nome trovato nei due modi alla stessa riga si segnala una volta. Sugli 8 file di
+  oggi nessun falso allarme. **3. Documenti**: CLAUDE.md (Confini), DECISIONI.md (corretta la riga K-016, che diceva un
+  byte zero buono ovunque), docs/sicurezza.md (tolto il limite, scritto cosa resta: un nome senza BOM di lettere non
+  semplici), commento di deposito.hpp. Prove cambiate: CartellaFileFormatiManifestiEsclusioni ("docs/argomenti", UTF-8
+  con byte zero e un nome, ora anche il problema del byte zero) e TestiUtf8EBinariAmmessi (lo stesso caso senza nome
+  spostato in tests/fuzz/semi/parametri/, dove resta buono); nuove ByteZero e CartelleConByteZero. Prove: 977 su 977
+  (prima 975), compilate senza avvisi; con i sanitizer 975 su 975 (senza le 2 prove sul programma di rilascio); fuzzing
+  in locale, 32 bersagli 20 secondi ciascuno: nessun guasto. Sabotaggi sul codice finale in una cartella temporanea: UTF-16 LE e BE senza BOM con un nome in docs/ 2
+  problemi ciascuno (byte zero e nome, alla riga giusta); lo stesso in tests/fuzz/semi/ 1 (il nome); UTF-8 con un byte
+  zero senza nome in docs/ 1 e in tests/ fuori da tests/fuzz/ 1; un nome attaccato a un byte zero in tests/fuzz/ 1;
+  UTF-32 LE senza BOM con un nome in tests/fuzz/casi/ 1; codice finale 0. Nello strumento: nomi non cercati senza gli
+  zeri 1 prova rossa, doppioni non tolti 1, byte zero ammesso ovunque 2, tutta tests/ ammessa 2, inizio del percorso
+  senza la barra 2. Tutti scoperti; nessun messaggio ha scritto un nome.
 
 ## Bug e limiti noti
 - (K-015) Il deposito e' pubblico: la storia prima del 5/11/2026 contiene ancora i quattro nomi tolti dai file di oggi

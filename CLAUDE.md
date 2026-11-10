@@ -21,7 +21,9 @@ Si parte da ALP (3 minibus + 1 auto) e si deve poter crescere fino a 500 mezzi e
   proposte.
 - IMPORTANTE (K-016): nel deposito i testi sono UTF-8; i binari solo dall'elenco dei binari ammessi (oggi i file .kzc e
   .kzr dentro tests/ ed esempi/; l'elenco sta in tests/strumenti/deposito.cpp), che si allarga solo con un mandato. Un
-  testo scritto in un'altra codifica (es. UTF-16 da un programma di Windows) si salva di nuovo in UTF-8.
+  testo scritto in un'altra codifica (es. UTF-16 da un programma di Windows) si salva di nuovo in UTF-8. Un byte zero in
+  un testo solo nelle cartelle dell'elenco dei byte zero ammessi (oggi tests/fuzz/; stesso file), che si allarga solo con
+  un mandato.
 
 ## Ruoli
 - Il supervisore: decide le regole del mestiere e approva i risultati.

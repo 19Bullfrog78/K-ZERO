@@ -196,7 +196,10 @@ ALP e le descrizioni. Le reti, che aiutano ma non bastano:
   testo UTF-8 valido, tranne i binari ammessi da un elenco nello strumento (oggi i file `.kzc` e `.kzr` dentro tests/ ed
   esempi/; l'elenco si allarga solo con un mandato), di cui si controlla solo il percorso; ogni altro file (un testo
   UTF-16, UTF-32 o Latin-1, un binario sconosciuto, un'immagine) e' un problema, e di un testo con il BOM di UTF-16 o
-  UTF-32 si cercano anche i nomi. I nomi non sono scritti nel controllo: ne conosce solo le impronte SHA-256, e i
+  UTF-32 si cercano anche i nomi. Un byte zero in un testo e' ammesso solo sotto le cartelle di un secondo elenco (oggi
+  tests/fuzz/, i semi e i casi del fuzzing; si allarga solo con un mandato): fuori di li' e' un problema, perche' un testo
+  UTF-16 o UTF-32 senza BOM di lettere semplici e' anche UTF-8 valido; e in ogni testo con byte zero i nomi si cercano
+  anche con i byte zero tolti (K-016 aggiunta 1). I nomi non sono scritti nel controllo: ne conosce solo le impronte SHA-256, e i
   messaggi dicono file, riga e quale nome (a-d), mai il nome.
 - **Il controllo GitHub delle proposte** (`Nomi della proposta`): lo stesso controllo sul titolo della proposta, sulla
   sua descrizione (dal K-016: e' pubblica e puo' entrare nel messaggio dell'unione) e sui messaggi dei suoi commit nuovi,
@@ -285,9 +288,11 @@ non ha una password; non protegge da tutto. Detto onestamente:
   commit gia' pubblicato resta nella storia, e GitHub mostra a tutti i titoli di prima nella cronologia della proposta e
   le versioni di prima della descrizione (finche' non si cancellano a mano): per questo il controllo locale va fatto
   prima di aprire la proposta. Il messaggio dell'unione lo scrive a mano il supervisore al momento del Merge e non passa
-  da nessun controllo prima di essere pubblicato. Testi: un file UTF-16 senza BOM fatto di sole lettere semplici e' anche
-  UTF-8 valido (con un byte zero tra ogni lettera), quindi passa come testo e un nome spezzato dai byte zero non si vede;
-  del contenuto dei binari ammessi (cassaforte e registro in tests/ ed esempi/) non si controlla niente. Le impronte dei
+  da nessun controllo prima di essere pubblicato. Testi: del contenuto dei binari ammessi (cassaforte e registro in tests/
+  ed esempi/) non si controlla niente; in un testo con byte zero (ammesso solo in tests/fuzz/) i nomi si cercano anche
+  senza gli zeri, ma un nome in UTF-16 o UTF-32 senza BOM fatto di lettere non semplici (accenti, altri alfabeti) non si
+  vede, perche' i byte che restano non sono quelli della lettera in UTF-8 (fuori da tests/fuzz/ il file e' comunque un
+  problema per il byte zero). Le impronte dei
   nomi non sono un segreto: provando le parole (una sigla di tre lettere in un istante) si ritrovano; servono solo a non
   scrivere i nomi in chiaro. La difesa vera e' tenere i dati veri fuori dalla cartella del deposito.
 - **"Non verificato".** Chi non puo' aprire una classe vede meno controlli e una giornata "non verificata" in alcune

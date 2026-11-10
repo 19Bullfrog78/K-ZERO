@@ -5,7 +5,9 @@
 //     (a, b, c, d: chi sono e cosa si scrive al loro posto e' detto nella tabella di deposito.cpp);
 //   - fuori da tests/ ed esempi/, i file dei formati dei dati (fogli di calcolo, documenti, cassaforte, registro) e i
 //     manifesti di un pacchetto (pacchetto.json);
-//   - (K-016) i file che non sono testo UTF-8 ne' binari dell'elenco dei binari ammessi.
+//   - (K-016) i file che non sono testo UTF-8 ne' binari dell'elenco dei binari ammessi;
+//   - (K-016 aggiunta 1) i testi con un byte zero fuori dalle cartelle di un elenco (oggi tests/fuzz/); in ogni testo con
+//     byte zero i nomi si cercano anche con i byte zero tolti.
 // I nomi non sono scritti in chiaro: il controllo conosce solo l'impronta SHA-256 di ogni nome in minuscolo (libsodium).
 // Ogni parola dei testi (lettere e cifre sono parole diverse) si porta in minuscolo e se ne calcola l'impronta; per un
 // nome di due parole l'impronta delle due parole vicine, anche a capo o con un segno di commento in mezzo. I messaggi dicono file, riga e quale nome (a-d), mai
@@ -55,6 +57,13 @@ struct Problema {
 // parole vale anche a capo o con in mezzo soli spazi e segni di commento (/ * # - > e le virgolette).
 std::vector<Problema> cerca_nomi(std::string_view testo, std::string_view dove, const std::vector<Nome>& nomi);
 
+// Come cerca_nomi, ma in un testo con byte zero (K-016 aggiunta 1) cerca i nomi nel testo com'e' e anche nel testo con i
+// byte zero tolti (un nome in UTF-16 o UTF-32 senza BOM, di lettere semplici, ha un byte zero tra ogni lettera). Le righe
+// restano quelle del file (si tolgono solo i byte zero, mai gli a capo); un nome trovato in tutti e due i modi alla
+// stessa riga si segnala una volta sola (per ogni riga e nome conta il numero piu' alto dei due modi).
+std::vector<Problema> cerca_nomi_anche_senza_zeri(std::string_view testo, std::string_view dove,
+                                                  const std::vector<Nome>& nomi);
+
 // I binari ammessi (K-016): ogni file del deposito e' testo UTF-8 valido, tranne i file con una di queste estensioni
 // (scritte cosi', in minuscolo) dentro una di queste cartelle in cima. L'elenco si allarga solo con un mandato
 // (CLAUDE.md, Confini).
@@ -66,6 +75,14 @@ const std::vector<BinarioAmmesso>& binari_ammessi();
 
 // Vero se il file (percorso relativo alla cima del deposito, con "/") sta nell'elenco dei binari ammessi.
 bool binario_ammesso(std::string_view relativo);
+
+// Le cartelle in cui un testo puo' contenere un byte zero (K-016 aggiunta 1): conta l'inizio del percorso (es.
+// "tests/fuzz/"), a ogni profondita' sotto. Oggi solo tests/fuzz/ (i semi e i casi del fuzzing). Fuori di li' un testo
+// UTF-8 con un byte zero e' un problema. L'elenco si allarga solo con un mandato (CLAUDE.md, Confini).
+const std::vector<std::string>& cartelle_con_byte_zero();
+
+// Vero se il file (percorso relativo, con "/") sta sotto una delle cartelle_con_byte_zero.
+bool byte_zero_ammesso(std::string_view relativo);
 
 // Resoconto del controllo di una cartella.
 struct Resoconto {
@@ -90,7 +107,8 @@ std::vector<std::string> righe_delle_cartelle(std::string_view gitignore);
 
 // Controlla tutti i file della cartella, tranne .git (a ogni livello), le cartelle saltate (a ogni livello) e le cartelle
 // "escluse" (es. la cartella della costruzione, se sta dentro). Ogni file che e' UTF-8 valido si legge come testo (K-016),
-// anche se ha un byte zero o un'estensione dei binari ammessi. Un file che non e' UTF-8 valido: se e' un binario ammesso
+// anche se ha un'estensione dei binari ammessi; se ha un byte zero e non sta in una delle cartelle_con_byte_zero e' un
+// problema, e i nomi si cercano anche senza i byte zero (cerca_nomi_anche_senza_zeri). Un file che non e' UTF-8 valido: se e' un binario ammesso
 // se ne controlla solo il percorso (i byte casuali di una cassaforte possono contenere per caso una sigla); altrimenti e'
 // un problema, e se comincia con il BOM di UTF-16 o UTF-32 lo si decodifica e si cercano anche i nomi. Fuori da tests/
 // ed esempi/ (in cima) i formati dei dati e i manifesti di un pacchetto sono un problema. Ordine stabile: file in ordine

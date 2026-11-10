@@ -195,7 +195,8 @@ TEST(Deposito, CartellaFileFormatiManifestiEsclusioni) {
     c.scrivi("esempi/demo/pacchetto.json", "{}");
     c.scrivi("esempi/foglio.xlsx", "");
     c.scrivi("docs/binario.dat", std::string("\0\xff\xfe zorbalino", 14));       // binario: non letto
-    c.scrivi("docs/argomenti", std::string("controlla\0zorbalino\0", 20));       // byte zero ma UTF-8: letto
+    c.scrivi("docs/argomenti", std::string("controlla\0zorbalino\0", 20));   // UTF-8 con byte zero: letto, ma in docs/
+                                                                             // e' un problema (K-016 aggiunta 1)
     c.scrivi("docs/latino.txt", "caff\xe8 zorbalino\n");                         // non UTF-8, senza byte zero: letto
     // Saltate: build/ e build-*/ a ogni livello (come .gitignore), .git, --escludi.
     c.scrivi("build/note.md", "zorbalino\n");
@@ -218,7 +219,7 @@ TEST(Deposito, CartellaFileFormatiManifestiEsclusioni) {
     const Resoconto r = controlla_cartella(c.radice(), {c.radice() / "costruzione"}, finti());
     std::vector<std::string> attesi = {"Build/note.md:1", "Pacchetto.json:0", "buildx/note.md:1", "cassaforte.kzc:0",
                                        "cassaforte.kzc:0", "docs/ELENCO.PDF:0", "docs/altro/build:1",
-                                       "docs/argomenti:1", "docs/binario.dat:0", "docs/build.vecchio/note.md:1",
+                                       "docs/argomenti:0", "docs/argomenti:1", "docs/binario.dat:0", "docs/build.vecchio/note.md:1",
                                        "docs/dati.xlsx:0", "docs/latino.txt:0", "docs/note.md:3",
                                        "docs/pacchetto.json:0", "docs/zorbalino/vuoto.txt:0", "src/codice.cpp:1"};
     if (collegamento)
@@ -236,6 +237,7 @@ TEST(Deposito, CartellaFileFormatiManifestiEsclusioni) {
         if (q.dove == "src/codice.cpp") atteso = "c'e' il nome z";
         if (q.dove == "docs/binario.dat" || q.dove == "docs/latino.txt")
             atteso = "non e' testo UTF-8 ne' un binario ammesso";
+        if (q.dove == "docs/argomenti") atteso = q.riga == 0 ? "testo con un byte zero" : "c'e' il nome x";
         EXPECT_NE(q.cosa.find(atteso), std::string::npos) << q.dove << ": " << q.cosa;
     }
     // Il messaggio non ripete il nome, tranne nel percorso del file, che e' il dato da correggere.
@@ -295,7 +297,8 @@ TEST(Deposito, TestiUtf8EBinariAmmessi) {
     c.scrivi("tests/X.KZC", "\xff");                               // estensione in maiuscolo: non ammessa
     c.scrivi("tests/immagine.png", "\x89PNG\xff");                  // anche in tests/ solo .kzc e .kzr
     c.scrivi("testsx/a.kzr", "\xff");                              // cartella diversa: due problemi
-    c.scrivi("docs/argomenti", std::string("controlla\0esempi\0", 18));   // byte zero ma UTF-8: testo, va bene
+    // UTF-8 con byte zero sotto tests/fuzz/: testo, va bene (fuori di li' e' un problema: prova ByteZero).
+    c.scrivi("tests/fuzz/semi/parametri/argomenti", std::string("controlla\0esempi\0", 18));
 
     const Resoconto r = controlla_cartella(c.radice(), {}, finti());
     EXPECT_EQ(dove_e_riga(r), (std::vector<std::string>{
@@ -342,8 +345,65 @@ TEST(Deposito, TestiUtf8EBinariAmmessi) {
     EXPECT_NE(cosa("docs/rotto16.txt", 1).find("nome y"), std::string::npos);
     EXPECT_NE(cosa("docs/surrogati16.txt", 2).find("nome y"), std::string::npos);
     EXPECT_NE(cosa("docs/surrogati32.txt", 2).find("nome y"), std::string::npos);
-    EXPECT_EQ(r.letti, 9u);   // i 7 testi con BOM, testo.kzc e argomenti
+    EXPECT_EQ(r.letti, 9u);   // i 7 testi con BOM, testo.kzc e argomenti di tests/fuzz/
     senza_nomi(r.problemi);
+}
+
+// K-016 aggiunta 1: un byte zero solo nei testi sotto tests/fuzz/; in ogni testo con byte zero i nomi si cercano anche
+// senza i byte zero (UTF-16 e UTF-32 senza BOM), con le righe del file e senza doppioni.
+TEST(Deposito, ByteZero) {
+    Cartella c;
+    auto senza_bom = [](const std::u32string& t, std::size_t passo, bool grande) {
+        return codificato(t, passo, grande).substr(passo);
+    };
+    c.scrivi("docs/utf16le-senza-bom.txt", senza_bom(U"Scelta di zorbalino\n", 2, false));
+    c.scrivi("docs/utf16be-senza-bom.md", senza_bom(U"prima\nVallerossa\nTrasportini\n", 2, true));
+    c.scrivi("docs/utf32le-senza-bom.txt", senza_bom(U"riga\nil file del VRK\n", 4, false));
+    c.scrivi("docs/zero.md", std::string("testo\0senza nome\n", 17));                  // problema, nessun nome
+    c.scrivi("tests/esempi/p/argomenti", std::string("controlla\0demo\n", 15));       // tests/ ma non tests/fuzz/
+    c.scrivi("tests/fuzzx/argomenti", std::string("a\0b\n", 4));                      // l'inizio del percorso conta
+    c.scrivi("docs/tests/fuzz/argomenti", std::string("a\0b\n", 4));                  // non in cima: non ammessa
+    c.scrivi("tests/fuzz/semi/x/utf16le", senza_bom(U"nota\nScelta di zorbalino\n", 2, false));   // solo il nome
+    c.scrivi("tests/fuzz/semi/x/utf16be", senza_bom(U"ZORBALINO\n", 2, true));
+    c.scrivi("tests/fuzz/casi/a/attaccato", std::string("\0zorbalino\0\n", 12));     // nei due modi: una volta
+    // Riga 1: due volte nel testo com'e', nessuna senza zeri (le parole si attaccano): due. Riga 2: solo senza zeri.
+    c.scrivi("tests/fuzz/casi/a/due", std::string("zorbalino\0zorbalino\nzor\0bal\0ino\n", 32));
+    c.scrivi("tests/fuzz/casi/a/pulito", std::string("controlla\0esempi/demo\0--formato\0json", 36));
+
+    const Resoconto r = controlla_cartella(c.radice(), {}, finti());
+    EXPECT_EQ(dove_e_riga(r), (std::vector<std::string>{
+                                  "docs/tests/fuzz/argomenti:0", "docs/utf16be-senza-bom.md:0",
+                                  "docs/utf16be-senza-bom.md:2", "docs/utf16le-senza-bom.txt:0",
+                                  "docs/utf16le-senza-bom.txt:1", "docs/utf32le-senza-bom.txt:0",
+                                  "docs/utf32le-senza-bom.txt:2", "docs/zero.md:0", "tests/esempi/p/argomenti:0",
+                                  "tests/fuzz/casi/a/attaccato:1", "tests/fuzz/casi/a/due:1", "tests/fuzz/casi/a/due:1",
+                                  "tests/fuzz/casi/a/due:2", "tests/fuzz/semi/x/utf16be:1",
+                                  "tests/fuzz/semi/x/utf16le:2", "tests/fuzzx/argomenti:0"}));
+    EXPECT_TRUE(r.binari.empty());
+    EXPECT_EQ(r.letti, 12u);
+    for (const Problema& q : r.problemi) {
+        if (q.riga == 0) {
+            EXPECT_NE(q.cosa.find("testo con un byte zero fuori dalle cartelle ammesse (tests/fuzz/): un testo con "
+                                  "byte zero (es. UTF-16 o UTF-32 senza BOM) si salva di nuovo in UTF-8"),
+                      std::string::npos)
+                << q.dove << ": " << q.cosa;
+            continue;
+        }
+        const char* atteso = q.dove == "docs/utf16be-senza-bom.md" ? "nome z"
+                             : q.dove == "docs/utf32le-senza-bom.txt" ? "nome y"
+                                                                       : "nome x";
+        EXPECT_NE(q.cosa.find(atteso), std::string::npos) << q.dove << ": " << q.cosa;
+    }
+    senza_nomi(r.problemi);
+}
+
+TEST(Deposito, CartelleConByteZero) {
+    EXPECT_EQ(cartelle_con_byte_zero(), (std::vector<std::string>{"tests/fuzz/"}));
+    for (const char* si : {"tests/fuzz/semi/parametri/controlla", "tests/fuzz/casi/x/y", "tests/fuzz/a"})
+        EXPECT_TRUE(byte_zero_ammesso(si)) << si;
+    for (const char* no : {"tests/fuzz", "tests/fuzz/", "tests/fuzzx/a", "tests/a", "docs/tests/fuzz/a", "Tests/fuzz/a",
+                           "esempi/fuzz/a"})
+        EXPECT_FALSE(byte_zero_ammesso(no)) << no;
 }
 
 TEST(Deposito, BinariAmmessi) {
