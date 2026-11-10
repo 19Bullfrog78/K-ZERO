@@ -1,5 +1,5 @@
 # Prove automatiche: ctest --test-dir build --output-on-failure
-# Etichette: nucleo, api, programma, documentazione, architettura, schemi, scala, sicurezza, fuzz.
+# Etichette: nucleo, api, programma, documentazione, architettura, schemi, scala, sicurezza, fuzz, deposito.
 include(GoogleTest)
 
 # --- Prove del nucleo (GoogleTest): ogni TEST si registra da solo --------------------
@@ -1937,6 +1937,26 @@ add_test(NAME sicurezza.elenco_dei_componenti
          COMMAND ${CMAKE_COMMAND} -DSORGENTI=${PROJECT_SOURCE_DIR} -DVERSIONE=${PROJECT_VERSION}
                  -P ${CMAKE_CURRENT_SOURCE_DIR}/programma/componenti.cmake)
 set_tests_properties(sicurezza.elenco_dei_componenti PROPERTIES LABELS sicurezza)
+
+# --- Deposito pubblico (K-015): nessun dato vero nel deposito (CLAUDE.md, Confini) --------------------------------------
+# Una rete, non la difesa (docs/sicurezza.md): nei file del deposito nessuno dei quattro nomi (il controllo ne conosce solo
+# le impronte SHA-256) e, fuori da tests/ ed esempi/, nessun file di dati ne' manifesto di un pacchetto. Lo stesso
+# strumento controlla nel controllo GitHub i messaggi dei commit e il titolo delle proposte
+# (tests/strumenti/controlla_proposta.sh). La prova del controllo usa una lista finta di nomi inventati.
+add_library(kzero_deposito STATIC strumenti/deposito.cpp)
+target_include_directories(kzero_deposito PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(kzero_deposito PUBLIC kzero_sodium kzero_utf8proc)
+target_compile_options(kzero_deposito PRIVATE ${KZERO_WARNINGS})
+add_executable(controlla_deposito strumenti/controlla_deposito.cpp)
+target_link_libraries(controlla_deposito PRIVATE kzero_deposito)
+target_compile_options(controlla_deposito PRIVATE ${KZERO_WARNINGS})
+add_test(NAME deposito.nomi_e_file
+         COMMAND controlla_deposito --cartella ${PROJECT_SOURCE_DIR} --escludi ${CMAKE_BINARY_DIR})
+set_tests_properties(deposito.nomi_e_file PROPERTIES LABELS deposito)
+add_executable(test_deposito test_deposito.cpp)
+target_link_libraries(test_deposito PRIVATE kzero_deposito GTest::gtest_main)
+target_compile_options(test_deposito PRIVATE ${KZERO_WARNINGS})
+gtest_discover_tests(test_deposito PROPERTIES LABELS deposito)
 
 # --- Fuzzing (K-009): prove con dati casuali e deformati (tests/fuzz, docs/sicurezza.md) -------------------------
 # I bersagli stanno in una libreria comune: libFuzzer li usa per cercare guasti (KZERO_FUZZ=ON, clang), rigioca_fuzz

@@ -1,2 +1,40 @@
 build/
 build-*/
+
+# Deposito pubblico (K-015, CLAUDE.md, Confini): i file dei formati dei dati (fogli di calcolo, CSV, PDF, documenti di
+# Word, cassaforte e registro di K-Zero) non entrano nel deposito, tranne gli esempi con dati inventati delle prove
+# (tests/) e dei pacchetti di esempio (esempi/). E' solo una rete: un pacchetto vero e' una cartella di file JSON come il
+# demo, che nessuna regola qui puo' riconoscere; la difesa vera e' tenere i dati veri fuori dalla cartella del deposito.
+# Maiuscole e minuscole contano tutte (es. ELENCO.PDF): ogni lettera tra parentesi quadre vale nei due modi.
+# La prova deposito.nomi_e_file (ctest -L deposito) controlla le stesse regole anche sui file gia' salvati.
+*.[xX][lL][sS][xX]
+*.[xX][lL][sS]
+*.[xX][lL][sS][mM]
+*.[oO][dD][sS]
+*.[cC][sS][vV]
+*.[pP][dD][fF]
+*.[dD][oO][cC][xX]
+*.[dD][oO][cC]
+*.[kK][zZ][cC]
+*.[kK][zZ][rR]
+# Ammessi solo in tests/ ed esempi/.
+!/tests/**/*.[xX][lL][sS][xX]
+!/tests/**/*.[xX][lL][sS]
+!/tests/**/*.[xX][lL][sS][mM]
+!/tests/**/*.[oO][dD][sS]
+!/tests/**/*.[cC][sS][vV]
+!/tests/**/*.[pP][dD][fF]
+!/tests/**/*.[dD][oO][cC][xX]
+!/tests/**/*.[dD][oO][cC]
+!/tests/**/*.[kK][zZ][cC]
+!/tests/**/*.[kK][zZ][rR]
+!/esempi/**/*.[xX][lL][sS][xX]
+!/esempi/**/*.[xX][lL][sS]
+!/esempi/**/*.[xX][lL][sS][mM]
+!/esempi/**/*.[oO][dD][sS]
+!/esempi/**/*.[cC][sS][vV]
+!/esempi/**/*.[pP][dD][fF]
+!/esempi/**/*.[dD][oO][cC][xX]
+!/esempi/**/*.[dD][oO][cC]
+!/esempi/**/*.[kK][zZ][cC]
+!/esempi/**/*.[kK][zZ][rR]
