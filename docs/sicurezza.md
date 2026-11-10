@@ -51,6 +51,7 @@ valori ci sono nella cassaforte, chi sono gli utenti e con quali permessi, fino 
 | **Un assistente AI che legge le uscite** (spesso su server esterni) | Di base le uscite non contengono dati personali (al loro posto il codice) ne' particolari ("riservato"), nemmeno nei messaggi, nelle posizioni o nel solo fatto che ci sia un problema sulla salute (sezione 3). Un assistente AI e' solo un aiuto facoltativo. | Con `--includi-dati-personali` o `--includi-dati-particolari` l'uscita contiene quei dati: non va data a un assistente AI. |
 | **Uno sbaglio di chi scrive i dati** | I controlli K-CTR (docs/controlli.md): es. un pacchetto "solo numeri" con dei nomi e' un errore (K-CTR-019); dati personali in chiaro in un pacchetto che non dice "dati inventati" sono un avviso a ogni lettura (K-CTR-096). | I nomi liberi (servizi, corse, turni, note, codici) possono rivelare un dato sulla salute: sezione 5. |
 | **La rete** | Nessun comando usa la rete; due prove lo controllano (sezione 3). | Il futuro adattatore delle distanze (es. Google Maps) sara' l'unica eccezione: un programma separato, acceso con un parametro esplicito, che manda fuori solo coordinate (mai nomi o altri dati delle persone), con un suo mandato. |
+| **Chi legge il deposito pubblico** (chiunque, dal 5/11/2026) | Nel deposito solo codice, documenti e dati inventati o pubblici: nessun dato vero, nemmeno cifrato (CLAUDE.md, Confini); reti: .gitignore, la prova `deposito` e il controllo GitHub di titolo e commit delle proposte (sezione 3). | La storia prima del 5/11 contiene i nomi tolti dal K-015; le reti non riconoscono un pacchetto vero (sezione 4). |
 | **Un componente esterno compromesso** | Poche librerie, con versione e impronta fissate (libsodium anche con la firma dell'autore verificata); elenco dei componenti in un formato standard (sezione 3). | Le librerie del sistema (libreria C e C++ del compilatore) non sono nell'elenco. |
 
 ## 3. Le misure di oggi
@@ -175,6 +176,26 @@ licenza, se serve al programma o solo alle prove. Una prova controlla che coinci
 Serve a chi comprera' K-Zero e al regolamento europeo sulla cibersicurezza dei prodotti (Cyber Resilience Act), se
 K-Zero sara' venduto.
 
+**Deposito pubblico (K-015).** Il deposito su GitHub e' pubblico dal 5/11/2026: chiunque legge il codice, i documenti,
+gli schemi, i pacchetti di esempio e di prova e tutta la storia dei salvataggi. La regola (CLAUDE.md, Confini): nessun
+dato vero che non sia gia' pubblico entra nel deposito, nemmeno cifrato in una cassaforte (una password di prova e'
+pubblica, e una cassaforte vera nel deposito sarebbe esposta per sempre a chi prova le password); i dati veri restano
+solo sul PC del supervisore, fuori dalla cartella del deposito. Vanno bene i dati pubblici (luoghi, linee e fermate del
+trasporto pubblico, leggi e regolamenti con la fonte) e quelli inventati. Quattro nomi (dell'azienda, del supervisore,
+del consorzio e dell'azienda del trasporto pubblico provinciale) non si scrivono piu' da nessuna parte: al loro posto
+ALP e le descrizioni. Tre reti, che aiutano ma non bastano:
+
+- **.gitignore**: i file dei formati dei dati (fogli di calcolo, CSV, PDF, documenti di Word, cassaforte `.kzc` e
+  registro `.kzr`), con maiuscole e minuscole, non entrano nel deposito fuori da tests/ ed esempi/.
+- **La prova `deposito`** (`ctest -L deposito`, in locale e nel controllo GitHub): in nessun file di testo del deposito
+  (fuori da build*/ e .git, anche quelli non ancora salvati) compare uno dei quattro nomi, parola intera, con maiuscole
+  e minuscole, quello di due parole anche a capo o con un segno di commento in mezzo, anche nei nomi dei file; fuori da
+  tests/ ed esempi/ nessun file di quei formati e nessun manifesto di un pacchetto (`pacchetto.json`). I nomi non sono
+  scritti nel controllo: ne conosce solo le impronte SHA-256, e i messaggi dicono file, riga e quale nome (a-d), mai il
+  nome.
+- **Il controllo GitHub delle proposte** (`Nomi della proposta`): lo stesso controllo sul titolo della proposta e sui
+  messaggi dei suoi commit nuovi, anche quando il titolo cambia.
+
 ## 4. I rischi che restano, e chi li chiudera'
 
 La cassaforte protegge i dati quando i file sono fermi sul disco, in una copia di sicurezza o su un PC rubato, e da chi
@@ -241,6 +262,16 @@ non ha una password; non protegge da tutto. Detto onestamente:
   il perche' e lasciare visibile il fatto, perche' chi pianifica deve sapere quali turni vanno coperti e quando, anche senza
   i dati sulla salute; nascondere anche il fatto renderebbe il piano inutilizzabile, e un testo a parte solo per le cause del
   tipo direbbe proprio quello. Chi deve vedere il perche' usa `--includi-dati-particolari`, con il permesso di quei dati.
+- **Deposito pubblico** (K-015). La storia del deposito prima del 5/11/2026 contiene i quattro nomi tolti dai file di
+  oggi (nei documenti, nei commenti e nei messaggi dei salvataggi di allora) e alcuni codici di esempio sostituiti: la
+  storia non si riscrive (scelta del supervisore), quindi restano leggibili. Le reti sono solo reti: un pacchetto vero
+  e' una cartella di file JSON come il demo, che il .gitignore non riconosce, e la prova `deposito` riconosce solo dal
+  manifesto `pacchetto.json` e solo fuori da tests/ ed esempi/; un file vero copiato dentro tests/ o esempi/, un nome
+  scritto in un altro modo (spezzato, abbreviato, con lettere simili), un dato vero che non e' un nome (una targa, un
+  orario interno) non si riconoscono. Il controllo dei messaggi vale per le proposte, non per i documenti salvati
+  direttamente su main, e scopre un nome solo prima dell'unione: un messaggio gia' pubblicato resta nella storia. Le
+  impronte dei nomi non sono un segreto: provando le parole (una sigla di tre lettere in un istante) si ritrovano;
+  servono solo a non scrivere i nomi in chiaro. La difesa vera e' tenere i dati veri fuori dalla cartella del deposito.
 - **"Non verificato".** Chi non puo' aprire una classe vede meno controlli e una giornata "non verificata" in alcune
   parti: e' voluto (mai un risultato su dati mancanti come se fossero completi), ma chi ha tutti i permessi deve guardare
   anche lui il pacchetto.
@@ -264,6 +295,9 @@ non ha una password; non protegge da tutto. Detto onestamente:
 
 ## 5. Consigli per chi usa K-Zero
 
+- **I dati veri fuori dalla cartella del deposito** (K-015): mai dentro la cartella in cui si scarica il deposito di
+  K-Zero, nemmeno per una prova veloce e nemmeno chiusi nella cassaforte; una cartella a parte sul PC, con la cifratura
+  del disco. Il deposito e' pubblico.
 - **I dati veri solo nella cassaforte.** Chiudere il pacchetto (`kzero chiudi`) prima di scriverci dati veri di persone,
   e subito dopo **cancellare la cartella in chiaro**; lo stesso per un'uscita in chiaro, appena richiusa.
 - **Password**: una frase lunga (es. quattro o cinque parole che non stanno insieme), diversa da ogni altra password,

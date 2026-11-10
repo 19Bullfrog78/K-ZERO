@@ -542,8 +542,59 @@
   requisito del punto 1 non riconosciuto (l'autorizzazione del committente) 1; B2 (law solo dalle regole sul lavoro) 1, prima 0;
   K-CTR-007 del campo particolare che manca visibile 1; il testo senza motivo anche senza requisiti del tipo 1; la posizione del
   fatto tenuta nel testo senza motivo 8. Tutti scoperti.
+- 2026-11-10 - K-015 (programma e documenti, proposta "K-015: deposito pubblico"). Il deposito e' pubblico dal 5/11/2026;
+  scelte del supervisore del 5/11 e dell'8/11: la storia resta com'e', si sistemano i file di oggi, i luoghi restano.
+  **1. Quattro nomi tolti dai file di oggi.** Sul main di oggi (a76263f) il controllo nuovo trovava 130 punti in 27 file
+  (nome a 20, b 85, c 18, d 7); ora 0. Al loro posto "ALP", "il supervisore", "il consorzio" (nei codici esterni il sistema
+  "Consorzio"), "l'azienda del trasporto pubblico provinciale" (nei codici esterni il sistema "Trasporti Provinciali"), in
+  documenti, commenti, descrizioni degli schemi (anche delle versioni vecchie: solo il testo, nessun cambio di struttura ne'
+  di versione), prove, strumenti e pacchetti di prova. La nota della rotazione del demo dice ALP: nessuna uscita la mostra
+  (solo kzero esporta la riscrive nei file), quindi nessuna prova da aggiornare. Prova delle password con un altro nome
+  inventato, stessa logica. Esempi di codici esterni sostituiti con codici inventati. tests/esempi/k011-orari: cambia solo
+  la nota, nello script e nel pacchetto; verificato rigenerando con lo script cambiato dal demo del K-011 (git show
+  9fe6cfb:esempi/demo) in una cartella temporanea: l'unica differenza con il pacchetto di prima e' la nota, e il pacchetto
+  rigenerato e' identico a quello nuovo. Rigenerato anche tests/esempi/k012-servizi dal demo di oggi: identico.
+  **2. Copia congelata tests/esempi/k010-cassaforte rifatta** (la stessa nota stava nella cassaforte, cifrata con la
+  password di prova pubblica): programma del K-010 (main 3f09c19, parametri di rilascio), demo del K-010 con la sola nota
+  cambiata, la sequenza letta con kzero registro su una copia di lavoro (chiudi da TITOLARE con conservazione 2099-12-31,
+  aggiungi-utente UFFICIO con i dati personali e SALUTE con i dati particolari, stesse password). Verifiche su copie di
+  lavoro: JSON in chiaro identici byte per byte tranne cassaforte.id; cambiano solo quello, cassaforte.kzc e registro.kzr
+  (3 voci); la nota esportata dice ALP e l'esportazione coincide con il demo del K-010 con la sola nota cambiata;
+  kzero controlla dei tre utenti, testo e JSON, uguale alla copia di prima; nessuna prova cambiata.
+  **3. Nessun dato vero nel deposito: regola e reti.** Regola in CLAUDE.md (Confini). .gitignore: i formati dei dati
+  (xlsx, xls, xlsm, ods, csv, pdf, docx, doc, kzc, kzr; maiuscole e minuscole) ignorati fuori da tests/ ed esempi/. Prova
+  deposito.nomi_e_file (etichetta deposito): lo strumento tests/strumenti/controlla_deposito cerca i quattro nomi in tutti i
+  file di testo della cartella del deposito (fuori da build*/ e .git), parola intera, maiuscole e minuscole, quello di due
+  parole anche a capo o con un segno di commento in mezzo, anche nei percorsi, e fuori da tests/ ed esempi/ i file di quei
+  formati e i manifesti di un pacchetto; conosce solo le impronte SHA-256 dei nomi (libsodium), i messaggi dicono file, riga
+  e quale nome (a-d), mai il nome. Prova dello strumento (test_deposito) con una lista finta di nomi inventati, un caso per
+  ogni regola (anche maiuscolo, a capo e nei commenti). Controllo GitHub "Nomi della proposta" (nomi.yml,
+  tests/strumenti/controlla_proposta.sh): titolo della proposta e messaggi dei commit nuovi, anche quando cambia il titolo.
+  **4. Rami delle proposte unite** (1-13): le teste dei 10 rami claude/* rimasti sono le teste di proposte unite; non
+  cancellati, perche' questa sessione non ha il permesso di cancellare rami (rifiuto HTTP 403): li cancella il supervisore,
+  elenco nel resoconto. **5. Documenti**: CLAUDE.md (regola e comando della prova), DECISIONI.md, docs/sicurezza.md (deposito
+  pubblico: cosa e' pubblico, la regola, le reti e i loro limiti), docs/architettura.md (etichetta deposito). Nessun cambio
+  di funzionamento di kzero: forma delle uscite, versioni degli schemi, codici K-CTR e K-ERR uguali.
+  Prove: 969 su 969 (prima 961), 8 nuove (le 7 dello strumento con la lista finta, test_deposito, e
+  deposito.nomi_e_file); nessuna prova di prima cambia esito (quella delle password usa un altro nome inventato con le
+  stesse attese). Ogni commit della proposta compila senza avvisi e passa le prove da solo (961, 961, 969, 969). Con i
+  sanitizer 967 su 967 (senza le 2 prove sul programma di rilascio), 30 minuti con 4 prove insieme. Fuzzing in locale sul
+  codice finale, i 32 bersagli 20 secondi ciascuno come nel controllo GitHub, 4 alla volta: nessun guasto (nessun bersaglio
+  nuovo: lo strumento del deposito legge solo i file del deposito, mai dati di un utente).
+  Sabotaggi sul codice finale, uno alla volta (prove rosse): nome a in un commento C++ 1; nome b tutto maiuscolo in un
+  commento CMake 1; nome c in un commento del controllo GitHub 1; nome d a capo in un commento C++ 1; un file .xlsx in
+  docs/ 1; un pacchetto.json in docs/ 1; un nome in un messaggio di commit di prova (in locale, mai pubblicato, poi tolto)
+  e il nome d a capo nel titolo di una proposta: lo script del controllo GitHub esce con 1; nello strumento: senza le
+  minuscole 5, nome di due parole non piu' a capo 3, ogni file con un byte zero trattato come binario 1, formati vietati
+  anche in tests/ ed esempi/ 2, messaggio che ripete la parola trovata 3, nome di due parole mai cercato 3, cartelle
+  build*/ non escluse 2. Tutti scoperti; nessun messaggio del controllo ha scritto un nome.
 
 ## Bug e limiti noti
+- (K-015) Il deposito e' pubblico: la storia prima del 5/11/2026 contiene ancora i quattro nomi tolti dai file di oggi
+  (anche nei messaggi dei salvataggi) e i codici di esempio sostituiti; .gitignore, la prova deposito e il controllo
+  delle proposte sono solo reti (un pacchetto vero e' una cartella di JSON come il demo; i salvataggi diretti su main non
+  passano dal controllo dei messaggi): la difesa vera e' tenere i dati veri fuori dalla cartella del deposito
+  (docs/sicurezza.md).
 - I pesi del calcolo (ObjectiveWeights) hanno ancora valori provvisori nel codice, non usati: andranno nei dati con il
   mandato del calcolo. Dal K-011 non c'e' piu' il peso della pausa (la pausa si giudica con la chiave del rientro); con
   il calcolo nessun peso dovra' premiare i km o la fretta (art. 10 del Reg. 561/2006).
@@ -664,7 +715,7 @@
 4. Viste per zona e per ora: giornata e orari di un gruppo di comuni o di una fascia oraria.
 5. Programma per Windows da scaricare (i dati veri restano sul PC del supervisore), con le prove di sicurezza su Windows (anche
    quelle della cassaforte) e la correzione dei dati senza file in chiaro.
-6. Raccolta dati veri ALP: mezzi, autisti (paese), giri di una giornata tipo; le letture "da confermare" degli
-   orari di lavoro al consulente del lavoro (REGOLE.md).
+6. Raccolta dati veri ALP (solo sul PC del supervisore, fuori dalla cartella del deposito): mezzi, autisti (paese), giri
+   di una giornata tipo; le letture "da confermare" degli orari di lavoro al consulente del lavoro (REGOLE.md).
 7. "Fotografia" dei giri attuali: km pieni, km a vuoto, tempi morti.
 8. Lettura dei paper e proposta del metodo di calcolo con OR-Tools.

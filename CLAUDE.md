@@ -8,6 +8,16 @@ Si parte da ALP (3 minibus + 1 auto) e si deve poter crescere fino a 500 mezzi e
 ## Confini
 - IMPORTANTE: questo repository riguarda SOLO K-Zero. Sullo stesso account GitHub esiste un
   progetto musicale separato: non leggerlo, non modificarlo, non citarlo, non mescolare file.
+- IMPORTANTE (supervisore, 5/11 e 8/11), deposito pubblico: il deposito e' pubblico dal 5/11/2026. Nessun dato vero che
+  non sia gia' pubblico (di ALP o di altri: persone, passeggeri, mezzi e targhe, codici interni, orari interni, file del
+  consorzio) entra nel deposito, nemmeno cifrato in una cassaforte: i dati veri restano solo sul PC del supervisore, fuori
+  dalla cartella del deposito. I dati pubblici vanno bene (luoghi, linee e fermate del trasporto pubblico, leggi e
+  regolamenti con la loro fonte). Pacchetti e casi di prova solo con dati inventati (piu' i dati pubblici, come R-TN).
+  Nei testi nuovi, nei messaggi dei commit, nei titoli delle proposte, nei resoconti e nei messaggi all'arbitro mai i
+  quattro nomi che il K-015 ha tolto (nell'ordine a-d dei messaggi del controllo): si scrivono "ALP", "il supervisore",
+  "il consorzio" (nei codici esterni il sistema "Consorzio"), "l'azienda del trasporto pubblico provinciale" (nei codici
+  esterni il sistema "Trasporti Provinciali"). La storia prima del 5/11 resta com'e'. Reti, che non sostituiscono la
+  regola (docs/sicurezza.md): .gitignore, la prova `deposito` e il controllo GitHub di titolo e commit delle proposte.
 
 ## Ruoli
 - Il supervisore: decide le regole del mestiere e approva i risultati.
@@ -52,6 +62,11 @@ Si parte da ALP (3 minibus + 1 auto) e si deve poter crescere fino a 500 mezzi e
   `aggiungi-utente`, `togli-utente`, `password`, `conservazione`, `cancella`; quelli che cambiano la cassaforte vogliono
   `--scrivi <cartella del pacchetto>`. Copia congelata della versione 1 con le password di prova: tests/esempi/k010-cassaforte.
 - Eseguire le prove: `ctest --test-dir build --output-on-failure`
+- Controllo del deposito pubblico (K-015: i quattro nomi in nessun file, nessun file di dati ne' manifesto di un pacchetto
+  fuori da tests/ ed esempi/): `ctest --test-dir build -L deposito --output-on-failure`; il messaggio dice file, riga e
+  quale nome (a-d), mai il nome. Prima di aprire una proposta anche il titolo e i messaggi dei commit nuovi (lo stesso
+  controllo che fa GitHub): `TITOLO="K-xxx: ..." tests/strumenti/controlla_proposta.sh build/tests/controlla_deposito
+  origin/main HEAD`.
 - Le prove sugli schemi JSON (`schema.*`) richiedono lo strumento standard check-jsonschema (versioni e
   impronte fissate), da installare prima di configurare in un ambiente Python dedicato:
   `python3 -m venv ~/.kzero-strumenti && ~/.kzero-strumenti/bin/pip install --require-hashes -r tests/strumenti/check-jsonschema.txt`
