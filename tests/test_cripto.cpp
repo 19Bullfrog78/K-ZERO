@@ -138,7 +138,7 @@ TEST(Cripto, NienteCoreDumpConLaCassaforteAperta) {
 // --- Password ----------------------------------------------------------------------------------------------------------
 
 namespace {
-password::Problema prova(const std::string& p, const std::vector<std::string>& contesto = {"U-MAURO", "DEMO-2026"}) {
+password::Problema prova(const std::string& p, const std::vector<std::string>& contesto = {"U-GERVASIO", "DEMO-2026"}) {
     password::Problema problema = password::Problema::Nessuno;
     std::size_t caratteri = 0;
     (void)password::nuova(segreto(p), contesto, problema, caratteri);
@@ -180,14 +180,14 @@ TEST(Password, ElencoDellePasswordComuni) {
 TEST(Password, ContestoRipetizioniSequenze) {
     EXPECT_EQ(prova("kzerokzerokzero"), password::Problema::Prevedibile);
     EXPECT_EQ(prova("KZero-Cassaforte 2026"), password::Problema::Prevedibile);
-    EXPECT_EQ(prova("u-mauro u-mauro 2026"), password::Problema::Prevedibile);
+    EXPECT_EQ(prova("u-gervasio u-gervasio 2026"), password::Problema::Prevedibile);
     EXPECT_EQ(prova("demo-2026 password"), password::Problema::Prevedibile);
     EXPECT_EQ(prova("abcabcabcabcabcabc"), password::Problema::Prevedibile);
     EXPECT_EQ(prova("abcdefghijklmnopq"), password::Problema::Prevedibile);
     EXPECT_EQ(prova("987654321098765"), password::Problema::Prevedibile);
     EXPECT_EQ(prova("aaaaaaaaaaaaaaaa"), password::Problema::Comune);      // anche nell'elenco
     EXPECT_EQ(prova("ŵŵŵŵŵŵŵŵŵŵŵŵŵŵŵŵ"), password::Problema::Prevedibile);
-    EXPECT_EQ(prova("mauro va al lago di garda"), password::Problema::Nessuno);
+    EXPECT_EQ(prova("gervasio va al lago di garda"), password::Problema::Nessuno);
 }
 
 TEST(Password, LaStessaPasswordConLettereAccentateScritteInDueModi) {

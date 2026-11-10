@@ -486,7 +486,7 @@
       }
     },
     "modo_corse": {
-      "description": "K-011 aggiunta 1 (Mauro, 28/10): modo delle corse dell'azienda. 'out' = regole nazionali, dove la legge lo permette; 'tachigrafo' = si seguono le regole del regime (es. il Reg. 561/2006, e chi lo segue con come_regime) anche dove la legge lo esclude, come scelta dell'azienda con la sua forza. Vince la scelta piu' precisa: corsa, poi servizio, poi tipo di servizio. Senza scelta decide la legge. La legge resta sempre sopra: 'out' dove la legge vuole il regime non vale (un avviso), salvo una forzatura cosciente dell'azienda, sempre visibile.",
+      "description": "K-011 aggiunta 1 (supervisore, 28/10): modo delle corse dell'azienda. 'out' = regole nazionali, dove la legge lo permette; 'tachigrafo' = si seguono le regole del regime (es. il Reg. 561/2006, e chi lo segue con come_regime) anche dove la legge lo esclude, come scelta dell'azienda con la sua forza. Vince la scelta piu' precisa: corsa, poi servizio, poi tipo di servizio. Senza scelta decide la legge. La legge resta sempre sopra: 'out' dove la legge vuole il regime non vale (un avviso), salvo una forzatura cosciente dell'azienda, sempre visibile.",
       "type": "object",
       "additionalProperties": false,
       "required": [

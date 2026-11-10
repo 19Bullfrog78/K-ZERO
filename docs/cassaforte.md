@@ -23,7 +23,7 @@ cosa protegge e cosa resta: [sicurezza.md](sicurezza.md). Il formato dei file no
   scritta nel registro), si correggono i file, poi `kzero richiudi <cartella-in-chiaro> --scrivi <cartella-chiusa>`
   rimette i dati nella stessa cassaforte (stessi utenti, stesso registro) e la cartella in chiaro si cancella. Servono i
   permessi di tutte e due le classi. Domani lo faranno senza file in chiaro l'interfaccia del programma per Windows e il
-  lettore del file del CTA, che scriveranno direttamente nella cassaforte.
+  lettore del file del consorzio, che scriveranno direttamente nella cassaforte.
 - **Utenti**: `kzero aggiungi-utente`, `kzero togli-utente`, `kzero password` (la propria, o una nuova per un altro con
   `--per-utente`); **conservazione**: `kzero conservazione`; **cancellazione**: `kzero cancella`; **vedere**:
   `kzero cassaforte` (utenti, permessi, conteggi) e `kzero registro`.

@@ -13,7 +13,7 @@ nomi nei dati.
 Per controllare un pacchetto: `kzero controlla <cartella>` (problemi spiegati in [controlli.md](controlli.md)).
 Esempi completi: `esempi/demo` (livello "completo") ed `esempi/demo-numeri` (livello "solo numeri"),
 con dati inventati. Dal K-008 il demo ha anche persone e turni: in Alfa la rotazione di 14 giorni della forma di
-quella di Alpinabus, un servizio fisso solo il mercoledi', sostituzioni, un mezzo in revisione sostituito dal mezzo di
+quella di ALP, un servizio fisso solo il mercoledi', sostituzioni, un mezzo in revisione sostituito dal mezzo di
 scorta, un autobus di linea con la distrazione al noleggio usato per una gita, il cambio dell'autista a meta' corsa,
 turni notturni, spezzati, di riserva e di reperibilita'; in Beta una linea 7 su 7 con orario feriale e festivo e un
 ciclo di 3 giorni. Dal K-012 la gita della Pro Loco e' un servizio NCC e ci sono due committenti privati: il matrimonio di
@@ -74,8 +74,8 @@ Un file con un nome diverso da questi non viene letto (avviso K-CTR-008): di sol
   dei gruppi di passeggeri e dei passeggeri sono unici in tutto il pacchetto.
 - **Codici esterni.** Luoghi, calendari, scuole, committenti, contratti, servizi, corse e mezzi possono avere
   un elenco `codici_esterni`: lo stesso elemento in un altro sistema, scritto come **sistema + tipo + codice**
-  (es. sistema "Trentino Trasporti", tipo "fermata", codice "6220PF"; sistema "CTA", tipo "servizio",
-  codice "1050002/3"). Cosi' il formato vale per qualunque committente senza campi dedicati.
+  (es. sistema "Trasporti Provinciali", tipo "fermata", codice "6220PF"; sistema "Consorzio", tipo "servizio",
+  codice "1234567/1"). Cosi' il formato vale per qualunque committente senza campi dedicati.
 - **Orari** `"HH:MM"`, ora locale del fuso del pacchetto. Dopo mezzanotte si continua a contare, come in GTFS:
   una corsa che parte alle 23:40 e arriva alle 00:12 del giorno dopo si scrive `"23:40"` ... `"24:12"`.
   Ammessi fino a `"47:59"`. Anche nelle uscite del programma un orario oltre le 24:00 resta tale.
@@ -279,7 +279,7 @@ quell'azienda organizza il suo turno. Le leggi si sommano su tutta la giornata, 
 4 c. 4). Le preferenze del K-008 (`fascia_oraria`,
 `giorni_liberi`, `evita_turni`, `pausa_massima`) restano dove sono: le scelte nuove non le ripetono.
 
-**Modo delle corse: OUT o tachigrafo** (aziende.json versione 2, `modo_corse`; decisione di Mauro del 28/10, K-011
+**Modo delle corse: OUT o tachigrafo** (aziende.json versione 2, `modo_corse`; decisione del supervisore del 28/10, K-011
 aggiunta 1). Dove la legge lo permette (es. linee e scolastico fino a 50 km, fuori dal Reg. 561/2006) un'azienda puo'
 lavorare **OUT** (con le regole nazionali, es. la L. 138) oppure registrare le corse con il **tachigrafo** e seguire per
 scelta il regime (`regime`, es. R-561, e chi ne prende le condizioni con `come_regime`, es. il D.Lgs. 234). La scelta
@@ -324,7 +324,7 @@ dopo quel giorno non vale piu').
   contata, tipo del riposo, K-CTR-127 e 128 solo contati), con una riga fissa per la persona, sempre: "Regimi seguiti per
   scelta dell'azienda: riservati".
 
-**Chiave della pausa fuori dal posto (rientro)** (decisa da Mauro il 20/10). Rientro = tra due corse della giornata la
+**Chiave della pausa fuori dal posto (rientro)** (decisa dal supervisore il 20/10). Rientro = tra due corse della giornata la
 persona (con o senza il mezzo) va in una rimessa (`rimesse.json`) o nel suo luogo di presa servizio, resta li' e torna;
 una pausa dove finisce la corsa prima e' "sul posto" e la chiave non la riguarda. La chiave (`rientro` dell'azienda, e
 della persona campo per campo) ha il **fermo minimo** in minuti, il **fattore della guida** a vuoto in piu', i **km a
@@ -498,7 +498,7 @@ autorizzato). Tipi dei luoghi privati: `porta_a_porta` (la casa del passeggero, 
 | `luoghi[].codici_esterni[]` | no | comune | Codici del luogo in altri sistemi |
 | `luoghi[].limiti_accesso` | no | comune | Misure e massa massime (`lunghezza_massima_m`, `larghezza_massima_m`, `altezza_massima_m`, `massa_massima_t`) e `divieti[]` |
 | `luoghi[].limiti_accesso.divieti[]` | no | comune | Divieto per un `mezzo` (codice) oppure per una `categoria` (M1, M2, M3), con il `motivo` (`cartello`, `esperienza` dell'autista, `altro`) e una `nota` |
-| `luoghi[].trasbordo` | no | comune | Presente = punto di trasbordo autorizzato: `autorizzato_da` (es. "CTA sentita la Provincia"), `data`, `documento` oppure `a_voce: true` (avviso K-CTR-043), `nota` |
+| `luoghi[].trasbordo` | no | comune | Presente = punto di trasbordo autorizzato: `autorizzato_da` (es. "il consorzio, sentita la Provincia"), `data`, `documento` oppure `a_voce: true` (avviso K-CTR-043), `nota` |
 | `luoghi[].sensibile` | no | comune | Versione 2: `true` = luogo sensibile, cioe' dire che una persona ci va lascia capire un dato sulla salute (es. un centro diurno, un centro di terapia). Lo sceglie chi scrive i dati: un doposcuola, anch'esso di tipo `centro`, di solito non lo e' (sotto) |
 | `luoghi[].nota` | no | comune | Note |
 | `luoghi_privati[].codice` | si' | comune | Codice del luogo (resta visibile: e' quello che compare al posto dei dati personali) |
@@ -838,7 +838,7 @@ ancora letta: un servizio `altro` resta `altro`, mai `ncc` da solo) e
 |---|---|---|---|
 | `servizi[].codice` | si' | comune | Codice del servizio |
 | `servizi[].nome` | no | comune | Nome |
-| `servizi[].codici_esterni[]` | no | comune | Es. sistema "CTA", tipo "servizio", codice "1050002/3"; scheda handicap "38177" |
+| `servizi[].codici_esterni[]` | no | comune | Es. sistema "Consorzio", tipo "servizio", codice "1234567/1"; scheda handicap "12345" |
 | `servizi[].tipo` | si' | particolare | Tipo dichiarato dal committente: `linea`, `scolastico`, `disabili`, `ncc` (versione 3, sotto), `altro` (con `tipo_descrizione`). "Promiscuo" non si dichiara: lo ricava il programma sulla corsa |
 | `servizi[].tipo_descrizione` | con `altro` | particolare | Descrizione del tipo |
 | `servizi[].contratto` | si' | comune | Contratto |
@@ -937,7 +937,7 @@ allora e' una corsa promiscua (es. medie del consorzio + superiori a supporto di
 |---|---|---|---|
 | `corse[].codice` | si' | comune | Codice della corsa |
 | `corse[].nome` | no | comune | Nome |
-| `corse[].codici_esterni[]` | no | comune | Es. sistema "Trentino Trasporti": linea "B634", corsa "533"; turno "2666" |
+| `corse[].codici_esterni[]` | no | comune | Es. sistema "Trasporti Provinciali": linea "B634", corsa "533"; turno "1234" |
 | `corse[].servizi[]` | si' | comune | Servizi che la corsa soddisfa (piu' di uno = promiscua; nessuno: avviso K-CTR-040) |
 | `corse[].calendario` | si' | comune | Calendario |
 | `corse[].passaggi[]` | si' | comune | Sequenza dei passaggi (sotto) |
@@ -1248,7 +1248,7 @@ e quello del sabato insieme).
 lunghezza, resto. Il ciclo **non si ferma** nelle vacanze ne' nei giorni senza turni: un giorno in cui il turno del
 passo non vale (festa, vacanza della scuola) quella persona semplicemente non lavora, e il giorno dopo il ciclo va
 avanti. Si conta anche prima della partenza (con `dal` precedente). Con i passi mensili, il passo e' il numero di mesi
-di calendario dalla partenza. La regola dell'azienda Alpinabus, con la tabella di 14 giorni, e' scritta in REGOLE.md.
+di calendario dalla partenza. La regola dell'azienda ALP, con la tabella di 14 giorni, e' scritta in REGOLE.md.
 
 La linea 7 su 7 del demo: tre autisti, ciclo di 3 giorni, il riposo scorre; il passo con due turni vale nei giorni
 feriali per il primo e nei festivi per l'altro, secondo i loro calendari:
@@ -1577,7 +1577,7 @@ riga per riga):
 
 ## Corrispondenza con GTFS
 
-GTFS e' il formato aperto degli orari del trasporto pubblico (lo pubblicano Trentino Trasporti e molti altri).
+GTFS e' il formato aperto degli orari del trasporto pubblico (lo pubblicano l'azienda del trasporto pubblico provinciale e molti altri).
 Dove un concetto esiste in GTFS, K-Zero lo segue: cosi' un lettore futuro potra' trasformare i dati aperti
 nel formato K-Zero senza riscrivere nulla. Il codice GTFS di un elemento va tra i codici esterni
 (sistema = chi pubblica i dati, tipo = il nome del campo GTFS).

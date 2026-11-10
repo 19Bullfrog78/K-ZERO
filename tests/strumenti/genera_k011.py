@@ -16,7 +16,7 @@ def save(n, d):
 pk = load('pacchetto')
 pk['codice'] = 'K011-ORARI'
 pk['nome'] = "Prova degli orari di lavoro (K-011)"
-pk['origine']['nota'] = ("Dati inventati per le prove degli orari di lavoro (K-011), dal pacchetto demo: i tre esempi della pausa di Mauro, "
+pk['origine']['nota'] = ("Dati inventati per le prove degli orari di lavoro (K-011), dal pacchetto demo: i tre esempi della pausa del supervisore, "
                         "una violazione per tipo di regola, la corsa di 52 km con mezzi da 17, 8 e 9 posti, una corsa senza km, un titolare.")
 save('pacchetto', pk)
 
@@ -150,7 +150,7 @@ def giro_ore(h0, h1, presa=None):
     luogo, alle = fine_ore(h1)
     return apertura(p, dopo(p, 10), inizio, dopo(p, 20)) + ore(h0, h1) + chiusura(luogo, alle, dopo(alle, 10))
 
-# Esempi della pausa (Mauro, 20/10): (a) 20 + 20 minuti di guida per 30 minuti fermo; (b) 19:05 -> 19:50 dallo stesso luogo,
+# Esempi della pausa (supervisore, 20/10): (a) 20 + 20 minuti di guida per 30 minuti fermo; (b) 19:05 -> 19:50 dallo stesso luogo,
 # 20 km e 15 minuti per tratta, 15 minuti fermo; (c) 9:08 -> 12:00 dallo stesso luogo, 12 km e 18 minuti per tratta.
 turno('T-PAUSA-A', "Esempio a della pausa", 'P-PAUSE', '2026-11-02',
       apertura('09:00', '09:10', 'F-STAZIONE', '09:25') + [c('C-PAUSA-A1'),

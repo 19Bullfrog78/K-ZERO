@@ -8,7 +8,7 @@
 - 2026-10-11 - Tolta da CLAUDE.md la regola sulla cartella CODICE/ (l'archivio ufficiale e' solo GitHub)
   e tolto dai prossimi passi il punto "archivio con storico", perche' fatto.
 - 2026-10-11 - Aggiunta in CLAUDE.md la sezione "Come si salvano le modifiche": documenti su main,
-  programma e CLAUDE.md con proposta, controllo dell'arbitro e approvazione di Mauro.
+  programma e CLAUDE.md con proposta, controllo dell'arbitro e approvazione del supervisore.
 - 2026-10-11 - Prove automatiche delle regole di REGOLE.md (tests/, 12 prove, eseguite con
   `ctest --test-dir build`): giri, posti, assistente, carrozzine e pedana, categorie di corsa,
   assistente per l'infanzia, pause. Controllo automatico su GitHub a ogni proposta e salvataggio
@@ -23,7 +23,7 @@
   Aperta la sezione "Bug e limiti noti".
 - 2026-10-11 - K-006 (regole del mestiere, salvate direttamente su main): REGOLE.md aggiornato con
   attesa massima a scuola (arrivo non prima di 25 minuti dall'inizio, ripresa entro 20 minuti dalla fine),
-  alunni attivi e sospesi (lo sblocco in un file separato, il file del CTA non si modifica mai), orari per
+  alunni attivi e sospesi (lo sblocco in un file separato, il file del consorzio non si modifica mai), orari per
   giorno della settimana e periodo, turni del giorno e rotazione degli autisti, estate, servizi fissi,
   corse con piu' committenti; nuova sezione Glossario (GSH, MITT, inserviente, AM/RM/RP).
 - 2026-10-11 - K-006 (programma, proposta "K-006: fondamenta uomo + AI"): un solo programma kzero con
@@ -88,9 +88,9 @@
 - 2026-10-18 - K-008 (regole del mestiere, salvate direttamente su main): REGOLE.md, "Turni del giorno e
   rotazione": ogni azienda sceglie la sua rotazione (es. 3, 8 o 14 giorni) e il suo modo di assegnare i turni;
   chi fa il turno in tre modi (rotazione, servizi fissi con i loro giorni, assegnazione del singolo giorno scritta
-  dall'utente), vince il piu' preciso; turno scoperto se nessuno lo fa; la rotazione di 14 giorni di Alpinabus
+  dall'utente), vince il piu' preciso; turno scoperto se nessuno lo fa; la rotazione di 14 giorni di ALP
   (senza nomi) come esempio. "Autisti": la pausa a casa vale dai 30 minuti in su se il giro lo consente (risposta
-  di Mauro del 13/10), il rientro dev'essere giustificato dai dati, la regola precisa la fissa il mandato "orari di
+  del supervisore del 13/10), il rientro dev'essere giustificato dai dati, la regola precisa la fissa il mandato "orari di
   lavoro"; il mezzo dorme preferibilmente vicino a casa dell'autista (impostazione dell'azienda: preferito,
   ammesso, mai); tolta dai "Da confermare" la domanda sulla pausa con il mezzo o con l'auto. "Mezzi e strade": un
   mezzo fa solo i servizi per cui e' omologato; per l'altro uso serve la distrazione, per singolo mezzo e con le
@@ -284,7 +284,7 @@
   = avviso con il motivo, senza dati mai "regolare". Demo: R-L138, R-561, R-234, R-CHIAMATA ed ESEMPIO-01 come al punto
   3 del mandato (REGOLE.md, "Orari di lavoro", con le fonti e l'elenco del "da confermare" per il consulente del lavoro).
   **Contratto della persona** (persone.json versione 2: ore previste e massime), **scelte dell'azienda e della persona**
-  (`scelte_orari`, preferenza o limite), **chiave del rientro** (Mauro, 20/10: fermo minimo, fattore della guida, km in
+  (`scelte_orari`, preferenza o limite), **chiave del rientro** (supervisore, 20/10: fermo minimo, fattore della guida, km in
   piu', forza; tolti HomeBreakRule, check_home_breaks e il peso della pausa). **`kzero ore`** (schema `ore` versione 1;
   K-ERR-039 e 040). **Controlli K-CTR-101 ... 126**; gli errori del piano degli orari non bloccano kzero giornata e
   kzero ore (schemi controlla 5, giornata 3, descrivi 5). Demo e demo "solo numeri" alla versione 2 (Alfa: fermo 30
@@ -292,7 +292,7 @@
   lavoro massimo; P-G a chiamata con 200 giornate dal 2023): 0 errori, 31 avvisi (prima 8). Per restare senza errori
   ho corretto un turno, non una regola: la gita di domenica 15 novembre porta il 561 su tutta la settimana di P-A, che
   senza il riposo regolare di 45 ore lo violava; ora venerdi' 13 il primo lo fa P-C (assegnazione del singolo giorno).
-  Pacchetto di prova tests/esempi/k011-orari (dati inventati, generato dal demo): i tre esempi della pausa di Mauro, una
+  Pacchetto di prova tests/esempi/k011-orari (dati inventati, generato dal demo): i tre esempi della pausa del supervisore, una
   violazione per tipo di regola, la corsa di 52 km con mezzi da 17, 8 e 9 posti, una corsa senza km, il titolare, il
   lavoro a chiamata, il contratto collettivo, le ore del contratto, due autisti a bordo: 15 errori (tutti del piano), 89
   avvisi. Prova di scala alla versione 2, con le leggi del demo: turni rifatti perche' le rispettino anche nella lettura
@@ -316,7 +316,7 @@
   su 798 sul programma finale (prima del K-011 701); quelle cambiate e il perche' sono elencate nella proposta. Tempi
   della prova di scala: in "Bug e limiti noti".
 - 2026-10-28 - K-011 aggiunta 1 (programma, nella proposta "K-011: orari di lavoro", dopo il controllo dell'arbitro e
-  la decisione di Mauro del 28/10 su OUT e tachigrafo). **Ore del contratto e scelte sul lavoro**: i conteggi
+  la decisione del supervisore del 28/10 su OUT e tachigrafo). **Ore del contratto e scelte sul lavoro**: i conteggi
   possibili sono quelli dei regimi certi, di quelli da confermare e, se nessuno e' certo, quello senza regime; nella
   lettura certa il piu' basso, nella prudente il piu' alto: errore solo se tutti superano (caso dell'arbitro: P-A con
   2,1 ore il 14 ottobre, prima errore K-CTR-119, ora avviso K-CTR-120 con il motivo). **D.Lgs. 234 nei giorni estesi
@@ -403,7 +403,7 @@
   esterni comuni), mai nel "solo numeri" (K-CTR-019, varianti 8 e 9); `LegameSensibile` esteso ai privati (gruppi, fermate
   o passeggeri in un luogo sensibile, corse che ci passano anche con i trasbordi, case porta a porta con il porta a porta
   sensibile), una regola sola anche per la cassaforte. Su domanda (risposta: "nome nelle uscite") giornata versione 4 e
-  dimostrazione 3 mostrano il nome del committente, filtrato; Mauro: il nome non si perde mai, chi ha i permessi lo vede
+  dimostrazione 3 mostrano il nome del committente, filtrato; il supervisore: il nome non si perde mai, chi ha i permessi lo vede
   sempre (REGOLE.md, docs/cassaforte.md). **4. Prova di scala mista** (DECISIONI.md): 610 mezzi, 9.800 corse (40 linee oltre i
   50 km, 400 corse promiscue), NCC con pullman e auto, disabili verso 20 centri sensibili, OUT o tachigrafo per tipo e per
   servizio, 20 prestiti di persone e 10 di mezzi; 0 errori, 1 avviso (K-CTR-104: la media di 4 mesi del D.Lgs. 234 esce
@@ -498,8 +498,8 @@
   servizi rigenerato: 19.166 file del pacchetto, 15.931 righe di comando, 2.051.694 date e orari, 67.793 cassaforti e 37.265
   contenuti, 543.762 registri e 361.217 elenchi di voci, 343.263 password. Nessun guasto. Tempi della prova di scala non
   rimisurati: il calcolo non cambia, cambia solo cosa si mostra.
-- 2026-11-05 - Regola di Mauro, registrata in CLAUDE.md (nella proposta del K-013, perche' CLAUDE.md passa da una proposta):
-  ogni resoconto per l'arbitro e ogni documento utile al progetto si consegna sempre come file da scaricare; Mauro lo mette
+- 2026-11-05 - Regola del supervisore, registrata in CLAUDE.md (nella proposta del K-013, perche' CLAUDE.md passa da una proposta):
+  ogni resoconto per l'arbitro e ogni documento utile al progetto si consegna sempre come file da scaricare; il supervisore lo mette
   nella cartella giusta del suo PC (i resoconti in C:\Users\BULLFROG\Desktop\LAVORO\K-ZERO\K-ZERO CC). Una sessione nel
   cloud non raggiunge il PC: il resoconto del K-013 e' stato consegnato da scaricare.
 - 2026-11-05 - K-014 (programma, proposta "K-014: requisiti per tipo senza i dati particolari"). **1. Requisiti che dipendono
@@ -509,7 +509,7 @@
   trovati anche la categoria della corsa (gia' particolare in kzero dimostrazione) e lo schema dei servizi (sotto). **2. Senza i
   dati particolari** (per permesso o per parametro) si contano soltanto, con il segno del K-013 (`by_service_kind`, `dal_tipo`):
   K-CTR-068 dell'autorizzazione del committente, K-CTR-069, K-CTR-072 con un vincolo per tipo, K-CTR-067 varianti 4 e 6. Scelta A
-  di Mauro (5/11): se il pacchetto ha almeno un requisito che dipende dal tipo, di ogni turno scoperto o senza mezzo per un fatto
+  del supervisore (5/11): se il pacchetto ha almeno un requisito che dipende dal tipo, di ogni turno scoperto o senza mezzo per un fatto
   con le date si vedono il fatto, i giorni e la persona o il mezzo previsto, il perche' no, con lo stesso testo e la stessa
   posizione per ogni causa (K-CTR-078 variante 5, K-CTR-079 variante 3, kzero giornata, kzero ore; `motivo_dei_turni_riservato`
   in src/api/riservatezza.hpp); lo stesso turno scoperto per cause diverse e' un problema solo; per chi non ha il permesso dei
@@ -542,8 +542,59 @@
   requisito del punto 1 non riconosciuto (l'autorizzazione del committente) 1; B2 (law solo dalle regole sul lavoro) 1, prima 0;
   K-CTR-007 del campo particolare che manca visibile 1; il testo senza motivo anche senza requisiti del tipo 1; la posizione del
   fatto tenuta nel testo senza motivo 8. Tutti scoperti.
+- 2026-11-10 - K-015 (programma e documenti, proposta "K-015: deposito pubblico"). Il deposito e' pubblico dal 5/11/2026;
+  scelte del supervisore del 5/11 e dell'8/11: la storia resta com'e', si sistemano i file di oggi, i luoghi restano.
+  **1. Quattro nomi tolti dai file di oggi.** Sul main di oggi (a76263f) il controllo nuovo trovava 130 punti in 27 file
+  (nome a 20, b 85, c 18, d 7); ora 0. Al loro posto "ALP", "il supervisore", "il consorzio" (nei codici esterni il sistema
+  "Consorzio"), "l'azienda del trasporto pubblico provinciale" (nei codici esterni il sistema "Trasporti Provinciali"), in
+  documenti, commenti, descrizioni degli schemi (anche delle versioni vecchie: solo il testo, nessun cambio di struttura ne'
+  di versione), prove, strumenti e pacchetti di prova. La nota della rotazione del demo dice ALP: nessuna uscita la mostra
+  (solo kzero esporta la riscrive nei file), quindi nessuna prova da aggiornare. Prova delle password con un altro nome
+  inventato, stessa logica. Esempi di codici esterni sostituiti con codici inventati. tests/esempi/k011-orari: cambia solo
+  la nota, nello script e nel pacchetto; verificato rigenerando con lo script cambiato dal demo del K-011 (git show
+  9fe6cfb:esempi/demo) in una cartella temporanea: l'unica differenza con il pacchetto di prima e' la nota, e il pacchetto
+  rigenerato e' identico a quello nuovo. Rigenerato anche tests/esempi/k012-servizi dal demo di oggi: identico.
+  **2. Copia congelata tests/esempi/k010-cassaforte rifatta** (la stessa nota stava nella cassaforte, cifrata con la
+  password di prova pubblica): programma del K-010 (main 3f09c19, parametri di rilascio), demo del K-010 con la sola nota
+  cambiata, la sequenza letta con kzero registro su una copia di lavoro (chiudi da TITOLARE con conservazione 2099-12-31,
+  aggiungi-utente UFFICIO con i dati personali e SALUTE con i dati particolari, stesse password). Verifiche su copie di
+  lavoro: JSON in chiaro identici byte per byte tranne cassaforte.id; cambiano solo quello, cassaforte.kzc e registro.kzr
+  (3 voci); la nota esportata dice ALP e l'esportazione coincide con il demo del K-010 con la sola nota cambiata;
+  kzero controlla dei tre utenti, testo e JSON, uguale alla copia di prima; nessuna prova cambiata.
+  **3. Nessun dato vero nel deposito: regola e reti.** Regola in CLAUDE.md (Confini). .gitignore: i formati dei dati
+  (xlsx, xls, xlsm, ods, csv, pdf, docx, doc, kzc, kzr; maiuscole e minuscole) ignorati fuori da tests/ ed esempi/. Prova
+  deposito.nomi_e_file (etichetta deposito): lo strumento tests/strumenti/controlla_deposito cerca i quattro nomi in tutti i
+  file di testo della cartella del deposito (fuori da build*/ e .git), parola intera, maiuscole e minuscole, quello di due
+  parole anche a capo o con un segno di commento in mezzo, anche nei percorsi, e fuori da tests/ ed esempi/ i file di quei
+  formati e i manifesti di un pacchetto; conosce solo le impronte SHA-256 dei nomi (libsodium), i messaggi dicono file, riga
+  e quale nome (a-d), mai il nome. Prova dello strumento (test_deposito) con una lista finta di nomi inventati, un caso per
+  ogni regola (anche maiuscolo, a capo e nei commenti). Controllo GitHub "Nomi della proposta" (nomi.yml,
+  tests/strumenti/controlla_proposta.sh): titolo della proposta e messaggi dei commit nuovi, anche quando cambia il titolo.
+  **4. Rami delle proposte unite** (1-13): le teste dei 10 rami claude/* rimasti sono le teste di proposte unite; non
+  cancellati, perche' questa sessione non ha il permesso di cancellare rami (rifiuto HTTP 403): li cancella il supervisore,
+  elenco nel resoconto. **5. Documenti**: CLAUDE.md (regola e comando della prova), DECISIONI.md, docs/sicurezza.md (deposito
+  pubblico: cosa e' pubblico, la regola, le reti e i loro limiti), docs/architettura.md (etichetta deposito). Nessun cambio
+  di funzionamento di kzero: forma delle uscite, versioni degli schemi, codici K-CTR e K-ERR uguali.
+  Prove: 969 su 969 (prima 961), 8 nuove (le 7 dello strumento con la lista finta, test_deposito, e
+  deposito.nomi_e_file); nessuna prova di prima cambia esito (quella delle password usa un altro nome inventato con le
+  stesse attese). Ogni commit della proposta compila senza avvisi e passa le prove da solo (961, 961, 969, 969). Con i
+  sanitizer 967 su 967 (senza le 2 prove sul programma di rilascio), 30 minuti con 4 prove insieme. Fuzzing in locale sul
+  codice finale, i 32 bersagli 20 secondi ciascuno come nel controllo GitHub, 4 alla volta: nessun guasto (nessun bersaglio
+  nuovo: lo strumento del deposito legge solo i file del deposito, mai dati di un utente).
+  Sabotaggi sul codice finale, uno alla volta (prove rosse): nome a in un commento C++ 1; nome b tutto maiuscolo in un
+  commento CMake 1; nome c in un commento del controllo GitHub 1; nome d a capo in un commento C++ 1; un file .xlsx in
+  docs/ 1; un pacchetto.json in docs/ 1; un nome in un messaggio di commit di prova (in locale, mai pubblicato, poi tolto)
+  e il nome d a capo nel titolo di una proposta: lo script del controllo GitHub esce con 1; nello strumento: senza le
+  minuscole 5, nome di due parole non piu' a capo 3, ogni file con un byte zero trattato come binario 1, formati vietati
+  anche in tests/ ed esempi/ 2, messaggio che ripete la parola trovata 3, nome di due parole mai cercato 3, cartelle
+  build*/ non escluse 2. Tutti scoperti; nessun messaggio del controllo ha scritto un nome.
 
 ## Bug e limiti noti
+- (K-015) Il deposito e' pubblico: la storia prima del 5/11/2026 contiene ancora i quattro nomi tolti dai file di oggi
+  (anche nei messaggi dei salvataggi) e i codici di esempio sostituiti; .gitignore, la prova deposito e il controllo
+  delle proposte sono solo reti (un pacchetto vero e' una cartella di JSON come il demo; i salvataggi diretti su main non
+  passano dal controllo dei messaggi): la difesa vera e' tenere i dati veri fuori dalla cartella del deposito
+  (docs/sicurezza.md).
 - I pesi del calcolo (ObjectiveWeights) hanno ancora valori provvisori nel codice, non usati: andranno nei dati con il
   mandato del calcolo. Dal K-011 non c'e' piu' il peso della pausa (la pausa si giudica con la chiave del rientro); con
   il calcolo nessun peso dovra' premiare i km o la fretta (art. 10 del Reg. 561/2006).
@@ -601,7 +652,7 @@
   arrivera' con le stampe. Le letture "da confermare" sono in REGOLE.md, da portare al consulente.
 - (K-013, chiuso dal K-014) Senza i dati particolari K-CTR-068 (autorizzazione del committente) e K-CTR-069 (uso del mezzo)
   dicevano il tipo di servizio: ora si contano soltanto, con K-CTR-072 (vincolo per tipo) e K-CTR-067 varianti 4 e 6.
-- (K-014) Senza i dati particolari si vede che un turno e' scoperto o senza mezzo, ma non il perche' (scelta A di Mauro): chi
+- (K-014) Senza i dati particolari si vede che un turno e' scoperto o senza mezzo, ma non il perche' (scelta A del supervisore): chi
   conosce bene assenze, fermi e scadenze (es. la distrazione di ALFA-05 che scade il 2027-06-30, K-CTR-050, sempre visibile)
   puo' a volte intuire che il motivo e' un requisito del tipo di servizio (docs/sicurezza.md). Il testo senza il motivo vale per
   ogni causa appena il pacchetto ha un requisito che dipende dal tipo, anche un vincolo di destinazione che non toglie mai un
@@ -636,7 +687,7 @@
 - Limiti delle strade (altezze, masse, strade strette) letti dalle mappe aperte.
 - Viaggi reali dalla piattaforma GPS del committente, per confrontarli con i giri pianificati.
 - Trasbordi proposti dal programma (oggi si scrivono a mano e il programma li controlla).
-- (Mauro, 13/10) Ricerca del mezzo adatto per un servizio nuovo o ipotetico: dati orario ed esigenze (posti,
+- (supervisore, 13/10) Ricerca del mezzo adatto per un servizio nuovo o ipotetico: dati orario ed esigenze (posti,
   carrozzine, ausili piegati, assistente), proporre i mezzi in ordine di convenienza (capienza, pedana,
   bagagliaio, dove si trova il mezzo a quell'ora, km a vuoto, regole sull'orario di lavoro degli autisti, es. oltre
   9 posti su un servizio di oltre 50 km cambiano le regole della settimana). Possibile dopo i turni (K-008), le
@@ -645,7 +696,7 @@
 - Scelta dei turni da parte degli autisti (preferenze espresse, poi il programma propone e l'azienda decide).
 - Servizi a chiamata (prenotati il giorno prima o in giornata), da inserire nei turni gia' fatti.
 - (K-010) Chiave di ripristino della cassaforte (oggi non c'e': persa la password, un altro utente con gli stessi permessi
-  ne da' una nuova, altrimenti i dati si riprendono dal file del CTA). Se servira': una chiave stampata su carta, data a
+  ne da' una nuova, altrimenti i dati si riprendono dal file del consorzio). Se servira': una chiave stampata su carta, data a
   chi decide l'azienda, con le stesse regole di una password.
 - (K-010) Accorgersi di una copia vecchia della cassaforte rimessa al suo posto: il programma ricorda, fuori dalla
   cartella (es. nella cartella dell'utente sul PC), per ogni cassaforte il numero della chiusura e la versione delle
@@ -657,14 +708,14 @@
 ## Prossimi passi
 1. Mandato piccolo "avviso sui nomi liberi": un avviso quando un nome libero (servizi, gruppi, turni, scuole e centri)
    lascia capire un dato personale o particolare.
-2. Lettore del file alunni del CTA, che lo trasforma nel formato K-Zero (con la lettura blindata del K-009) e scrive i
+2. Lettore del file alunni del consorzio, che lo trasforma nel formato K-Zero (con la lettura blindata del K-009) e scrive i
    dati personali e particolari solo nella cassaforte, mai in file in chiaro.
 3. Scadenziario: le scadenze in un posto solo (abilitazioni, autorizzazioni, revisioni, contratti, data di
    conservazione, giornate a chiamata vicine al limite).
 4. Viste per zona e per ora: giornata e orari di un gruppo di comuni o di una fascia oraria.
-5. Programma per Windows da scaricare (i dati veri restano sul PC di Mauro), con le prove di sicurezza su Windows (anche
+5. Programma per Windows da scaricare (i dati veri restano sul PC del supervisore), con le prove di sicurezza su Windows (anche
    quelle della cassaforte) e la correzione dei dati senza file in chiaro.
-6. Raccolta dati veri Alpinabus: mezzi, autisti (paese), giri di una giornata tipo; le letture "da confermare" degli
-   orari di lavoro al consulente del lavoro (REGOLE.md).
+6. Raccolta dati veri ALP (solo sul PC del supervisore, fuori dalla cartella del deposito): mezzi, autisti (paese), giri
+   di una giornata tipo; le letture "da confermare" degli orari di lavoro al consulente del lavoro (REGOLE.md).
 7. "Fotografia" dei giri attuali: km pieni, km a vuoto, tempi morti.
 8. Lettura dei paper e proposta del metodo di calcolo con OR-Tools.

@@ -1,5 +1,5 @@
 # Prove automatiche: ctest --test-dir build --output-on-failure
-# Etichette: nucleo, api, programma, documentazione, architettura, schemi, scala, sicurezza, fuzz.
+# Etichette: nucleo, api, programma, documentazione, architettura, schemi, scala, sicurezza, fuzz, deposito.
 include(GoogleTest)
 
 # --- Prove del nucleo (GoogleTest): ogni TEST si registra da solo --------------------
@@ -777,7 +777,7 @@ kzero_prova(controlla_orari_dati_personali USCITA 1 FORMATO testo RESOCONTO
                      "Straordinario: la persona P-TITOLARE (Titolare Prova) ha 9 ore e 35 minuti di lavoro effettivo, oltre il normale di 8 ore (massimo 10 ore) della regola R-L138 L138-GIORNO"
                      "va confermato se la legge vale per il rapporto di lavoro della persona"
             ARGOMENTI controlla ${ORE_K011} --includi-dati-personali --includi-dati-particolari)
-# I tre esempi della pausa di Mauro (20/10), con la chiave del rientro di Alfa (30 minuti, fattore 2, preferenza).
+# I tre esempi della pausa del supervisore (20/10), con la chiave del rientro di Alfa (30 minuti, fattore 2, preferenza).
 kzero_prova(ore_tre_esempi_della_pausa USCITA 0 FORMATO testo
             CONTIENE "Rientro tra C-PAUSA-A1 e C-PAUSA-A2: fermo 30 minuti a L-RIMESSA-ALFA; 40 minuti di guida a vuoto in piu' (il luogo dopo e' lo stesso), con il fattore 2 ne servono almeno 1 ora e 20 minuti; fermo minimo 30 minuti; 20 km: non giustificato (fermo troppo corto per la guida in piu')."
                      "Rientro tra C-PAUSA-B1 e C-PAUSA-B2: fermo 15 minuti a L-RIMESSA-ALFA; 30 minuti di guida a vuoto in piu' (il luogo dopo e' lo stesso), con il fattore 2 ne servono almeno 1 ora; fermo minimo 30 minuti; 40 km: non giustificato (fermo sotto il minimo)."
@@ -864,7 +864,7 @@ kzero_prova(ore_titolare USCITA 0 FORMATO testo CONTIENE "Avviso K-CTR-112" "Avv
             NON_CONTIENE "Errore K-CTR"
             ARGOMENTI ore ${ORE_K011} --data 2026-11-20 --persona P-TITOLARE --includi-dati-personali --includi-dati-particolari)
 
-# K-011 aggiunta 1, OUT o tachigrafo (Mauro 28/10). La forzatura cosciente di Alfa sulla corsa C-FORZATA (55 km, mezzo da
+# K-011 aggiunta 1, OUT o tachigrafo (supervisore 28/10). La forzatura cosciente di Alfa sulla corsa C-FORZATA (55 km, mezzo da
 # 17 posti: con i dati scritti vale il Reg. 561): il programma pianifica OUT come ha scelto l'azienda (nella lettura certa
 # il 561 non conta), ma la forzatura si vede sempre (modo della corsa e K-CTR-129) e il suo rischio e' un avviso (K-CTR-130,
 # K-CTR-114 con il motivo), mai un errore. Motivo e chi l'ha scritta sono dati personali.
@@ -1067,7 +1067,7 @@ kzero_prova(ore_tachigrafo_per_tipo_riservato_json USCITA 0 FORMATO json SCHEMA 
             CONTIENE "\"regimi_per_scelta\": \"riservato\"" "\"modo\": \"riservato\""
             NON_CONTIENE "\"per_scelta\": true" "tachigrafo_per_scelta" "\"tachigrafo\""
             ARGOMENTI ore ${KZERO_DEMO} --data 2026-10-19 --persona P-B1 --formato json)
-# K-011 aggiunta 2, caso dell'arbitro: nel demo Alfa ha scelte per linea, scolastico e altro (come Mauro: gita, linea e
+# K-011 aggiunta 2, caso dell'arbitro: nel demo Alfa ha scelte per linea, scolastico e altro (come il supervisore: gita, linea e
 # scolastico), nessuna per i disabili. Di base la corsa per disabili C-DIS-1 ha la stessa riga del modo delle linee ("per un
 # dato particolare"), cosi' la riga non dice il tipo; con i dati particolari si vede tutto, anche "nessuna scelta".
 kzero_prova(giornata_modo_uguale_senza_dati_particolari USCITA 0 FORMATO testo
@@ -1183,7 +1183,7 @@ kzero_prova(tipo_dis_linea_dati_particolari USCITA 1 FORMATO testo RESOCONTO BAS
             PROBLEMI "K-CTR-069|turni.json|/turni/2/mezzo" "K-CTR-072|turni.json|/turni/2/mezzo"
             CONTIENE "fa il servizio S-DIS (Trasporto al centro diurno Il Faro), che chiede l'uso LINEA"
             ARGOMENTI controlla @PACCHETTO@ --includi-dati-particolari)
-# K-014, scelta A di Mauro: S-LIN-B610 come NCC chiede l'uso NCC, che ALFA-05 ha solo fino al 2027-06-30 (distrazione). Dopo,
+# K-014, scelta A del supervisore: S-LIN-B610 come NCC chiede l'uso NCC, che ALFA-05 ha solo fino al 2027-06-30 (distrazione). Dopo,
 # i turni con ALFA-05 restano senza mezzo: si vede che lo sono e in quali giorni (serve per lavorare), il perche' no, nemmeno con
 # i dati personali (stesso testo e stessa posizione, il mezzo previsto, per ogni causa). Con i dati particolari si vede.
 kzero_prova(tipo_lin_ncc_controlla USCITA 1 FORMATO testo RESOCONTO BASE ${KZERO_DEMO}
@@ -1761,7 +1761,7 @@ kzero_prova(dati_in_chiaro_senza_dati_inventati BASE ${KZERO_DEMO} USCITA 0 FORM
             ARGOMENTI controlla @PACCHETTO@)
 
 # K-012: i committenti privati del demo con la cassaforte vera e tre utenti (TIT tutti i permessi, UFF solo i dati personali,
-# SAL solo i particolari). Il nome non si perde mai (Mauro): chi ha i permessi lo vede sempre, gli altri vedono il codice.
+# SAL solo i particolari). Il nome non si perde mai (supervisore): chi ha i permessi lo vede sempre, gli altri vedono il codice.
 # CP-01 noleggia per un matrimonio (sabato 2027-07-10, luoghi normali): il nome e' personale. CP-02 noleggia per andare al
 # centro diurno (mercoledi' 2027-07-07, luogo sensibile): il nome e' legato, solo con tutti e due i permessi.
 set(PW_K012_TIT "titolare delle prove dei servizi")
@@ -1937,6 +1937,26 @@ add_test(NAME sicurezza.elenco_dei_componenti
          COMMAND ${CMAKE_COMMAND} -DSORGENTI=${PROJECT_SOURCE_DIR} -DVERSIONE=${PROJECT_VERSION}
                  -P ${CMAKE_CURRENT_SOURCE_DIR}/programma/componenti.cmake)
 set_tests_properties(sicurezza.elenco_dei_componenti PROPERTIES LABELS sicurezza)
+
+# --- Deposito pubblico (K-015): nessun dato vero nel deposito (CLAUDE.md, Confini) --------------------------------------
+# Una rete, non la difesa (docs/sicurezza.md): nei file del deposito nessuno dei quattro nomi (il controllo ne conosce solo
+# le impronte SHA-256) e, fuori da tests/ ed esempi/, nessun file di dati ne' manifesto di un pacchetto. Lo stesso
+# strumento controlla nel controllo GitHub i messaggi dei commit e il titolo delle proposte
+# (tests/strumenti/controlla_proposta.sh). La prova del controllo usa una lista finta di nomi inventati.
+add_library(kzero_deposito STATIC strumenti/deposito.cpp)
+target_include_directories(kzero_deposito PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_link_libraries(kzero_deposito PUBLIC kzero_sodium kzero_utf8proc)
+target_compile_options(kzero_deposito PRIVATE ${KZERO_WARNINGS})
+add_executable(controlla_deposito strumenti/controlla_deposito.cpp)
+target_link_libraries(controlla_deposito PRIVATE kzero_deposito)
+target_compile_options(controlla_deposito PRIVATE ${KZERO_WARNINGS})
+add_test(NAME deposito.nomi_e_file
+         COMMAND controlla_deposito --cartella ${PROJECT_SOURCE_DIR} --escludi ${CMAKE_BINARY_DIR})
+set_tests_properties(deposito.nomi_e_file PROPERTIES LABELS deposito)
+add_executable(test_deposito test_deposito.cpp)
+target_link_libraries(test_deposito PRIVATE kzero_deposito GTest::gtest_main)
+target_compile_options(test_deposito PRIVATE ${KZERO_WARNINGS})
+gtest_discover_tests(test_deposito PROPERTIES LABELS deposito)
 
 # --- Fuzzing (K-009): prove con dati casuali e deformati (tests/fuzz, docs/sicurezza.md) -------------------------
 # I bersagli stanno in una libreria comune: libFuzzer li usa per cercare guasti (KZERO_FUZZ=ON, clang), rigioca_fuzz

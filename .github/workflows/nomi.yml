@@ -1,0 +1,29 @@
+# Controllo delle proposte (K-015): il deposito e' pubblico; nel titolo di una proposta e nei messaggi dei suoi commit nuovi
+# non c'e' nessuno dei quattro nomi (CLAUDE.md, Confini). Usa lo stesso strumento della prova deposito.nomi_e_file, che
+# conosce solo le impronte dei nomi (tests/strumenti/controlla_proposta.sh). I file del deposito li controlla quella prova,
+# nel lavoro compila-e-prova del Controllo. Questo controllo sta a parte perche' riparte anche quando si cambia il titolo
+# (edited), senza rifare tutte le prove; dei messaggi controlla i commit della proposta che il ramo di arrivo non ha.
+name: Nomi della proposta
+
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+jobs:
+  titolo-e-commit:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+      - name: Compila lo strumento del controllo
+        run: |
+          cmake -S . -B build -DKZERO_WERROR=ON
+          cmake --build build -j "$(nproc)" --target controlla_deposito
+      - name: Nomi nel titolo e nei messaggi dei commit nuovi
+        env:
+          # Titolo e ramo arrivano come variabili, mai scritti dentro il comando (un titolo non deve diventare un comando).
+          TITOLO: ${{ github.event.pull_request.title }}
+          RAMO_DI_ARRIVO: ${{ github.base_ref }}
+          TESTA: ${{ github.event.pull_request.head.sha }}
+        run: tests/strumenti/controlla_proposta.sh build/tests/controlla_deposito "origin/$RAMO_DI_ARRIVO" "$TESTA"

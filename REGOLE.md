@@ -1,4 +1,4 @@
-# Regole del mestiere (confermate da Mauro)
+# Regole del mestiere (confermate dal supervisore)
 
 Le regole sono divise in due parti:
 - **Parte 1 - Regole generali del mestiere**: valgono per ogni azienda e ogni territorio.
@@ -15,9 +15,9 @@ Le regole sono divise in due parti:
 - **Corsa** = il viaggio vero di un mezzo: una fila di passaggi (luogo, orario, chi sale e chi scende).
   Una corsa puo' soddisfare piu' servizi.
 - La parola **"linea"** ha due sensi: la "linea" di un'azienda e' spesso la "corsa" del committente;
-  la "linea" del committente (es. la B634 di Trentino Trasporti) contiene piu' corse.
+  la "linea" del committente (es. la B634 dell'azienda del trasporto pubblico provinciale) contiene piu' corse.
 - Di solito un servizio si perde o si scambia una corsa alla volta, a volte un intero lotto (gruppo di servizi).
-- Categorie (Mauro, 3/11): Linee, Handicap (nel formato dei dati: disabili), Scolastici, NCC (noleggio con conducente:
+- Categorie (supervisore, 3/11): Linee, Handicap (nel formato dei dati: disabili), Scolastici, NCC (noleggio con conducente:
   gite, turismo), Promiscui (di solito scolastico + handicap; fino al K-011 "ibridi"), e "altro" per i servizi che non sono
   nessuno di questi (altre aziende, altri paesi). Il tipo del servizio lo dichiara il committente; la categoria della corsa
   la ricava il programma, non si scrive a mano.
@@ -25,14 +25,14 @@ Le regole sono divise in due parti:
 - Promiscuo anche: studenti portati a un centro esterno (doposcuola, centro diurno).
 - Una corsa che soddisfa piu' servizi e' promiscua, anche se uno e' NCC. Una stessa corsa puo' servire committenti diversi.
   Esempio: a mezzogiorno si caricano le superiori insieme alle medie; le superiori sono un servizio a supporto
-  di Trentino Trasporti (servizio pubblico della Provincia) e non compaiono nel file del CTA. La corsa e' promiscua.
+  dell'azienda del trasporto pubblico provinciale (servizio pubblico della Provincia) e non compaiono nel file del consorzio. La corsa e' promiscua.
 - Corse promiscue finora sempre autorizzate: infanzia + handicap, medie + superiori, medie + handicap.
 - **NCC** = servizi per gruppi formati su iniziativa del cliente o dell'azienda (gite, turismo, eventi, matrimoni), anche
   se si ripetono. Il tipo dice la natura del servizio, non la licenza del mezzo: un trasporto con tragitto e frequenza fissi
   per una categoria di persone (es. gli operai casa-lavoro) e' un servizio regolare specializzato anche se si fa con un mezzo
   da noleggio, e non e' NCC (va "altro", o il tipo giusto) [Probabile: Reg. (CE) 1073/2009 art. 2, stesse definizioni del
   Reg. (CE) 12/98 art. 2]. Senza questa regola una navetta di operai scritta NCC diventerebbe un servizio occasionale certo.
-- Per un servizio NCC chi sale non cambia la categoria: una gita scolastica porta studenti ma e' NCC (Mauro mette le gite
+- Per un servizio NCC chi sale non cambia la categoria: una gita scolastica porta studenti ma e' NCC (supervisore mette le gite
   nell'NCC). Per gli altri tipi tutto come prima (gruppi misti = promiscuo).
 - Il committente puo' essere un privato (es. un matrimonio): nome e nota sono dati personali (sotto, "Dati personali nel
   lavoro").
@@ -49,7 +49,7 @@ Le regole sono divise in due parti:
 ## Alunni attivi e sospesi
 - Attivi = hanno diritto al trasporto per legge: il piano si fa su di loro.
 - Sospesi (passivi) = posti liberi: li sblocca la Provincia con una mail o con una lista non ufficiale.
-- Lo sblocco si registra in un file separato; il file del CTA non si modifica mai.
+- Lo sblocco si registra in un file separato; il file del consorzio non si modifica mai.
 
 ## Posti a bordo
 - I posti sono quelli del libretto (carta di circolazione) e non cambiano con l'eta' dei passeggeri.
@@ -101,7 +101,7 @@ Le regole sono divise in due parti:
 
 ## Autisti
 - La pausa fuori dal posto (rientro in rimessa o in un ricovero tra due corse) si giudica con la chiave del rientro
-  dell'azienda e della persona: vedi "Orari di lavoro" qui sotto (Mauro, 20/10). Resta una preferenza, non un
+  dell'azienda e della persona: vedi "Orari di lavoro" qui sotto (supervisore, 20/10). Resta una preferenza, non un
   obbligo, se l'azienda non la fa diventare un limite.
 - Il mezzo dorme preferibilmente in un ricovero vicino a casa dell'autista, cosi' l'autista usa la sua auto il
   meno possibile. Altre aziende vogliono sempre il rientro in rimessa: e' un'impostazione di ogni azienda
@@ -129,7 +129,7 @@ Le regole sono divise in due parti:
 - I cambi occasionali per impegni personali non si pianificano.
 - Estate: il lavoro diminuisce e gli autisti vanno in ferie; corse, turni e rotazione possono quindi cambiare
   da un periodo dell'anno all'altro (piu' rotazioni nello stesso anno, anche per gruppi diversi di persone).
-- Esempio di rotazione (Alpinabus, 11/10): ciclo di 14 giorni che parte di lunedi'; due turni del giorno,
+- Esempio di rotazione (ALP, 11/10): ciclo di 14 giorni che parte di lunedi'; due turni del giorno,
   "primo" (dalla prima linea del mattino a verso le 17.00) e "secondo" (dalle 8.00 o piu' tardi a verso le 20.30
   con l'ultima linea); il sabato un solo autista fa tutto il giorno (con 1h30 di pulizia del mezzo); la domenica
   nessuno. Il secondo autista fa sempre l'opposto del primo.
@@ -156,7 +156,7 @@ Le regole sono divise in due parti:
 ## Servizi fissi
 - Alcuni servizi restano sempre allo stesso autista, fuori dalla rotazione, per ridurre km a vuoto e ore di lavoro.
   Hanno i loro giorni (es. solo il mercoledi'); gli altri giorni il turno segue la rotazione.
-- Esempio Alpinabus: le uscite di scuola di mezzogiorno (12.00-13.15) sempre allo stesso autista;
+- Esempio ALP: le uscite di scuola di mezzogiorno (12.00-13.15) sempre allo stesso autista;
   le linee 13.00-14.30 sempre all'autista che abita piu' vicino.
 - Se un'azienda tiene fisse solo alcune corse, le mette in un turno a parte.
 
@@ -189,7 +189,7 @@ Nel demo le categorie dubbie hanno il motivo scritto accanto: ATTESA e SOSTA con
 conducente e' libero si scrive una pausa); RICARICA e RISERVA disponibilita'; REPERIBILE reperibilita'; A-PIEDI
 (spostamento senza il mezzo) altre mansioni.
 
-### La pausa fuori dal posto (chiave del rientro, Mauro 20/10)
+### La pausa fuori dal posto (chiave del rientro, supervisore 20/10)
 - Rientro = tra due corse della giornata la persona va in una rimessa o in un ricovero, resta li' e torna. Una pausa
   dove finisce la corsa e' "sul posto": la chiave non la riguarda.
 - La chiave e' dell'azienda, con valori diversi per persona: fermo minimo (minuti), fattore della guida, km a vuoto
@@ -204,11 +204,11 @@ conducente e' libero si scrive una pausa); RICARICA e RISERVA disponibilita'; RE
   minuti) non e' vietato, ma quel tempo resta lavoro pagato: il programma lo dice con un avviso.
 - Demo: Alfa 30 minuti, fattore 2, preferenza; Beta 45 minuti, fattore 1,5, al massimo 15 km in piu', limite
   rigido; la persona P-E ha il suo fermo minimo di 45 minuti.
-- Gli esempi di Mauro (pacchetto di prova tests/esempi/k011-orari): (a) 20 + 20 minuti di guida per 30 minuti fermo:
+- Gli esempi del supervisore (pacchetto di prova tests/esempi/k011-orari): (a) 20 + 20 minuti di guida per 30 minuti fermo:
   non giustificato (servono 80 minuti); (b) 15 minuti fermo: non giustificato (sotto i 30); (c) 2 ore e 16 fermo
   contro 36 minuti di guida in piu' (ne servono 72): giustificato.
 
-### OUT o tachigrafo (Mauro 28/10)
+### OUT o tachigrafo (supervisore 28/10)
 - Dove la legge lo permette (linee e scolastico fino a 50 km, fuori dal Reg. 561) l'azienda sceglie: **OUT** (regole
   nazionali, la L. 138) oppure il **tachigrafo** (segue per scelta il Reg. 561 e il D.Lgs. 234). E' una scelta
   dell'azienda, per tipo di servizio, per servizio o per corsa: vince la piu' precisa.
@@ -224,7 +224,7 @@ conducente e' libero si scrive una pausa); RICARICA e RISERVA disponibilita'; RE
   sono sbagliati), con motivo, chi, quando ed eventualmente fino a quando. Il programma pianifica come ha scelto
   l'azienda, ma la forzatura si vede sempre (kzero controlla, giornata e ore) e il rischio e' un avviso "forzatura
   dell'azienda" con le violazioni che ci sarebbero se fosse sbagliata.
-- Il consulente (riferito da Mauro il 28/10): lo scolastico fino a 50 km e' OUT con certezza, anche con passeggeri
+- Il consulente (riferito dal supervisore il 28/10): lo scolastico fino a 50 km e' OUT con certezza, anche con passeggeri
   disabili sulla stessa corsa; il servizio solo per disabili resta da confermare.
 - Demo: Alfa linee e scolastico OUT, NCC (gite e noleggi; fino al K-011 tipo "altro") con il tachigrafo; Beta linee con il tachigrafo, come
   preferenza. Nel pacchetto di prova una forzatura (corsa C-FORZATA di 55 km, "il percorso vero e' di 48 km") e una
@@ -249,7 +249,7 @@ Riassunti per il pacchetto dimostrativo (letture dell'arbitro del 20/10). "dc" =
 | Regime | Fonte | Quando vale | Regole |
 |---|---|---|---|
 | R-L138 | L. 14 febbraio 1958, n. 138 | autisti; dipendenti (tempo pieno, part-time, determinato, stagionale, a chiamata); servizi di linea (non l'NCC). Dc: titolare, socio, collaboratore familiare, autonomo, volontario, altro; scolastico e disabili; assistente. Nelle settimane del 561 non vale per guida e riposi; per il lavoro resta (dc) | art. 6 lavoro effettivo (guida, altre mansioni, disponibilita', soste fino a 30 minuti, 12% dell'inoperoso fuori residenza); artt. 2-3: 8 ore al giorno e 48 a settimana, con lo straordinario al massimo 10 e 60; art. 4 notte 22-5 (solo conteggio); art. 5 guida di fila al massimo 5 ore; art. 7 riposo di 9 ore nelle 24 ore dall'inizio della giornata; art. 8 riposo settimanale di 24 ore |
-| R-561 | Reg. (CE) n. 561/2006, testo consolidato al 31/12/2024; nota INL n. 61 del 14/01/2021 | chi guida un mezzo che porta piu' di 9 persone compreso il conducente; esclusi i servizi di linea fino a 50 km (art. 3 a); scolastico fino a 50 km escluso, anche con disabili sulla stessa corsa (il consulente, Mauro 28/10); solo disabili fino a 50 km escluso solo dc (art. 4 n); servizi occasionali mai esclusi: nel demo l'NCC con certezza (K-012), il tipo "altro" dc. Una corsa che lo fa valere lo porta su tutta la settimana per guida e riposi (nota INL). La guida delle corse escluse conta come altre mansioni per le sue regole di guida (art. 6 c. 5; dc, prudente: guida) | art. 6 guida 9 ore tra due riposi (10 due volte a settimana), 56 a settimana, 90 in due settimane; art. 7 dopo 4 ore e 30 di guida 45 minuti di interruzione (o 15 + 30; 15 + 15 per i servizi occasionali); art. 8 riposo giornaliero 11 ore (3 + 9; ridotto 9, al massimo 3 volte), riposo settimanale 45 ore (ridotto 24) entro 6 periodi di 24 ore, compensazione entro la terza settimana |
+| R-561 | Reg. (CE) n. 561/2006, testo consolidato al 31/12/2024; nota INL n. 61 del 14/01/2021 | chi guida un mezzo che porta piu' di 9 persone compreso il conducente; esclusi i servizi di linea fino a 50 km (art. 3 a); scolastico fino a 50 km escluso, anche con disabili sulla stessa corsa (il consulente, supervisore 28/10); solo disabili fino a 50 km escluso solo dc (art. 4 n); servizi occasionali mai esclusi: nel demo l'NCC con certezza (K-012), il tipo "altro" dc. Una corsa che lo fa valere lo porta su tutta la settimana per guida e riposi (nota INL). La guida delle corse escluse conta come altre mansioni per le sue regole di guida (art. 6 c. 5; dc, prudente: guida) | art. 6 guida 9 ore tra due riposi (10 due volte a settimana), 56 a settimana, 90 in due settimane; art. 7 dopo 4 ore e 30 di guida 45 minuti di interruzione (o 15 + 30; 15 + 15 per i servizi occasionali); art. 8 riposo giornaliero 11 ore (3 + 9; ridotto 9, al massimo 3 volte), riposo settimanale 45 ore (ridotto 24) entro 6 periodi di 24 ore, compensazione entro la terza settimana |
 | R-234 | D.Lgs. 19 novembre 2007, n. 234 | dove vale il 561, per dipendenti e autonomi (nelle settimane in cui il 561 vale per estensione, nei giorni senza le sue corse dc); dc: titolare, socio, collaboratore familiare, volontario, altro, assistente | art. 3 orario di lavoro = guida e altre mansioni; art. 4 al massimo 60 ore a settimana e media 48 su 4 mesi; art. 5 mai piu' di 6 ore di fila senza pausa, 30 minuti tra 6 e 9 ore, 45 oltre; art. 7 con lavoro notturno al massimo 10 ore in 24 |
 | R-CHIAMATA | D.Lgs. 15 giugno 2015, n. 81, art. 13 c. 3 | rapporto a chiamata | al massimo 400 giornate in tre anni con lo stesso datore (solo avvisi: oltre e vicino al limite) |
 | ESEMPIO-01 | contratto collettivo inventato | chi ha quel contratto (P-A, e P-CONTRATTO nel pacchetto di prova) | regole inventate per provare i contratti collettivi: ampiezza 14 ore, riposo 10 ore tra due giornate, 7 giorni di fila |
@@ -275,10 +275,10 @@ Il programma le tratta oggi con prudenza: con la lettura certa da' errori, con q
    due settimane e' ammesso da noi (esigenze di servizio o accordo)?
 9. L. 138 nelle settimane in cui vale il 561: i limiti del lavoro effettivo (artt. 2-3) restano?
 10. Reg. 561: lo scolastico fino a 50 km e' escluso come le linee (art. 4 n, dal Reg. 2024/1258), anche con passeggeri
-    disabili sulla stessa corsa: confermato dal consulente (riferito da Mauro il 28/10). Resta da confermare: un servizio
+    disabili sulla stessa corsa: confermato dal consulente (riferito dal supervisore il 28/10). Resta da confermare: un servizio
     solo per disabili fino a 50 km e' un "servizio regolare specializzato" escluso? Fino alla risposta l'azienda puo'
     dichiararlo escluso nei dati (dichiarazione, "OUT o tachigrafo").
-11. Reg. 561: quali nostri servizi sono "servizi occasionali"? Dal K-012 (Mauro, 3/11) l'NCC (gite, turismo, eventi,
+11. Reg. 561: quali nostri servizi sono "servizi occasionali"? Dal K-012 (supervisore, 3/11) l'NCC (gite, turismo, eventi,
     matrimoni: gruppi formati su iniziativa del cliente o dell'azienda, anche se si ripetono) lo e' con certezza nel demo
     [Probabile: Reg. (CE) 1073/2009 art. 2, occasionali = non regolari ne' regolari specializzati]; resta da confermare il
     confine con il servizio regolare specializzato (es. una navetta di operai con tragitto e orari fissi fatta con un mezzo
@@ -295,7 +295,7 @@ Il programma le tratta oggi con prudenza: con la lettura certa da' errori, con q
     mansioni; REPERIBILE come reperibilita') e le soste non scritte (Alfa: oltre 30 minuti libere; Beta: oltre 15).
 17. Per i dipendenti a cui non vale la L. 138 (es. servizi non di linea fuori dal 561): quale legge sugli orari si
     applica? Oggi il programma lo dice con un avviso e non giudica quegli orari.
-18. Il contratto collettivo vero dell'azienda (es. quello applicato da Alpinabus): va scritto nei dati come regime,
+18. Il contratto collettivo vero dell'azienda (es. quello applicato da ALP): va scritto nei dati come regime,
     con le sue regole, quando arriva dal consulente.
 19. Nelle settimane in cui il Reg. 561 vale per estensione (una corsa sopra i 50 km o una gita), il D.Lgs. 234 vale per
     tutta la settimana o solo nei giorni di quelle corse? (Oggi: negli altri giorni da confermare.)
@@ -317,7 +317,7 @@ Il programma le tratta oggi con prudenza: con la lettura certa da' errori, con q
 - Due livelli di pacchetto dati: "solo numeri" (solo conteggi per fermata: e' il livello consigliato)
   e "completo" (anche i passeggeri uno per uno).
 - Mai codice fiscale, telefoni, mail delle famiglie: per pianificare non servono.
-- Clienti privati (K-012, Mauro 3/11): un committente puo' essere una persona (es. un matrimonio). Il nome e la nota sono
+- Clienti privati (K-012, supervisore 3/11): un committente puo' essere una persona (es. un matrimonio). Il nome e la nota sono
   dati personali, nella cassaforte; per un ente, una scuola o un'agenzia restano comuni. Il nome del cliente privato non si
   perde mai: il titolare e i delegati con i permessi vedono sempre nome e cognome (se il servizio va in un luogo sensibile,
   es. un centro diurno, servono tutti e due i permessi, come per i passeggeri); gli altri vedono il codice. Il codice del
@@ -355,9 +355,9 @@ sono scritte come regolamento, con la fonte di ogni valore.
   (come per gli autobus nel Codice della strada, art. 54), cioe' piu' di 8 posti per i passeggeri.
 
 # Glossario
-- GSH = Gruppo Sensibilizzazione Handicap. I suoi centri sono piu' d'uno in zona; Alpinabus ne serve uno,
+- GSH = Gruppo Sensibilizzazione Handicap. I suoi centri sono piu' d'uno in zona; ALP ne serve uno,
   quindi nei fogli "GSH" indica anche quel luogo.
 - MITT = obliteratrice.
 - Inserviente = ausiliaria = assistente a bordo.
-- AM / RM / RP = andata mattina / ritorno mezzogiorno / ritorno pomeriggio (file del CTA).
+- AM / RM / RP = andata mattina / ritorno mezzogiorno / ritorno pomeriggio (file del consorzio).
 - Lotto = gruppo di servizi affidati insieme con lo stesso contratto.

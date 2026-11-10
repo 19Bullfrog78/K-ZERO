@@ -40,7 +40,7 @@ const Json* corsa(const Json& doc, const std::string& codice, const Json** turno
 
 }  // namespace
 
-// Prova di accettazione del mandato: dall'uscita si ricavano tutte le voci della scheda scuola del CTA per il servizio
+// Prova di accettazione del mandato: dall'uscita si ricavano tutte le voci della scheda scuola del consorzio per il servizio
 // scolastico del demo (andata del mattino, tre giri): servizio, mezzo con targa e posti, autista, giorni, orari, carichi
 // e scarichi, km per tratto e totali, giorni di servizio nel periodo.
 TEST(Giornata, scheda_scuola_del_committente) {

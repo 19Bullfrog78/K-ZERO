@@ -163,7 +163,7 @@
       "required": ["autorizzato_da", "data"],
       "properties": {
         "autorizzato_da": {
-          "description": "Chi ha autorizzato (es. 'CTA sentita la Provincia').",
+          "description": "Chi ha autorizzato (es. 'il consorzio, sentita la Provincia').",
           "$ref": "#/definitions/testo"
         },
         "data": { "$ref": "#/definitions/data" },

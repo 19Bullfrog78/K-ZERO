@@ -92,7 +92,7 @@ std::string trasportato(const kzero::Source& elemento, const Lettura& lettura);
 // La posizione sta dentro un passeggero o una casa (un livello del percorso marcato "x-kzero-trasportato")?
 bool in_trasportato(const kzero::Source& posizione, const Lettura& lettura);
 
-// --- Turni scoperti o senza mezzo (K-014, scelta A di Mauro del 5/11) ---------------------------------------------------
+// --- Turni scoperti o senza mezzo (K-014, scelta A del supervisore del 5/11) ---------------------------------------------------
 // Un turno ricorrente resta scoperto o senza mezzo per un fatto con le date (assenza, disponibilita', patente o autorizzazione
 // scaduta, fermo, uso del mezzo non autorizzato quel giorno, prestito). Due di questi fatti contano solo per alcuni tipi di
 // servizio: l'autorizzazione del committente e l'uso del mezzo (kind_requirements, turni.hpp). Senza i dati particolari (per

@@ -285,7 +285,7 @@ TEST(Regole, handicap_con_accompagnatore_assistente_obbligatorio) {
 }
 
 // Rientro (K-011): la pausa fuori dal posto (in rimessa o in un ricovero) e' giustificata con la chiave dell'azienda o della
-// persona (Mauro, 20/10): fermo minimo, fattore della guida a vuoto in piu', km a vuoto in piu' al massimo. Nessun valore nel
+// persona (supervisore, 20/10): fermo minimo, fattore della guida a vuoto in piu', km a vuoto in piu' al massimo. Nessun valore nel
 // codice: la chiave la scrive la prova, come la scriverebbe l'azienda nei dati (es. 30 minuti e fattore 2 per Alfa).
 namespace {
 
@@ -306,7 +306,7 @@ ReturnJudgment rientro(int fermo, int guida_trasferimenti, bool stesso_luogo, in
 
 }  // namespace
 
-// Esempio a di Mauro: 20 minuti per andare e 20 per tornare, 30 minuti fermo: servono 2 x 40 = 80 minuti: non conviene.
+// Esempio a del supervisore: 20 minuti per andare e 20 per tornare, 30 minuti fermo: servono 2 x 40 = 80 minuti: non conviene.
 TEST(Regole, rientro_esempio_a_non_giustificato) {
     const ReturnJudgment r = rientro(30, 40, true, 30, 2.0);
     EXPECT_EQ(r.outcome, ReturnJudgment::Outcome::NotJustified);

@@ -373,7 +373,7 @@ void aggiungi_orari(std::vector<DefinizioneControllo>& c) {
         const std::string dopo = " Se con i dati scritti vale il regime, il programma pianifica comunque OUT, come ha scelto l'azienda, ma "
                                  "non vuol dire \"regolare\": nella lettura prudente vale la legge come la calcolano i dati, e le violazioni che "
                                  "ne nascono sono avvisi con il motivo della forzatura.";
-        // La forzatura e' un dato comune, sempre visibile (decisione di Mauro): anche a chi ha solo i dati particolari
+        // La forzatura e' un dato comune, sempre visibile (decisione del supervisore): anche a chi ha solo i dati particolari
         // (K-011 aggiunta 2). Motivo e chi sono valori personali: senza i dati personali diventano "riservato".
         const std::string chi = " Motivo: {motivo}; scritta da {chi} il {quando}";
         std::vector<std::string> m;
