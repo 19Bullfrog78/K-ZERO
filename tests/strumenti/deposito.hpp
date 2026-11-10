@@ -6,8 +6,8 @@
 //   - fuori da tests/ ed esempi/, i file dei formati dei dati (fogli di calcolo, documenti, cassaforte, registro) e i
 //     manifesti di un pacchetto (pacchetto.json).
 // I nomi non sono scritti in chiaro: il controllo conosce solo l'impronta SHA-256 di ogni nome in minuscolo (libsodium).
-// Ogni parola dei testi si porta in minuscolo e se ne calcola l'impronta; per un nome di due parole l'impronta delle due
-// parole vicine, anche a capo o con un segno di commento in mezzo. I messaggi dicono file, riga e quale nome (a-d), mai
+// Ogni parola dei testi (lettere e cifre sono parole diverse) si porta in minuscolo e se ne calcola l'impronta; per un
+// nome di due parole l'impronta delle due parole vicine, anche a capo o con un segno di commento in mezzo. I messaggi dicono file, riga e quale nome (a-d), mai
 // il nome. Le impronte non sono un segreto: chi prova le parole (una sigla di tre lettere in pochi istanti) le ritrova;
 // servono solo a non scrivere i nomi in chiaro.
 // Strumento delle prove: non fa parte del programma kzero.
@@ -49,8 +49,9 @@ struct Problema {
 };
 
 // Cerca i nomi in un testo (UTF-8; i byte che non sono UTF-8 valgono come separatori). Parola intera: una parola e' una
-// fila di lettere, segni e cifre Unicode; maiuscole e minuscole contano tutte. Un nome di due parole vale anche a capo o
-// con in mezzo soli spazi e segni di commento (/ * # - > e le virgolette).
+// fila di lettere e segni Unicode, oppure di cifre e segni: il passaggio tra una lettera e una cifra, nei due versi,
+// separa due parole (K-016: "<nome>2027" e "78<nome>" si vedono); maiuscole e minuscole contano tutte. Un nome di due
+// parole vale anche a capo o con in mezzo soli spazi e segni di commento (/ * # - > e le virgolette).
 std::vector<Problema> cerca_nomi(std::string_view testo, std::string_view dove, const std::vector<Nome>& nomi);
 
 // Resoconto del controllo di una cartella.

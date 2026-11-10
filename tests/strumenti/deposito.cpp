@@ -44,18 +44,27 @@ Carattere leggi(std::string_view t, std::size_t i) {
     return {c, static_cast<std::size_t>(n)};
 }
 
-// Lettere, segni (accenti) e cifre: i caratteri di una parola.
-bool di_parola(std::int32_t c) {
-    if (c < 0) return false;
+// I caratteri di una parola: lettere, segni (accenti) e cifre. Lettere e cifre non stanno nella stessa parola (K-016): il
+// passaggio da una lettera a una cifra, o da una cifra a una lettera, separa due parole; un segno resta con il carattere
+// che lo precede.
+enum class Tipo { nessuno, lettera, segno, cifra };
+
+Tipo tipo_di(std::int32_t c) {
+    if (c < 0) return Tipo::nessuno;
     switch (utf8proc_category(c)) {
         case UTF8PROC_CATEGORY_LU: case UTF8PROC_CATEGORY_LL: case UTF8PROC_CATEGORY_LT: case UTF8PROC_CATEGORY_LM:
-        case UTF8PROC_CATEGORY_LO: case UTF8PROC_CATEGORY_MN: case UTF8PROC_CATEGORY_MC: case UTF8PROC_CATEGORY_ME:
+        case UTF8PROC_CATEGORY_LO:
+            return Tipo::lettera;
+        case UTF8PROC_CATEGORY_MN: case UTF8PROC_CATEGORY_MC: case UTF8PROC_CATEGORY_ME:
+            return Tipo::segno;
         case UTF8PROC_CATEGORY_ND: case UTF8PROC_CATEGORY_NL: case UTF8PROC_CATEGORY_NO:
-            return true;
+            return Tipo::cifra;
         default:
-            return false;
+            return Tipo::nessuno;
     }
 }
+
+bool di_parola(std::int32_t c) { return tipo_di(c) != Tipo::nessuno; }
 
 // Tra le due parole di un nome: spazi (anche a capo) e segni di commento o di citazione.
 bool di_separazione(std::int32_t c) {
@@ -87,9 +96,15 @@ std::vector<Parola> parole_di(std::string_view t) {
         Parola p;
         p.inizio = i;
         p.riga = riga;
+        Tipo di_questa = Tipo::nessuno;   // lettera o cifra: il primo che si incontra
         while (i < t.size()) {
             const Carattere d = leggi(t, i);
-            if (!di_parola(d.codice)) break;
+            const Tipo k = tipo_di(d.codice);
+            if (k == Tipo::nessuno) break;
+            if (k != Tipo::segno) {
+                if (di_questa != Tipo::nessuno && k != di_questa) break;
+                di_questa = k;
+            }
             utf8proc_uint8_t byte[4];
             const utf8proc_ssize_t n = utf8proc_encode_char(utf8proc_tolower(d.codice), byte);
             p.minuscola.append(reinterpret_cast<const char*>(byte), static_cast<std::size_t>(n));

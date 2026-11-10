@@ -121,7 +121,7 @@ TEST(Deposito, ParolaInteraMaiuscoleEMinuscole) {
         "U-ZORBALINO e (zorbalino)\n"         // 4: due volte
         "prova_zorbalino_2\n"                 // 5
         "\xe2\x80\x9czorbalino\xe2\x80\x9d\n"  // 6: tra virgolette tipografiche
-        "zorbalinos azorbalino zorbalino2\n"  // 7: parole diverse
+        "zorbalinos azorbalino zorbalinoa\n"  // 7: parole diverse
         "zorbalin\xc3\xb2 \xc3\xa8zorbalino\n"  // 8: con lettere accentate attaccate, parole diverse
         "il file del VRK, vrk-001\n"          // 9: due volte
         "vrkx avrk K-CTR-001\n";              // 10: niente
@@ -130,6 +130,30 @@ TEST(Deposito, ParolaInteraMaiuscoleEMinuscole) {
     for (const Problema& q : p) EXPECT_EQ(q.dove, "prova.md");
     EXPECT_NE(p.at(0).cosa.find("nome x"), std::string::npos);
     EXPECT_NE(p.at(7).cosa.find("nome y"), std::string::npos);
+    senza_nomi(p);
+}
+
+// K-016: lettere e cifre non stanno nella stessa parola, nei due versi; il resto della regola resta.
+TEST(Deposito, LettereECifreSeparano) {
+    const std::string t =
+        "zorbalino2027\n"                     // 1
+        "78zorbalino\n"                       // 2
+        "// 78ZORBALINO2027 in un commento\n" // 3
+        "vrk1 A1vrk\n"                        // 4: due volte
+        "zorbalino2x\n"                       // 5
+        "2\xcc\x81zorbalino\n"                // 6: un segno dopo una cifra resta con la cifra
+        "zorbalino\xd9\xa3\n"                 // 7: cifra araba
+        "x2zorbalinos zorbalino\xcc\x81 zorbalino_\n"  // 8: niente (parole diverse, poi "_" separa: una volta)
+        "vallerossa trasportini2027\n"        // 9
+        "2026vallerossa\n"                    // 10 (a capo)
+        "Trasportini\n"                       // 11
+        "vallerossa1 trasportini\n"           // 12: niente (tra le due parole c'e' la cifra)
+        "K-CTR-001 R-TN 24:12 2026-11-10\n";  // 13: niente
+    const std::vector<Problema> p = cerca_nomi(t, "prova.md", finti());
+    EXPECT_EQ(righe(p), (std::vector<std::size_t>{1, 2, 3, 4, 4, 5, 6, 7, 8, 9, 10}));
+    EXPECT_NE(p.at(3).cosa.find("nome y"), std::string::npos);
+    EXPECT_NE(p.at(9).cosa.find("nome z"), std::string::npos);
+    EXPECT_NE(p.at(10).cosa.find("nome z"), std::string::npos);
     senza_nomi(p);
 }
 
