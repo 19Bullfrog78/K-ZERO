@@ -17,7 +17,11 @@ Si parte da ALP (3 minibus + 1 auto) e si deve poter crescere fino a 500 mezzi e
   quattro nomi che il K-015 ha tolto (nell'ordine a-d dei messaggi del controllo): si scrivono "ALP", "il supervisore",
   "il consorzio" (nei codici esterni il sistema "Consorzio"), "l'azienda del trasporto pubblico provinciale" (nei codici
   esterni il sistema "Trasporti Provinciali"). La storia prima del 5/11 resta com'e'. Reti, che non sostituiscono la
-  regola (docs/sicurezza.md): .gitignore, la prova `deposito` e il controllo GitHub di titolo e commit delle proposte.
+  regola (docs/sicurezza.md): .gitignore, la prova `deposito` e il controllo GitHub di titolo, descrizione e commit delle
+  proposte.
+- IMPORTANTE (K-016): nel deposito i testi sono UTF-8; i binari solo dall'elenco dei binari ammessi (oggi i file .kzc e
+  .kzr dentro tests/ ed esempi/; l'elenco sta in tests/strumenti/deposito.cpp), che si allarga solo con un mandato. Un
+  testo scritto in un'altra codifica (es. UTF-16 da un programma di Windows) si salva di nuovo in UTF-8.
 
 ## Ruoli
 - Il supervisore: decide le regole del mestiere e approva i risultati.
@@ -25,11 +29,16 @@ Si parte da ALP (3 minibus + 1 auto) e si deve poter crescere fino a 500 mezzi e
 - Claude in chat (progetto K-Zero): arbitro. Rivede piani e modifiche, non scrive codice nel repository.
 
 ## Come si salvano le modifiche
-- Solo documenti (DIARIO.md, REGOLE.md, DECISIONI.md, altre note): salva direttamente
-  su main e annota nel diario. L'arbitro controlla dopo.
-- Programma (codice, CMakeLists.txt, test) e CLAUDE.md: ramo di lavoro, poi proposta
-  (pull request), poi controllo dell'arbitro, poi il supervisore approva con Merge.
-  Non unire mai una proposta da solo.
+- IMPORTANTE (K-016): niente salvataggi diretti su main. Ogni modifica, anche di soli documenti (DIARIO.md, REGOLE.md,
+  DECISIONI.md, altre note), va su un ramo di lavoro e in una proposta (pull request), e si annota nel diario.
+- Programma (codice, CMakeLists.txt, prove) e CLAUDE.md: proposta, poi controllo dell'arbitro, poi il supervisore approva
+  con Merge.
+- Solo documenti: la proposta ha un titolo che lo dice (es. "Documenti: ...") o il codice del mandato; la unisce il
+  supervisore quando i quattro controlli sono verdi (compila-e-prova, sanitizer e fuzzing del "Controllo",
+  titolo-descrizione-e-commit dei "Nomi della proposta"); l'arbitro la guarda quando il supervisore lo chiede.
+- Non unire mai una proposta da solo.
+- Perche': il supervisore rende obbligatori su main la proposta e i controlli verdi, quindi un salvataggio diretto verrebbe
+  rifiutato, e cosi' anche i messaggi dei documenti passano dal controllo dei nomi.
 - IMPORTANTE (supervisore, 5/11): ogni resoconto per l'arbitro (es. K-013-resoconto-per-l-arbitro.md) e ogni documento utile al
   progetto si consegna al supervisore sempre come file da scaricare (non solo come testo nel messaggio), con il suo nome: il
   supervisore lo mette nella cartella giusta del suo PC (i resoconti in `C:\Users\BULLFROG\Desktop\LAVORO\K-ZERO\K-ZERO CC`).
@@ -63,10 +72,12 @@ Si parte da ALP (3 minibus + 1 auto) e si deve poter crescere fino a 500 mezzi e
   `--scrivi <cartella del pacchetto>`. Copia congelata della versione 1 con le password di prova: tests/esempi/k010-cassaforte.
 - Eseguire le prove: `ctest --test-dir build --output-on-failure`
 - Controllo del deposito pubblico (K-015: i quattro nomi in nessun file, nessun file di dati ne' manifesto di un pacchetto
-  fuori da tests/ ed esempi/): `ctest --test-dir build -L deposito --output-on-failure`; il messaggio dice file, riga e
-  quale nome (a-d), mai il nome. Prima di aprire una proposta anche il titolo e i messaggi dei commit nuovi (lo stesso
-  controllo che fa GitHub): `TITOLO="K-xxx: ..." tests/strumenti/controlla_proposta.sh build/tests/controlla_deposito
-  origin/main HEAD`.
+  fuori da tests/ ed esempi/; K-016: solo testi UTF-8 e binari ammessi, cartelle saltate uguali a quelle di .gitignore):
+  `ctest --test-dir build -L deposito --output-on-failure`; il messaggio dice file, riga e quale nome (a-d), mai il nome.
+  Prima di aprire una proposta anche il titolo, la descrizione (scritta in un file fuori dalla cartella del deposito, es.
+  ../descrizione.md) e i messaggi dei commit nuovi (lo stesso controllo che fa GitHub): `TITOLO="K-xxx: ..."
+  DESCRIZIONE="$(cat ../descrizione.md)" tests/strumenti/controlla_proposta.sh build/tests/controlla_deposito origin/main
+  HEAD` (senza descrizione `DESCRIZIONE=""`).
 - Le prove sugli schemi JSON (`schema.*`) richiedono lo strumento standard check-jsonschema (versioni e
   impronte fissate), da installare prima di configurare in un ambiente Python dedicato:
   `python3 -m venv ~/.kzero-strumenti && ~/.kzero-strumenti/bin/pip install --require-hashes -r tests/strumenti/check-jsonschema.txt`

@@ -588,13 +588,55 @@
   minuscole 5, nome di due parole non piu' a capo 3, ogni file con un byte zero trattato come binario 1, formati vietati
   anche in tests/ ed esempi/ 2, messaggio che ripete la parola trovata 3, nome di due parole mai cercato 3, cartelle
   build*/ non escluse 2. Tutti scoperti; nessun messaggio del controllo ha scritto un nome.
+- 2026-11-10 - K-016 (programma e documenti, proposta "K-016: reti del deposito e controlli obbligatori"). Scelte del
+  supervisore del 10/11: la storia resta com'e', controlli obbligatori, anche i documenti passano da una proposta.
+  **1. Cartelle saltate = quelle di .gitignore.** Lo strumento del deposito saltava ogni cartella in cima che comincia con
+  "build" (una "buildx/" sarebbe stata salvata senza controllo); ora salta esattamente `build` e `build-*` a ogni livello,
+  piu' .git e --escludi. Nessun file salvato sta in cartelle con quei nomi (git ls-files). Prova nuova
+  Deposito.CartelleSaltateComeGitignore: legge .gitignore dall'albero dei file (anche senza .git) e fallisce se le righe
+  sulle cartelle non sono quelle saltate; piu' due prove sulle regole (CartellaSaltata, RigheDelleCartelle).
+  **2. Lettere e cifre separano le parole** (nei due versi), il resto della regola resta; nessuna eccezione. Sul main di
+  oggi (611c67b) nessun falso allarme. Prova nuova LettereECifreSeparano.
+  **3. Testi solo UTF-8, binari solo da un elenco**: oggi .kzc e .kzr dentro tests/ ed esempi/ (gli unici file non UTF-8
+  di oggi sono la cassaforte e il registro di tests/esempi/k010-cassaforte); ogni altro file non UTF-8 e' un problema ("non
+  e' testo UTF-8 ne' un binario ammesso"); un testo con il BOM di UTF-16 o UTF-32 si decodifica (anche le coppie di
+  surrogati) e se ne cercano i nomi. Gli 8 file UTF-8 con un byte zero (semi e un caso del fuzzing) restano testo, come
+  prima. Prove nuove TestiUtf8EBinariAmmessi e BinariAmmessi; la prova della cartella aggiornata (Latin-1 e un binario
+  sconosciuto ora sono problemi, la cassaforte fuori da tests/ ha anche il problema della codifica, cartelle build
+  annidate saltate). **4. Descrizione della proposta**: il controllo "Nomi della proposta" la guarda come il titolo,
+  passata come variabile (vuota = nessun problema; lo script vuole tutte e due le variabili, anche vuote); il lavoro si
+  chiama ora titolo-descrizione-e-commit; riparte gia' quando la proposta si modifica (edited, verificato sulla proposta).
+  **5. Documenti con proposta**: CLAUDE.md, "Come si salvano le modifiche": niente piu' salvataggi diretti su main.
+  **6. Documenti**: CLAUDE.md (Confini: testi UTF-8 e binari dall'elenco; reti; comando locale con la descrizione),
+  DECISIONI.md, docs/sicurezza.md (reti nuove; il limite dei salvataggi diretti vale finche' il supervisore non accende la
+  regola; cosa resta fuori), docs/architettura.md (etichetta deposito), commenti dei due controlli GitHub. Nessun cambio di
+  kzero: uscite, schemi, codici K-CTR e K-ERR uguali.
+  Strumento sul main di oggi: 374 file letti come testo, 2 binari ammessi, nessun problema; sul codice finale lo stesso.
+  Prove: 975 su 975 (prima 969), 6 nuove; ogni commit compila senza avvisi e passa le prove da solo (972, 973, 975, 975,
+  975). Con i sanitizer 973 su 973 (senza le 2 prove sul programma di rilascio), compilati senza avvisi. Fuzzing in locale
+  sul codice finale, i 32 bersagli 20 secondi ciascuno come nel controllo GitHub: nessun guasto (nessun bersaglio nuovo:
+  lo strumento del deposito legge solo i file del deposito, mai dati di un utente).
+  Sabotaggi sul codice finale in una cartella temporanea, uno alla volta: un nome in un file di "buildx/" in cima 1
+  problema; un nome in "docs/build/" e in "tests/x/build-prova/" 0 (saltate, come per git); "<nome>2027" e "78<nome>" in
+  un commento 2; un testo UTF-16 con BOM in docs/ con un nome 2 (codifica e nome, con la riga), senza nome 1; un testo
+  Latin-1 in docs/ 1; un .png in docs/ 1; la cassaforte .kzc copiata in docs/ 2 (formato e codifica); in .gitignore
+  "build-*/" cambiata in "build*/", una riga "node_modules/" in piu', "build/" tolta, "build/" cambiata in "/build/": la
+  prova del punto 1 fallisce ogni volta; un nome nella descrizione (anche a capo, con a capo Windows) con lo script locale:
+  uscita 1, e senza la variabile della descrizione uscita 2. Nello strumento: cartelle "build*" 3 prove rosse, lettere e
+  cifre di nuovo insieme 2, ogni file non UTF-8 come binario ammesso 2, binari ammessi in ogni cartella 2, estensione
+  senza maiuscole e minuscole 2, cartelle saltate solo in cima 1, niente BOM UTF-16, UTF-32 letto come UTF-16, big endian
+  letto come little, surrogati non uniti 1 ciascuno (quest'ultimo all'inizio non era scoperto: aggiunto il caso dei
+  surrogati alla prova). Tutti scoperti; nessun messaggio ha scritto un nome.
 
 ## Bug e limiti noti
 - (K-015) Il deposito e' pubblico: la storia prima del 5/11/2026 contiene ancora i quattro nomi tolti dai file di oggi
   (anche nei messaggi dei salvataggi) e i codici di esempio sostituiti; .gitignore, la prova deposito e il controllo
-  delle proposte sono solo reti (un pacchetto vero e' una cartella di JSON come il demo; i salvataggi diretti su main non
-  passano dal controllo dei messaggi): la difesa vera e' tenere i dati veri fuori dalla cartella del deposito
-  (docs/sicurezza.md).
+  delle proposte sono solo reti (un pacchetto vero e' una cartella di JSON come il demo): la difesa vera e' tenere i dati
+  veri fuori dalla cartella del deposito (docs/sicurezza.md). Dal K-016 nessun salvataggio diretto su main: ogni modifica,
+  anche di soli documenti, passa da una proposta e quindi dal controllo dei nomi; GitHub rifiuta un salvataggio diretto
+  solo da quando il supervisore accende la regola su main (proposta e quattro controlli verdi), e fino ad allora resta
+  possibile. Il messaggio dell'unione, scritto a mano dal supervisore, non passa da nessun controllo prima di essere
+  pubblicato.
 - I pesi del calcolo (ObjectiveWeights) hanno ancora valori provvisori nel codice, non usati: andranno nei dati con il
   mandato del calcolo. Dal K-011 non c'e' piu' il peso della pausa (la pausa si giudica con la chiave del rientro); con
   il calcolo nessun peso dovra' premiare i km o la fretta (art. 10 del Reg. 561/2006).
