@@ -3,8 +3,9 @@
 #    compilatore, prova i comandi (anche kzero controlla sui pacchetti di esempio), esegue le prove e verifica le uscite
 #    JSON e i file dei pacchetti di esempio con gli schemi di docs/schema usando uno strumento standard
 #    (check-jsonschema), indipendente dal codice di K-Zero. Tra le prove (K-015) il controllo del deposito pubblico
-#    (etichetta deposito): nessuno dei quattro nomi nei file e nessun file di dati fuori da tests/ ed esempi/. Titolo e
-#    messaggi dei commit delle proposte li controlla nomi.yml.
+#    (etichetta deposito): nessuno dei quattro nomi nei file, nessun file di dati fuori da tests/ ed esempi/ e (K-016)
+#    nessun file che non sia testo UTF-8 o un binario ammesso. Titolo, descrizione e messaggi dei commit delle proposte
+#    li controlla nomi.yml.
 # 2. sanitizer (K-009): compila tutto con AddressSanitizer e UndefinedBehaviorSanitizer ed esegue tutte le prove; il
 #    primo errore di memoria o comportamento non definito ferma la prova (GDPR art. 32 c. 1 lett. d: provare
 #    regolarmente l'efficacia delle misure).
