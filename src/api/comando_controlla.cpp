@@ -131,7 +131,8 @@ std::string in_testo(const Resoconto& r, const Visibilita& visibilita, const acc
         if (!pos.empty()) t += " (" + pos + ")";
         t += ": " + p.messaggio + "\n";
     }
-    if (r.problemi.empty() && r.errori_riservati + r.avvisi_riservati == 0) t += "Nessun problema.\n";
+    const int non_verificati = r.turni_non_verificati ? r.turni_non_verificati->first + r.turni_non_verificati->second : 0;
+    if (r.problemi.empty() && r.errori_riservati + r.avvisi_riservati == 0 && non_verificati == 0) t += "Nessun problema.\n";
     if (!r.contenuto_controllato)
         t += "Controlli sul contenuto non eseguiti: prima vanno corretti gli errori nella forma dei file.\n";
     for (const Resoconto::NonVerificati& nv : r.non_verificati) {
@@ -141,6 +142,11 @@ std::string in_testo(const Resoconto& r, const Visibilita& visibilita, const acc
              "controlli sui dati " + nome_classe(nv.classe) + " stessi e quelli che li usano (" + codici +
              "). I loro risultati non sono ne' tra i problemi ne' nel riepilogo.\n";
     }
+    // K-017: i controlli dei turni per chi non apre i dati particolari: la riga c'e' sempre, che ce ne siano o no.
+    if (r.turni_non_verificati)
+        t += "Controlli dei turni: si vedono i problemi certi; quelli che dipendono dal tipo di servizio (dato particolare, che "
+             "l'utente non puo' aprire) non sono verificati e non sono ne' tra i problemi ne' nel riepilogo: " +
+             errori_e_avvisi(r.turni_non_verificati->first, r.turni_non_verificati->second) + ".\n";
     t += "Dati personali e particolari nel pacchetto: " + valori_riservati_testo(r.lettura, visibilita, cf) + ".\n";
     const Conteggi c = conteggi(r);
     t += "Riepilogo: " + quanti_opz(c.aziende, "azienda", "aziende", "non lette") + ", " +
@@ -183,6 +189,8 @@ std::string in_json(const DefinizioneComando& comando, const Resoconto& r, const
     j["non_verificato"] = nv;
     j["controlli_sul_contenuto"] = r.contenuto_controllato;
     j["problemi_riservati"] = {{"errori", r.errori_riservati}, {"avvisi", r.avvisi_riservati}};
+    j["problemi_dei_turni_non_verificati"] =
+        r.turni_non_verificati ? Json{{"errori", r.turni_non_verificati->first}, {"avvisi", r.turni_non_verificati->second}} : Json(nullptr);
     Json problemi = Json::array();
     for (const ProblemaPresentato& p : r.problemi) {
         Json x = Json::object();

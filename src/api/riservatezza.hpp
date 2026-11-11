@@ -105,13 +105,17 @@ bool in_trasportato(const kzero::Source& posizione, const Lettura& lettura);
 // (K-CTR-083) restano come sono: dipendono solo da dati comuni (turni, rotazioni, servizi fissi, assegnazioni).
 bool motivo_dei_turni_riservato(const kzero::Package& pacchetto, const Visibilita& visibilita);
 
-// Varianti del catalogo senza il motivo: K-CTR-078 (turno scoperto) e K-CTR-079 (turno senza mezzo).
+// Varianti del catalogo senza il motivo: K-CTR-078 (turno scoperto) e K-CTR-079 (turno senza mezzo); per chi non puo' aprire
+// i dati particolari (K-017) il motivo "non verificato", come nella giornata.
 constexpr int kScopertoSenzaMotivo = 5;
 constexpr int kSenzaMezzoSenzaMotivo = 3;
+constexpr int kScopertoMotivoNonVerificato = 6;
+constexpr int kSenzaMezzoMotivoNonVerificato = 4;
 
-// I problemi K-CTR-078 e K-CTR-079 senza il motivo: la variante senza motivo, la posizione della persona o del mezzo previsto,
-// solo il turno, la persona o il mezzo e i giorni; poi di nuovo raggruppati per giorni (lo stesso turno scoperto per cause
-// diverse diventa un problema solo).
-std::vector<kzero::Problem> turni_senza_motivo(std::vector<kzero::Problem> problemi, const kzero::Package& pacchetto);
+// I problemi K-CTR-078 e K-CTR-079 senza il motivo: la variante senza motivo (motivo non verificato, se l'utente non puo' aprire
+// i dati particolari), la posizione della persona o del mezzo previsto, solo il turno, la persona o il mezzo e i giorni; poi di
+// nuovo raggruppati per giorni (lo stesso turno scoperto per cause diverse diventa un problema solo).
+std::vector<kzero::Problem> turni_senza_motivo(std::vector<kzero::Problem> problemi, const kzero::Package& pacchetto,
+                                               bool non_verificato);
 
 }  // namespace kzero::api

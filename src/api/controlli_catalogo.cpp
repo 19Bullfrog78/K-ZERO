@@ -813,7 +813,10 @@ const std::vector<DefinizioneControllo>& catalogo_controlli() {
               // K-014: senza i dati particolari, se il pacchetto ha requisiti che dipendono dal tipo di servizio (riservatezza.hpp).
               "Il turno {turno} e' scoperto {giorni}: la persona prevista {persona} non puo' farlo; il motivo e' riservato, perche' "
               "puo' dipendere dal tipo di servizio (dato particolare; --includi-dati-particolari). Rimedio: un'assegnazione del "
-              "singolo giorno."},
+              "singolo giorno.",
+              // K-017: lo stesso per chi non puo' aprire i dati particolari (il testo della giornata).
+              "Il turno {turno} e' scoperto {giorni}: la persona prevista {persona} non puo' farlo; il motivo non e' verificato "
+              "(servono i dati particolari, che l'utente non puo' aprire). Rimedio: un'assegnazione del singolo giorno."},
              {{0, PE}, {1, PE}, {3, PE}, {4, PE}},
              {{0, "Il turno {turno} e' scoperto {giorni}: la persona prevista {persona} non puo' farlo (dati personali: riservati). "
                   "Rimedio: un'assegnazione del singolo giorno."},
@@ -833,7 +836,11 @@ const std::vector<DefinizioneControllo>& catalogo_controlli() {
               // K-014: senza i dati particolari, se il pacchetto ha requisiti che dipendono dal tipo di servizio (riservatezza.hpp).
               "Il turno {turno} e' senza mezzo {giorni}: il mezzo previsto {mezzo} non puo' farlo; il motivo e' riservato, perche' "
               "puo' dipendere dal tipo di servizio (dato particolare; --includi-dati-particolari). Rimedio: un'assegnazione del "
-              "singolo giorno con un altro mezzo."}},
+              "singolo giorno con un altro mezzo.",
+              // K-017: lo stesso per chi non puo' aprire i dati particolari (il testo della giornata).
+              "Il turno {turno} e' senza mezzo {giorni}: il mezzo previsto {mezzo} non puo' farlo; il motivo non e' verificato "
+              "(servono i dati particolari, che l'utente non puo' aprire). Rimedio: un'assegnazione del singolo giorno con un altro "
+              "mezzo."}},
             {Check::TripWithoutShift, "K-CTR-080", A, N, "Corsa senza turno",
              {"La corsa {corsa} non e' in nessun turno da autista {giorni}."}},
             {Check::PreferenceNotRespected, "K-CTR-081", A, PE, "Preferenza di una persona non rispettata",
@@ -980,7 +987,8 @@ const std::vector<DefinizioneControllo>& catalogo_controlli() {
         // Il piano del giorno (turni.hpp: chi fa ogni turno e con quale mezzo) toglie la persona o il mezzo per un fatto con le
         // date: assenze, disponibilita', abilitazioni e autorizzazioni scadute (dati personali), usi del mezzo e
         // autorizzazioni richiesti per tipo di servizio (dato particolare). Tutti i controlli fatti sulla persona o sul mezzo
-        // del piano richiedono quindi le due classi.
+        // del piano richiedono quindi i dati personali. K-017: non piu' quelli particolari: con il tipo non noto il piano dice
+        // cosa e' certo e cosa non e' verificato, e i controlli dei turni (T, piu' sotto) mostrano solo i problemi certi.
         const std::map<Check, Richiede> richiede = {
             {Check::NumbersOnlyPersonalData, PQ},     // la presenza di dati personali (anche quelli legati a luoghi sensibili)
             {Check::PlaceWithoutCoordinates, PQ},     // le coordinate dei luoghi privati (le case legate: tutti e due i permessi)
@@ -990,27 +998,27 @@ const std::vector<DefinizioneControllo>& catalogo_controlli() {
             {Check::ExpiresInPeriod, P},              // scadenze delle abilitazioni delle persone
             {Check::CompanyWithoutNorms, P},          // abilitazioni delle persone
             // Sul piano del giorno:
-            {Check::ShiftVehicleInconsistent, PQ},    // mezzo abituale della persona del giorno
-            {Check::PersonOverlap, PQ},
-            {Check::VehicleOverlap, PQ},
-            {Check::DayAssignmentAgainstFact, PQ},
-            {Check::DriverWithoutLicence, PQ},
-            {Check::VehicleWithoutUseForService, PQ},
-            {Check::PairingFixedViolated, PQ},
-            {Check::PersonWithoutCompetence, PQ},     // anche competenze delle persone e competenze richieste
-            {Check::VehicleAgainstConstraint, PQ},
-            {Check::OtherCompanyWithoutLoan, PQ},
-            {Check::BlockedTripOtherVehicle, PQ},
-            {Check::PersonRoleMismatch, PQ},
-            {Check::RecurringShiftPersonFact, PQ},
-            {Check::RecurringShiftVehicleFact, PQ},
-            {Check::PreferenceNotRespected, PQ},
-            {Check::PairingNotRespected, PQ},
-            {Check::ShiftVehicleToAssign, PQ},
-            {Check::PersonWithoutShifts, PQ},
-            {Check::VehicleNeverUsed, PQ},
-            {Check::EscortWithoutPerson, PQ},
-            {Check::EscortProviderDiffers, PQ},
+            {Check::ShiftVehicleInconsistent, P},     // mezzo abituale della persona del giorno
+            {Check::PersonOverlap, P},
+            {Check::VehicleOverlap, P},
+            {Check::DayAssignmentAgainstFact, P},
+            {Check::DriverWithoutLicence, P},
+            {Check::VehicleWithoutUseForService, P},
+            {Check::PairingFixedViolated, P},
+            {Check::PersonWithoutCompetence, PQ},     // anche competenze delle persone e competenze richieste (particolari)
+            {Check::VehicleAgainstConstraint, P},
+            {Check::OtherCompanyWithoutLoan, P},
+            {Check::BlockedTripOtherVehicle, P},
+            {Check::PersonRoleMismatch, P},
+            {Check::RecurringShiftPersonFact, P},
+            {Check::RecurringShiftVehicleFact, P},
+            {Check::PreferenceNotRespected, P},
+            {Check::PairingNotRespected, P},
+            {Check::ShiftVehicleToAssign, P},
+            {Check::PersonWithoutShifts, P},
+            {Check::VehicleNeverUsed, P},
+            {Check::EscortWithoutPerson, P},
+            {Check::EscortProviderDiffers, P},
             // Orari di lavoro (K-011): il piano del giorno, e quale legge vale per la persona (rapporto e contratto collettivo,
             // dati personali; tipo di servizio della corsa, dato particolare).
             {Check::PartialVerification, PQ},
@@ -1048,6 +1056,19 @@ const std::vector<DefinizioneControllo>& catalogo_controlli() {
             d.richiede_personali = it->second.personali;
             d.richiede_particolari = it->second.particolari;
         }
+        // K-017: i controlli dei turni sul piano del giorno che senza i dati particolari si fanno lo stesso (DefinizioneControllo::
+        // turni). Non K-CTR-071: le competenze sono dati particolari, il controllo resta non verificato.
+        for (DefinizioneControllo& d : c)
+            for (const Check t : {Check::ShiftVehicleInconsistent, Check::PersonOverlap, Check::VehicleOverlap, Check::DayAssignmentAgainstFact,
+                                  Check::DriverWithoutLicence, Check::VehicleWithoutUseForService, Check::PairingFixedViolated,
+                                  Check::VehicleAgainstConstraint, Check::OtherCompanyWithoutLoan, Check::BlockedTripOtherVehicle,
+                                  Check::PersonRoleMismatch, Check::RecurringShiftPersonFact, Check::RecurringShiftVehicleFact,
+                                  Check::PreferenceNotRespected, Check::PairingNotRespected, Check::ShiftVehicleToAssign,
+                                  Check::PersonWithoutShifts, Check::VehicleNeverUsed, Check::EscortWithoutPerson, Check::EscortProviderDiffers})
+                if (d.controllo == t) {
+                    if (!d.richiede_personali || d.richiede_particolari) throw std::logic_error("controllo dei turni con i requisiti sbagliati");
+                    d.turni = true;
+                }
         // K-014: controlli sui turni che possono nascere da un requisito che dipende dal tipo di servizio (kind_requirements,
         // turni.hpp): l'autorizzazione del committente (K-CTR-068, e scaduta su un'assegnazione del giorno: K-CTR-067), gli usi
         // dei mezzi (K-CTR-069, e un'autorizzazione all'uso che non vale su un'assegnazione del giorno: K-CTR-067), il vincolo

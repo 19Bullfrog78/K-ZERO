@@ -231,17 +231,52 @@ std::vector<kzero::Problem> tutti_i_problemi(const Lettura& l) {
     return tutti;
 }
 
-// I problemi di una lettura come testi; senza quelli che stanno in un dato (o rivelano un dato) che "leggibili" non apre:
-// li puo' vedere solo chi ha quel permesso.
-std::set<std::string> problemi_di(const Lettura& l, const Visibilita& leggibili) {
-    std::set<std::string> s;
+// I problemi di una lettura, giorno per giorno (un testo per problema e giorno: un problema certo puo' coprire solo una parte dei
+// giorni, K-017), divisi come li tratta il resoconto (controllo.cpp) per un utente che apre le classi "leggibili": mostrati;
+// non verificati (K-017: dei controlli dei turni, per chi apre i personali ma non i particolari, se dipendono dal tipo di
+// servizio: si contano soltanto); gli altri, che stanno in un dato (o rivelano un dato) che "leggibili" non apre, mancano.
+struct ProblemiPerGiorno {
+    std::set<std::string> mostrati;
+    std::set<std::string> non_verificati;   // con la chiave larga (chiave_larga)
+};
+
+// Un problema in un giorno, con la chiave larga: il controllo, il turno, la persona o il mezzo e il giorno. Un problema non
+// verificato puo' nominare un'altra causa (es. un altro servizio) di quello di chi ha tutti i permessi.
+std::string chiave_larga(const std::string& codice, const kzero::Problem& p, const std::string& giorno) {
+    std::string s = codice;
+    for (const char* nome : {"turno", "persona", "mezzo"})
+        for (const auto& x : p.params)
+            if (x.name == nome) {
+                s += " " + x.name + "=" + x.text;
+                break;
+            }
+    return s + " " + giorno;
+}
+
+ProblemiPerGiorno problemi_per_giorno(const Lettura& l, const Visibilita& leggibili) {
+    ProblemiPerGiorno out;
     for (const auto& p : tutti_i_problemi(l)) {
-        if (!verificabile(definizione_controllo(p.check), p, classe_della_posizione(p.where, l), in_trasportato(p.where, l),
-                          leggibili))
+        const DefinizioneControllo& d = definizione_controllo(p.check);
+        const bool non_verificato = d.turni && leggibili.personali && !leggibili.particolari && (p.unverified || p.by_service_kind);
+        if (!non_verificato &&
+            !verificabile(d, p, classe_della_posizione(p.where, l), in_trasportato(p.where, l), leggibili))
             continue;
-        s.insert(come_testo(p));
+        std::vector<kzero::Day> giorni;
+        kzero::Problem senza = p;
+        for (auto& x : senza.params)
+            if (x.kind == kzero::Param::Kind::Days) {
+                giorni = x.days;
+                x.days.clear();
+            }
+        std::vector<std::string> per_giorno;
+        if (giorni.empty()) per_giorno.push_back("");
+        for (const kzero::Day g : giorni) per_giorno.push_back(kzero::text_from_day(g));
+        for (const std::string& g : per_giorno) {
+            if (non_verificato) out.non_verificati.insert(chiave_larga(d.codice, p, g));
+            else out.mostrati.insert(come_testo(senza) + " giorno=" + g);
+        }
     }
-    return s;
+    return out;
 }
 
 }  // namespace
@@ -330,13 +365,29 @@ std::map<std::string, std::string> differenze_per(const Visibilita& v, int& usat
         std::string differenza;
         if (!chiusura::stessi_dati(chiaro, piena, differenza)) continue;   // non si potrebbe chiudere (es. codici ripetuti)
         ++usati;
-        const std::set<std::string> pieno = problemi_di(piena, v);
+        const ProblemiPerGiorno pieno = problemi_per_giorno(piena, v);
         const ValoriCassaforte vv = valori(c, v);
-        const std::set<std::string> ridotto = problemi_di(leggi_pacchetto(c.normali, &vv), v);
-        for (const std::string& p : pieno)
-            if (!ridotto.count(p)) diversi[p.substr(0, p.find('/')) + " (manca)"] = p;
-        for (const std::string& p : ridotto)
-            if (!pieno.count(p)) diversi[p.substr(0, p.find('/')) + " (in piu')"] = p;
+        const Lettura ridotta = leggi_pacchetto(c.normali, &vv);
+        const ProblemiPerGiorno ridotto = problemi_per_giorno(ridotta, v);
+        // Ogni problema mostrato (giorno per giorno) e' vero: lo trova anche chi ha tutti i permessi (K-017: anche quelli certi
+        // dei turni senza i dati particolari).
+        for (const std::string& p : ridotto.mostrati)
+            if (!pieno.mostrati.count(p)) diversi[p.substr(0, p.find('/')) + " (in piu')"] = p;
+        // Ogni problema di chi ha tutti i permessi, che l'utente puo' verificare, e' mostrato oppure (K-017) contato tra i non
+        // verificati.
+        const auto larga = [](const std::string& testo) {
+            // testo = "K-CTR-nnn/v file punt k=v:n ... giorno=AAAA-MM-GG": la chiave larga dello stesso problema.
+            std::string k = testo.substr(0, testo.find('/'));
+            for (const char* nome : {" turno=", " persona=", " mezzo="}) {
+                const std::size_t i = testo.find(nome);
+                if (i != std::string::npos) k += testo.substr(i, testo.find(':', i) - i);
+            }
+            return k + " " + testo.substr(testo.rfind("giorno=") + 7);
+        };
+        for (const std::string& p : pieno.mostrati)
+            if (!ridotto.mostrati.count(p) && !ridotto.non_verificati.count(larga(p))) diversi[p.substr(0, p.find('/')) + " (manca)"] = p;
+        for (const std::string& p : pieno.non_verificati)
+            if (!ridotto.non_verificati.count(p)) diversi[p.substr(0, p.find(' ')) + " (non verificato, manca)"] = p;
     }
     return diversi;
 }
@@ -1430,12 +1481,13 @@ bool nomina(const std::string& testo, const std::set<std::string>& codici) {
 }
 
 // I controlli fatti sul piano del giorno: quelli che il catalogo dichiara bisognosi di tutte e due le classi (chi fa i turni
-// dipende dai dati personali, i mezzi anche dagli usi richiesti per tipo di servizio).
+// dipende dai dati personali, i mezzi anche dagli usi richiesti per tipo di servizio) e, dal K-017, i controlli dei turni
+// (DefinizioneControllo::turni: richiedono i dati personali; senza i particolari mostrano solo i problemi certi).
 const std::set<std::string>& controlli_del_piano() {
     static const std::set<std::string> c = [] {
         std::set<std::string> out;
         for (const DefinizioneControllo& d : catalogo_controlli())
-            if (d.richiede_personali && d.richiede_particolari) out.insert(d.codice);
+            if (d.richiede_personali && (d.richiede_particolari || d.turni)) out.insert(d.codice);
         return out;
     }();
     return c;

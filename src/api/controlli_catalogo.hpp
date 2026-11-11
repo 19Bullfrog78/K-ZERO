@@ -53,6 +53,11 @@ struct DefinizioneControllo {
     // lavoro contato da quei regimi). Il nucleo lo dice problema per problema (Problem::by_service_kind): allora rivela un
     // dato particolare, qualunque sia la variante. Una prova controlla che il nucleo lo dica solo per questi controlli.
     bool dal_tipo = false;
+    // K-017: un controllo sul piano del giorno (chi fa i turni e con quali mezzi, controlli_turni.cpp) che senza i dati
+    // particolari si fa lo stesso: i problemi certi si vedono, quelli che dipendono dal tipo di servizio (Problem::unverified,
+    // Problem::by_service_kind) non sono verificati e si contano soltanto. Richiede i dati personali (il piano dipende da
+    // assenze, disponibilita', abilitazioni), non quelli particolari.
+    bool turni = false;
 
     Classe rivela_variante(int variante) const {
         const auto it = rivela_varianti.find(variante);

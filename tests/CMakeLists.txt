@@ -1407,18 +1407,24 @@ kzero_cassaforte(cassaforte_controlla_titolare_json TITOLARE USCITA 0 FORMATO js
 kzero_cassaforte(cassaforte_controlla_titolare_tutti_i_dati TITOLARE USCITA 0 FORMATO testo PROBLEMI ${AVVISI_DEMO_COMPLETI}
                  CONTIENE "248 valori personali e 37 particolari, nella cassaforte: luoghi.json 25 personali"
                  ARGOMENTI controlla @PACCHETTO@ --includi-dati-personali --includi-dati-particolari)
+# K-017: senza i dati particolari i controlli dei turni mostrano i problemi certi (qui K-CTR-078 e K-CTR-082) e contano soltanto
+# quelli che dipendono dal tipo di servizio; K-CTR-068 (l'autorizzazione del committente, per tipo) e' tra questi.
 kzero_cassaforte(cassaforte_controlla_ufficio UFFICIO USCITA 0 FORMATO testo
                  CONTIENE "Cassaforte aperta dall'utente UFFICIO (dati personali)"
-                          "Non verificato (servono i dati particolari, che l'utente non puo' aprire)" "K-CTR-068"
-                 NON_CONTIENE "servono i dati personali" ${DATI_PERSONALI} ${DATI_PARTICOLARI}
+                          "Non verificato (servono i dati particolari, che l'utente non puo' aprire)" "K-CTR-071"
+                          "Controlli dei turni: si vedono i problemi certi" "18 errori e 5 avvisi." "Avviso K-CTR-078 (persone.json, /persone/1)"
+                          "Avviso K-CTR-082 (servizi_fissi.json, /servizi_fissi/2)" " 0 errori, 7 avvisi."
+                 NON_CONTIENE "servono i dati personali" "K-CTR-068" ${DATI_PERSONALI} ${DATI_PARTICOLARI}
                  ARGOMENTI controlla @PACCHETTO@)
 kzero_cassaforte(cassaforte_controlla_ufficio_json UFFICIO USCITA 0 FORMATO json SCHEMA controlla
                  CONTIENE "\"servono\": \"particolari\"" "\"utente\": \"UFFICIO\"" NON_CONTIENE "\"servono\": \"personali\""
                  ARGOMENTI controlla @PACCHETTO@ --formato json)
 kzero_cassaforte(cassaforte_controlla_ufficio_dati_personali UFFICIO USCITA 0 FORMATO testo
                  CONTIENE "nella cassaforte: luoghi.json" "persone.json 161 personali e 0 particolari"
-                 PROBLEMI "K-CTR-050|persone.json|/persone/2/abilitazioni/2"
-                 NON_CONTIENE ${DATI_PERSONALI_LEGATI} ${DATI_PARTICOLARI} "K-CTR-078 ("
+                          # K-017: il turno scoperto per un fatto certo si vede, il motivo no (scelta A del 5/11, K-014).
+                          "il motivo non e' verificato (servono i dati particolari"
+                 PROBLEMI "K-CTR-050|persone.json|/persone/2/abilitazioni/2" "K-CTR-078|persone.json|/persone/1"
+                 NON_CONTIENE ${DATI_PERSONALI_LEGATI} ${DATI_PARTICOLARI} "K-CTR-078 (assenze.json" "e' assente"
                  ARGOMENTI controlla @PACCHETTO@ --includi-dati-personali)
 kzero_cassaforte(cassaforte_controlla_salute SALUTE USCITA 0 FORMATO testo
                  CONTIENE "Cassaforte aperta dall'utente SALUTE (dati particolari)"

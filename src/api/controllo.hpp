@@ -3,6 +3,7 @@
 // Lo usano "kzero controlla" (cartella sul disco) e "kzero dimostrazione" (pacchetto incorporato).
 
 #include <optional>
+#include <utility>
 #include <string>
 #include <vector>
 
@@ -45,6 +46,11 @@ struct Resoconto {
     // per uno: solo quanti sono (in errori e avvisi sono gia' contati).
     int errori_riservati = 0;
     int avvisi_riservati = 0;
+    // K-017: per chi apre i dati personali ma non quelli particolari, i problemi dei controlli dei turni (catalogo,
+    // DefinizioneControllo::turni) che dipendono dal tipo di servizio: nati da un risultato del piano non verificato o da un
+    // requisito del tipo. Non verificati: non si elencano e non sono in errori e avvisi, si contano soltanto. Senza valore per
+    // gli altri utenti (per chi apre i particolari non ce ne sono; senza i personali i controlli dei turni non sono verificati).
+    std::optional<std::pair<int, int>> turni_non_verificati;   // errori, avvisi
     // Cassaforte (K-010): per ogni classe che l'utente non puo' aprire, i controlli non verificati (in ordine di codice): quelli
     // che la richiedono (catalogo). Anche i problemi che starebbero nei dati di quella classe non si possono calcolare.
     // Nessun loro risultato e' nel resoconto, ne' tra i problemi ne' nei conteggi.
