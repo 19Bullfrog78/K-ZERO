@@ -464,6 +464,13 @@ foreach(caso "persona_giovedi;--data;2026-10-22;--persona;P-C" "mezzo_giovedi;--
               NON_CONTIENE ${DATI_PERSONE} ${DATI_PERSONALI} ${DATI_PARTICOLARI} "PEDANA"
               ARGOMENTI ${GIORNATA_DEMO} ${caso} --formato json)
 endforeach()
+# K-017: per il titolare (e il pacchetto in chiaro) la giornata del 2027-07-07 resta quella di prima del K-017 (uscite attese
+# prese dal programma del K-016): 1 turno scoperto (T-SECONDO), nessuno senza mezzo, 5 mezzi.
+kzero_prova(giornata_tutti_2027_07_07 USCITA 0 FORMATO testo ATTESO ${CMAKE_CURRENT_SOURCE_DIR}/attesi/giornata_tutti_2027-07-07.txt
+            ARGOMENTI ${GIORNATA_DEMO} --data 2027-07-07)
+kzero_prova(giornata_tutti_2027_07_07_dati_particolari USCITA 0 FORMATO testo
+            ATTESO ${CMAKE_CURRENT_SOURCE_DIR}/attesi/giornata_tutti_2027-07-07_dati_particolari.txt
+            ARGOMENTI ${GIORNATA_DEMO} --data 2027-07-07 --includi-dati-particolari)
 # Tutti i turni di un giorno di scuola: di base senza nomi e senza dati sulla salute; con i due parametri si vedono.
 kzero_prova(giornata_tutti USCITA 0 FORMATO testo
             CONTIENE "Tutti i turni del giorno" "T-B-ACCOMP" "A bordo del mezzo: BETA-01" "Totali: 13 turni (nessuno scoperto"
@@ -1222,6 +1229,20 @@ kzero_prova(tipo_altro_senza_descrizione_dati_particolari USCITA 1 FORMATO json 
             MODIFICA IMPOSTA servizi.json /servizi/3/tipo "\"altro\""
             PROBLEMI "K-CTR-007|servizi.json|/servizi/3" CONTIENE "manca il campo obbligatorio 'tipo_descrizione'"
             ARGOMENTI controlla @PACCHETTO@ --includi-dati-particolari --formato json)
+# K-017, prova mancante C9 (controllo del K-014): un campo obbligatorio personale che manca (i ruoli di una persona, l'inizio di
+# un'assenza) non rivela un valore: da' il suo messaggio come prima e non e' contato tra i problemi sui dati particolari (solo un
+# campo particolare che manca lo e', variante 1 di K-CTR-007). Un problema contato soltanto non avrebbe il messaggio.
+kzero_rotto(c9_ruoli_mancanti FORMATO testo MODIFICA TOGLI persone.json /persone/0/ruoli
+            PROBLEMI "K-CTR-007|persone.json|/persone/0" CONTIENE "manca il campo obbligatorio 'ruoli'"
+            NON_CONTIENE "Problemi sui dati particolari")
+kzero_rotto(c9_ruoli_mancanti_json FORMATO json MODIFICA TOGLI persone.json /persone/0/ruoli
+            PROBLEMI "K-CTR-007|persone.json|/persone/0"
+            CONTIENE "manca il campo obbligatorio 'ruoli'")
+kzero_rotto(c9_inizio_assenza_mancante FORMATO testo MODIFICA TOGLI assenze.json /assenze/0/dal
+            CONTIENE "Errore K-CTR-007 (il punto preciso con --includi-dati-personali): Non rispetta lo schema: manca il campo obbligatorio 'dal'."
+            NON_CONTIENE "Problemi sui dati particolari")
+kzero_rotto(c9_inizio_assenza_mancante_json FORMATO json MODIFICA TOGLI assenze.json /assenze/0/dal
+            CONTIENE "manca il campo obbligatorio 'dal'")
 kzero_rotto(rotto_trasbordo_non_autorizzato FORMATO testo MODIFICA TOGLI luoghi.json /luoghi/16/trasbordo
             PROBLEMI "K-CTR-023|corse.json|/corse/4/passaggi/2/trasbordi/0" "K-CTR-023|corse.json|/corse/5/passaggi/3/trasbordi/0")
 kzero_rotto(rotto_trasbordo_senza_meta FORMATO testo MODIFICA IMPOSTA corse.json /corse/5/passaggi/3/trasbordi/0/codice "\"T-02\""

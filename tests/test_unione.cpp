@@ -32,6 +32,7 @@
 #include "schemi_dati.hpp"
 #include "tempo.hpp"
 #include "turni.hpp"
+#include "vista.hpp"
 
 using namespace kzero::api;
 using kzero::Check;
@@ -344,6 +345,28 @@ std::vector<Modifica> modifiche_dei_dati_riservati(const InMemoria& demo) {
 
 namespace {
 
+// I problemi di chi ha tutti i dati (pieno) e quelli dello stesso pacchetto per un utente con meno permessi (ridotto), visti
+// come li vede quell'utente (problemi_per_giorno): ogni giorno di un problema mostrato e' vero, lo trova anche chi ha tutti i
+// dati (K-017: anche quelli certi dei turni senza i dati particolari); ogni problema di chi ha tutti i dati, che l'utente puo'
+// verificare, e' mostrato oppure (K-017) contato tra i non verificati. Le differenze vanno in diversi (controllo -> esempio).
+void confronta_problemi(const ProblemiPerGiorno& pieno, const ProblemiPerGiorno& ridotto, std::map<std::string, std::string>& diversi) {
+    for (const std::string& p : ridotto.mostrati)
+        if (!pieno.mostrati.count(p)) diversi[p.substr(0, p.find('/')) + " (in piu')"] = p;
+    const auto larga = [](const std::string& testo) {
+        // testo = "K-CTR-nnn/v file punt k=v:n ... giorno=AAAA-MM-GG": la chiave larga dello stesso problema.
+        std::string k = testo.substr(0, testo.find('/'));
+        for (const char* nome : {" turno=", " persona=", " mezzo="}) {
+            const std::size_t i = testo.find(nome);
+            if (i != std::string::npos) k += testo.substr(i, testo.find(':', i) - i);
+        }
+        return k + " " + testo.substr(testo.rfind("giorno=") + 7);
+    };
+    for (const std::string& p : pieno.mostrati)
+        if (!ridotto.mostrati.count(p) && !ridotto.non_verificati.count(larga(p))) diversi[p.substr(0, p.find('/')) + " (manca)"] = p;
+    for (const std::string& p : pieno.non_verificati)
+        if (!ridotto.non_verificati.count(p)) diversi[p.substr(0, p.find(' ')) + " (non verificato, manca)"] = p;
+}
+
 // Per un tipo di utente: su ogni pacchetto del corpo (il demo, le modifiche delle prove sul programma e quelle mirate ai
 // dati riservati) i problemi che l'utente puo' verificare sono esattamente quelli che trova chi ha tutti i permessi. Se un
 // controllo usasse una classe che l'utente non legge senza dichiararlo nel catalogo, qui un problema mancherebbe o sarebbe
@@ -365,29 +388,8 @@ std::map<std::string, std::string> differenze_per(const Visibilita& v, int& usat
         std::string differenza;
         if (!chiusura::stessi_dati(chiaro, piena, differenza)) continue;   // non si potrebbe chiudere (es. codici ripetuti)
         ++usati;
-        const ProblemiPerGiorno pieno = problemi_per_giorno(piena, v);
         const ValoriCassaforte vv = valori(c, v);
-        const Lettura ridotta = leggi_pacchetto(c.normali, &vv);
-        const ProblemiPerGiorno ridotto = problemi_per_giorno(ridotta, v);
-        // Ogni problema mostrato (giorno per giorno) e' vero: lo trova anche chi ha tutti i permessi (K-017: anche quelli certi
-        // dei turni senza i dati particolari).
-        for (const std::string& p : ridotto.mostrati)
-            if (!pieno.mostrati.count(p)) diversi[p.substr(0, p.find('/')) + " (in piu')"] = p;
-        // Ogni problema di chi ha tutti i permessi, che l'utente puo' verificare, e' mostrato oppure (K-017) contato tra i non
-        // verificati.
-        const auto larga = [](const std::string& testo) {
-            // testo = "K-CTR-nnn/v file punt k=v:n ... giorno=AAAA-MM-GG": la chiave larga dello stesso problema.
-            std::string k = testo.substr(0, testo.find('/'));
-            for (const char* nome : {" turno=", " persona=", " mezzo="}) {
-                const std::size_t i = testo.find(nome);
-                if (i != std::string::npos) k += testo.substr(i, testo.find(':', i) - i);
-            }
-            return k + " " + testo.substr(testo.rfind("giorno=") + 7);
-        };
-        for (const std::string& p : pieno.mostrati)
-            if (!ridotto.mostrati.count(p) && !ridotto.non_verificati.count(larga(p))) diversi[p.substr(0, p.find('/')) + " (manca)"] = p;
-        for (const std::string& p : pieno.non_verificati)
-            if (!ridotto.non_verificati.count(p)) diversi[p.substr(0, p.find(' ')) + " (non verificato, manca)"] = p;
+        confronta_problemi(problemi_per_giorno(piena, v), problemi_per_giorno(leggi_pacchetto(c.normali, &vv), v), diversi);
     }
     return diversi;
 }
@@ -1924,4 +1926,427 @@ TEST(Unione, TurnoScopertoPerCauseDiverseUnProblemaSolo) {
         EXPECT_NE(uno.front()->messaggio.find("il motivo e' riservato"), std::string::npos);
         EXPECT_EQ(r.avvisi, tutti.avvisi - 1);
     }
+}
+
+// --- K-017: il piano di chi non apre i dati particolari (scelta A del supervisore, 11/11) --------------------------------------
+// Il tipo dei servizi e dei gruppi e' un dato particolare: per chi non puo' leggerlo non e' noto, mai "altro". Un fatto del piano
+// che dipende dal tipo si valuta per ogni tipo possibile: uguale per tutti = certo, diverso = non verificato. Criteri (punto 5 del
+// mandato), su varianti del demo che cambiano solo il tipo di un servizio (verso ogni altro tipo), lette dal titolare (tutti i
+// permessi) e da chi ha i soli dati personali, chiuse in memoria:
+// (a) per chi ha i soli dati personali kzero giornata e kzero controlla (testo e JSON, di base e con i dati personali) sono
+//     identiche tra le varianti;
+// (b) ogni risultato del piano dato per certo (chi fa il turno, il mezzo, il mezzo su cui e' a bordo) coincide con quello del
+//     titolare in ogni variante. Le varianti in cui il titolare ha errori nei dati (la giornata si ferma, K-ERR-018) per (b) si
+//     saltano e si elencano.
+
+namespace {
+
+// I risultati del piano di un pacchetto, turno per turno e giorno per giorno, con quello che e' verificato.
+struct EsitoDelTurno {
+    std::string persona, mezzo, a_bordo;   // "-" = nessuno
+    bool persona_certa = true, mezzo_certo = true, a_bordo_certo = true;
+};
+using PianoVerificato = std::map<std::pair<kzero::Day, std::string>, EsitoDelTurno>;
+
+PianoVerificato piano_verificato(const kzero::Package& p) {
+    PianoVerificato out;
+    const kzero::Planner piano(p);
+    const auto codice = [](const auto* x) { return x ? x->code : std::string("-"); };
+    for (kzero::Day d = p.manifest.period.from; d <= p.manifest.period.to; ++d)
+        for (const kzero::ShiftDay& sd : piano.day(d))
+            out[{d, sd.shift->code}] = {codice(sd.person), codice(sd.vehicle), codice(sd.aboard), sd.person_verified, sd.vehicle_verified,
+                                        sd.aboard_verified};
+    return out;
+}
+
+// Un pacchetto chiuso in memoria, letto da chi ha tutti i permessi e da chi ha i soli dati personali.
+struct DueLetture {
+    Chiuso chiuso;
+    Lettura titolare, personali;
+};
+
+DueLetture due_letture(const InMemoria& chiaro) {
+    DueLetture d{chiudi(chiaro), {}, {}};
+    const ValoriCassaforte tutti = valori(d.chiuso, {true, true}), personali = valori(d.chiuso, {true, false});
+    d.titolare = leggi_pacchetto(d.chiuso.normali, &tutti);
+    d.personali = leggi_pacchetto(d.chiuso.normali, &personali);
+    return d;
+}
+
+Risultato esegui_su(const Lettura& l, const std::string& comando, Parametri par) {
+    accesso::LetturaPerComando lc;
+    lc.lettura = l;
+    lc.visibilita = Visibilita{par.includi_dati_personali, par.includi_dati_particolari};
+    par.argomenti = {"pacchetto in memoria"};
+    const DefinizioneComando& c = *trova_comando(comando);
+    try {
+        if (comando == "controlla") return controlla_su(c, par, std::move(lc));
+        return giornata_su(c, par, std::move(lc));
+    } catch (const ErroreKZero& e) {
+        return Risultato{e.definizione().codice + " " + e.messaggio(), 1};
+    }
+}
+
+// I totali di una giornata JSON contano solo cio' che e' certo: devono venire dai turni mostrati (un risultato non verificato e'
+// null). Restituisce cosa non torna.
+std::string totali_della_giornata(const std::string& uscita) {
+    const JsonDati j = JsonDati::parse(uscita);
+    long long scoperti = 0, senza_mezzo = 0, non_verificati = 0;
+    std::set<std::string> persone, mezzi;
+    for (const JsonDati& t : j.at("turni")) {
+        scoperti += t.at("scoperto") == true ? 1 : 0;
+        senza_mezzo += t.at("senza_mezzo") == true ? 1 : 0;
+        non_verificati += t.at("non_verificato").is_null() ? 0 : 1;
+        if (!t.at("persona").is_null()) persone.insert(t.at("persona").at("codice").get<std::string>());
+        if (!t.at("mezzo").is_null()) mezzi.insert(t.at("mezzo").at("codice").get<std::string>());
+        // Un risultato non verificato non si mostra come certo.
+        const JsonDati& nv = t.at("non_verificato");
+        if (!nv.is_null() && nv.at("persona") == true && (!t.at("persona").is_null() || !t.at("scoperto").is_null()))
+            return "turno " + t.at("codice").get<std::string>() + ": persona non verificata mostrata come certa";
+        if (!nv.is_null() && nv.at("mezzo") == true && (!t.at("mezzo").is_null() || !t.at("senza_mezzo").is_null()))
+            return "turno " + t.at("codice").get<std::string>() + ": mezzo non verificato mostrato come certo";
+    }
+    const JsonDati& tot = j.at("totali");
+    std::string male;
+    if (tot.at("scoperti") != scoperti) male += " scoperti";
+    if (tot.at("senza_mezzo") != senza_mezzo) male += " senza_mezzo";
+    if (tot.at("non_verificati") != non_verificati) male += " non_verificati";
+    if (tot.at("persone") != persone.size()) male += " persone";
+    if (tot.at("mezzi") != mezzi.size()) male += " mezzi";
+    return male;
+}
+
+struct EsitoDelPiano {
+    std::string fughe;                       // (a): uscite diverse tra le varianti per chi ha i soli dati personali
+    std::string sbagliati;                   // (b): un risultato certo diverso da quello del titolare
+    std::vector<std::string> con_errori;     // varianti saltate per (b): il titolare ha errori nei dati
+    int certi = 0, non_verificati = 0;       // turni nei giorni del periodo (varianti senza errori)
+    int varianti = 0;
+};
+
+// Quanti problemi dei controlli dei turni il resoconto di kzero controlla mostra e quanti conta tra i non verificati, per chi ha
+// i soli dati personali, e quanti ne dice la stessa regola applicata ai problemi del nucleo (problemi_per_giorno, che la prova
+// dei 375 pacchetti confronta con chi ha tutti i dati): devono coincidere. Restituisce cosa non torna.
+std::string resoconto_dei_turni(const Lettura& personali) {
+    const Visibilita v{true, false};
+    const Resoconto r = controlla_lettura(personali, v);
+    std::set<std::string> dei_turni;
+    for (const DefinizioneControllo& d : catalogo_controlli())
+        if (d.turni) dei_turni.insert(d.codice);
+    int mostrati = 0;
+    for (const ProblemaPresentato& p : r.problemi) mostrati += dei_turni.count(p.codice) ? 1 : 0;
+    std::vector<kzero::Problem> problemi = tutti_i_problemi(personali);
+    if (motivo_dei_turni_riservato(personali.pacchetto, v)) problemi = turni_senza_motivo(std::move(problemi), personali.pacchetto, true);
+    int attesi = 0, non_verificati = 0;
+    for (const kzero::Problem& p : problemi) {
+        const DefinizioneControllo& d = definizione_controllo(p.check);
+        if (!d.turni) continue;
+        if (p.unverified || p.by_service_kind) ++non_verificati;
+        else if (verificabile(d, p, classe_della_posizione(p.where, personali), in_trasportato(p.where, personali), v)) ++attesi;
+    }
+    if (!r.turni_non_verificati) return "manca il conteggio dei non verificati";
+    std::string male;
+    if (mostrati != attesi) male += " mostrati " + std::to_string(mostrati) + " invece di " + std::to_string(attesi);
+    if (r.turni_non_verificati->first + r.turni_non_verificati->second != non_verificati)
+        male += " non verificati " + std::to_string(r.turni_non_verificati->first + r.turni_non_verificati->second) + " invece di " +
+                std::to_string(non_verificati);
+    return male;
+}
+
+EsitoDelPiano prova_del_piano(const std::string& servizio, const std::function<void(InMemoria&)>& modifica = {}) {
+    EsitoDelPiano e;
+    std::map<std::string, std::string> prima;   // (a): l'uscita della prima variante, per uscita
+    const std::vector<kzero::Day> giorni = {*kzero::day_from_text("2026-11-11"), *kzero::day_from_text("2027-07-07")};
+    for (const std::string& tipo : kTipi) {
+        ++e.varianti;
+        const std::string variante = servizio + " " + tipo;
+        InMemoria chiaro = demo_con_il_tipo(servizio, tipo);
+        if (modifica) modifica(chiaro);
+        const DueLetture l = due_letture(chiaro);
+        if (!l.titolare.forma_valida() || !l.personali.forma_valida()) {
+            e.sbagliati += "\n  " + variante + ": errori di forma";
+            continue;
+        }
+        // (b) anche per i controlli dei turni (punto 4: una regola sola con la giornata): ogni giorno di un problema mostrato a
+        // chi ha i soli dati personali e' un problema del titolare; ogni problema del titolare e' mostrato o non verificato. E il
+        // resoconto di kzero controlla segue la stessa regola.
+        std::map<std::string, std::string> diversi;
+        confronta_problemi(problemi_per_giorno(l.titolare, {true, false}), problemi_per_giorno(l.personali, {true, false}), diversi);
+        for (const auto& [k, esempio] : diversi) e.sbagliati += "\n  " + variante + ", controlla: " + k + " es. " + esempio.substr(0, 200);
+        const std::string resoconto = resoconto_dei_turni(l.personali);
+        if (!resoconto.empty()) e.sbagliati += "\n  " + variante + ", resoconto di controlla:" + resoconto;
+        // (a) Le uscite di chi ha i soli dati personali.
+        for (const bool personali : {false, true})
+            for (const Formato f : {Formato::Testo, Formato::Json}) {
+                Parametri par;
+                par.formato = f;
+                par.includi_dati_personali = personali;
+                const std::string come = std::string(personali ? " --includi-dati-personali" : "") + (f == Formato::Json ? " json" : " testo");
+                std::vector<std::pair<std::string, Risultato>> uscite = {{"controlla" + come, esegui_su(l.personali, "controlla", par)}};
+                for (const kzero::Day d : giorni) {
+                    Parametri pg = par;
+                    pg.data = d;
+                    uscite.push_back({"giornata del " + kzero::text_from_day(d) + come, esegui_su(l.personali, "giornata", pg)});
+                }
+                for (const auto& [nome, r] : uscite) {
+                    const auto [it, nuova] = prima.emplace(nome, r.uscita);
+                    if (!nuova && it->second != r.uscita) e.fughe += "\n  " + variante + ", " + nome + ": " + prima_differenza(it->second, r.uscita);
+                    if (f == Formato::Json && nome.rfind("giornata", 0) == 0 && r.codice == 0) {
+                        const std::string m = totali_della_giornata(r.uscita);
+                        if (!m.empty()) e.sbagliati += "\n  " + variante + ", " + nome + ": totali o turni sbagliati:" + m;
+                    }
+                }
+            }
+        // (b) I risultati certi, giorno per giorno, contro quelli del titolare.
+        const Resoconto r = controlla_lettura(l.titolare, Visibilita{true, true});
+        if (r.errori_nei_dati() > 0) {
+            e.con_errori.push_back(tipo);
+            continue;
+        }
+        const PianoVerificato t = piano_verificato(l.titolare.pacchetto), p = piano_verificato(l.personali.pacchetto);
+        if (t.size() != p.size()) e.sbagliati += "\n  " + variante + ": turni diversi";
+        for (const auto& [chiave, x] : p) {
+            const auto it = t.find(chiave);
+            if (it == t.end()) continue;
+            const EsitoDelTurno& y = it->second;
+            if (!y.persona_certa || !y.mezzo_certo || !y.a_bordo_certo) e.sbagliati += "\n  " + variante + ": il titolare ha un risultato non verificato";
+            const bool certo = x.persona_certa && x.mezzo_certo && x.a_bordo_certo;
+            (certo ? e.certi : e.non_verificati) += 1;
+            const std::string dove = "\n  " + variante + ", " + kzero::text_from_day(chiave.first) + " " + chiave.second + ": ";
+            if (x.persona_certa && x.persona != y.persona) e.sbagliati += dove + "persona " + x.persona + " invece di " + y.persona;
+            if (x.mezzo_certo && x.mezzo != y.mezzo) e.sbagliati += dove + "mezzo " + x.mezzo + " invece di " + y.mezzo;
+            if (x.a_bordo_certo && x.a_bordo != y.a_bordo) e.sbagliati += dove + "a bordo di " + x.a_bordo + " invece di " + y.a_bordo;
+            if (e.sbagliati.size() > 4000) return e;
+        }
+    }
+    return e;
+}
+
+void controlla_il_piano(const std::string& servizio, const std::function<void(InMemoria&)>& modifica = {}) {
+    const EsitoDelPiano e = prova_del_piano(servizio, modifica);
+    std::string saltate;
+    for (const std::string& t : e.con_errori) saltate += " " + t;
+    std::cout << "[ " << servizio << " ] varianti: " << e.varianti << "; turni nei giorni del periodo: " << e.certi << " certi, "
+              << e.non_verificati << " non verificati; saltate per (b), il titolare ha errori nei dati:"
+              << (saltate.empty() ? std::string(" nessuna") : saltate) << std::endl;
+    EXPECT_EQ(e.varianti, 5);
+    EXPECT_TRUE(e.fughe.empty()) << "Uscite diverse tra le varianti per chi ha i soli dati personali:" << e.fughe;
+    EXPECT_TRUE(e.sbagliati.empty()) << "Risultati certi diversi da quelli del titolare:" << e.sbagliati;
+    EXPECT_LT(e.con_errori.size(), 5u) << servizio << ": nessuna variante provata per (b)";
+}
+
+}  // namespace
+
+TEST(Unione, PianoSenzaParticolariScuolaAndataMattina) { controlla_il_piano("S-SCU-AM"); }
+TEST(Unione, PianoSenzaParticolariScuolaRitornoMezzogiorno) { controlla_il_piano("S-SCU-RM"); }
+TEST(Unione, PianoSenzaParticolariSuperiori) { controlla_il_piano("S-SUP-RM"); }
+TEST(Unione, PianoSenzaParticolariCentroDiurno) { controlla_il_piano("S-DIS"); }
+TEST(Unione, PianoSenzaParticolariAsilo) { controlla_il_piano("S-ASILO"); }
+TEST(Unione, PianoSenzaParticolariLineaB610) { controlla_il_piano("S-LIN-B610"); }
+TEST(Unione, PianoSenzaParticolariCentroDiurnoGiovedi) { controlla_il_piano("S-DIS-GIO"); }
+TEST(Unione, PianoSenzaParticolariLineaB620) { controlla_il_piano("S-LIN-B620"); }
+TEST(Unione, PianoSenzaParticolariGita) { controlla_il_piano("S-GITA"); }
+TEST(Unione, PianoSenzaParticolariMatrimonio) { controlla_il_piano("S-MATRIMONIO"); }
+TEST(Unione, PianoSenzaParticolariNoleggioPrivato) { controlla_il_piano("S-PRIVATO-CENTRO"); }
+
+// Due casi che nel demo non ci sono, con la stessa prova (sabotaggi del K-017).
+// Il mezzo abituale segue chi fa il turno: T-SCUOLA-1 con il mezzo abituale di P-E e la sua autorizzazione del committente CVA
+// scaduta (R-TN la chiede per i servizi per disabili; P-F e P-G la hanno valida, cosi' la variante "disabili" non ha errori):
+// senza i dati particolari chi fa il turno non e' verificato, e quindi nemmeno il mezzo.
+void mezzo_abituale_e_autorizzazione(InMemoria& m) {
+    JsonDati t = JsonDati::parse(m.file.at("turni.json"));
+    for (JsonDati& x : t.at("turni"))
+        if (x.at("codice") == "T-SCUOLA-1") x["mezzo"] = {{"modo", "abituale"}};
+    m.file["turni.json"] = t.dump(2);
+    JsonDati p = JsonDati::parse(m.file.at("persone.json"));
+    for (JsonDati& x : p.at("persone")) {
+        if (x.at("codice") == "P-E") x.at("autorizzazioni")[0]["scadenza"] = "2026-10-01";
+        if (x.at("codice") == "P-F" || x.at("codice") == "P-G")
+            x["autorizzazioni"] = JsonDati::array({{{"committente", "CVA"}, {"riferimento", "Cartellino di prova (inventato)"}, {"scadenza", "2027-08-31"}}});
+    }
+    m.file["persone.json"] = p.dump(2);
+}
+
+TEST(Unione, PianoSenzaParticolariMezzoAbituale) {
+    controlla_il_piano("S-SCU-AM", mezzo_abituale_e_autorizzazione);
+    InMemoria m = demo_in_chiaro();
+    mezzo_abituale_e_autorizzazione(m);
+    const DueLetture l = due_letture(m);
+    int tutti_e_due = 0;
+    for (const auto& [k, x] : piano_verificato(l.personali.pacchetto))
+        tutti_e_due += k.second == "T-SCUOLA-1" && !x.persona_certa && !x.mezzo_certo && x.mezzo == "ALFA-01" ? 1 : 0;
+    EXPECT_GT(tutti_e_due, 100);   // i giorni di scuola dal 2026-10-01
+}
+
+// Una sovrapposizione con un turno non verificato: il 2027-07-07 ALFA-05 anche su T-DIS (assegnazione del singolo giorno, certa);
+// su T-PRIMO non e' verificato (come linea si', come NCC o "altro" no): la sovrapposizione dei mezzi (K-CTR-064) non e' verificata.
+// Senza il blocco della corsa del centro diurno su ALFA-03 (sarebbe un errore in ogni variante: nessuna da provare per (b)).
+void alfa05_su_tdis(InMemoria& m) {
+    JsonDati a = JsonDati::parse(m.file.at("assegnazioni.json"));
+    a.at("assegnazioni").push_back({{"data", "2027-07-07"}, {"turno", "T-DIS"}, {"mezzo", "ALFA-05"}});
+    m.file["assegnazioni.json"] = a.dump(2);
+    JsonDati b = JsonDati::parse(m.file.at("blocchi.json"));
+    JsonDati tenuti = JsonDati::array();
+    for (const JsonDati& x : b.at("blocchi"))
+        if (x.at("codice") != "B-DIS") tenuti.push_back(x);
+    b["blocchi"] = tenuti;
+    m.file["blocchi.json"] = b.dump(2);
+}
+
+TEST(Unione, PianoSenzaParticolariSovrapposizione) {
+    controlla_il_piano("S-LIN-B610", alfa05_su_tdis);
+    InMemoria m = demo_in_chiaro();
+    alfa05_su_tdis(m);
+    const DueLetture l = due_letture(m);
+    const ProblemiPerGiorno p = problemi_per_giorno(l.personali, {true, false});
+    std::string trovati;
+    for (const std::string& k : p.non_verificati)
+        if (k.rfind("K-CTR-064", 0) == 0) trovati += " [" + k + "]";
+    for (const std::string& k : p.mostrati)
+        if (k.rfind("K-CTR-064", 0) == 0) trovati += " mostrato [" + k + "]";
+    EXPECT_TRUE(p.non_verificati.count("K-CTR-064 turno=T-DIS mezzo=ALFA-05 2027-07-07"))
+        << "la sovrapposizione non e' tra i non verificati:" << trovati;
+}
+
+// Ogni servizio del demo ha la sua prova qui sopra (un servizio nuovo nel demo va aggiunto).
+TEST(Unione, PianoSenzaParticolariTuttiIServizi) {
+    const Lettura l = leggi_pacchetto(demo_in_chiaro());
+    std::set<std::string> servizi;
+    for (const kzero::Service& s : l.pacchetto.services) servizi.insert(s.code);
+    EXPECT_EQ(servizi, (std::set<std::string>{"S-SCU-AM", "S-SCU-RM", "S-SUP-RM", "S-DIS", "S-ASILO", "S-LIN-B610", "S-DIS-GIO", "S-LIN-B620",
+                                              "S-GITA", "S-MATRIMONIO", "S-PRIVATO-CENTRO"}));
+}
+
+// Per chi non puo' leggerlo il tipo dei servizi e dei gruppi non e' noto (mai "altro"); per chi puo', sempre noto. I tipi possibili
+// sono tutti quelli dello schema dei servizi.
+TEST(Unione, TipoNonNotoMaiAltro) {
+    const DueLetture l = due_letture(demo_in_chiaro());
+    ASSERT_TRUE(l.titolare.forma_valida() && l.personali.forma_valida());
+    for (const kzero::Service& s : l.personali.pacchetto.services) {
+        EXPECT_FALSE(s.kind.known()) << s.code;
+        EXPECT_THROW((void)s.kind.value(), std::logic_error) << s.code;
+        EXPECT_EQ(kzero::possible_kinds(s.kind).size(), 5u);
+        for (const kzero::PassengerGroup& g : s.groups) EXPECT_FALSE(g.type.known()) << g.code;
+    }
+    for (const kzero::Service& s : l.titolare.pacchetto.services) {
+        EXPECT_TRUE(s.kind.known()) << s.code;
+        for (const kzero::PassengerGroup& g : s.groups) EXPECT_TRUE(g.type.known()) << g.code;
+    }
+    // La categoria della corsa nasce dai tipi: per chi non li legge non e' nota (tranne il promiscuo di piu' servizi).
+    const kzero::Index idx(l.personali.pacchetto);
+    for (const kzero::Trip& t : l.personali.pacchetto.trips)
+        EXPECT_EQ(idx.category(t).known(), t.services.size() > 1) << t.code;
+    // I tipi possibili sono quelli dello schema dei servizi (versione di oggi).
+    const JsonDati& schema = *SchemiDati::incorporati().schema("servizi", 3);
+    std::set<std::string> dello_schema, del_programma;
+    const std::function<void(const JsonDati&)> cerca = [&](const JsonDati& n) {
+        if (n.is_object()) {
+            if (n.contains("properties") && n.at("properties").contains("tipo") && n.at("properties").contains("liberta_oraria"))
+                for (const auto& v : n.at("properties").at("tipo").at("enum")) dello_schema.insert(v.get<std::string>());
+            for (const auto& [k, v] : n.items()) cerca(v);
+        } else if (n.is_array()) {
+            for (const auto& v : n) cerca(v);
+        }
+    };
+    cerca(schema);
+    for (const kzero::ServiceKind k : kzero::kServiceKinds) del_programma.insert(nome_tipo_servizio(k));
+    EXPECT_FALSE(dello_schema.empty());
+    EXPECT_EQ(dello_schema, del_programma);
+}
+
+// Il caso del mandato: il demo chiuso, il 2027-07-07, per chi ha i soli dati personali. Prima: "9 turni (nessuno scoperto, 3 senza
+// mezzo), 4 mezzi", con tre TURNO SENZA MEZZO su ALFA-05 che non esistono (il tipo che mancava era diventato "altro", che chiede
+// l'uso NCC, scaduto il 2027-06-30). Ora i tre turni con ALFA-05 non sono verificati (il mezzo, e per T-SECONDO anche la persona:
+// la CQC-P di P-C e' scaduta e conta solo se il mezzo c'e'); nessun turno senza mezzo o scoperto inventato. Il titolare resta
+// com'era: 1 scoperto (T-SECONDO), nessuno senza mezzo, 5 mezzi.
+TEST(Unione, DemoChiusoLuglio2027SoloPersonali) {
+    const DueLetture l = due_letture(demo_in_chiaro());
+    Parametri par;
+    par.formato = Formato::Json;
+    par.data = *kzero::day_from_text("2027-07-07");
+    const Risultato r = esegui_su(l.personali, "giornata", par);
+    ASSERT_EQ(r.codice, 0) << r.uscita;
+    const JsonDati j = JsonDati::parse(r.uscita);
+    EXPECT_EQ(j.at("totali").at("turni"), 9);
+    EXPECT_EQ(j.at("totali").at("scoperti"), 0);
+    EXPECT_EQ(j.at("totali").at("senza_mezzo"), 0);
+    EXPECT_EQ(j.at("totali").at("non_verificati"), 3);
+    EXPECT_EQ(j.at("totali").at("persone"), 8);
+    EXPECT_EQ(j.at("totali").at("mezzi"), 4);
+    EXPECT_EQ(totali_della_giornata(r.uscita), "");
+    std::map<std::string, JsonDati> turni;
+    for (const JsonDati& t : j.at("turni")) turni[t.at("codice").get<std::string>()] = t;
+    for (const char* t : {"T-PRIMO", "T-SECONDO", "T-NOTTE"}) {
+        const JsonDati& x = turni.at(t);
+        EXPECT_EQ(x.at("non_verificato").at("mezzo"), true) << t;
+        EXPECT_TRUE(x.at("mezzo").is_null()) << t;
+        EXPECT_TRUE(x.at("senza_mezzo").is_null()) << t;
+        EXPECT_EQ(x.at("mezzo_previsto").at("codice"), "ALFA-05") << t;
+        EXPECT_EQ(x.at("non_verificato").at("motivo"), "dipende dal tipo di servizio (dato particolare)") << t;
+    }
+    EXPECT_EQ(turni.at("T-PRIMO").at("persona").at("codice"), "P-B");
+    EXPECT_EQ(turni.at("T-NOTTE").at("persona").at("codice"), "P-NUOVO");
+    EXPECT_EQ(turni.at("T-SECONDO").at("non_verificato").at("persona"), true);
+    EXPECT_TRUE(turni.at("T-SECONDO").at("scoperto").is_null());
+    EXPECT_EQ(turni.at("T-SECONDO").at("persona_prevista").at("codice"), "P-C");
+    for (const auto& [codice, x] : turni) {
+        if (codice != "T-PRIMO" && codice != "T-SECONDO" && codice != "T-NOTTE") {
+            EXPECT_TRUE(x.at("non_verificato").is_null()) << codice;
+        }
+    }
+    EXPECT_EQ(j.at("non_verificato").size(), 1u);
+    EXPECT_EQ(j.at("non_verificato")[0].at("turni"), 3);
+    // Il testo dice lo stesso.
+    par.formato = Formato::Testo;
+    const std::string testo = esegui_su(l.personali, "giornata", par).uscita;
+    EXPECT_NE(testo.find("Totali: 9 turni (nessuno scoperto, nessuno senza mezzo, 3 non verificati), 8 persone, 4 mezzi;"), std::string::npos);
+    EXPECT_NE(testo.find("Mezzo: non verificato - previsto ALFA-05"), std::string::npos);
+    EXPECT_NE(testo.find("Persona: non verificata - prevista P-C"), std::string::npos);
+    EXPECT_EQ(testo.find("SENZA MEZZO"), std::string::npos);
+    EXPECT_EQ(testo.find("SCOPERTO"), std::string::npos);
+    // Il titolare, senza e con i dati particolari, come prima.
+    for (const bool particolari : {false, true}) {
+        Parametri pt;
+        pt.formato = Formato::Json;
+        pt.data = par.data;
+        pt.includi_dati_particolari = particolari;
+        const JsonDati t = JsonDati::parse(esegui_su(l.titolare, "giornata", pt).uscita);
+        EXPECT_EQ(t.at("totali").at("scoperti"), 1);
+        EXPECT_EQ(t.at("totali").at("senza_mezzo"), 0);
+        EXPECT_EQ(t.at("totali").at("non_verificati"), 0);
+        EXPECT_EQ(t.at("totali").at("mezzi"), 5);
+        for (const JsonDati& x : t.at("turni")) EXPECT_TRUE(x.at("non_verificato").is_null());
+    }
+}
+
+// Il calcolo non legge il tipo in nessun modo: ne' dai codici esterni dei servizi ne' dai loro nomi. Cambiarli non cambia cosa e'
+// certo e cosa non e' verificato per chi ha i soli dati personali (nel demo i codici esterni dicono "linea", "servizio", "scheda").
+TEST(Unione, PianoSenzaParticolariNonLeggeCodiciEsterniNeNomi) {
+    const InMemoria base = demo_in_chiaro();
+    InMemoria cambiato = base;
+    JsonDati s = JsonDati::parse(cambiato.file.at("servizi.json"));
+    int n = 0;
+    for (JsonDati& x : s.at("servizi")) {
+        x.erase("codici_esterni");
+        x["nome"] = "Servizio " + std::to_string(++n);
+    }
+    cambiato.file["servizi.json"] = s.dump(2);
+    const DueLetture a = due_letture(base), b = due_letture(cambiato);
+    ASSERT_TRUE(a.personali.forma_valida() && b.personali.forma_valida());
+    const PianoVerificato pa = piano_verificato(a.personali.pacchetto), pb = piano_verificato(b.personali.pacchetto);
+    int non_verificati = 0;
+    for (const auto& [k, x] : pa) non_verificati += x.persona_certa && x.mezzo_certo && x.a_bordo_certo ? 0 : 1;
+    EXPECT_GT(non_verificati, 0);
+    ASSERT_EQ(pa.size(), pb.size());
+    for (const auto& [k, x] : pa) {
+        const EsitoDelTurno& y = pb.at(k);
+        EXPECT_TRUE(x.persona == y.persona && x.mezzo == y.mezzo && x.a_bordo == y.a_bordo && x.persona_certa == y.persona_certa &&
+                    x.mezzo_certo == y.mezzo_certo && x.a_bordo_certo == y.a_bordo_certo)
+            << kzero::text_from_day(k.first) << " " << k.second;
+    }
+    const Resoconto ra = controlla_lettura(a.personali, Visibilita{}), rb = controlla_lettura(b.personali, Visibilita{});
+    ASSERT_TRUE(ra.turni_non_verificati && rb.turni_non_verificati);
+    EXPECT_EQ(*ra.turni_non_verificati, *rb.turni_non_verificati);
+    EXPECT_EQ(ra.avvisi, rb.avvisi);
+    EXPECT_EQ(ra.errori, rb.errori);
 }
