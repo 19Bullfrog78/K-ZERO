@@ -1956,6 +1956,7 @@ set_tests_properties(deposito.nomi_e_file PROPERTIES LABELS deposito)
 add_executable(test_deposito test_deposito.cpp)
 target_link_libraries(test_deposito PRIVATE kzero_deposito GTest::gtest_main)
 target_compile_options(test_deposito PRIVATE ${KZERO_WARNINGS})
+target_compile_definitions(test_deposito PRIVATE KZERO_SORGENTI="${PROJECT_SOURCE_DIR}")
 gtest_discover_tests(test_deposito PROPERTIES LABELS deposito)
 
 # --- Fuzzing (K-009): prove con dati casuali e deformati (tests/fuzz, docs/sicurezza.md) -------------------------

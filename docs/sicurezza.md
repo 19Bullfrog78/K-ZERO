@@ -51,7 +51,7 @@ valori ci sono nella cassaforte, chi sono gli utenti e con quali permessi, fino 
 | **Un assistente AI che legge le uscite** (spesso su server esterni) | Di base le uscite non contengono dati personali (al loro posto il codice) ne' particolari ("riservato"), nemmeno nei messaggi, nelle posizioni o nel solo fatto che ci sia un problema sulla salute (sezione 3). Un assistente AI e' solo un aiuto facoltativo. | Con `--includi-dati-personali` o `--includi-dati-particolari` l'uscita contiene quei dati: non va data a un assistente AI. |
 | **Uno sbaglio di chi scrive i dati** | I controlli K-CTR (docs/controlli.md): es. un pacchetto "solo numeri" con dei nomi e' un errore (K-CTR-019); dati personali in chiaro in un pacchetto che non dice "dati inventati" sono un avviso a ogni lettura (K-CTR-096). | I nomi liberi (servizi, corse, turni, note, codici) possono rivelare un dato sulla salute: sezione 5. |
 | **La rete** | Nessun comando usa la rete; due prove lo controllano (sezione 3). | Il futuro adattatore delle distanze (es. Google Maps) sara' l'unica eccezione: un programma separato, acceso con un parametro esplicito, che manda fuori solo coordinate (mai nomi o altri dati delle persone), con un suo mandato. |
-| **Chi legge il deposito pubblico** (chiunque, dal 5/11/2026) | Nel deposito solo codice, documenti e dati inventati o pubblici: nessun dato vero, nemmeno cifrato (CLAUDE.md, Confini); reti: .gitignore, la prova `deposito` e il controllo GitHub di titolo e commit delle proposte (sezione 3). | La storia prima del 5/11 contiene i nomi tolti dal K-015; le reti non riconoscono un pacchetto vero (sezione 4). |
+| **Chi legge il deposito pubblico** (chiunque, dal 5/11/2026) | Nel deposito solo codice, documenti e dati inventati o pubblici: nessun dato vero, nemmeno cifrato (CLAUDE.md, Confini); reti: .gitignore, la prova `deposito`, il controllo GitHub di titolo, descrizione e commit delle proposte e, dal K-016, le proposte obbligatorie anche per i documenti (sezione 3). | La storia prima del 5/11 contiene i nomi tolti dal K-015; le reti non riconoscono un pacchetto vero (sezione 4). |
 | **Un componente esterno compromesso** | Poche librerie, con versione e impronta fissate (libsodium anche con la firma dell'autore verificata); elenco dei componenti in un formato standard (sezione 3). | Le librerie del sistema (libreria C e C++ del compilatore) non sono nell'elenco. |
 
 ## 3. Le misure di oggi
@@ -183,18 +183,31 @@ pubblica, e una cassaforte vera nel deposito sarebbe esposta per sempre a chi pr
 solo sul PC del supervisore, fuori dalla cartella del deposito. Vanno bene i dati pubblici (luoghi, linee e fermate del
 trasporto pubblico, leggi e regolamenti con la fonte) e quelli inventati. Quattro nomi (dell'azienda, del supervisore,
 del consorzio e dell'azienda del trasporto pubblico provinciale) non si scrivono piu' da nessuna parte: al loro posto
-ALP e le descrizioni. Tre reti, che aiutano ma non bastano:
+ALP e le descrizioni. Le reti, che aiutano ma non bastano:
 
 - **.gitignore**: i file dei formati dei dati (fogli di calcolo, CSV, PDF, documenti di Word, cassaforte `.kzc` e
   registro `.kzr`), con maiuscole e minuscole, non entrano nel deposito fuori da tests/ ed esempi/.
-- **La prova `deposito`** (`ctest -L deposito`, in locale e nel controllo GitHub): in nessun file di testo del deposito
-  (fuori da build*/ e .git, anche quelli non ancora salvati) compare uno dei quattro nomi, parola intera, con maiuscole
-  e minuscole, quello di due parole anche a capo o con un segno di commento in mezzo, anche nei nomi dei file; fuori da
-  tests/ ed esempi/ nessun file di quei formati e nessun manifesto di un pacchetto (`pacchetto.json`). I nomi non sono
-  scritti nel controllo: ne conosce solo le impronte SHA-256, e i messaggi dicono file, riga e quale nome (a-d), mai il
-  nome.
-- **Il controllo GitHub delle proposte** (`Nomi della proposta`): lo stesso controllo sul titolo della proposta e sui
-  messaggi dei suoi commit nuovi, anche quando il titolo cambia.
+- **La prova `deposito`** (`ctest -L deposito`, in locale e nel controllo GitHub): in nessun file del deposito (anche
+  quelli non ancora salvati; fuori da .git e, dal K-016, fuori dalle sole cartelle che .gitignore ignora, `build/` e
+  `build-*/` a ogni livello: una prova confronta le due cose) compare uno dei quattro nomi, parola intera, con maiuscole
+  e minuscole, quello di due parole anche a capo o con un segno di commento in mezzo, anche nei nomi dei file; dal K-016
+  lettere e cifre sono parole diverse, quindi un nome attaccato a un numero, prima o dopo, si vede. Fuori da tests/ ed
+  esempi/ nessun file di quei formati e nessun manifesto di un pacchetto (`pacchetto.json`). Dal K-016 ogni file e'
+  testo UTF-8 valido, tranne i binari ammessi da un elenco nello strumento (oggi i file `.kzc` e `.kzr` dentro tests/ ed
+  esempi/; l'elenco si allarga solo con un mandato), di cui si controlla solo il percorso; ogni altro file (un testo
+  UTF-16, UTF-32 o Latin-1, un binario sconosciuto, un'immagine) e' un problema, e di un testo con il BOM di UTF-16 o
+  UTF-32 si cercano anche i nomi. Un byte zero in un testo e' ammesso solo sotto le cartelle di un secondo elenco (oggi
+  tests/fuzz/, i semi e i casi del fuzzing; si allarga solo con un mandato): fuori di li' e' un problema, perche' un testo
+  UTF-16 o UTF-32 senza BOM di lettere semplici e' anche UTF-8 valido; e in ogni testo con byte zero i nomi si cercano
+  anche con i byte zero tolti (K-016 aggiunta 1). I nomi non sono scritti nel controllo: ne conosce solo le impronte SHA-256, e i
+  messaggi dicono file, riga e quale nome (a-d), mai il nome.
+- **Il controllo GitHub delle proposte** (`Nomi della proposta`): lo stesso controllo sul titolo della proposta, sulla
+  sua descrizione (dal K-016: e' pubblica e puo' entrare nel messaggio dell'unione) e sui messaggi dei suoi commit nuovi,
+  anche quando il titolo o la descrizione cambiano.
+- **Proposte obbligatorie** (K-016): ogni modifica, anche di soli documenti, passa da una proposta (CLAUDE.md, "Come si
+  salvano le modifiche"), cosi' anche i messaggi dei documenti passano dal controllo dei nomi. Il supervisore rende
+  obbligatori su GitHub, per main, la proposta e i quattro controlli verdi; da allora un salvataggio diretto su main
+  viene rifiutato.
 
 ## 4. I rischi che restano, e chi li chiudera'
 
@@ -268,10 +281,20 @@ non ha una password; non protegge da tutto. Detto onestamente:
   e' una cartella di file JSON come il demo, che il .gitignore non riconosce, e la prova `deposito` riconosce solo dal
   manifesto `pacchetto.json` e solo fuori da tests/ ed esempi/; un file vero copiato dentro tests/ o esempi/, un nome
   scritto in un altro modo (spezzato, abbreviato, con lettere simili), un dato vero che non e' un nome (una targa, un
-  orario interno) non si riconoscono. Il controllo dei messaggi vale per le proposte, non per i documenti salvati
-  direttamente su main, e scopre un nome solo prima dell'unione: un messaggio gia' pubblicato resta nella storia. Le
-  impronte dei nomi non sono un segreto: provando le parole (una sigla di tre lettere in un istante) si ritrovano;
-  servono solo a non scrivere i nomi in chiaro. La difesa vera e' tenere i dati veri fuori dalla cartella del deposito.
+  orario interno) non si riconoscono; anche un nome attaccato ad altre lettere (parola intera) non si vede. Il controllo
+  dei messaggi vale solo per le proposte: un salvataggio diretto su main non passa da nessun controllo prima di essere
+  pubblicato, e dal K-016 e' vietato (CLAUDE.md), ma GitHub lo rifiuta solo da quando il supervisore accende la regola
+  su main; fino ad allora resta possibile. Il controllo scopre un nome solo dopo che la proposta e' aperta: un messaggio di
+  commit gia' pubblicato resta nella storia, e GitHub mostra a tutti i titoli di prima nella cronologia della proposta e
+  le versioni di prima della descrizione (finche' non si cancellano a mano): per questo il controllo locale va fatto
+  prima di aprire la proposta. Il messaggio dell'unione lo scrive a mano il supervisore al momento del Merge e non passa
+  da nessun controllo prima di essere pubblicato. Testi: del contenuto dei binari ammessi (cassaforte e registro in tests/
+  ed esempi/) non si controlla niente; in un testo con byte zero (ammesso solo in tests/fuzz/) i nomi si cercano anche
+  senza gli zeri, ma un nome in UTF-16 o UTF-32 senza BOM fatto di lettere non semplici (accenti, altri alfabeti) non si
+  vede, perche' i byte che restano non sono quelli della lettera in UTF-8 (fuori da tests/fuzz/ il file e' comunque un
+  problema per il byte zero). Le impronte dei
+  nomi non sono un segreto: provando le parole (una sigla di tre lettere in un istante) si ritrovano; servono solo a non
+  scrivere i nomi in chiaro. La difesa vera e' tenere i dati veri fuori dalla cartella del deposito.
 - **"Non verificato".** Chi non puo' aprire una classe vede meno controlli e una giornata "non verificata" in alcune
   parti: e' voluto (mai un risultato su dati mancanti come se fossero completi), ma chi ha tutti i permessi deve guardare
   anche lui il pacchetto.

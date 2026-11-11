@@ -6,6 +6,7 @@
 #include <cstdio>
 #include <fstream>
 #include <iterator>
+#include <map>
 #include <sstream>
 #include <system_error>
 
@@ -44,18 +45,27 @@ Carattere leggi(std::string_view t, std::size_t i) {
     return {c, static_cast<std::size_t>(n)};
 }
 
-// Lettere, segni (accenti) e cifre: i caratteri di una parola.
-bool di_parola(std::int32_t c) {
-    if (c < 0) return false;
+// I caratteri di una parola: lettere, segni (accenti) e cifre. Lettere e cifre non stanno nella stessa parola (K-016): il
+// passaggio da una lettera a una cifra, o da una cifra a una lettera, separa due parole; un segno resta con il carattere
+// che lo precede.
+enum class Tipo { nessuno, lettera, segno, cifra };
+
+Tipo tipo_di(std::int32_t c) {
+    if (c < 0) return Tipo::nessuno;
     switch (utf8proc_category(c)) {
         case UTF8PROC_CATEGORY_LU: case UTF8PROC_CATEGORY_LL: case UTF8PROC_CATEGORY_LT: case UTF8PROC_CATEGORY_LM:
-        case UTF8PROC_CATEGORY_LO: case UTF8PROC_CATEGORY_MN: case UTF8PROC_CATEGORY_MC: case UTF8PROC_CATEGORY_ME:
+        case UTF8PROC_CATEGORY_LO:
+            return Tipo::lettera;
+        case UTF8PROC_CATEGORY_MN: case UTF8PROC_CATEGORY_MC: case UTF8PROC_CATEGORY_ME:
+            return Tipo::segno;
         case UTF8PROC_CATEGORY_ND: case UTF8PROC_CATEGORY_NL: case UTF8PROC_CATEGORY_NO:
-            return true;
+            return Tipo::cifra;
         default:
-            return false;
+            return Tipo::nessuno;
     }
 }
+
+bool di_parola(std::int32_t c) { return tipo_di(c) != Tipo::nessuno; }
 
 // Tra le due parole di un nome: spazi (anche a capo) e segni di commento o di citazione.
 bool di_separazione(std::int32_t c) {
@@ -87,9 +97,15 @@ std::vector<Parola> parole_di(std::string_view t) {
         Parola p;
         p.inizio = i;
         p.riga = riga;
+        Tipo di_questa = Tipo::nessuno;   // lettera o cifra: il primo che si incontra
         while (i < t.size()) {
             const Carattere d = leggi(t, i);
-            if (!di_parola(d.codice)) break;
+            const Tipo k = tipo_di(d.codice);
+            if (k == Tipo::nessuno) break;
+            if (k != Tipo::segno) {
+                if (di_questa != Tipo::nessuno && k != di_questa) break;
+                di_questa = k;
+            }
             utf8proc_uint8_t byte[4];
             const utf8proc_ssize_t n = utf8proc_encode_char(utf8proc_tolower(d.codice), byte);
             p.minuscola.append(reinterpret_cast<const char*>(byte), static_cast<std::size_t>(n));
@@ -159,6 +175,109 @@ void controlla_file(const std::string& relativo, Resoconto& r) {
         r.problemi.push_back({relativo, 0, "file di un formato di dati (" + estensione + ") " + k_regola_file});
 }
 
+// Un nome corrisponde a un modello in cui "*" vale per qualsiasi fila di caratteri, anche vuota (come in .gitignore).
+bool corrisponde(std::string_view modello, std::string_view nome) {
+    if (modello.empty()) return nome.empty();
+    if (modello.front() == '*') {
+        for (std::size_t i = 0; i <= nome.size(); ++i)
+            if (corrisponde(modello.substr(1), nome.substr(i))) return true;
+        return false;
+    }
+    return !nome.empty() && modello.front() == nome.front() && corrisponde(modello.substr(1), nome.substr(1));
+}
+
+std::string_view senza_spazi_in_fondo(std::string_view riga) {
+    while (!riga.empty() && (riga.back() == ' ' || riga.back() == '\t' || riga.back() == '\r')) riga.remove_suffix(1);
+    return riga;
+}
+
+// Testi con il BOM di UTF-16 o UTF-32 (es. scritti da un programma di Windows): non sono UTF-8, ma si decodificano per
+// cercare anche i nomi. UTF-32 prima di UTF-16: il BOM di UTF-32 little endian comincia come quello di UTF-16.
+enum class Bom { nessuno, utf16le, utf16be, utf32le, utf32be };
+
+Bom bom_di(std::string_view t) {
+    auto comincia = [&t](std::string_view b) { return t.size() >= b.size() && t.substr(0, b.size()) == b; };
+    using namespace std::string_view_literals;
+    if (comincia("\xff\xfe\x00\x00"sv)) return Bom::utf32le;
+    if (comincia("\x00\x00\xfe\xff"sv)) return Bom::utf32be;
+    if (comincia("\xff\xfe"sv)) return Bom::utf16le;
+    if (comincia("\xfe\xff"sv)) return Bom::utf16be;
+    return Bom::nessuno;
+}
+
+const char* nome_di(Bom k) {
+    switch (k) {
+        case Bom::utf16le: return "UTF-16 little endian";
+        case Bom::utf16be: return "UTF-16 big endian";
+        case Bom::utf32le: return "UTF-32 little endian";
+        case Bom::utf32be: return "UTF-32 big endian";
+        case Bom::nessuno: break;
+    }
+    return "";
+}
+
+// Il testo decodificato, in UTF-8. Ogni pezzo che non si decodifica (unita' a meta' in fondo, surrogato senza la sua
+// coppia, codice oltre Unicode) diventa U+FFFD, che separa le parole come ogni segno che non e' di parola.
+std::string decodifica(std::string_view t, Bom k) {
+    const bool trentadue = k == Bom::utf32le || k == Bom::utf32be;
+    const bool grande = k == Bom::utf16be || k == Bom::utf32be;
+    const std::size_t passo = trentadue ? 4 : 2;
+    auto unita = [&](std::size_t i) {
+        std::uint32_t u = 0;
+        for (std::size_t j = 0; j < passo; ++j) {
+            const std::uint32_t b = static_cast<unsigned char>(t[i + (grande ? j : passo - 1 - j)]);
+            u = (u << 8) | b;
+        }
+        return u;
+    };
+    std::string uscita;
+    auto aggiungi = [&uscita](std::uint32_t c) {
+        if (c > 0x10FFFF || (c >= 0xD800 && c <= 0xDFFF)) c = 0xFFFD;
+        utf8proc_uint8_t byte[4];
+        const utf8proc_ssize_t n = utf8proc_encode_char(static_cast<utf8proc_int32_t>(c), byte);
+        uscita.append(reinterpret_cast<const char*>(byte), static_cast<std::size_t>(n));
+    };
+    std::size_t i = passo;   // dopo il BOM
+    while (i + passo <= t.size()) {
+        std::uint32_t c = unita(i);
+        i += passo;
+        if (!trentadue && c >= 0xD800 && c <= 0xDBFF && i + passo <= t.size()) {
+            const std::uint32_t d = unita(i);
+            if (d >= 0xDC00 && d <= 0xDFFF) {
+                c = 0x10000 + ((c - 0xD800) << 10) + (d - 0xDC00);
+                i += passo;
+            }
+        }
+        aggiungi(c);
+    }
+    if (i < t.size()) aggiungi(0xFFFD);
+    return uscita;
+}
+
+std::string elenco_dei_binari() {
+    std::string e;
+    for (const BinarioAmmesso& b : binari_ammessi()) {
+        if (!e.empty()) e += ", ";
+        e += b.estensione + " in";
+        for (std::size_t i = 0; i < b.cartelle.size(); ++i)
+            e += (i == 0 ? " " : (i + 1 == b.cartelle.size() ? " o " : ", ")) + b.cartelle[i] + "/";
+    }
+    return e;
+}
+
+std::string messaggio_byte_zero() {
+    std::string elenco;
+    for (const std::string& c : cartelle_con_byte_zero()) elenco += (elenco.empty() ? "" : ", ") + c;
+    return "testo con un byte zero fuori dalle cartelle ammesse (" + elenco +
+           "): un testo con byte zero (es. UTF-16 o UTF-32 senza BOM) si salva di nuovo in UTF-8 (CLAUDE.md, Confini); "
+           "i nomi si cercano anche senza i byte zero";
+}
+
+std::string messaggio_non_utf8() {
+    return "non e' testo UTF-8 ne' un binario ammesso (binari ammessi: " + elenco_dei_binari() +
+           "): i testi del deposito si salvano in UTF-8 (CLAUDE.md, Confini)";
+}
+
 bool escluso(const fs::path& p, const std::vector<fs::path>& escluse) {
     std::error_code e;
     for (const fs::path& x : escluse)
@@ -177,6 +296,61 @@ Impronta impronta(std::string_view testo) {
     Impronta i{};
     crypto_hash_sha256(i.data(), reinterpret_cast<const unsigned char*>(testo.data()), testo.size());
     return i;
+}
+
+const std::vector<std::string>& cartelle_saltate() {
+    static const std::vector<std::string> c = {"build", "build-*"};
+    return c;
+}
+
+bool cartella_saltata(std::string_view nome) {
+    for (const std::string& modello : cartelle_saltate())
+        if (corrisponde(modello, nome)) return true;
+    return false;
+}
+
+std::vector<std::string> righe_delle_cartelle(std::string_view gitignore) {
+    std::vector<std::string> righe;
+    while (!gitignore.empty()) {
+        const std::size_t a_capo = gitignore.find('\n');
+        const std::string_view riga = senza_spazi_in_fondo(gitignore.substr(0, a_capo));
+        gitignore.remove_prefix(a_capo == std::string_view::npos ? gitignore.size() : a_capo + 1);
+        if (riga.empty() || riga.front() == '#' || riga.front() == '!') continue;
+        if (riga.size() > 2 && riga.substr(0, 2) == "*.") continue;
+        righe.emplace_back(riga);
+    }
+    return righe;
+}
+
+const std::vector<BinarioAmmesso>& binari_ammessi() {
+    // Cassaforte e registro degli accessi (K-010) dei pacchetti di prova e di esempio: gli unici binari di oggi.
+    static const std::vector<BinarioAmmesso> b = {{".kzc", {"tests", "esempi"}}, {".kzr", {"tests", "esempi"}}};
+    return b;
+}
+
+bool binario_ammesso(std::string_view relativo) {
+    const std::size_t barra = relativo.find('/');
+    if (barra == std::string_view::npos) return false;
+    const std::string_view cima = relativo.substr(0, barra);
+    const std::string_view nome = relativo.substr(relativo.rfind('/') + 1);
+    for (const BinarioAmmesso& b : binari_ammessi()) {
+        if (nome.size() <= b.estensione.size() || nome.substr(nome.size() - b.estensione.size()) != b.estensione)
+            continue;
+        if (std::find(b.cartelle.begin(), b.cartelle.end(), cima) != b.cartelle.end()) return true;
+    }
+    return false;
+}
+
+const std::vector<std::string>& cartelle_con_byte_zero() {
+    // I semi e i casi del fuzzing: argomenti della riga di comando separati da byte zero, file deformati apposta.
+    static const std::vector<std::string> c = {"tests/fuzz/"};
+    return c;
+}
+
+bool byte_zero_ammesso(std::string_view relativo) {
+    for (const std::string& c : cartelle_con_byte_zero())
+        if (relativo.size() > c.size() && relativo.substr(0, c.size()) == c) return true;
+    return false;
 }
 
 const std::vector<Nome>& nomi_del_deposito() {
@@ -217,6 +391,24 @@ std::vector<Problema> cerca_nomi(std::string_view testo, std::string_view dove, 
     return trovati;
 }
 
+std::vector<Problema> cerca_nomi_anche_senza_zeri(std::string_view testo, std::string_view dove,
+                                                  const std::vector<Nome>& nomi) {
+    std::vector<Problema> trovati = cerca_nomi(testo, dove, nomi);
+    if (testo.find('\0') == std::string_view::npos) return trovati;
+    std::string senza;
+    senza.reserve(testo.size());
+    for (const char c : testo)
+        if (c != '\0') senza.push_back(c);
+    // Per ogni riga e nome conta il numero piu' alto dei due modi: dal testo senza zeri si aggiungono solo quelli in piu'.
+    std::map<std::pair<std::size_t, std::string>, std::size_t> com_e, senza_zeri;
+    for (const Problema& q : trovati) ++com_e[{q.riga, q.cosa}];
+    for (Problema& q : cerca_nomi(senza, dove, nomi))
+        if (++senza_zeri[{q.riga, q.cosa}] > com_e[{q.riga, q.cosa}]) trovati.push_back(std::move(q));
+    std::stable_sort(trovati.begin(), trovati.end(),
+                     [](const Problema& x, const Problema& y) { return x.riga < y.riga; });
+    return trovati;
+}
+
 Resoconto controlla_cartella(const fs::path& radice, const std::vector<fs::path>& escluse,
                              const std::vector<Nome>& nomi) {
     Resoconto r;
@@ -232,7 +424,7 @@ Resoconto controlla_cartella(const fs::path& radice, const std::vector<fs::path>
             continue;
         }
         if (it->is_directory()) {
-            if (nome == ".git" || (it.depth() == 0 && nome.rfind("build", 0) == 0) || escluso(p, escluse))
+            if (nome == ".git" || cartella_saltata(nome) || escluso(p, escluse))
                 it.disable_recursion_pending();
             continue;
         }
@@ -256,12 +448,27 @@ Resoconto controlla_cartella(const fs::path& radice, const std::vector<fs::path>
             continue;
         }
         const std::string contenuto((std::istreambuf_iterator<char>(in)), std::istreambuf_iterator<char>());
-        if (contenuto.find('\0') != std::string::npos && !utf8_valido(contenuto)) {
+        if (utf8_valido(contenuto)) {
+            ++r.letti;
+            if (contenuto.find('\0') != std::string::npos && !byte_zero_ammesso(relativo))
+                r.problemi.push_back({relativo, 0, messaggio_byte_zero()});
+            for (Problema& q : cerca_nomi_anche_senza_zeri(contenuto, relativo, nomi)) r.problemi.push_back(std::move(q));
+            continue;
+        }
+        if (binario_ammesso(relativo)) {
             r.binari.push_back(relativo);
             continue;
         }
+        const Bom k = bom_di(contenuto);
+        if (k == Bom::nessuno) {
+            r.problemi.push_back({relativo, 0, messaggio_non_utf8()});
+            continue;
+        }
+        r.problemi.push_back({relativo, 0, std::string("testo ") + nome_di(k) + " con BOM: " + messaggio_non_utf8() +
+                                               "; i nomi si cercano anche nel testo decodificato"});
         ++r.letti;
-        for (Problema& q : cerca_nomi(contenuto, relativo, nomi)) r.problemi.push_back(std::move(q));
+        for (Problema& q : cerca_nomi_anche_senza_zeri(decodifica(contenuto, k), relativo, nomi))
+            r.problemi.push_back(std::move(q));
     }
     std::stable_sort(r.problemi.begin(), r.problemi.end(), [](const Problema& x, const Problema& y) {
         return x.dove != y.dove ? x.dove < y.dove : x.riga < y.riga;
@@ -320,7 +527,7 @@ int esegui(const std::vector<std::string>& argomenti, std::istream& ingresso, co
     for (const Problema& q : r.problemi) scrivi(q);
     uscita << "Deposito controllato: " << r.letti << " file letti come testo";
     if (!r.binari.empty()) {
-        uscita << "; " << r.binari.size() << " binari, di cui si controlla solo il percorso:";
+        uscita << "; " << r.binari.size() << " binari ammessi, di cui si controlla solo il percorso:";
         for (const std::string& b : r.binari) uscita << " " << b;
     }
     if (!r.collegamenti.empty()) {
@@ -329,7 +536,7 @@ int esegui(const std::vector<std::string>& argomenti, std::istream& ingresso, co
     }
     uscita << ".\n";
     if (r.problemi.empty()) {
-        uscita << "Nessun nome e nessun file di dati.\n";
+        uscita << "Nessun nome, nessun file di dati e nessun file che non e' testo UTF-8 ne' un binario ammesso.\n";
         return 0;
     }
     uscita << r.problemi.size() << (r.problemi.size() == 1 ? " problema: va tolto" : " problemi: vanno tolti")
