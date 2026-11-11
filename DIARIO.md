@@ -678,7 +678,8 @@
   Prove: 1.002 su 1.002 (prima 977), compilate senza avvisi; 25 nuove: la prova per differenza del punto 5 per ognuno degli
   11 servizi del demo (55 varianti: (a) giornata e controlla identiche tra le varianti per chi ha i soli dati personali, (b)
   ogni risultato certo del piano uguale a quello del titolare in ogni giorno, e lo stesso per i problemi dei controlli dei
-  turni, giorno per giorno; saltate per (b), come chiede il mandato, le 14 varianti in cui il titolare ha errori nei dati:
+  turni, giorno per giorno; saltate per (b), come chiede il mandato, le 13 varianti (scritto 14 nel messaggio del commit e nel primo resoconto:
+  sbagliato) in cui il titolare ha errori nei dati:
   S-SCU-AM linea e disabili, S-DIS linea, scolastico, NCC e altro, S-ASILO linea e disabili, S-DIS-GIO linea, S-LIN-B620 NCC e
   altro, S-MATRIMONIO linea, S-PRIVATO-CENTRO linea; provata a parte anche (b) su quelle: tutto uguale), due casi che il demo
   non ha (mezzo abituale di una persona non verificata; sovrapposizione dei mezzi con un turno non verificato), il demo del
@@ -694,6 +695,17 @@
   non verificato dato per certo 4; la persona non verificata tolta dal turno 2; il mezzo abituale che non segue la persona non
   verificata 1 e le sovrapposizioni tutte certe 1 (al primo giro 0: nel demo questi casi non c'erano, aggiunte le due prove
   mirate). Tutti scoperti.
+- 2026-11-11 - K-017 aggiunta 1 (stessa proposta, commit nuovi). Controllo dell'arbitro della proposta n. 16: tre cose.
+  **1. Problemi possibili dei turni**: per chi ha i soli dati personali la riga "... non sono verificati ...: 20 errori e 5
+  avvisi" sembrava dire che i dati hanno 20 errori (il titolare con tutti i dati ne ha 0). Ora: "Controlli dei turni: si
+  vedono i problemi certi. Ci sono anche problemi possibili (20 errori possibili e 5 avvisi possibili): dipendono dal tipo di
+  servizio (dato particolare, che l'utente non puo' aprire) e possono esserci o no; con i tipi veri anche nessuno. Non sono
+  problemi certi: non sono ne' tra i problemi ne' nel riepilogo."; con zero "nessun problema possibile (...)"; con solo
+  problemi possibili "Nessun problema certo."; JSON `problemi_possibili_dei_turni` (controlla versione 6, non ancora uscita).
+  Documenti: controlli.md, cassaforte.md, sicurezza.md, lo schema controlla v6, DECISIONI.md. Prove: nuova
+  Unione.ProblemiPossibiliDeiTurni (il demo; una variante senza i problemi certi di quell'utente: "Nessun problema certo.";
+  senza requisiti del tipo: zero), cambiate le attese di UFFICIO sul pacchetto congelato ("18 errori possibili e 5 avvisi
+  possibili") e la sua forma JSON.
 
 ## Bug e limiti noti
 - (K-017) Per chi non apre i dati particolari la regola "certo solo se vale per ogni tipo" e' prudente: valuta ogni requisito

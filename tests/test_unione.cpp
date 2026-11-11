@@ -2044,11 +2044,11 @@ std::string resoconto_dei_turni(const Lettura& personali) {
         if (p.unverified || p.by_service_kind) ++non_verificati;
         else if (verificabile(d, p, classe_della_posizione(p.where, personali), in_trasportato(p.where, personali), v)) ++attesi;
     }
-    if (!r.turni_non_verificati) return "manca il conteggio dei non verificati";
+    if (!r.problemi_possibili_dei_turni) return "manca il conteggio dei problemi possibili";
     std::string male;
     if (mostrati != attesi) male += " mostrati " + std::to_string(mostrati) + " invece di " + std::to_string(attesi);
-    if (r.turni_non_verificati->first + r.turni_non_verificati->second != non_verificati)
-        male += " non verificati " + std::to_string(r.turni_non_verificati->first + r.turni_non_verificati->second) + " invece di " +
+    if (r.problemi_possibili_dei_turni->first + r.problemi_possibili_dei_turni->second != non_verificati)
+        male += " possibili " + std::to_string(r.problemi_possibili_dei_turni->first + r.problemi_possibili_dei_turni->second) + " invece di " +
                 std::to_string(non_verificati);
     return male;
 }
@@ -2319,6 +2319,72 @@ TEST(Unione, DemoChiusoLuglio2027SoloPersonali) {
     }
 }
 
+// K-017 aggiunta 1: i problemi dei turni che dipendono dal tipo, per chi ha i soli dati personali, sono problemi possibili (con i
+// tipi veri anche nessuno), mai errori dei dati. La riga li dice possibili (mai "fino a N") e c'e' sempre, anche con zero; con
+// solo problemi possibili e nessuno certo il resoconto scrive "Nessun problema certo.".
+TEST(Unione, ProblemiPossibiliDeiTurni) {
+    const auto controlla_personali = [](const InMemoria& m, Formato f) {
+        const DueLetture l = due_letture(m);
+        Parametri par;
+        par.formato = f;
+        return esegui_su(l.personali, "controlla", par).uscita;
+    };
+    // Il demo: problemi certi e 25 possibili.
+    const std::string demo = controlla_personali(demo_in_chiaro(), Formato::Testo);
+    EXPECT_NE(demo.find("Controlli dei turni: si vedono i problemi certi. Ci sono anche problemi possibili (20 errori possibili e 5 avvisi "
+                        "possibili): dipendono dal tipo di servizio (dato particolare, che l'utente non puo' aprire) e possono esserci "
+                        "o no; con i tipi veri anche nessuno."),
+              std::string::npos)
+        << demo;
+    EXPECT_EQ(demo.find("Nessun problema"), std::string::npos);
+    const std::size_t riga = demo.find("Controlli dei turni:");
+    ASSERT_NE(riga, std::string::npos);
+    EXPECT_EQ(demo.substr(riga, demo.find('\n', riga) - riga).find("fino a"), std::string::npos);   // mai un massimo
+    const JsonDati j = JsonDati::parse(controlla_personali(demo_in_chiaro(), Formato::Json));
+    EXPECT_EQ(j.at("problemi_possibili_dei_turni"), (JsonDati{{"errori", 20}, {"avvisi", 5}}));
+    EXPECT_EQ(j.at("riepilogo").at("errori"), 0);
+    // Senza i problemi certi che vede chi ha i soli dati personali: "Nessun problema certo." e la riga dei possibili.
+    InMemoria solo_possibili = demo_in_chiaro();
+    {
+        JsonDati a = JsonDati::parse(solo_possibili.file.at("aziende.json"));
+        a.at("aziende")[0].at("rientro")["fermo_minimo_minuti"] = 31;                      // K-CTR-105
+        a.at("aziende")[0].at("impostazioni")["abbinamento_autista_mezzo"] = "nessuno";   // K-CTR-082
+        solo_possibili.file["aziende.json"] = a.dump(2);
+        JsonDati l = JsonDati::parse(solo_possibili.file.at("luoghi.json"));
+        l.at("luoghi")[17].at("trasbordo").erase("a_voce");                                 // K-CTR-043
+        l.at("luoghi")[17].at("trasbordo")["documento"] = "Autorizzazione scritta di prova (inventata)";
+        solo_possibili.file["luoghi.json"] = l.dump(2);
+        JsonDati pe = JsonDati::parse(solo_possibili.file.at("persone.json"));
+        for (JsonDati& ab : pe.at("persone")[2].at("abilitazioni"))
+            if (ab.contains("scadenza")) ab["scadenza"] = "2030-01-15";                    // K-CTR-050 di P-C
+        solo_possibili.file["persone.json"] = pe.dump(2);
+        JsonDati me = JsonDati::parse(solo_possibili.file.at("mezzi.json"));
+        for (JsonDati& v : me.at("mezzi"))
+            if (v.contains("autorizzazioni_uso"))
+                for (JsonDati& u : v.at("autorizzazioni_uso")) u["al"] = "2027-09-30";      // K-CTR-050 di ALFA-05
+        solo_possibili.file["mezzi.json"] = me.dump(2);
+        JsonDati as = JsonDati::parse(solo_possibili.file.at("assenze.json"));
+        JsonDati tenute = JsonDati::array();
+        for (const JsonDati& x : as.at("assenze"))
+            if (x.at("persona") != "P-B") tenute.push_back(x);                              // K-CTR-078 di T-PRIMO
+        as["assenze"] = tenute;
+        solo_possibili.file["assenze.json"] = as.dump(2);
+    }
+    const std::string testo = controlla_personali(solo_possibili, Formato::Testo);
+    EXPECT_NE(testo.find("\nNessun problema certo.\n"), std::string::npos) << testo;
+    EXPECT_EQ(testo.find("\nNessun problema.\n"), std::string::npos);
+    EXPECT_NE(testo.find("Ci sono anche problemi possibili ("), std::string::npos);
+    EXPECT_NE(testo.find("; 0 errori, 0 avvisi."), std::string::npos) << testo;
+    // Senza requisiti del tipo: nessun problema possibile, con una frase chiara (la riga c'e' sempre).
+    const std::string zero = controlla_personali(senza_requisiti_del_tipo(demo_in_chiaro()), Formato::Testo);
+    EXPECT_NE(zero.find("Controlli dei turni: si vedono i problemi certi; nessun problema possibile (nessun loro risultato dipende dal "
+                        "tipo di servizio, dato particolare)."),
+              std::string::npos)
+        << zero;
+    EXPECT_EQ(JsonDati::parse(controlla_personali(senza_requisiti_del_tipo(demo_in_chiaro()), Formato::Json)).at("problemi_possibili_dei_turni"),
+              (JsonDati{{"errori", 0}, {"avvisi", 0}}));
+}
+
 // Il calcolo non legge il tipo in nessun modo: ne' dai codici esterni dei servizi ne' dai loro nomi. Cambiarli non cambia cosa e'
 // certo e cosa non e' verificato per chi ha i soli dati personali (nel demo i codici esterni dicono "linea", "servizio", "scheda").
 TEST(Unione, PianoSenzaParticolariNonLeggeCodiciEsterniNeNomi) {
@@ -2345,8 +2411,8 @@ TEST(Unione, PianoSenzaParticolariNonLeggeCodiciEsterniNeNomi) {
             << kzero::text_from_day(k.first) << " " << k.second;
     }
     const Resoconto ra = controlla_lettura(a.personali, Visibilita{}), rb = controlla_lettura(b.personali, Visibilita{});
-    ASSERT_TRUE(ra.turni_non_verificati && rb.turni_non_verificati);
-    EXPECT_EQ(*ra.turni_non_verificati, *rb.turni_non_verificati);
+    ASSERT_TRUE(ra.problemi_possibili_dei_turni && rb.problemi_possibili_dei_turni);
+    EXPECT_EQ(*ra.problemi_possibili_dei_turni, *rb.problemi_possibili_dei_turni);
     EXPECT_EQ(ra.avvisi, rb.avvisi);
     EXPECT_EQ(ra.errori, rb.errori);
 }

@@ -280,7 +280,7 @@ I comandi della cassaforte rispondono con lo schema `cassaforte` (versione 1: [s
 schema/cassaforte.v1.schema.json)); `kzero registro` con lo schema `registro` (versione 1:
 [schema/registro.v1.schema.json](schema/registro.v1.schema.json)). `kzero controlla` (dalla versione 4) e `kzero giornata`
 (dalla versione 2) hanno i campi `cassaforte` (chi l'ha aperta, con quali permessi, la data di conservazione) e
-`non_verificato`; dal K-017 `kzero controlla` (versione 6) anche `problemi_dei_turni_non_verificati` e `kzero giornata`
+`non_verificato`; dal K-017 `kzero controlla` (versione 6) anche `problemi_possibili_dei_turni` e `kzero giornata`
 (versione 5) quello che non e' verificato turno per turno. Nessuna uscita contiene mai i valori della cassaforte se non quelli che l'utente puo' aprire e ha
 chiesto di vedere.
 
@@ -308,8 +308,8 @@ mezzo, un'autorizzazione del committente) si valuta per ogni tipo possibile; ugu
 verificato, e quello che ne segue anche (es. l'abilitazione di una persona per un mezzo che forse non c'e'). In `kzero
 giornata` ogni turno mostra la persona e il mezzo: certi come per il titolare, oppure "non verificato" con la persona o il
 mezzo previsti; i totali contano solo cio' che e' certo e dicono quanti turni non sono verificati. In `kzero controlla` i
-controlli dei turni si fanno: i problemi certi si vedono (con i testi del K-014), quelli che dipendono dal tipo si contano
-soltanto ("Controlli dei turni: ..."). `kzero ore` resta com'era (K-013: le leggi, il lavoro e i rientri non sono verificati);
+controlli dei turni si fanno: i problemi certi si vedono (con i testi del K-014), quelli che dipendono dal tipo sono problemi
+possibili (possono esserci o no, con i tipi veri anche nessuno) e si contano soltanto ("Controlli dei turni: ..."). `kzero ore` resta com'era (K-013: le leggi, il lavoro e i rientri non sono verificati);
 cambia solo il totale del controllo del pacchetto, perche' ora conta anche i problemi certi dei turni.
 
 Gli avvisi della cassaforte (K-CTR-097 data di conservazione passata, K-CTR-098 ... K-CTR-100 password da cambiare) hanno

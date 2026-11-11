@@ -286,10 +286,11 @@ non ha una password; non protegge da tutto. Detto onestamente:
   i dati sulla salute; nascondere anche il fatto renderebbe il piano inutilizzabile, e un testo a parte solo per le cause del
   tipo direbbe proprio quello. Chi deve vedere il perche' usa `--includi-dati-particolari`, con il permesso di quei dati.
 - **Turni non verificati** (K-017). Chi ha i soli dati personali vede quali turni non sono verificati (la persona, il mezzo)
-  e quanti problemi dei turni non sono verificati. Non lo dice il tipo: lo dicono i dati comuni (i regolamenti e le norme che
+  e quanti problemi possibili hanno i controlli dei turni. Non lo dice il tipo: lo dicono i dati comuni (i regolamenti e le norme che
   chiedono usi o autorizzazioni per tipo, le autorizzazioni dei mezzi con le loro date) e personali (abilitazioni e
   autorizzazioni delle persone), che quell'utente vede comunque; la stessa cosa vale per tutti i tipi. Un turno non
-  verificato dice solo che, per qualche tipo possibile, il piano cambierebbe. Il titolare, con i dati particolari, vede il
+  verificato dice solo che, per qualche tipo possibile, il piano cambierebbe; un problema possibile dei turni non e' un problema
+  dei dati (con i tipi veri puo' non esserci), e il loro numero non e' un massimo. Il titolare, con i dati particolari, vede il
   piano intero (scelta A del supervisore, K-014: il fatto si', il perche' no senza il parametro).
 - **Deposito pubblico** (K-015). La storia del deposito prima del 5/11/2026 contiene i quattro nomi tolti dai file di
   oggi (nei documenti, nei commenti e nei messaggi dei salvataggi di allora) e alcuni codici di esempio sostituiti: la

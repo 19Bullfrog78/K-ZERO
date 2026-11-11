@@ -4,7 +4,7 @@
 e scrive un resoconto in testo o in JSON (schema `controlla`, file
 [schema/controlla.v6.schema.json](schema/controlla.v6.schema.json); le versioni 1, del K-007, 2, del K-008, 3, del K-009,
 4, del K-010, e 5, del K-011 (la `natura` di ogni problema e gli errori del piano), non sono piu' prodotte; la 6, del K-017,
-aggiunge `problemi_dei_turni_non_verificati`).
+aggiunge `problemi_possibili_dei_turni`).
 
 Ogni problema ha:
 - un **livello**: **errore** (il dato e' sbagliato e va corretto) oppure **avviso** (il dato e' accettabile,
@@ -237,19 +237,27 @@ possibile: uguale per tutti = certo, diverso = non verificato). I controlli dei 
 quelli particolari. I problemi certi si vedono come per gli altri, con i testi del K-014 (di un turno scoperto o senza mezzo
 il fatto, non il perche': K-CTR-078 variante 6 e K-CTR-079 variante 4, "il motivo non e' verificato"); un problema certo
 puo' coprire solo una parte dei giorni (negli altri e' non verificato). Quelli che dipendono dal tipo (nati da un risultato del
-piano non verificato, o da un requisito per tipo di servizio come nel K-014) non si elencano e non sono nel riepilogo: si
-contano soltanto, in una riga che c'e' sempre per quell'utente, e in JSON in `problemi_dei_turni_non_verificati`. K-CTR-071 resta
-non verificato (le competenze sono dati particolari), come i controlli degli orari. Esempio (il demo chiuso, utente con i soli
-dati personali):
+piano non verificato, o da un requisito per tipo di servizio come nel K-014) sono **problemi possibili** (aggiunta 1): possono
+esserci o no, e con i tipi veri anche nessuno; non sono problemi certi dei dati. Non si elencano e non sono nel riepilogo: si
+contano soltanto, in una riga che c'e' sempre per quell'utente (anche con zero), e in JSON in `problemi_possibili_dei_turni`. Il
+numero non e' un massimo: la somma su tutti i tipi puo' contare insieme problemi che con un tipo solo non ci sono insieme. Con
+solo problemi possibili e nessuno certo il resoconto scrive "Nessun problema certo.". K-CTR-071 resta non verificato (le
+competenze sono dati particolari), come i controlli degli orari. Esempio (il demo chiuso, utente con i soli dati personali):
 
 ```
 Avviso K-CTR-078 (persone.json, /persone/1): Il turno T-PRIMO (Primo) e' scoperto il 2026-11-20: la persona prevista P-B non puo' farlo; il motivo non e' verificato (servono i dati particolari, che l'utente non puo' aprire). Rimedio: un'assegnazione del singolo giorno.
-Controlli dei turni: si vedono i problemi certi; quelli che dipendono dal tipo di servizio (dato particolare, che l'utente non puo' aprire) non sono verificati e non sono ne' tra i problemi ne' nel riepilogo: 20 errori e 5 avvisi.
+Controlli dei turni: si vedono i problemi certi. Ci sono anche problemi possibili (20 errori possibili e 5 avvisi possibili): dipendono dal tipo di servizio (dato particolare, che l'utente non puo' aprire) e possono esserci o no; con i tipi veri anche nessuno. Non sono problemi certi: non sono ne' tra i problemi ne' nel riepilogo.
+```
+
+Senza nessun problema possibile (es. un pacchetto senza requisiti per tipo di servizio):
+
+```
+Controlli dei turni: si vedono i problemi certi; nessun problema possibile (nessun loro risultato dipende dal tipo di servizio, dato particolare).
 ```
 
 Una prova (tests/test_unione.cpp) confronta, su 375 pacchetti, i problemi di quell'utente con quelli di chi ha tutti i
 permessi, giorno per giorno: ogni giorno di un problema mostrato e' un problema anche per chi ha tutti i permessi, e ognuno dei
-suoi e' mostrato o contato tra i non verificati.
+suoi e' mostrato o contato tra i problemi possibili.
 
 Non sono in questo catalogo (arriveranno con la verifica delle regole e con il calcolo): posti a bordo, attese massime
 sulle corse, limiti di accesso confrontati con i mezzi, tempi per andare da un luogo all'altro tra due turni, km

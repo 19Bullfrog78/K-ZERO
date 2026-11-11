@@ -1429,16 +1429,19 @@ kzero_cassaforte(cassaforte_controlla_titolare_tutti_i_dati TITOLARE USCITA 0 FO
                  CONTIENE "248 valori personali e 37 particolari, nella cassaforte: luoghi.json 25 personali"
                  ARGOMENTI controlla @PACCHETTO@ --includi-dati-personali --includi-dati-particolari)
 # K-017: senza i dati particolari i controlli dei turni mostrano i problemi certi (qui K-CTR-078 e K-CTR-082) e contano soltanto
-# quelli che dipendono dal tipo di servizio; K-CTR-068 (l'autorizzazione del committente, per tipo) e' tra questi.
+# quelli che dipendono dal tipo di servizio; K-CTR-068 (l'autorizzazione del committente, per tipo) e' tra questi. Aggiunta 1: sono
+# problemi possibili, non errori dei dati.
 kzero_cassaforte(cassaforte_controlla_ufficio UFFICIO USCITA 0 FORMATO testo
                  CONTIENE "Cassaforte aperta dall'utente UFFICIO (dati personali)"
                           "Non verificato (servono i dati particolari, che l'utente non puo' aprire)" "K-CTR-071"
-                          "Controlli dei turni: si vedono i problemi certi" "18 errori e 5 avvisi." "Avviso K-CTR-078 (persone.json, /persone/1)"
+                          "Controlli dei turni: si vedono i problemi certi" "problemi possibili (18 errori possibili e 5 avvisi possibili)"
+                          "possono esserci o no; con i tipi veri anche nessuno" "Avviso K-CTR-078 (persone.json, /persone/1)"
                           "Avviso K-CTR-082 (servizi_fissi.json, /servizi_fissi/2)" " 0 errori, 7 avvisi."
                  NON_CONTIENE "servono i dati personali" "K-CTR-068" ${DATI_PERSONALI} ${DATI_PARTICOLARI}
                  ARGOMENTI controlla @PACCHETTO@)
 kzero_cassaforte(cassaforte_controlla_ufficio_json UFFICIO USCITA 0 FORMATO json SCHEMA controlla
-                 CONTIENE "\"servono\": \"particolari\"" "\"utente\": \"UFFICIO\"" NON_CONTIENE "\"servono\": \"personali\""
+                 CONTIENE "\"servono\": \"particolari\"" "\"utente\": \"UFFICIO\"" "\"problemi_possibili_dei_turni\": {"
+                 NON_CONTIENE "\"servono\": \"personali\""
                  ARGOMENTI controlla @PACCHETTO@ --formato json)
 kzero_cassaforte(cassaforte_controlla_ufficio_dati_personali UFFICIO USCITA 0 FORMATO testo
                  CONTIENE "nella cassaforte: luoghi.json" "persone.json 161 personali e 0 particolari"

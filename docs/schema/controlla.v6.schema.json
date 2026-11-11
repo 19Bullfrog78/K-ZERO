@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "kzero - controlla, versione 6",
-  "description": "Uscita di 'kzero controlla <cartella> --formato json': i problemi trovati nel pacchetto dati (errori e avvisi con codice K-CTR, spiegati in docs/controlli.md) e un riepilogo. Va sull'uscita standard anche quando ci sono errori nei dati; allora il codice di uscita e' 1. I messaggi e le posizioni seguono le classi dei dati: di base i dati personali sono sostituiti dal codice dell'elemento, quelli particolari non compaiono, una posizione non entra mai in un dato personale o particolare (si ferma all'elemento comune piu' vicino) e i problemi che rivelano un dato particolare (salute) non si elencano uno per uno: si contano in 'problemi_riservati'. Versione 3 (K-009): campi 'problemi_riservati', 'posizione_completa_con' e 'dati_riservati_presenti'. Sostituisce la versione 2 (K-008), che non e' piu' prodotta. Versione 4 (K-010): 'cassaforte' (chi l'ha aperta e con quali permessi) e 'non_verificato' (per chi non puo' aprire una classe, i controlli non verificati: i loro risultati non sono nel resoconto). Sostituisce la versione 3, che non e' piu' prodotta. Versione 5 (K-011): 'natura' di ogni problema (dati o piano) e 'errori_del_piano' nel riepilogo. Sostituisce la versione 4, che non e' piu' prodotta. Versione 6 (K-017): 'problemi_dei_turni_non_verificati' (per chi apre i dati personali ma non quelli particolari: i controlli dei turni sul piano del giorno si fanno, si vedono i problemi certi e si contano soltanto quelli che dipendono dal tipo di servizio). Sostituisce la versione 5, che non e' piu' prodotta.",
+  "description": "Uscita di 'kzero controlla <cartella> --formato json': i problemi trovati nel pacchetto dati (errori e avvisi con codice K-CTR, spiegati in docs/controlli.md) e un riepilogo. Va sull'uscita standard anche quando ci sono errori nei dati; allora il codice di uscita e' 1. I messaggi e le posizioni seguono le classi dei dati: di base i dati personali sono sostituiti dal codice dell'elemento, quelli particolari non compaiono, una posizione non entra mai in un dato personale o particolare (si ferma all'elemento comune piu' vicino) e i problemi che rivelano un dato particolare (salute) non si elencano uno per uno: si contano in 'problemi_riservati'. Versione 3 (K-009): campi 'problemi_riservati', 'posizione_completa_con' e 'dati_riservati_presenti'. Sostituisce la versione 2 (K-008), che non e' piu' prodotta. Versione 4 (K-010): 'cassaforte' (chi l'ha aperta e con quali permessi) e 'non_verificato' (per chi non puo' aprire una classe, i controlli non verificati: i loro risultati non sono nel resoconto). Sostituisce la versione 3, che non e' piu' prodotta. Versione 5 (K-011): 'natura' di ogni problema (dati o piano) e 'errori_del_piano' nel riepilogo. Sostituisce la versione 4, che non e' piu' prodotta. Versione 6 (K-017): 'problemi_possibili_dei_turni' (per chi apre i dati personali ma non quelli particolari: i controlli dei turni sul piano del giorno si fanno, si vedono i problemi certi e si contano soltanto i problemi possibili, che dipendono dal tipo di servizio). Sostituisce la versione 5, che non e' piu' prodotta.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -14,7 +14,7 @@
     "non_verificato",
     "controlli_sul_contenuto",
     "problemi_riservati",
-    "problemi_dei_turni_non_verificati",
+    "problemi_possibili_dei_turni",
     "problemi",
     "riepilogo",
     "dati_riservati_presenti"
@@ -157,8 +157,8 @@
         }
       }
     },
-    "problemi_dei_turni_non_verificati": {
-      "description": "K-017: per chi apre i dati personali ma non quelli particolari (cassaforte), i problemi dei controlli dei turni sul piano del giorno che dipendono dal tipo di servizio (dato particolare, che l'utente non puo' aprire): nati da un risultato del piano non verificato (chi fa il turno o con quale mezzo cambia con il tipo) o da un requisito per tipo di servizio. Non sono verificati: non sono in 'problemi' ne' nel riepilogo, si dice solo quanti sono. I problemi certi degli stessi controlli sono in 'problemi'. null per gli altri utenti: chi apre i dati particolari ha il piano tutto certo; senza i dati personali i controlli dei turni sono tra i non verificati ('non_verificato').",
+    "problemi_possibili_dei_turni": {
+      "description": "K-017: per chi apre i dati personali ma non quelli particolari (cassaforte), quanti problemi possibili hanno i controlli dei turni sul piano del giorno: dipendono dal tipo di servizio (dato particolare, che l'utente non puo' aprire), nati da un risultato del piano non verificato (chi fa il turno o con quale mezzo cambia con il tipo) o da un requisito per tipo di servizio. Possono esserci o no: con i tipi veri anche nessuno. Non sono problemi certi dei dati: non sono in 'problemi' ne' nel riepilogo. Non sono un massimo: la somma su tutti i tipi puo' contare insieme problemi che con un tipo solo non ci sono insieme. I problemi certi degli stessi controlli sono in 'problemi'. null per gli altri utenti: chi apre i dati particolari ha il piano tutto certo; senza i dati personali i controlli dei turni sono tra i non verificati ('non_verificato').",
       "oneOf": [
         {
           "type": "null"
