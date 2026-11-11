@@ -706,6 +706,17 @@
   Unione.ProblemiPossibiliDeiTurni (il demo; una variante senza i problemi certi di quell'utente: "Nessun problema certo.";
   senza requisiti del tipo: zero), cambiate le attese di UFFICIO sul pacchetto congelato ("18 errori possibili e 5 avvisi
   possibili") e la sua forma JSON.
+  **2. Mezzo a bordo e secondo autista non verificati** (prove che mancavano: nel demo T-B-ACCOMP e' sempre a bordo di BETA-01,
+  certo, e un secondo autista non c'e'; il sabotaggio dell'arbitro in aboard(), "nessun mezzo" aggiunto solo se la lista dei
+  mezzi possibili e' vuota, passava tutte le 1.002 prove). Nuove prove, sulla sonda dell'arbitro (BETA-01 con un'autorizzazione
+  all'uso LINEA scaduta il 2026-10-31): Unione.PianoSenzaParticolariMezzoABordo e, con un turno da secondo autista in piu'
+  (T-B-SECONDO, fatto da P-B5 con la patente D scaduta, tutto inventato), Unione.PianoSenzaParticolariSecondoAutista. Tutte e
+  due con i criteri (a) e (b) sulle 5 varianti di S-ASILO e, il 2026-11-20, con S-ASILO scolastico e di linea: chi ha i soli
+  dati personali vede le stesse uscite (T-B-ASILO con il mezzo non verificato, "A bordo del mezzo: non verificato - previsto
+  BETA-01", per il secondo autista "Persona: non verificata - prevista P-B5"); il titolare, senza errori nei dati, con S-ASILO
+  scolastico BETA-01 (e il secondo autista scoperto), di linea T-B-ASILO senza mezzo, nessun mezzo a bordo (e il secondo
+  autista c'e'). Il controllo dei totali della giornata JSON guarda anche il mezzo a bordo. Sabotaggi: quello dell'arbitro e
+  "abilitazione del secondo autista guardata solo sul primo mezzo possibile", tutti e due scoperti.
 
 ## Bug e limiti noti
 - (K-017) Per chi non apre i dati particolari la regola "certo solo se vale per ogni tipo" e' prudente: valuta ogni requisito

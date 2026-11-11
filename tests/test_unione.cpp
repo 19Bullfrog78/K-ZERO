@@ -1948,11 +1948,12 @@ struct EsitoDelTurno {
 };
 using PianoVerificato = std::map<std::pair<kzero::Day, std::string>, EsitoDelTurno>;
 
-PianoVerificato piano_verificato(const kzero::Package& p) {
+// Tutti i giorni del periodo, oppure un giorno solo.
+PianoVerificato piano_verificato(const kzero::Package& p, std::optional<kzero::Day> solo = std::nullopt) {
     PianoVerificato out;
     const kzero::Planner piano(p);
     const auto codice = [](const auto* x) { return x ? x->code : std::string("-"); };
-    for (kzero::Day d = p.manifest.period.from; d <= p.manifest.period.to; ++d)
+    for (kzero::Day d = solo.value_or(p.manifest.period.from); d <= solo.value_or(p.manifest.period.to); ++d)
         for (const kzero::ShiftDay& sd : piano.day(d))
             out[{d, sd.shift->code}] = {codice(sd.person), codice(sd.vehicle), codice(sd.aboard), sd.person_verified, sd.vehicle_verified,
                                         sd.aboard_verified};
@@ -2005,6 +2006,8 @@ std::string totali_della_giornata(const std::string& uscita) {
             return "turno " + t.at("codice").get<std::string>() + ": persona non verificata mostrata come certa";
         if (!nv.is_null() && nv.at("mezzo") == true && (!t.at("mezzo").is_null() || !t.at("senza_mezzo").is_null()))
             return "turno " + t.at("codice").get<std::string>() + ": mezzo non verificato mostrato come certo";
+        if (!nv.is_null() && nv.at("a_bordo") == true && !t.at("a_bordo_di").is_null())
+            return "turno " + t.at("codice").get<std::string>() + ": mezzo a bordo non verificato mostrato come certo";
     }
     const JsonDati& tot = j.at("totali");
     std::string male;
@@ -2206,6 +2209,160 @@ TEST(Unione, PianoSenzaParticolariSovrapposizione) {
         if (k.rfind("K-CTR-064", 0) == 0) trovati += " mostrato [" + k + "]";
     EXPECT_TRUE(p.non_verificati.count("K-CTR-064 turno=T-DIS mezzo=ALFA-05 2027-07-07"))
         << "la sovrapposizione non e' tra i non verificati:" << trovati;
+}
+
+// K-017 aggiunta 1: un turno da assistente e uno da secondo autista a bordo di un mezzo non verificato (nel demo non succede:
+// T-B-ACCOMP e' sempre a bordo di BETA-01, certo, e un secondo autista non c'e').
+// La sonda dell'arbitro: BETA-01 (uso NCC) ha un'autorizzazione all'uso LINEA scaduta il 2026-10-31. Se S-ASILO e' di linea BETA-01
+// non puo' fare T-B-ASILO (un fatto su un turno ricorrente, non un errore nei dati: l'autorizzazione c'e') e T-B-ACCOMP non e' a
+// bordo di nessun mezzo; con il suo tipo (scolastico) T-B-ACCOMP e' a bordo di BETA-01. Senza i dati particolari non si sa.
+void beta01_linea_scaduta(InMemoria& m) {
+    JsonDati me = JsonDati::parse(m.file.at("mezzi.json"));
+    for (JsonDati& v : me.at("mezzi"))
+        if (v.at("codice") == "BETA-01")
+            v["autorizzazioni_uso"] = JsonDati::array({{{"uso", "LINEA"},
+                                                         {"ente", "Motorizzazione civile di Valfonda (inventato)"},
+                                                         {"riferimento", "Autorizzazione di prova n. 1/2026 (inventata)"},
+                                                         {"dal", "2026-09-01"},
+                                                         {"al", "2026-10-31"}}});
+    m.file["mezzi.json"] = me.dump(2);
+}
+
+// Il secondo autista: in piu' T-B-SECONDO sulla corsa dell'asilo (come T-B-ACCOMP), fatto per servizio fisso da P-B5, con la
+// patente D scaduta il 2026-10-31 (tutto inventato). L'abilitazione si guarda su ogni mezzo possibile: a bordo di BETA-01 (M2, 19
+// posti: patente D) il turno e' scoperto, senza mezzo no.
+void secondo_autista_su_beta01(InMemoria& m) {
+    beta01_linea_scaduta(m);
+    JsonDati p = JsonDati::parse(m.file.at("persone.json"));
+    p.at("persone").push_back({{"codice", "P-B5"},
+                               {"azienda", "BETA"},
+                               {"ruoli", {"autista"}},
+                               {"nome", "Conti Paolo"},
+                               {"presa_servizio", "F-SORGENTA"},
+                               {"rapporto", {{"tipo", "dipendente_part_time"}}},
+                               {"abilitazioni", JsonDati::array({{{"tipo", "B"}},
+                                                                 {{"tipo", "D"}, {"scadenza", "2026-10-31"}},
+                                                                 {{"tipo", "CQC-P"}, {"scadenza", "2029-12-31"}}})}});
+    m.file["persone.json"] = p.dump(2);
+    JsonDati t = JsonDati::parse(m.file.at("turni.json"));
+    t.at("turni").push_back({{"codice", "T-B-SECONDO"},
+                             {"nome", "Secondo autista dell'asilo"},
+                             {"azienda", "BETA"},
+                             {"ruolo", "secondo_autista"},
+                             {"calendario", "CAL-INFANZIA"},
+                             {"mezzo", {{"modo", "nessuno"}}},
+                             {"inizio", "F-SORGENTA"},
+                             {"fine", "L-INFANZIA"},
+                             {"elementi", JsonDati::array({{{"corsa", "C-ASILO-1"}, {"da", {{"luogo", "F-SORGENTA"}}}}})}});
+    m.file["turni.json"] = t.dump(2);
+    JsonDati f = JsonDati::parse(m.file.at("servizi_fissi.json"));
+    f.at("servizi_fissi").push_back({{"codice", "SF-B-SECONDO"}, {"turno", "T-B-SECONDO"}, {"persona", "P-B5"}, {"calendario", "CAL-INFANZIA"}});
+    m.file["servizi_fissi.json"] = f.dump(2);
+}
+
+// Un caso della sonda il 2026-11-20, con S-ASILO di un tipo: le uscite di kzero giornata di chi ha i soli dati personali, il piano
+// di quel giorno per lui e per il titolare, gli errori nei dati del titolare.
+struct CasoABordo {
+    std::map<std::string, std::string> uscite;   // "testo", "json", con "--includi-dati-personali" davanti se ci sono
+    std::map<std::string, EsitoDelTurno> personali, titolare;
+    int errori_del_titolare = 0;
+};
+
+CasoABordo caso_a_bordo(const std::string& tipo, const std::function<void(InMemoria&)>& modifica) {
+    InMemoria m = demo_con_il_tipo("S-ASILO", tipo);
+    modifica(m);
+    const DueLetture l = due_letture(m);
+    CasoABordo c;
+    const kzero::Day d = *kzero::day_from_text("2026-11-20");
+    for (const bool personali : {false, true})
+        for (const Formato f : {Formato::Testo, Formato::Json}) {
+            Parametri par;
+            par.formato = f;
+            par.data = d;
+            par.includi_dati_personali = personali;
+            const Risultato r = esegui_su(l.personali, "giornata", par);
+            EXPECT_EQ(r.codice, 0) << tipo << ": " << r.uscita;
+            c.uscite[std::string(personali ? "--includi-dati-personali " : "") + (f == Formato::Json ? "json" : "testo")] = r.uscita;
+        }
+    for (const auto& [k, x] : piano_verificato(l.personali.pacchetto, d)) c.personali[k.second] = x;
+    for (const auto& [k, x] : piano_verificato(l.titolare.pacchetto, d)) c.titolare[k.second] = x;
+    c.errori_del_titolare = controlla_lettura(l.titolare, Visibilita{true, true}).errori_nei_dati();
+    return c;
+}
+
+// Il pezzo di una giornata in testo che parla di un turno.
+std::string blocco_del_turno(const std::string& testo, const std::string& turno) {
+    const std::size_t inizio = testo.find("\n" + turno + " \"");
+    if (inizio == std::string::npos) return "";
+    return testo.substr(inizio, testo.find("\nT-", inizio + 1) - inizio);
+}
+
+std::map<std::string, JsonDati> turni_della_giornata(const std::string& uscita) {
+    std::map<std::string, JsonDati> out;
+    const JsonDati j = JsonDati::parse(uscita);   // tenuto in vita: il ciclo scorre un suo pezzo
+    for (const JsonDati& t : j.at("turni")) out[t.at("codice").get<std::string>()] = t;
+    return out;
+}
+
+// La parte comune delle due prove: chi ha i soli dati personali vede le stesse uscite con S-ASILO scolastico e di linea; T-B-ASILO
+// ha il mezzo non verificato (previsto BETA-01), il turno a bordo il mezzo a bordo non verificato (previsto BETA-01); il titolare
+// non ha errori nei dati e il suo piano e' tutto certo: con S-ASILO scolastico T-B-ASILO ha BETA-01 e il turno e' a bordo di
+// BETA-01, di linea T-B-ASILO e' senza mezzo e il turno non e' a bordo di nessun mezzo.
+void controlla_la_sonda(const CasoABordo& scolastico, const CasoABordo& linea, const std::string& a_bordo) {
+    for (const auto& [nome, uscita] : scolastico.uscite)
+        EXPECT_EQ(uscita, linea.uscite.at(nome)) << nome << ": " << prima_differenza(uscita, linea.uscite.at(nome));
+    const std::string& testo = scolastico.uscite.at("testo");
+    EXPECT_NE(blocco_del_turno(testo, "T-B-ASILO").find("Mezzo: non verificato - previsto BETA-01"), std::string::npos) << testo;
+    EXPECT_NE(blocco_del_turno(testo, a_bordo).find("A bordo del mezzo: non verificato - previsto BETA-01"), std::string::npos) << testo;
+    const std::string& json = scolastico.uscite.at("json");
+    EXPECT_EQ(totali_della_giornata(json), "");
+    const std::map<std::string, JsonDati> turni = turni_della_giornata(json);
+    const JsonDati& asilo = turni.at("T-B-ASILO");
+    EXPECT_EQ(asilo.at("non_verificato").at("mezzo"), true);
+    EXPECT_TRUE(asilo.at("mezzo").is_null());
+    EXPECT_TRUE(asilo.at("senza_mezzo").is_null());
+    EXPECT_EQ(asilo.at("mezzo_previsto").at("codice"), "BETA-01");
+    const JsonDati& bordo = turni.at(a_bordo);
+    EXPECT_EQ(bordo.at("non_verificato").at("a_bordo"), true);
+    EXPECT_TRUE(bordo.at("a_bordo_di").is_null());
+    EXPECT_EQ(bordo.at("a_bordo_previsto").at("codice"), "BETA-01");
+    EXPECT_FALSE(scolastico.personali.at(a_bordo).a_bordo_certo);
+    EXPECT_EQ(scolastico.personali.at(a_bordo).a_bordo, "BETA-01");
+    for (const CasoABordo* c : {&scolastico, &linea}) {
+        EXPECT_EQ(c->errori_del_titolare, 0);
+        for (const auto& [turno, x] : c->titolare)
+            EXPECT_TRUE(x.persona_certa && x.mezzo_certo && x.a_bordo_certo) << turno;
+    }
+    EXPECT_EQ(scolastico.titolare.at("T-B-ASILO").mezzo, "BETA-01");
+    EXPECT_EQ(scolastico.titolare.at(a_bordo).a_bordo, "BETA-01");
+    EXPECT_EQ(linea.titolare.at("T-B-ASILO").mezzo, "-");
+    EXPECT_EQ(linea.titolare.at(a_bordo).a_bordo, "-");
+}
+
+TEST(Unione, PianoSenzaParticolariMezzoABordo) {
+    controlla_il_piano("S-ASILO", beta01_linea_scaduta);
+    controlla_la_sonda(caso_a_bordo("scolastico", beta01_linea_scaduta), caso_a_bordo("linea", beta01_linea_scaduta), "T-B-ACCOMP");
+}
+
+// Il secondo autista a bordo di un mezzo non verificato, con l'abilitazione per quel mezzo scaduta: per chi ha i soli dati personali
+// la persona non e' verificata (prevista P-B5); per il titolare dipende dal tipo vero: con S-ASILO scolastico il turno e' scoperto,
+// di linea lo fa P-B5.
+TEST(Unione, PianoSenzaParticolariSecondoAutista) {
+    controlla_il_piano("S-ASILO", secondo_autista_su_beta01);
+    const CasoABordo scolastico = caso_a_bordo("scolastico", secondo_autista_su_beta01), linea = caso_a_bordo("linea", secondo_autista_su_beta01);
+    controlla_la_sonda(scolastico, linea, "T-B-SECONDO");
+    const EsitoDelTurno& p = scolastico.personali.at("T-B-SECONDO");
+    EXPECT_FALSE(p.persona_certa);
+    EXPECT_EQ(p.persona, "P-B5");
+    EXPECT_NE(blocco_del_turno(scolastico.uscite.at("testo"), "T-B-SECONDO").find("Persona: non verificata - prevista P-B5"), std::string::npos)
+        << scolastico.uscite.at("testo");
+    const JsonDati secondo = turni_della_giornata(scolastico.uscite.at("json")).at("T-B-SECONDO");
+    EXPECT_EQ(secondo.at("non_verificato").at("persona"), true);
+    EXPECT_TRUE(secondo.at("persona").is_null());
+    EXPECT_TRUE(secondo.at("scoperto").is_null());
+    EXPECT_EQ(secondo.at("persona_prevista").at("codice"), "P-B5");
+    EXPECT_EQ(scolastico.titolare.at("T-B-SECONDO").persona, "-");   // scoperto: la patente D per BETA-01 e' scaduta
+    EXPECT_EQ(linea.titolare.at("T-B-SECONDO").persona, "P-B5");      // nessun mezzo: niente da guidare
 }
 
 // Ogni servizio del demo ha la sua prova qui sopra (un servizio nuovo nel demo va aggiunto).
