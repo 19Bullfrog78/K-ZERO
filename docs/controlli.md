@@ -2,8 +2,9 @@
 
 `kzero controlla <cartella>` controlla un pacchetto dati (spiegato in [formato-dati.md](formato-dati.md))
 e scrive un resoconto in testo o in JSON (schema `controlla`, file
-[schema/controlla.v5.schema.json](schema/controlla.v5.schema.json); le versioni 1, del K-007, 2, del K-008, 3, del K-009, e
-4, del K-010, non sono piu' prodotte; la 5, del K-011, aggiunge la `natura` di ogni problema e gli errori del piano).
+[schema/controlla.v6.schema.json](schema/controlla.v6.schema.json); le versioni 1, del K-007, 2, del K-008, 3, del K-009,
+4, del K-010, e 5, del K-011 (la `natura` di ogni problema e gli errori del piano), non sono piu' prodotte; la 6, del K-017,
+aggiunge `problemi_dei_turni_non_verificati`).
 
 Ogni problema ha:
 - un **livello**: **errore** (il dato e' sbagliato e va corretto) oppure **avviso** (il dato e' accettabile,
@@ -226,7 +227,29 @@ particolari si vede tutto come prima. Anche un errore di forma lasciava capire i
 solo ai servizi e ai gruppi "altro", quindi "manca il campo obbligatorio 'tipo_descrizione'" diceva "altro". Come per un valore
 sbagliato conta la classe del campo, ricavata dallo schema: un campo obbligatorio particolare che manca e' la variante di
 K-CTR-007 che rivela un dato particolare. La prova per differenza del K-014 (tests/test_unione.cpp) controlla tutto questo con i
-requisiti veri del demo; il rischio che resta e' in docs/sicurezza.md.
+requisiti veri del demo; il rischio che resta e' in docs/sicurezza.md. Un campo obbligatorio personale che manca (es. i ruoli
+di una persona, l'inizio di un'assenza) non rivela un valore: resta la variante di base, con il suo messaggio (prova C9, K-017).
+
+**Il piano senza i dati particolari (K-017).** Per chi apre i dati personali ma non quelli particolari il tipo dei servizi non e'
+noto (mai "altro"): il piano dei turni dice cosa e' certo e cosa no (un fatto che dipende dal tipo si valuta per ogni tipo
+possibile: uguale per tutti = certo, diverso = non verificato). I controlli dei turni sul piano del giorno (K-CTR-056, 063,
+064, 067, 068, 069, 070, 072, 073, 074, 076, 078, 079, 081 ... 087) per lui si fanno: chiedono i dati personali, non piu'
+quelli particolari. I problemi certi si vedono come per gli altri, con i testi del K-014 (di un turno scoperto o senza mezzo
+il fatto, non il perche': K-CTR-078 variante 6 e K-CTR-079 variante 4, "il motivo non e' verificato"); un problema certo
+puo' coprire solo una parte dei giorni (negli altri e' non verificato). Quelli che dipendono dal tipo (nati da un risultato del
+piano non verificato, o da un requisito per tipo di servizio come nel K-014) non si elencano e non sono nel riepilogo: si
+contano soltanto, in una riga che c'e' sempre per quell'utente, e in JSON in `problemi_dei_turni_non_verificati`. K-CTR-071 resta
+non verificato (le competenze sono dati particolari), come i controlli degli orari. Esempio (il demo chiuso, utente con i soli
+dati personali):
+
+```
+Avviso K-CTR-078 (persone.json, /persone/1): Il turno T-PRIMO (Primo) e' scoperto il 2026-11-20: la persona prevista P-B non puo' farlo; il motivo non e' verificato (servono i dati particolari, che l'utente non puo' aprire). Rimedio: un'assegnazione del singolo giorno.
+Controlli dei turni: si vedono i problemi certi; quelli che dipendono dal tipo di servizio (dato particolare, che l'utente non puo' aprire) non sono verificati e non sono ne' tra i problemi ne' nel riepilogo: 20 errori e 5 avvisi.
+```
+
+Una prova (tests/test_unione.cpp) confronta, su 375 pacchetti, i problemi di quell'utente con quelli di chi ha tutti i
+permessi, giorno per giorno: ogni giorno di un problema mostrato e' un problema anche per chi ha tutti i permessi, e ognuno dei
+suoi e' mostrato o contato tra i non verificati.
 
 Non sono in questo catalogo (arriveranno con la verifica delle regole e con il calcolo): posti a bordo, attese massime
 sulle corse, limiti di accesso confrontati con i mezzi, tempi per andare da un luogo all'altro tra due turni, km
@@ -263,7 +286,8 @@ una persona in due turni insieme) restano errori nei dati.
 
 Per un utente della cassaforte che non puo' aprire i dati personali o quelli particolari, i controlli sugli orari del
 piano sono "non verificati" (le leggi che valgono dipendono dal rapporto e dal tipo di servizio, chi fa i turni dalle
-assenze), come gli altri controlli sul piano del giorno. Chi puo' aprire i dati particolari ma non li chiede
+assenze); senza i dati personali anche gli altri controlli sul piano del giorno, senza i soli dati particolari no (K-017, qui
+sopra). Chi puo' aprire i dati particolari ma non li chiede
 (`--includi-dati-particolari`) vede i problemi dei regimi che dipendono dal tipo di servizio solo contati (K-013, qui sopra).
 
 ## Controlli sui turni, giorno per giorno

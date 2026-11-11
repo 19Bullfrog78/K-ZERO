@@ -194,6 +194,12 @@ Si parte da ALP (3 minibus + 1 auto) e si deve poter crescere fino a 500 mezzi e
   dai permessi e dai parametri insieme; un controllo o un calcolo che ha bisogno di una classe che l'utente non puo'
   aprire dice "non verificato", mai un risultato fatto su dati mancanti. Ogni apertura scrive prima la voce del registro:
   senza voce, nessun dato.
+- IMPORTANTE (K-017): il tipo di un servizio o di un gruppo che l'utente non puo' leggere e' "non noto" (`MaybeKnown`) e non
+  diventa mai un altro tipo. Ogni requisito che dipende dal tipo (oggi `kind_requirements`, e i regimi degli orari) con il tipo
+  non noto si valuta per ogni tipo dello schema (`possible_kinds`): uguale per tutti = certo, diverso = non verificato; mai un
+  tipo ricavato da altri dati (codici esterni, nomi, gruppi). Un fatto che dipende da un risultato non verificato non e'
+  verificato. Ogni nuovo requisito del tipo e ogni nuova uscita del piano seguono questa regola (giornata e controlla:
+  `ShiftDay::*_verified`, `Problem::unverified`).
 - Ogni nuova uscita, messaggio, posizione o registro passa dal filtro delle classi; nessun dato personale nei registri
   del programma. La lettura dei file e' blindata (solo file normali dentro la cartella del pacchetto, mai oltre il
   massimo di byte): ogni nuovo lettore di file esterni (es. il file del consorzio) la usa.

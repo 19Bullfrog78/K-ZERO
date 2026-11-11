@@ -647,8 +647,61 @@
   UTF-32 LE senza BOM con un nome in tests/fuzz/casi/ 1; codice finale 0. Nello strumento: nomi non cercati senza gli
   zeri 1 prova rossa, doppioni non tolti 1, byte zero ammesso ovunque 2, tutta tests/ ammessa 2, inizio del percorso
   senza la barra 2. Tutti scoperti; nessun messaggio ha scritto un nome.
+- 2026-11-11 - K-017 (programma e documenti, proposta "K-017: piano senza i dati particolari"). Scelta A del supervisore
+  dell'11/11; difetto trovato dall'arbitro nel controllo del K-014 (c'era dal K-010): per chi non apre i dati particolari il
+  tipo dei servizi, che non gli arriva, diventava "altro" e il piano applicava i requisiti di "altro". Domanda prima del
+  codice (un turno incerto solo in parte): risposta "persona e mezzo separati". **1. Tipo non noto**: `MaybeKnown<T>` per il
+  tipo dei servizi e dei gruppi, senza confronto ne' conversione (il compilatore ha fermato ogni punto che lo leggeva, anche
+  3 prove); il lettore non mette piu' "altro". Il tipo dei gruppi senza i particolari si usa solo nella categoria della corsa
+  (kzero dimostrazione, gia' riservata): ora non nota. **2. Regola per ogni tipo** (`possible_kinds`, `Outcome`): usi dei
+  mezzi, autorizzazione del committente, vincolo di destinazione; negli orari regimi, servizi occasionali e modo delle corse.
+  Il piano (`ShiftDay`) dice se persona, mezzo e mezzo a bordo sono certi; un fatto che vale solo con il mezzo (abilitazione,
+  autorizzazione) con il mezzo non verificato non e' verificato; un risultato non verificato tiene il valore previsto.
+  **3. Giornata versione 5**: "NON VERIFICATO: ... dipende dal tipo di servizio (dato particolare)", persona e mezzo previsti,
+  totali solo certi (uno per uno in DECISIONI.md), quanti turni non verificati, riga in cima precisa. **4. Controlla versione
+  6**: i controlli dei turni sul piano chiedono solo i dati personali; i problemi certi si vedono (K-CTR-078 variante 6 e
+  079 variante 4, "il motivo non e' verificato"), quelli che dipendono dal tipo si contano soltanto in una riga sempre
+  presente; K-CTR-071 resta non verificato. Altre uscite che usano il piano: kzero ore (resta com'era, cambia solo il totale
+  del controllo) e kzero dimostrazione (solo il demo in chiaro).
+  Demo chiuso, utente con i soli dati personali, 2027-07-07: prima "9 turni (nessuno scoperto, 3 senza mezzo), 8 persone, 4
+  mezzi" con T-PRIMO, T-SECONDO e T-NOTTE senza mezzo inventati; ora "9 turni (nessuno scoperto, nessuno senza mezzo, 3 non
+  verificati), 8 persone, 4 mezzi": il mezzo ALFA-05 dei tre turni non e' verificato (come linea va, come NCC o "altro" no
+  dopo il 2027-06-30) e in T-SECONDO anche la persona (la CQC-P di P-C e' scaduta: conta solo se il mezzo c'e'). Il titolare:
+  "1 scoperto, nessuno senza mezzo, 8 persone, 5 mezzi", prima e dopo. 2026-11-11: nessun turno non verificato (8 su 8
+  certi), giornata uguale tranne la riga in cima. Controlla dello stesso utente: prima 4 avvisi e i controlli dei turni tutti
+  non verificati; ora 6 avvisi (K-CTR-078 di T-PRIMO il 2026-11-20 e K-CTR-082) e "20 errori e 5 avvisi" non verificati.
+  Uscite di confronto (programma del K-016 e finale, 4.432 uscite: tutti i giorni del periodo per quattro pacchetti, testo e
+  JSON, controlla e ore con e senza parametri, titolare e utente con i soli personali sul demo chiuso): per il titolare e il
+  pacchetto in chiaro testo identico; in JSON cambiano solo la versione e i campi nuovi, vuoti (2.933 uscite controllate
+  campo per campo); per l'utente con i soli dati personali cambiano solo giornata e controlla, e in kzero ore di tutto il
+  periodo solo il totale del controllo (4 avvisi, ora 6).
+  Prove: 1.002 su 1.002 (prima 977), compilate senza avvisi; 25 nuove: la prova per differenza del punto 5 per ognuno degli
+  11 servizi del demo (55 varianti: (a) giornata e controlla identiche tra le varianti per chi ha i soli dati personali, (b)
+  ogni risultato certo del piano uguale a quello del titolare in ogni giorno, e lo stesso per i problemi dei controlli dei
+  turni, giorno per giorno; saltate per (b), come chiede il mandato, le 14 varianti in cui il titolare ha errori nei dati:
+  S-SCU-AM linea e disabili, S-DIS linea, scolastico, NCC e altro, S-ASILO linea e disabili, S-DIS-GIO linea, S-LIN-B620 NCC e
+  altro, S-MATRIMONIO linea, S-PRIVATO-CENTRO linea; provata a parte anche (b) su quelle: tutto uguale), due casi che il demo
+  non ha (mezzo abituale di una persona non verificata; sovrapposizione dei mezzi con un turno non verificato), il demo del
+  2027-07-07, il tipo mai "altro" e i tipi dello schema, codici esterni e nomi che non cambiano niente, C9 (testo e JSON) e le
+  uscite attese del titolare per il 2027-07-07 (prese dal programma del K-016). Cambiate: il confronto dei problemi tra utenti
+  sui 375 pacchetti ora giorno per giorno; le attese di UFFICIO in controlla. Ogni commit compila e passa le prove da solo
+  (977, 977, 977, 1.002). Con i sanitizer 998 su 998 (senza le 2 prove sul programma di rilascio), poi, aggiunte le due prove
+  mirate, le 25 prove nuove di nuovo: tutte; compilati senza avvisi. Fuzzing in locale, 32 bersagli 20 secondi ciascuno: nessun guasto. Sabotaggi sul codice finale, uno alla volta
+  (prove rosse): tipo non noto letto di nuovo come "altro" 16; un requisito valutato per un solo tipo 5; un turno non
+  verificato contato nei totali 12; un problema non verificato mostrato come certo in controlla 14 (al primo giro solo 1, la
+  riga dei conteggi: aggiunto alla prova per differenza il confronto dei problemi e del resoconto); per il titolare cambia una
+  riga della giornata 6; il calcolo guarda un codice esterno 5; C9 di nuovo contato tra i particolari 4; un fatto sul mezzo
+  non verificato dato per certo 4; la persona non verificata tolta dal turno 2; il mezzo abituale che non segue la persona non
+  verificata 1 e le sovrapposizioni tutte certe 1 (al primo giro 0: nel demo questi casi non c'erano, aggiunte le due prove
+  mirate). Tutti scoperti.
 
 ## Bug e limiti noti
+- (K-017) Per chi non apre i dati particolari la regola "certo solo se vale per ogni tipo" e' prudente: valuta ogni requisito
+  del tipo da solo e un fatto che dipende da un risultato non verificato e' non verificato. Quando due fatti dipendono dallo
+  stesso tipo in modo opposto (es. il mezzo non va solo come NCC e l'autorizzazione serve solo per i disabili) puo' dire "non
+  verificato" dove, guardando le combinazioni, il risultato sarebbe certo; mai il contrario. In kzero ore il piano di
+  quell'utente resta dichiarato non verificato in blocco (K-013) e un turno non verificato conta con la persona prevista: il
+  dettaglio turno per turno e' solo in kzero giornata.
 - (K-015) Il deposito e' pubblico: la storia prima del 5/11/2026 contiene ancora i quattro nomi tolti dai file di oggi
   (anche nei messaggi dei salvataggi) e i codici di esempio sostituiti; .gitignore, la prova deposito e il controllo
   delle proposte sono solo reti (un pacchetto vero e' una cartella di JSON come il demo): la difesa vera e' tenere i dati
