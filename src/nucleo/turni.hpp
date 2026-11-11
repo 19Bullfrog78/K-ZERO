@@ -81,6 +81,18 @@ struct ShiftDay {
     // Turni da assistente o da secondo autista: il mezzo su cui la persona e' a bordo (dal turno dell'autista).
     const Vehicle* aboard = nullptr;
 
+    // K-017: con il tipo di un servizio non noto (dato particolare che l'utente non puo' aprire) un fatto che dipende dal tipo si
+    // valuta per ogni tipo possibile: uguale per tutti = certo, diverso = non verificato. Il calcolo non legge mai il tipo in
+    // altro modo, quindi "certo" o "non verificato" non dicono niente del tipo. Un risultato non verificato tiene il valore
+    // previsto (la persona o il mezzo, come se il fatto non ci fosse; il fatto possibile resta in person_impediment o
+    // vehicle_impediment) e lo dice qui. Con tutti i tipi noti tutto e' certo.
+    bool person_fact_verified = true;    // il fatto sulla persona (o che non ci sia) e' certo
+    bool vehicle_fact_verified = true;   // il fatto sul mezzo (o che non ci sia) e' certo
+    bool person_verified = true;         // chi fa il turno (person, anche nullptr = scoperto) e' certo
+    bool vehicle_verified = true;        // il mezzo del turno (vehicle, anche nullptr = senza mezzo) e' certo
+    bool aboard_verified = true;         // il mezzo su cui e' a bordo (aboard) e' certo
+    bool verified() const { return person_verified && vehicle_verified && aboard_verified; }
+
     bool uncovered() const { return person == nullptr; }
     // Punto dei dati in cui e' scritta l'assegnazione della persona (la riga della rotazione, il servizio fisso,
     // l'assegnazione del giorno); il turno se nessun modo da' una persona. Resta lo stesso nei giorni diversi, cosi' i
@@ -103,9 +115,13 @@ struct PartResolution {
 };
 PartResolution resolve_part(const ShiftTrip& part, const Trip& trip);
 
-// Usi dei mezzi ammessi per un servizio: il regolamento del contratto, se lo dice; altrimenti le norme dell'azienda
-// del contratto. Nessun valore = nessuna regola (nessun uso richiesto).
-std::optional<std::vector<Code>> allowed_uses(const Service& s, const Index& idx);
+// Usi dei mezzi ammessi per un servizio di un tipo dato: il regolamento del contratto, se lo dice; altrimenti le norme
+// dell'azienda del contratto. Nessun valore = nessuna regola (nessun uso richiesto). Il tipo e' un parametro: con il tipo del
+// servizio non noto si chiede per ogni tipo possibile (possible_kinds, K-017).
+std::optional<std::vector<Code>> allowed_uses(const Service& s, ServiceKind kind, const Index& idx);
+// Gli usi ammessi per ogni tipo possibile del servizio: uno solo se il tipo e' noto, uno per tipo dello schema se non lo e'.
+using UsesByKind = std::vector<std::optional<std::vector<Code>>>;
+UsesByKind allowed_uses_by_kind(const Service& s, const Index& idx);
 
 // K-014: i requisiti dei dati che dipendono dal tipo di servizio (dato particolare: rivela il servizio per disabili), fuori
 // dagli orari (per gli orari: kind_dependence, orari.hpp). Lo dicono i dati, mai il nome:
@@ -118,6 +134,8 @@ std::optional<std::vector<Code>> allowed_uses(const Service& s, const Index& idx
 // Senza i dati particolari i problemi che nascono da questi requisiti si contano soltanto (Problem::by_service_kind) e, se il
 // pacchetto ne ha almeno uno, i turni scoperti o senza mezzo per un fatto con le date si mostrano tutti con lo stesso testo,
 // senza la causa (DECISIONI.md, K-014).
+// K-017: per chi non puo' leggere il tipo (non noto) ogni requisito si valuta per ogni tipo possibile dello schema: uguale per
+// tutti = certo, diverso = non verificato (Outcome). Ogni nuovo requisito del tipo va qui e si valuta allo stesso modo.
 struct KindRequirements {
     std::vector<const Regulation*> vehicle_uses;           // regolamenti con usi dei mezzi per tipo
     std::vector<const Norms*> service_uses;                // norme con usi per tipo di servizio
@@ -141,10 +159,13 @@ struct LicenceResult {
 };
 LicenceResult check_licences(const Person& p, const Vehicle& v, const Norms& n, Day d);
 
-// Autorizzazioni del committente che servono all'autista per le corse di un turno in un giorno.
+// Autorizzazioni del committente che servono all'autista per le corse di un turno in un giorno: una per committente, con il
+// primo servizio che la chiede.
 struct RequiredAuthorization {
     const Contract* contract = nullptr;   // il committente e' quello del contratto
     const Service* service = nullptr;
+    // K-017: Yes = la chiede con certezza; Unverified = solo per alcuni tipi possibili dei servizi (tipo non noto).
+    Outcome required = Outcome::Yes;
 };
 std::vector<RequiredAuthorization> required_authorizations(const ShiftDay& sd, const Index& idx);
 
@@ -184,14 +205,17 @@ public:
     // o un'attivita'.
     int shift_days(const Shift& s) const;
 
-    // Usi dei mezzi ammessi per un servizio del pacchetto (allowed_uses), calcolati una volta sola.
-    const std::optional<std::vector<Code>>& uses_of(const Service& s) const;
+    // Usi dei mezzi ammessi per un servizio del pacchetto, per ogni tipo possibile (allowed_uses_by_kind), calcolati una volta
+    // sola.
+    const UsesByKind& uses_of(const Service& s) const;
 
 private:
     void resolve_person(ShiftDay& sd) const;
     void resolve_vehicle(ShiftDay& sd) const;
-    void person_facts(ShiftDay& sd, bool with_vehicle) const;
+    void person_facts(ShiftDay& sd) const;
+    void person_vehicle_facts(ShiftDay& sd) const;
     void vehicle_facts(ShiftDay& sd) const;
+    void aboard(ShiftDay& sd, const std::vector<ShiftDay>& day) const;
 
     // Corsa e pezzo di ogni elemento-corsa dei turni: non cambiano da un giorno all'altro, si calcolano una volta sola.
     struct TripItem {
@@ -204,7 +228,7 @@ private:
     Index idx_;
     CalendarDays days_;
     std::unordered_map<const ShiftItem*, TripItem> trip_items_;
-    std::unordered_map<const Service*, std::optional<std::vector<Code>>> service_uses_;
+    std::unordered_map<const Service*, UsesByKind> service_uses_;
     // Per ogni rotazione, riga e passo: i turni del passo (posizioni in Package::shifts) e la persona della riga.
     struct RotationRowPlan {
         const Person* person = nullptr;

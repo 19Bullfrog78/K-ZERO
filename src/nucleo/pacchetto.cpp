@@ -46,7 +46,7 @@ const Regulation* Index::regulation_of(const Service& s) const {
     return c ? regulation(c->regulation.code) : nullptr;
 }
 
-std::optional<ServiceType> Index::category(const Trip& t) const {
+TripCategory Index::category(const Trip& t) const {
     return derive_service(
         t, [this](const Code& c) { return service(c); }, [this](const Code& c) { return group(c); },
         [this](const Code& c) { return school(c); }, [this](const Code& c) { return service_of_group(c); });

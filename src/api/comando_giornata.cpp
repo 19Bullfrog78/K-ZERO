@@ -244,7 +244,7 @@ public:
             Json x = Json::object();
             x["codice"] = r.code;
             x["nome"] = sv && !sv->name.empty() ? Json(sv->name) : Json(nullptr);
-            x["tipo"] = sv ? vista_.campo(sv->src, "tipo", nome_tipo_servizio(sv->kind), sv->code) : Json(nullptr);
+            x["tipo"] = sv ? vista_.tipo_servizio(*sv) : Json(nullptr);
             const kzero::Contract* c = sv ? idx_.contract(sv->contract.code) : nullptr;
             if (c && !primo_contratto) primo_contratto = c;
             x["contratto"] = sv ? Json(sv->contract.code) : Json(nullptr);

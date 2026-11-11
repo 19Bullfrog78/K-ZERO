@@ -799,7 +799,7 @@ TEST(Unione, CategorieDelPacchettoDeiServizi) {
     const Lettura l = leggi_pacchetto(da_cartella(prove + "/esempi/k012-servizi"));
     ASSERT_TRUE(l.forma_valida());
     const kzero::Index idx(l.pacchetto);
-    const auto categoria = [&](const char* corsa) { return idx.category(*idx.trip(corsa)); };
+    const auto categoria = [&](const char* corsa) { return idx.category(*idx.trip(corsa)).value(); };
     for (const char* c : {"C-GITA-SCUOLA-A", "C-GITA-SCUOLA-R", "C-NCC-AUTO-A", "C-NCC-BUS-1", "C-GITA-A"})
         EXPECT_EQ(categoria(c), kzero::ServiceType::Ncc) << c;
     EXPECT_EQ(categoria("C-NAVETTA-1"), kzero::ServiceType::Other);

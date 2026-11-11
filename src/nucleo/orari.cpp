@@ -91,10 +91,15 @@ TripMode trip_mode(const Trip& t, const CompanySettings* s, const Index& idx, Da
         decide(by_service, TripMode::From::Service);
         return m;
     }
-    // 3. I tipi di servizio della corsa.
+    // 3. I tipi di servizio della corsa. K-017: con un tipo non noto, le voci di tutti i tipi possibili (decide come per una corsa
+    // con tipi diversi). Senza scelte per tipo il tipo non conta e non si guarda.
+    if (tm.by_kind.empty()) return m;
     std::set<ServiceKind> kinds;
-    for (const Ref& sr : t.services)
-        if (const Service* sv = idx.service(sr.code)) kinds.insert(sv->kind);
+    for (const std::set<ServiceKind>& k : possible_kind_sets(t, idx)) kinds.insert(k.begin(), k.end());
+    m.kinds_unknown = std::any_of(t.services.begin(), t.services.end(), [&idx](const Ref& sr) {
+        const Service* sv = idx.service(sr.code);
+        return sv && !sv->kind.known();
+    });
     std::vector<const ModeEntry*> by_kind;
     for (ServiceKind k : kinds) {
         const ModeEntry* found = nullptr;
@@ -104,6 +109,29 @@ TripMode trip_mode(const Trip& t, const CompanySettings* s, const Index& idx, Da
     }
     decide(by_kind, TripMode::From::Kind);
     return m;
+}
+
+std::vector<std::set<ServiceKind>> possible_kind_sets(const Trip& t, const Index& idx) {
+    std::set<ServiceKind> known;
+    std::set<Code> unknown;
+    for (const Ref& sr : t.services)
+        if (const Service* sv = idx.service(sr.code)) {
+            if (sv->kind.known()) known.insert(sv->kind.value());
+            else unknown.insert(sv->code);
+        }
+    if (unknown.empty()) return {known};
+    // Ogni sottoinsieme non vuoto dei tipi, con al piu' tanti tipi quanti sono i servizi con il tipo non noto.
+    constexpr unsigned n = sizeof(kServiceKinds) / sizeof(kServiceKinds[0]);
+    std::set<std::set<ServiceKind>> sets;
+    for (unsigned mask = 1; mask < (1u << n); ++mask) {
+        std::set<ServiceKind> add;
+        for (unsigned i = 0; i < n; ++i)
+            if (mask & (1u << i)) add.insert(kServiceKinds[i]);
+        if (add.size() > unknown.size()) continue;
+        add.insert(known.begin(), known.end());
+        sets.insert(add);
+    }
+    return {sets.begin(), sets.end()};
 }
 
 KindDependence kind_dependence(const Norms& n) {
@@ -557,23 +585,35 @@ private:
         why.shift = it.shift;
         why.role = it.role;
         why.role_level = level_of(r.roles, it.role);
-        std::set<ServiceKind> kinds;
+        // K-017: i tipi della corsa, per ogni insieme possibile (uno solo se tutti noti). Ogni livello che dipende dai tipi e' quello
+        // di tutti gli insiemi se e' uguale, altrimenti da confermare.
+        const std::vector<std::set<ServiceKind>> sets = possible_kind_sets(*it.trip, idx_);
         for (const Ref& sr : it.trip->services)
-            if (const Service* s = idx_.service(sr.code)) kinds.insert(s->kind);
-        why.kinds.assign(kinds.begin(), kinds.end());
+            if (const Service* s = idx_.service(sr.code)) {
+                if (!s->kind.known()) why.kinds_known = false;
+                else if (std::find(why.kinds.begin(), why.kinds.end(), s->kind.value()) == why.kinds.end()) why.kinds.push_back(s->kind.value());
+            }
+        std::sort(why.kinds.begin(), why.kinds.end());
+        const auto same_or_to_confirm = [](const std::vector<Certainty>& v) {
+            return std::all_of(v.begin(), v.end(), [&v](Certainty c) { return c == v.front(); }) ? v.front() : Certainty::ToConfirm;
+        };
         // Inclusione per tipo di servizio: basta un tipo.
-        Certainty inc = Certainty::Certain;
-        if (tc.service_kinds.present) {
-            inc = Certainty::No;
+        const auto inclusion = [&tc](const std::set<ServiceKind>& kinds) {
+            if (!tc.service_kinds.present) return Certainty::Certain;
+            Certainty inc = Certainty::No;
             for (ServiceKind k : kinds) inc = max_c(inc, level_of(tc.service_kinds, k));
-        }
+            return inc;
+        };
+        std::vector<Certainty> incs;
+        for (const std::set<ServiceKind>& kinds : sets) incs.push_back(inclusion(kinds));
+        const Certainty inc = same_or_to_confirm(incs);
         const RouteKm km = route_km(*it.trip);
         why.km_known = km.known;
         why.km = km.km;
         // Esclusioni: ogni tipo della corsa deve essere escluso da una voce; la certezza e' la piu' bassa tra i tipi. Si
         // calcola due volte: con i km come sono e come se il percorso fosse noto e dentro il limite, per sapere se l'incertezza
         // viene dal tipo di servizio o dai km che mancano.
-        const auto excluded = [&](bool km_as_known) {
+        const auto excluded = [&](const std::set<ServiceKind>& kinds, bool km_as_known) {
             if (tc.exclusions.empty() || kinds.empty()) return Certainty::No;
             Certainty all = Certainty::Certain;
             for (ServiceKind k : kinds) {
@@ -598,7 +638,12 @@ private:
         const auto applies_after = [](Certainty ex) {
             return ex == Certainty::Certain ? Certainty::No : ex == Certainty::ToConfirm ? Certainty::ToConfirm : Certainty::Certain;
         };
-        const Certainty by_kinds = applies_after(excluded(true)), by_all = applies_after(excluded(false));
+        std::vector<Certainty> v_kinds, v_all;
+        for (const std::set<ServiceKind>& kinds : sets) {
+            v_kinds.push_back(applies_after(excluded(kinds, true)));
+            v_all.push_back(applies_after(excluded(kinds, false)));
+        }
+        const Certainty by_kinds = same_or_to_confirm(v_kinds), by_all = same_or_to_confirm(v_all);
         // Se il risultato cambia con i km, l'incertezza e' nel percorso (i km mancano), non nel tipo di servizio.
         why.kinds_level = by_all == by_kinds ? min_c(inc, by_kinds) : inc;
         if (by_all != by_kinds) why.route_level = Certainty::ToConfirm;   // i km mancanti decidono
@@ -1050,6 +1095,7 @@ private:
                 t.shift = w.shift;
                 t.role = w.role;
                 t.kinds = w.kinds;
+                t.kinds_known = w.kinds_known;
                 t.vehicle = w.vehicle;
                 t.persons = w.persons;
                 t.km_known = w.km_known;
