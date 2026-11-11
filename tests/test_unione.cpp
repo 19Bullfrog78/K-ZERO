@@ -2056,11 +2056,37 @@ std::string resoconto_dei_turni(const Lettura& personali) {
     return male;
 }
 
-EsitoDelPiano prova_del_piano(const std::string& servizio, const std::function<void(InMemoria&)>& modifica = {}) {
+// K-017 aggiunta 1 (scelta dell'arbitro): nella costruzione con il sanitizer (KZERO_SANITIZER, che accende
+// KZERO_PROVE_COL_SANITIZER in tests/CMakeLists.txt) la prova di un servizio fa solo il suo tipo e il tipo dopo il suo
+// nell'elenco kTipi (dopo "altro" di nuovo "linea"): chi ha i soli dati personali fa lo stesso calcolo in ogni variante (il tipo
+// non gli arriva) e il titolare usa il codice normale con il tipo noto, provato da tutte le altre prove. S-LIN-B610 e i casi
+// mirati fanno tutti i tipi. Nella costruzione normale tutti i tipi per tutti.
+#ifdef KZERO_PROVE_COL_SANITIZER
+constexpr bool kColSanitizer = true;
+#else
+constexpr bool kColSanitizer = false;
+#endif
+
+std::vector<std::string> tipi_del_servizio(const std::string& servizio) {
+    if (!kColSanitizer || servizio == "S-LIN-B610") return kTipi;
+    const JsonDati s = JsonDati::parse(demo_in_chiaro().file.at("servizi.json"));
+    for (const JsonDati& x : s.at("servizi"))
+        if (x.at("codice") == servizio) {
+            const auto suo = std::find(kTipi.begin(), kTipi.end(), x.at("tipo").get<std::string>());
+            if (suo == kTipi.end()) break;
+            const std::size_t i = static_cast<std::size_t>(suo - kTipi.begin());
+            return {kTipi[i], kTipi[(i + 1) % kTipi.size()]};
+        }
+    ADD_FAILURE() << servizio << ": servizio o tipo che non e' nel demo";
+    return kTipi;
+}
+
+EsitoDelPiano prova_del_piano(const std::string& servizio, const std::function<void(InMemoria&)>& modifica,
+                              const std::vector<std::string>& tipi) {
     EsitoDelPiano e;
     std::map<std::string, std::string> prima;   // (a): l'uscita della prima variante, per uscita
     const std::vector<kzero::Day> giorni = {*kzero::day_from_text("2026-11-11"), *kzero::day_from_text("2027-07-07")};
-    for (const std::string& tipo : kTipi) {
+    for (const std::string& tipo : tipi) {
         ++e.varianti;
         const std::string variante = servizio + " " + tipo;
         InMemoria chiaro = demo_con_il_tipo(servizio, tipo);
@@ -2125,32 +2151,41 @@ EsitoDelPiano prova_del_piano(const std::string& servizio, const std::function<v
     return e;
 }
 
-void controlla_il_piano(const std::string& servizio, const std::function<void(InMemoria&)>& modifica = {}) {
-    const EsitoDelPiano e = prova_del_piano(servizio, modifica);
-    std::string saltate;
+// Tipi: tutti, oppure (prove dei singoli servizi) quelli di tipi_del_servizio. La prova scrive quali varianti ha fatto.
+void controlla_il_piano(const std::string& servizio, const std::function<void(InMemoria&)>& modifica = {},
+                        const std::vector<std::string>& tipi = kTipi) {
+    const EsitoDelPiano e = prova_del_piano(servizio, modifica, tipi);
+    std::string fatte, saltate;
+    for (const std::string& t : tipi) fatte += " " + t;
     for (const std::string& t : e.con_errori) saltate += " " + t;
-    std::cout << "[ " << servizio << " ] varianti: " << e.varianti << "; turni nei giorni del periodo: " << e.certi << " certi, "
-              << e.non_verificati << " non verificati; saltate per (b), il titolare ha errori nei dati:"
-              << (saltate.empty() ? std::string(" nessuna") : saltate) << std::endl;
-    EXPECT_EQ(e.varianti, 5);
+    std::cout << "[ " << servizio << " ] varianti: " << e.varianti << " (" << fatte.substr(1)
+              << (tipi.size() < kTipi.size() ? "; costruzione con il sanitizer: il suo tipo e quello dopo" : "")
+              << "); turni nei giorni del periodo: " << e.certi << " certi, " << e.non_verificati
+              << " non verificati; saltate per (b), il titolare ha errori nei dati:" << (saltate.empty() ? std::string(" nessuna") : saltate)
+              << std::endl;
+    EXPECT_GE(tipi.size(), 2u);
+    EXPECT_EQ(e.varianti, static_cast<int>(tipi.size()));
     EXPECT_TRUE(e.fughe.empty()) << "Uscite diverse tra le varianti per chi ha i soli dati personali:" << e.fughe;
     EXPECT_TRUE(e.sbagliati.empty()) << "Risultati certi diversi da quelli del titolare:" << e.sbagliati;
-    EXPECT_LT(e.con_errori.size(), 5u) << servizio << ": nessuna variante provata per (b)";
+    EXPECT_LT(e.con_errori.size(), tipi.size()) << servizio << ": nessuna variante provata per (b)";
 }
+
+// La prova di un servizio del demo: con il sanitizer solo una parte delle varianti (tipi_del_servizio).
+void controlla_il_piano_del_servizio(const std::string& servizio) { controlla_il_piano(servizio, {}, tipi_del_servizio(servizio)); }
 
 }  // namespace
 
-TEST(Unione, PianoSenzaParticolariScuolaAndataMattina) { controlla_il_piano("S-SCU-AM"); }
-TEST(Unione, PianoSenzaParticolariScuolaRitornoMezzogiorno) { controlla_il_piano("S-SCU-RM"); }
-TEST(Unione, PianoSenzaParticolariSuperiori) { controlla_il_piano("S-SUP-RM"); }
-TEST(Unione, PianoSenzaParticolariCentroDiurno) { controlla_il_piano("S-DIS"); }
-TEST(Unione, PianoSenzaParticolariAsilo) { controlla_il_piano("S-ASILO"); }
-TEST(Unione, PianoSenzaParticolariLineaB610) { controlla_il_piano("S-LIN-B610"); }
-TEST(Unione, PianoSenzaParticolariCentroDiurnoGiovedi) { controlla_il_piano("S-DIS-GIO"); }
-TEST(Unione, PianoSenzaParticolariLineaB620) { controlla_il_piano("S-LIN-B620"); }
-TEST(Unione, PianoSenzaParticolariGita) { controlla_il_piano("S-GITA"); }
-TEST(Unione, PianoSenzaParticolariMatrimonio) { controlla_il_piano("S-MATRIMONIO"); }
-TEST(Unione, PianoSenzaParticolariNoleggioPrivato) { controlla_il_piano("S-PRIVATO-CENTRO"); }
+TEST(Unione, PianoSenzaParticolariScuolaAndataMattina) { controlla_il_piano_del_servizio("S-SCU-AM"); }
+TEST(Unione, PianoSenzaParticolariScuolaRitornoMezzogiorno) { controlla_il_piano_del_servizio("S-SCU-RM"); }
+TEST(Unione, PianoSenzaParticolariSuperiori) { controlla_il_piano_del_servizio("S-SUP-RM"); }
+TEST(Unione, PianoSenzaParticolariCentroDiurno) { controlla_il_piano_del_servizio("S-DIS"); }
+TEST(Unione, PianoSenzaParticolariAsilo) { controlla_il_piano_del_servizio("S-ASILO"); }
+TEST(Unione, PianoSenzaParticolariLineaB610) { controlla_il_piano_del_servizio("S-LIN-B610"); }   // tutti i tipi, sempre
+TEST(Unione, PianoSenzaParticolariCentroDiurnoGiovedi) { controlla_il_piano_del_servizio("S-DIS-GIO"); }
+TEST(Unione, PianoSenzaParticolariLineaB620) { controlla_il_piano_del_servizio("S-LIN-B620"); }
+TEST(Unione, PianoSenzaParticolariGita) { controlla_il_piano_del_servizio("S-GITA"); }
+TEST(Unione, PianoSenzaParticolariMatrimonio) { controlla_il_piano_del_servizio("S-MATRIMONIO"); }
+TEST(Unione, PianoSenzaParticolariNoleggioPrivato) { controlla_il_piano_del_servizio("S-PRIVATO-CENTRO"); }
 
 // Due casi che nel demo non ci sono, con la stessa prova (sabotaggi del K-017).
 // Il mezzo abituale segue chi fa il turno: T-SCUOLA-1 con il mezzo abituale di P-E e la sua autorizzazione del committente CVA
@@ -2363,6 +2398,26 @@ TEST(Unione, PianoSenzaParticolariSecondoAutista) {
     EXPECT_EQ(secondo.at("persona_prevista").at("codice"), "P-B5");
     EXPECT_EQ(scolastico.titolare.at("T-B-SECONDO").persona, "-");   // scoperto: la patente D per BETA-01 e' scaduta
     EXPECT_EQ(linea.titolare.at("T-B-SECONDO").persona, "P-B5");      // nessun mezzo: niente da guidare
+}
+
+// Le varianti delle prove dei singoli servizi: nella costruzione normale tutti i tipi; con il sanitizer il suo tipo e quello dopo,
+// S-LIN-B610 tutti.
+TEST(Unione, PianoSenzaParticolariVariantiDelSanitizer) {
+    const JsonDati s = JsonDati::parse(demo_in_chiaro().file.at("servizi.json"));
+    for (const JsonDati& x : s.at("servizi")) {
+        const std::string servizio = x.at("codice").get<std::string>(), suo = x.at("tipo").get<std::string>();
+        const std::vector<std::string> tipi = tipi_del_servizio(servizio);
+        std::cout << "[ " << servizio << " ] " << (kColSanitizer ? "costruzione con il sanitizer" : "costruzione normale") << ":";
+        for (const std::string& t : tipi) std::cout << " " << t;
+        std::cout << std::endl;
+        if (!kColSanitizer || servizio == "S-LIN-B610") {
+            EXPECT_EQ(tipi, kTipi) << servizio;
+            continue;
+        }
+        ASSERT_EQ(tipi.size(), 2u) << servizio;
+        EXPECT_EQ(tipi[0], suo) << servizio;
+        EXPECT_NE(tipi[1], suo) << servizio;
+    }
 }
 
 // Ogni servizio del demo ha la sua prova qui sopra (un servizio nuovo nel demo va aggiunto).

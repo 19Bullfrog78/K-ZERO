@@ -38,6 +38,11 @@ add_executable(test_unione test_unione.cpp)
 target_link_libraries(test_unione PRIVATE kzero_api GTest::gtest_main)
 target_compile_options(test_unione PRIVATE ${KZERO_WARNINGS})
 target_compile_definitions(test_unione PRIVATE KZERO_CARTELLA_PROVE="${CMAKE_CURRENT_SOURCE_DIR}")
+# K-017 aggiunta 1: con il sanitizer la prova per differenza del piano fa una parte delle varianti (test_unione.cpp,
+# tipi_del_servizio). La prova lo sa dalla costruzione, non da una variabile d'ambiente.
+if(KZERO_SANITIZER)
+  target_compile_definitions(test_unione PRIVATE KZERO_PROVE_COL_SANITIZER=1)
+endif()
 gtest_discover_tests(test_unione PROPERTIES LABELS sicurezza)
 add_executable(test_registro test_registro.cpp)
 target_link_libraries(test_registro PRIVATE kzero_api GTest::gtest_main)

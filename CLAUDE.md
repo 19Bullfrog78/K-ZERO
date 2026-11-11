@@ -87,7 +87,11 @@ Si parte da ALP (3 minibus + 1 auto) e si deve poter crescere fino a 500 mezzi e
   (CMake lo segnala); il controllo GitHub le rende obbligatorie (`-DKZERO_SCHEMI_OBBLIGATORI=ON`).
 - Prove con i sanitizer (AddressSanitizer e UndefinedBehaviorSanitizer, si fermano al primo problema; clang come nel
   controllo GitHub; su Ubuntu serve il pacchetto libclang-rt-18-dev): `CC=clang CXX=clang++ cmake -S . -B build-san -DKZERO_SANITIZER=ON -DKZERO_WERROR=ON
-  -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build-san && ctest --test-dir build-san --output-on-failure`
+  -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build-san && ctest --test-dir build-san --output-on-failure`. Con il
+  sanitizer la prova per differenza del piano del K-017 (test_unione, `PianoSenzaParticolari*`) fa solo una parte delle
+  varianti: per ogni servizio il suo tipo e quello dopo nell'elenco, S-LIN-B610 e i casi mirati (mezzo abituale,
+  sovrapposizione, mezzo a bordo, secondo autista) tutti i tipi; lo sa dalla costruzione (KZERO_SANITIZER), mai da una
+  variabile d'ambiente, e scrive quali varianti ha fatto. Nella costruzione normale tutte le varianti.
 - Fuzzing (prove con dati casuali e deformati, libFuzzer, solo clang; su Ubuntu serve il pacchetto libclang-rt-18-dev):
   `CC=clang CXX=clang++ cmake -S . -B build-fuzz -DKZERO_FUZZ=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo &&
   cmake --build build-fuzz --target fuzz_pacchetto fuzz_parametri fuzz_date_e_orari fuzz_cassaforte rigioca_fuzz`

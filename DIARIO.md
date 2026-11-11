@@ -717,6 +717,11 @@
   scolastico BETA-01 (e il secondo autista scoperto), di linea T-B-ASILO senza mezzo, nessun mezzo a bordo (e il secondo
   autista c'e'). Il controllo dei totali della giornata JSON guarda anche il mezzo a bordo. Sabotaggi: quello dell'arbitro e
   "abilitazione del secondo autista guardata solo sul primo mezzo possibile", tutti e due scoperti.
+  **3. Sanitizer, una parte delle varianti** (scelta dell'arbitro: il lavoro del sanitizer su GitHub durava 95 minuti). Nella
+  costruzione con il sanitizer (KZERO_SANITIZER accende KZERO_PROVE_COL_SANITIZER per test_unione) la prova per differenza del
+  piano fa per ogni servizio il suo tipo e quello dopo nell'elenco; S-LIN-B610 e i casi mirati tutti i tipi; nella costruzione
+  normale tutto come prima. Ogni prova scrive quali varianti ha fatto; nuova prova PianoSenzaParticolariVariantiDelSanitizer
+  sulla regola. CLAUDE.md (Comandi) e DECISIONI.md.
 
 ## Bug e limiti noti
 - (K-017) Per chi non apre i dati particolari la regola "certo solo se vale per ogni tipo" e' prudente: valuta ogni requisito
