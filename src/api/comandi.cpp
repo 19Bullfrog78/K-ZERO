@@ -340,7 +340,7 @@ std::vector<DefinizioneComando> crea_comandi() {
          {{"cartella", "Cartella del pacchetto dati, con il manifesto pacchetto.json."}},
          {parametro_formato(), parametro_dati_personali(), parametro_dati_particolari(), parametro_data(), parametro_persona(),
           parametro_mezzo(), parametro_utente(false), parametro_password_da_ingresso()},
-         {"giornata", 4},
+         {"giornata", 5},
          esegui_giornata},
         {"ore",
          "Mostra gli orari di lavoro delle persone, giorno per giorno, in un giorno (--data) o in un periodo (--dal e --al): "
@@ -399,9 +399,12 @@ std::string forma_comando(const DefinizioneComando& c) {
 
 const std::vector<Schema>& schemi_ritirati() {
     // Versioni non piu' prodotte: i file restano in docs/schema per controllare le uscite salvate prima.
-    static const std::vector<Schema> s = {{"controlla", 1}, {"controlla", 2}, {"controlla", 3}, {"controlla", 4}, {"controlla", 5}, {"descrivi", 1},
-                                          {"descrivi", 2},  {"descrivi", 3},  {"descrivi", 4},  {"dimostrazione", 1},
-                                          {"dimostrazione", 2}, {"giornata", 1},  {"giornata", 2}, {"giornata", 3}, {"ore", 1}, {"ore", 2}};
+    static const std::vector<Schema> s = {
+        {"controlla", 1},     {"controlla", 2},     {"controlla", 3}, {"controlla", 4}, {"controlla", 5},
+        {"descrivi", 1},      {"descrivi", 2},      {"descrivi", 3},  {"descrivi", 4},
+        {"dimostrazione", 1}, {"dimostrazione", 2},
+        {"giornata", 1},      {"giornata", 2},      {"giornata", 3},  {"giornata", 4},
+        {"ore", 1},           {"ore", 2}};
     return s;
 }
 
