@@ -62,17 +62,17 @@
       "nota": "Prende l'autobus dal primo a Valfonda, Piazza, alle 17:04."
     },
     {
-      "codice": "T-DIS",
-      "nome": "Centro diurno",
+      "codice": "T-VAL-3",
+      "nome": "Valfonda 3",
       "azienda": "ALFA",
       "ruolo": "autista",
-      "calendario": "CAL-CENTRO",
+      "calendario": "CAL-LMG",
       "mezzo": { "modo": "preciso", "codice": "ALFA-03" },
       "inizio": "L-RIMESSA-ALFA",
       "fine": "L-RIMESSA-ALFA",
       "elementi": [
         { "attivita": "PRESA", "luogo": "L-RIMESSA-ALFA", "dalle": "07:25", "alle": "07:38" },
-        { "corsa": "C-DIS-1", "assistente": "committente" },
+        { "corsa": "C-VAL-3", "assistente": "committente" },
         { "attivita": "VUOTO", "luogo": "L-CENTRO", "verso": "L-RIMESSA-ALFA", "dalle": "08:55", "alle": "09:05", "km_vuoti": 1.0 },
         { "attivita": "PULIZIA", "luogo": "L-RIMESSA-ALFA", "dalle": "09:05", "alle": "09:35" }
       ],
@@ -146,16 +146,16 @@
       ]
     },
     {
-      "codice": "T-DIS-GIO",
-      "nome": "Centro diurno del giovedi'",
+      "codice": "T-VAL-4",
+      "nome": "Valfonda 4 del giovedi'",
       "azienda": "ALFA",
       "ruolo": "autista",
-      "calendario": "CAL-CENTRO-GIO",
+      "calendario": "CAL-GIO",
       "mezzo": { "modo": "preciso", "codice": "ALFA-01" },
       "inizio": "L-RIMESSA-ALFA",
       "fine": "L-RIMESSA-ALFA",
       "elementi": [
-        { "corsa": "C-DIS-GIO" },
+        { "corsa": "C-VAL-4" },
         { "attivita": "VUOTO", "luogo": "L-CENTRO", "verso": "L-RIMESSA-ALFA", "dalle": "08:47", "alle": "08:55", "km_vuoti": 1.0 },
         { "attivita": "FINE", "luogo": "L-RIMESSA-ALFA", "dalle": "08:55", "alle": "09:05" }
       ]
@@ -198,13 +198,13 @@
       "nome": "Auto elettrica",
       "azienda": "ALFA",
       "ruolo": "autista",
-      "calendario": "CAL-CENTRO",
+      "calendario": "CAL-LMG",
       "mezzo": { "modo": "preciso", "codice": "ALFA-04" },
       "inizio": "L-RIMESSA-ALFA",
       "fine": "L-RIMESSA-ALFA",
       "elementi": [
         { "attivita": "PRESA", "luogo": "L-RIMESSA-ALFA", "dalle": "07:35", "alle": "07:47" },
-        { "corsa": "C-DIS-R" },
+        { "corsa": "C-VAL-3R" },
         { "attivita": "RICARICA", "luogo": "L-RIMESSA-ALFA", "dalle": "08:45", "alle": "09:30" }
       ],
       "competenze_richieste": ["ELETTRICO"]
@@ -393,17 +393,17 @@
       ]
     },
     {
-      "codice": "T-PRIVATO-CENTRO",
+      "codice": "T-PRIVATO",
       "nome": "Noleggio privato",
       "azienda": "ALFA",
       "ruolo": "autista",
-      "calendario": "CAL-PRIVATO-CENTRO",
+      "calendario": "CAL-PRIVATO",
       "mezzo": { "modo": "preciso", "codice": "ALFA-06" },
       "inizio": "L-RIMESSA-ALFA",
       "fine": "L-RIMESSA-ALFA",
       "elementi": [
         { "attivita": "PRESA", "luogo": "L-RIMESSA-ALFA", "dalle": "07:45", "alle": "08:00" },
-        { "corsa": "C-PRIVATO-CENTRO" },
+        { "corsa": "C-PRIVATO" },
         { "attivita": "FINE", "luogo": "L-RIMESSA-ALFA", "dalle": "09:10", "alle": "09:20" }
       ]
     }

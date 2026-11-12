@@ -54,9 +54,9 @@ S-SCU-RM  Ritorno mezzogiorno medie
 S-SUP-RM  Ritorno superiori a supporto della linea B610
    tipo: riservato  contratto CT-LIN (committente TPV "Trasporti Provinciali Valfonda (inventato)")  calendario CAL-SCUOLA-LV
    gruppo G-RM-SUP  tipo: riservato  scuola SC-SUP  persone 5 in 4 fermate  carrozzine: riservato  ausili piegati: riservato  assistente richiesto: riservato
-S-DIS  Trasporto al centro diurno Il Faro
-   tipo: riservato  contratto CT-SCU (committente CVA "Consorzio Valle Alta (inventato)")  calendario CAL-CENTRO
-   gruppo G-DIS  tipo: riservato  scuola SC-CENTRO  persone 3 in 4 fermate  carrozzine: riservato  ausili piegati: riservato  assistente richiesto: riservato
+S-VAL-3  Servizio Valfonda 3
+   tipo: riservato  contratto CT-SCU (committente CVA "Consorzio Valle Alta (inventato)")  calendario CAL-LMG
+   gruppo G-VAL-3  tipo: riservato  scuola SC-CENTRO  persone 3 in 4 fermate  carrozzine: riservato  ausili piegati: riservato  assistente richiesto: riservato
       passeggero P-D1  attivo  sale a PP-01, scende a L-CENTRO  esigenze: riservato
       passeggero P-D2  attivo  sale a PP-02, scende a L-CENTRO  esigenze: riservato
       passeggero P-D3  attivo  sale a PP-03, scende a L-CENTRO  esigenze: riservato
@@ -74,9 +74,9 @@ S-ASILO  Scuola dell'infanzia di Lagobello, andata
 S-LIN-B610  Linea B610 Valfonda - Pradello
    tipo: riservato  contratto CT-LIN (committente TPV "Trasporti Provinciali Valfonda (inventato)")  calendario CAL-FERIALI
    gruppo G-LIN  tipo: riservato  persone non note in 4 fermate  carrozzine: riservato  ausili piegati: riservato  assistente richiesto: riservato
-S-DIS-GIO  Trasporto al centro diurno Il Faro, il giovedi'
-   tipo: riservato  contratto CT-SCU (committente CVA "Consorzio Valle Alta (inventato)")  calendario CAL-CENTRO-GIO
-   gruppo G-DIS-GIO  tipo: riservato  scuola SC-CENTRO  persone 1 in 2 fermate  carrozzine: riservato  ausili piegati: riservato  assistente richiesto: riservato
+S-VAL-4  Servizio Valfonda 4, il giovedi'
+   tipo: riservato  contratto CT-SCU (committente CVA "Consorzio Valle Alta (inventato)")  calendario CAL-GIO
+   gruppo G-VAL-4  tipo: riservato  scuola SC-CENTRO  persone 1 in 2 fermate  carrozzine: riservato  ausili piegati: riservato  assistente richiesto: riservato
       passeggero P-D4  attivo  sale a PP-04, scende a L-CENTRO  esigenze: riservato
 S-LIN-B620  Linea B620 Sorgenta - Montebrino, tutti i giorni
    tipo: riservato  contratto CT-LIN-BETA (committente TPV "Trasporti Provinciali Valfonda (inventato)")  calendario CAL-SEMPRE
@@ -89,9 +89,9 @@ S-MATRIMONIO  Noleggio per un matrimonio
    tipo: riservato  contratto CT-MATRIMONIO (committente CP-01 "Galli Marta")  calendario CAL-MATRIMONIO
    gruppo G-MATRIMONIO-A  tipo: riservato  persone 14 in 2 fermate  carrozzine: riservato  ausili piegati: riservato  assistente richiesto: riservato
    gruppo G-MATRIMONIO-R  tipo: riservato  persone 14 in 2 fermate  carrozzine: riservato  ausili piegati: riservato  assistente richiesto: riservato
-S-PRIVATO-CENTRO  Noleggio privato di un giorno
-   tipo: riservato  contratto CT-PRIVATO-CENTRO (committente CP-02)  calendario CAL-PRIVATO-CENTRO
-   gruppo G-PRIVATO-CENTRO  tipo: riservato  scuola SC-CENTRO  persone 1 in 2 fermate  carrozzine: riservato  ausili piegati: riservato  assistente richiesto: riservato
+S-PRIVATO  Noleggio privato di un giorno
+   tipo: riservato  contratto CT-PRIVATO (committente CP-02)  calendario CAL-PRIVATO
+   gruppo G-PRIVATO  tipo: riservato  scuola SC-CENTRO  persone 1 in 2 fermate  carrozzine: riservato  ausili piegati: riservato  assistente richiesto: riservato
 
 === CORSE ===
 C-AM-1  Andata mattina, giro 1
@@ -122,14 +122,14 @@ C-RM-1  Ritorno mezzogiorno superiori e medie
    12:26  F-MONTEBRINO  Montebrino, Centro  scendono 5  a bordo 5
    12:35  F-PRADELLO  Pradello, Piazza  scendono 5  a bordo 0
    12:47  L-RIMESSA-ALFA  Valfonda, rimessa Autoservizi Alfa  a bordo 0
-C-DIS-R  Centro diurno, ramo di Montebrino
-   categoria: riservato  servizi S-DIS  calendario CAL-CENTRO  07:50-08:45  km a pieno 11,2, a vuoto 19
+C-VAL-3R  Valfonda 3, ramo di Montebrino
+   categoria: riservato  servizi S-VAL-3  calendario CAL-LMG  07:50-08:45  km a pieno 11,2, a vuoto 19
    07:50  L-RIMESSA-ALFA  Valfonda, rimessa Autoservizi Alfa  a bordo 0
    08:05  PP-03  salgono 1  a bordo 1
    08:25  L-TRASB-PONTE  Ponte di Sorgenta, piazzale  consegna il trasbordo T-01 (1)  a bordo 0
    08:45  L-RIMESSA-ALFA  Valfonda, rimessa Autoservizi Alfa  a bordo 0
-C-DIS-1  Centro diurno, giro principale
-   categoria: riservato  servizi S-DIS  calendario CAL-CENTRO  07:40-08:52  km a pieno 20,3, a vuoto 5,5
+C-VAL-3  Valfonda 3, giro principale
+   categoria: riservato  servizi S-VAL-3  calendario CAL-LMG  07:40-08:52  km a pieno 20,3, a vuoto 5,5
    07:40  L-RIMESSA-ALFA  Valfonda, rimessa Autoservizi Alfa  sale l'assistente  a bordo 0
    07:52  PP-01  salgono 1  a bordo 1
    08:05  PP-02  salgono 1  a bordo 2
@@ -153,8 +153,8 @@ C-LIN-560  Linea B610, corsa della sera (finisce dopo mezzanotte)
    23:48  F-CASTELROVO-ALTO  Castelrovo, Alto  a bordo non noto
    24:05  F-VALFONDA-PIAZZA  Valfonda, Piazza Grande  a bordo non noto
    24:12  F-STAZIONE  Valfonda, Stazione FVV  a bordo non noto
-C-DIS-GIO  Centro diurno, giovedi'
-   categoria: riservato  servizi S-DIS-GIO  calendario CAL-CENTRO-GIO  08:05-08:45  km a pieno 9,1, a vuoto 6,4
+C-VAL-4  Valfonda 4, giovedi'
+   categoria: riservato  servizi S-VAL-4  calendario CAL-GIO  08:05-08:45  km a pieno 9,1, a vuoto 6,4
    08:05  L-RIMESSA-ALFA  Valfonda, rimessa Autoservizi Alfa  a bordo 0
    08:20  PP-04  salgono 1  a bordo 1
    08:45  L-CENTRO  Valfonda, Centro diurno Il Faro  scendono 1  a bordo 0
@@ -252,8 +252,8 @@ C-MATRIMONIO-R  Matrimonio, ritorno
    17:30  F-LAGOBELLO  Lagobello, Lago  salgono 14  a bordo 14
    18:05  F-PRADELLO  Pradello, Piazza  scendono 14  a bordo 0
    18:35  L-RIMESSA-ALFA  Valfonda, rimessa Autoservizi Alfa  a bordo 0
-C-PRIVATO-CENTRO  Noleggio privato, andata
-   categoria: riservato  servizi S-PRIVATO-CENTRO  calendario CAL-PRIVATO-CENTRO  08:00-09:10  km a pieno 12, a vuoto 15,5
+C-PRIVATO  Noleggio privato, andata
+   categoria: riservato  servizi S-PRIVATO  calendario CAL-PRIVATO  08:00-09:10  km a pieno 12, a vuoto 15,5
    08:00  L-RIMESSA-ALFA  Valfonda, rimessa Autoservizi Alfa  a bordo 0
    08:20  F-PRADELLO  Pradello, Piazza  salgono 1  a bordo 1
    08:50  L-CENTRO  Valfonda, Centro diurno Il Faro  scendono 1  a bordo 0

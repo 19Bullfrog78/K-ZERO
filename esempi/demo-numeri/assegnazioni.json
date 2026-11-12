@@ -4,14 +4,14 @@
   "assegnazioni": [
     { "data": "2026-10-19", "turno": "T-SCUOLA-1", "mezzo": "ALFA-07" },
     { "data": "2026-10-20", "turno": "T-SCUOLA-1", "mezzo": "ALFA-07" },
-    { "data": "2026-10-22", "turno": "T-DIS", "persona": "P-C" },
+    { "data": "2026-10-22", "turno": "T-VAL-3", "persona": "P-C" },
     { "data": "2026-10-22", "turno": "T-SECONDO", "persona": "P-C" },
     { "data": "2026-10-23", "turno": "T-SECONDO", "persona": "P-C" },
     { "data": "2026-11-03", "turno": "T-B-ASILO", "persona": "P-C" },
     { "data": "2026-11-03", "turno": "T-B-SERA", "persona": "P-C" },
     { "data": "2026-11-13", "turno": "T-PRIMO", "persona": "P-C" },
     { "data": "2026-11-15", "turno": "T-GITA", "persona": "P-A" },
-    { "data": "2027-07-07", "turno": "T-PRIVATO-CENTRO", "persona": "P-G" },
+    { "data": "2027-07-07", "turno": "T-PRIVATO", "persona": "P-G" },
     { "data": "2027-07-10", "turno": "T-MATRIMONIO", "persona": "P-G" }
   ]
 }

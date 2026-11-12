@@ -11,10 +11,10 @@
     },
     { "codice": "SF-NOTTE", "turno": "T-NOTTE", "persona": "P-NUOVO", "calendario": "CAL-FERIALI" },
     { "codice": "SF-SCUOLA-1", "turno": "T-SCUOLA-1", "persona": "P-E", "calendario": "CAL-SCUOLA-LV" },
-    { "codice": "SF-DIS-GIO", "turno": "T-DIS-GIO", "persona": "P-E", "calendario": "CAL-CENTRO-GIO" },
+    { "codice": "SF-VAL-4", "turno": "T-VAL-4", "persona": "P-E", "calendario": "CAL-GIO" },
     { "codice": "SF-SCUOLA-2", "turno": "T-SCUOLA-2", "persona": "P-F", "calendario": "CAL-SCUOLA-LV" },
     { "codice": "SF-SCUOLA-3", "turno": "T-SCUOLA-3", "persona": "P-G", "calendario": "CAL-SCUOLA-LV" },
-    { "codice": "SF-AUTO", "turno": "T-AUTO", "persona": "P-D", "calendario": "CAL-CENTRO" },
+    { "codice": "SF-AUTO", "turno": "T-AUTO", "persona": "P-D", "calendario": "CAL-LMG" },
     { "codice": "SF-RISERVA", "turno": "T-RISERVA", "persona": "P-D", "calendario": "CAL-MAR-VEN" },
     { "codice": "SF-B-ACCOMP", "turno": "T-B-ACCOMP", "persona": "P-B4", "calendario": "CAL-INFANZIA" },
     {

@@ -944,7 +944,7 @@ TEST(Orari, contratto_con_due_regimi_certi_il_conteggio_piu_basso) {
 
 // Nessun regime certo, un regime da confermare che conta meno del lavoro "senza regime": il conteggio certo e' il piu' basso
 // tra quelli possibili (anche quello del regime da confermare), quindi nessun errore, ma un avviso con il motivo. Caso
-// dell'arbitro sul demo: P-A con T-DIS (L. 138, Reg. 561 e D.Lgs. 234 da confermare), K-CTR-120 e non K-CTR-119.
+// dell'arbitro sul demo: P-A con T-VAL-3 (L. 138, Reg. 561 e D.Lgs. 234 da confermare), K-CTR-120 e non K-CTR-119.
 TEST(Orari, contratto_regime_da_confermare_nessun_errore_non_certo) {
     const auto prova = [](double massime) {
         Prova p({conteggio({TimeCategory::Driving})});
@@ -1260,7 +1260,7 @@ TEST(Orari, modo_della_corsa_vince_la_scelta_piu_precisa) {
 TEST(Orari, asilo_piu_disabili_scelte_uguali_e_diverse) {
     Prova561 a;
     alfa(a.p.p).trip_modes = modi({per_tipo(ServiceKind::School, TripModeKind::Out), per_tipo(ServiceKind::Disability, TripModeKind::Out)});
-    a.lunga("C-MISTA", {"S-ASILO", "S-DIS"}, 30.0);
+    a.lunga("C-MISTA", {"S-ASILO", "S-VAL-3"}, 30.0);
     const Index ia(a.p.p);
     EXPECT_EQ(trip_mode(a.p.p.trips.back(), &alfa(a.p.p), ia, giorno("2026-10-05")).mode, TripModeKind::Out);
     EXPECT_TRUE(a.p.problemi(Check::ModeMixed).empty());
@@ -1268,7 +1268,7 @@ TEST(Orari, asilo_piu_disabili_scelte_uguali_e_diverse) {
     EXPECT_TRUE(a.p.problemi(Check::LawDrivingToConfirm).empty()) << elenco(a.p.problemi(Check::LawDrivingToConfirm));
     Prova561 b;
     alfa(b.p.p).trip_modes = modi({per_tipo(ServiceKind::School, TripModeKind::Out), per_tipo(ServiceKind::Disability, TripModeKind::Tachograph)});
-    b.lunga("C-MISTA", {"S-ASILO", "S-DIS"}, 30.0);
+    b.lunga("C-MISTA", {"S-ASILO", "S-VAL-3"}, 30.0);
     const Index ib(b.p.p);
     const TripMode m = trip_mode(b.p.p.trips.back(), &alfa(b.p.p), ib, giorno("2026-10-05"));
     EXPECT_EQ(m.mode, TripModeKind::Tachograph);
@@ -1288,9 +1288,9 @@ TEST(Orari, out_dalle_scelte_diverse_tipi_particolare_servizi_comune) {
     for (const bool tipi : {true, false}) {
         Prova561 a;
         alfa(a.p.p).trip_modes = tipi ? modi({per_tipo(ServiceKind::School, TripModeKind::Out), per_tipo(ServiceKind::Disability, TripModeKind::Tachograph)})
-                                      : modi({}, {per_servizio("S-ASILO", TripModeKind::Out), per_servizio("S-DIS", TripModeKind::Tachograph)});
+                                      : modi({}, {per_servizio("S-ASILO", TripModeKind::Out), per_servizio("S-VAL-3", TripModeKind::Tachograph)});
         alfa(a.p.p).trip_modes->mixed = MixedModes::Out;
-        a.lunga("C-MISTA", {"S-ASILO", "S-DIS"}, 60.0);
+        a.lunga("C-MISTA", {"S-ASILO", "S-VAL-3"}, 60.0);
         const auto v = a.p.problemi(Check::ModeOutNotValid);
         ASSERT_EQ(v.size(), 1u) << elenco(a.p.tutti());
         EXPECT_EQ(v[0].variant, tipi ? 4 : 3);
@@ -1300,7 +1300,7 @@ TEST(Orari, out_dalle_scelte_diverse_tipi_particolare_servizi_comune) {
 // Scolastico e scolastico + disabili fino a 50 km esclusi con certezza (consulente, 28/10); solo disabili da confermare.
 TEST(Orari, scolastico_escluso_solo_disabili_da_confermare) {
     for (const auto& [servizi, da_confermare] :
-         std::vector<std::pair<std::vector<std::string>, bool>>{{{"S-ASILO"}, false}, {{"S-ASILO", "S-DIS"}, false}, {{"S-DIS"}, true}}) {
+         std::vector<std::pair<std::vector<std::string>, bool>>{{{"S-ASILO"}, false}, {{"S-ASILO", "S-VAL-3"}, false}, {{"S-VAL-3"}, true}}) {
         Prova561 a;
         a.lunga("C-X", servizi, 30.0);
         EXPECT_TRUE(a.p.problemi(Check::LawDrivingViolated).empty()) << servizi.size();
@@ -1312,9 +1312,9 @@ TEST(Orari, scolastico_escluso_solo_disabili_da_confermare) {
 // senza la dichiarazione gli avvisi restano.
 TEST(Orari, dichiarazione_su_un_servizio_solo_disabili) {
     Prova561 a;
-    a.lunga("C-DIS-X", {"S-DIS"}, 30.0);
+    a.lunga("C-DIS-X", {"S-VAL-3"}, 30.0);
     EXPECT_EQ(a.p.problemi(Check::LawDrivingToConfirm).size(), 1u);
-    ModeEntry d = per_servizio("S-DIS", TripModeKind::Out);
+    ModeEntry d = per_servizio("S-VAL-3", TripModeKind::Out);
     d.declaration = giustificazione("/aziende/0/modo_corse/servizi/0/dichiarazione");
     alfa(a.p.p).trip_modes = modi({}, {d});
     EXPECT_TRUE(a.p.problemi(Check::LawDrivingToConfirm).empty()) << elenco(a.p.problemi(Check::LawDrivingToConfirm));
@@ -1411,16 +1411,16 @@ TEST(Orari, forzatura_e_dichiarazione_che_non_servono) {
         EXPECT_EQ(varianti(b.p.problemi(Check::ModeForcedUseless)), std::vector<int>{1});   // sul servizio, vale ma non cambia
         // Dove la legge e' solo da confermare (servizio solo per disabili) la forzatura non cambia niente: serve la dichiarazione.
         Prova561 c;
-        c.lunga("C-DIS-F", {"S-DIS"}, 30.0);
-        ModeEntry h = per_servizio("S-DIS", TripModeKind::Out);
+        c.lunga("C-DIS-F", {"S-VAL-3"}, 30.0);
+        ModeEntry h = per_servizio("S-VAL-3", TripModeKind::Out);
         h.forcing = giustificazione("/aziende/0/modo_corse/servizi/0/forzatura");
         alfa(c.p.p).trip_modes = modi({}, {h});
         EXPECT_EQ(varianti(c.p.problemi(Check::ModeForcedUseless)), std::vector<int>{1});
     }
     {   // Dichiarazione sul servizio solo disabili (serve), sullo scolastico (gia' escluso: 1), su una corsa che non c'e' (2).
         Prova561 a;
-        a.lunga("C-DIS-X", {"S-DIS"}, 30.0);
-        ModeEntry d = per_servizio("S-DIS", TripModeKind::Out);
+        a.lunga("C-DIS-X", {"S-VAL-3"}, 30.0);
+        ModeEntry d = per_servizio("S-VAL-3", TripModeKind::Out);
         d.declaration = giustificazione("/aziende/0/modo_corse/servizi/0/dichiarazione");
         ModeEntry n = per_corsa("C-NESSUNA", TripModeKind::Out);
         n.declaration = giustificazione("/aziende/0/modo_corse/corse/0/dichiarazione");

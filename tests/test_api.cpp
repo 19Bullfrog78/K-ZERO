@@ -293,7 +293,10 @@ TEST(Api, pacchetto_demo_letto) {
     EXPECT_EQ(l.versioni.size(), 24u);   // tutti i file del formato tranne tempi_sosta.json
     for (const char* f : {"calendari.json", "luoghi.json", "persone.json", "committenti.json"}) EXPECT_EQ(l.versioni.at(f), 2) << f;
     // K-012: il tipo di servizio ncc e i servizi occasionali tipo per tipo.
-    for (const char* f : {"regolamenti.json", "servizi.json", "mezzi.json", "aziende.json", "norme.json"}) EXPECT_EQ(l.versioni.at(f), 3) << f;
+    for (const char* f : {"regolamenti.json", "servizi.json", "mezzi.json", "aziende.json"}) EXPECT_EQ(l.versioni.at(f), 3) << f;
+    // K-018: le parole sulla salute del paese (norme 4) e i falsi allarmi (manifesto 3).
+    EXPECT_EQ(l.versioni.at("norme.json"), 4);
+    EXPECT_EQ(l.versioni.at("pacchetto.json"), 3);
     EXPECT_EQ(l.pacchetto.trips.size(), 29u);   // K-012: le corse del matrimonio e del noleggio privato
 }
 
@@ -682,15 +685,15 @@ std::string in_utf16(const std::string& t, bool con_segno = true, bool big_endia
 // Il JSON e' sempre UTF-8: un file salvato come "ANSI" o come "Unicode" (UTF-16) da' un errore chiaro, con il
 // rimedio, invece di un JSON non valido. Il messaggio non riporta il testo del file (potrebbe contenere dati personali).
 TEST(Api, K_CTR_048_file_non_in_utf8) {
-    const std::string vecchio = "\"nome\": \"Centro diurno, giovedi'\"";
+    const std::string vecchio = "\"nome\": \"Valfonda 4, giovedi'\"";
     Memoria ansi;   // la "i" accentata in Latin-1 (un byte, 0xEC)
-    ansi.sostituisci("corse.json", vecchio, "\"nome\": \"Centro diurno, gioved\xEC\"");
+    ansi.sostituisci("corse.json", vecchio, "\"nome\": \"Valfonda 4, gioved\xEC\"");
     EXPECT_TRUE(problemi(ansi, {{Check::NotUtf8, 0, "corse.json", ""}}));
     const Lettura l = leggi_pacchetto(ansi);
     EXPECT_EQ(l.problemi[0].where.line, 282);
-    EXPECT_EQ(l.problemi[0].where.column, 37);
+    EXPECT_EQ(l.problemi[0].where.column, 34);
     EXPECT_FALSE(l.usato("corse.json"));
-    EXPECT_EQ(messaggio(ansi), "Il file non e' salvato in UTF-8: alla riga 282, colonna 37 c'e' un carattere scritto in "
+    EXPECT_EQ(messaggio(ansi), "Il file non e' salvato in UTF-8: alla riga 282, colonna 34 c'e' un carattere scritto in "
                                "un'altra codifica (succede con i file salvati come \"ANSI\" da programmi vecchi). Salvarlo "
                                "di nuovo scegliendo la codifica UTF-8. Il file non e' stato letto.");
     const Resoconto r = controlla_pacchetto(ansi, Visibilita{true, true});
@@ -711,13 +714,13 @@ TEST(Api, K_CTR_048_file_non_in_utf8) {
 
     // Le lettere accentate scritte in UTF-8 vanno bene, anche con il segno iniziale (BOM) dei programmi di Windows.
     Memoria buono;
-    buono.sostituisci("corse.json", vecchio, "\"nome\": \"Centro diurno, gioved\xC3\xAC\"");
+    buono.sostituisci("corse.json", vecchio, "\"nome\": \"Valfonda 4, gioved\xC3\xAC\"");
     buono.file["mezzi.json"] = "\xEF\xBB\xBF" + *buono.file.at("mezzi.json");
     EXPECT_TRUE(problemi(buono, {}));
     // Sequenze UTF-8 non valide: troncata, codifica troppo lunga, meta' di una coppia UTF-16.
     for (const std::string& sbagliato : {std::string("\xC3"), std::string("\xC0\xAF"), std::string("\xED\xA0\x80")}) {
         Memoria m;
-        m.sostituisci("corse.json", vecchio, "\"nome\": \"Centro diurno, gioved" + sbagliato + "\"");
+        m.sostituisci("corse.json", vecchio, "\"nome\": \"Valfonda 4, gioved" + sbagliato + "\"");
         EXPECT_TRUE(problemi(m, {{Check::NotUtf8, 0, "corse.json", ""}}));
     }
 }
@@ -725,11 +728,11 @@ TEST(Api, K_CTR_048_file_non_in_utf8) {
 // Un testo vuoto viola due regole dello schema (troppo corto e senza un carattere visibile): un solo errore.
 TEST(Api, testo_vuoto_un_solo_errore) {
     Memoria m;
-    m.sostituisci("corse.json", "\"nome\": \"Centro diurno, giovedi'\"", "\"nome\": \"\"");
+    m.sostituisci("corse.json", "\"nome\": \"Valfonda 4, giovedi'\"", "\"nome\": \"\"");
     EXPECT_TRUE(problemi(m, {{Check::SchemaViolation, 0, "corse.json", "/corse/9/nome"}}));
     EXPECT_EQ(messaggio(m), "Non rispetta lo schema: testo vuoto. Il file non e' stato usato.");
     Memoria spazi;
-    spazi.sostituisci("corse.json", "\"nome\": \"Centro diurno, giovedi'\"", "\"nome\": \"   \"");
+    spazi.sostituisci("corse.json", "\"nome\": \"Valfonda 4, giovedi'\"", "\"nome\": \"   \"");
     EXPECT_TRUE(problemi(spazi, {{Check::SchemaViolation, 0, "corse.json", "/corse/9/nome"}}));
     EXPECT_EQ(messaggio(spazi), "Non rispetta lo schema: forma non valida (\"   \"): Testo di una riga, non vuoto (al massimo "
                                 "300 caratteri). Il file non e' stato usato.");
@@ -1038,7 +1041,7 @@ TEST(Api, problemi_sui_dati_particolari_contati_e_non_elencati) {
     ASSERT_FALSE(particolari.problemi.empty());
     EXPECT_EQ(particolari.problemi.front().codice, "K-CTR-047");
     EXPECT_EQ(particolari.problemi.front().messaggio,
-              "Il passeggero P-D1 ha bisogno dell'assistente a bordo, ma il gruppo G-DIS (Centro diurno, andata) non richiede "
+              "Il passeggero P-D1 ha bisogno dell'assistente a bordo, ma il gruppo G-VAL-3 (Servizio Valfonda 3, andata) non richiede "
               "l'assistente.");
 }
 
@@ -1098,11 +1101,11 @@ TEST(Api, luoghi_sensibili_nei_messaggi) {
         return p.messaggio(kzero::Problem{Check::CountsDifferFromPassengers, 3, kzero::Source{},
                                           {kzero::ref_param("passeggero", kzero::Element::Passenger, passeggero),
                                            kzero::ref_param("luogo", kzero::Element::Place, luogo),
-                                           kzero::ref_param("gruppo", kzero::Element::Group, "G-DIS")}});
+                                           kzero::ref_param("gruppo", kzero::Element::Group, "G-VAL-3")}});
     };
     EXPECT_EQ(messaggio("P-D1", "L-CENTRO", Visibilita{true, false}),
               "Il passeggero P-D1 sale o scende a L-CENTRO (Valfonda, Centro diurno Il Faro), che non e' tra le fermate del "
-              "gruppo G-DIS (Centro diurno, andata).");
+              "gruppo G-VAL-3 (Servizio Valfonda 3, andata).");
     EXPECT_EQ(messaggio("P-D1", "L-CENTRO", Visibilita{}), messaggio("P-D1", "L-CENTRO", Visibilita{true, false}));
     EXPECT_NE(messaggio("P-D1", "L-CENTRO", Visibilita{true, true}).find("P-D1 (Bianchi Luca) sale o scende a L-CENTRO"),
               std::string::npos);
@@ -1134,7 +1137,7 @@ TEST(Api, legame_con_i_luoghi_sensibili) {
         const kzero::Index idx(l.pacchetto);
         prova(LegameSensibile(&idx));
     };
-    // Il demo: chi va al centro diurno (gruppi G-DIS e G-DIS-GIO) e le loro case; non i bambini dell'asilo, non il
+    // Il demo: chi va al centro diurno (gruppi G-VAL-3 e G-VAL-4) e le loro case; non i bambini dell'asilo, non il
     // garage presso la casa di un autista.
     legame_di(Memoria(), [](const LegameSensibile& x) {
         for (const char* q : {"P-D1", "P-D2", "P-D3", "P-D4"}) EXPECT_TRUE(x.passeggero(q)) << q;
@@ -1207,7 +1210,7 @@ TEST(Api, legame_dei_committenti_privati) {
     auto& pr = corsa(passa, "C-MATRIMONIO-R").passages;
     pr.insert(pr.begin() + 1, centro);
     legame_di(passa, [](const LegameSensibile& x) { EXPECT_TRUE(x.committente("CP-01")); });
-    // Un trasbordo tra la corsa del matrimonio e quella che va al centro (C-DIS-1).
+    // Un trasbordo tra la corsa del matrimonio e quella che va al centro (C-VAL-3).
     kzero::Package trasbordo = base.pacchetto;
     kzero::TransferHalf h;
     h.code = "T-PROVA";
@@ -1215,7 +1218,7 @@ TEST(Api, legame_dei_committenti_privati) {
     h.persons = 1;
     corsa(trasbordo, "C-MATRIMONIO-A").passages[1].transfers.push_back(h);
     h.action = kzero::TransferAction::Receive;
-    corsa(trasbordo, "C-DIS-1").passages[1].transfers.push_back(h);
+    corsa(trasbordo, "C-VAL-3").passages[1].transfers.push_back(h);
     legame_di(trasbordo, [](const LegameSensibile& x) { EXPECT_TRUE(x.committente("CP-01")); });
     // Una casa porta a porta tra le fermate di un gruppo del matrimonio: con il porta a porta sensibile (il demo) e' legato;
     // senza no (la casa e' legata, ma per chi ci abita, non per chi noleggia).
@@ -1263,7 +1266,7 @@ TEST(Api, casa_e_luogo_sensibile_nei_messaggi) {
     const auto messaggio = [&l](const std::string& da, const std::string& a, Visibilita v) {
         const Presentatore p(&l.pacchetto, &l.versioni, v);
         return p.messaggio(kzero::Problem{Check::TripPartsGap, 0, kzero::Source{},
-                                          {kzero::ref_param("corsa", kzero::Element::Trip, "C-DIS-1"),
+                                          {kzero::ref_param("corsa", kzero::Element::Trip, "C-VAL-3"),
                                            kzero::ref_param("da", kzero::Element::Place, da), kzero::ref_param("a", kzero::Element::Place, a),
                                            kzero::days_param("giorni", kzero::day_from_ymd(2026, 10, 22))}});
     };
@@ -1337,9 +1340,9 @@ TEST(Api, filtro_delle_classi_nei_messaggi) {
     const Resoconto r0 = controlla_pacchetto(rotto, Visibilita{});
     const Resoconto r1 = controlla_pacchetto(rotto, Visibilita{true, true});
     ASSERT_GE(r0.errori, 1);
-    EXPECT_EQ(r0.problemi[0].messaggio, "Gruppo G-DIS (Centro diurno, andata), fermata PP-02: le persone che salgono (1) "
+    EXPECT_EQ(r0.problemi[0].messaggio, "Gruppo G-VAL-3 (Servizio Valfonda 3, andata), fermata PP-02: le persone che salgono (1) "
                                         "non corrispondono ai passeggeri che salgono qui (2).");
-    EXPECT_EQ(r1.problemi[0].messaggio, "Gruppo G-DIS (Centro diurno, andata), fermata PP-02 (Casa Verdi): le persone che "
+    EXPECT_EQ(r1.problemi[0].messaggio, "Gruppo G-VAL-3 (Servizio Valfonda 3, andata), fermata PP-02 (Casa Verdi): le persone che "
                                         "salgono (1) non corrispondono ai passeggeri che salgono qui (2).");
     for (const auto& p : r0.problemi) {
         EXPECT_EQ(p.messaggio.find("Casa"), std::string::npos) << p.messaggio;

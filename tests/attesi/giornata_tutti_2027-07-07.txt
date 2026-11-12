@@ -54,7 +54,7 @@ T-B-PRIMO "Primo"  06:20-13:50 (7 ore e 30 minuti)  azienda BETA, autista
 T-AUTO "Auto elettrica"  07:15-09:52 (2 ore e 37 minuti)  azienda ALFA, autista
    Persona: P-D, servizio fisso SF-AUTO (servizi_fissi.json /servizi_fissi/6)
    Mezzo: ALFA-04 (AA 104 AA, M1, 4 posti, uso NCC), scritto nel turno
-   Calendario CAL-CENTRO "Centro diurno: lunedi', mercoledi' e giovedi'"; il turno c'e' in 139 giorni del periodo
+   Calendario CAL-LMG "Lunedi', mercoledi' e giovedi'"; il turno c'e' in 139 giorni del periodo
    Competenze richieste: riservato
    Comincia a PR-01, finisce a PR-01
    Nota: L'auto dorme nel garage vicino a casa dell'autista.
@@ -62,10 +62,10 @@ T-AUTO "Auto elettrica"  07:15-09:52 (2 ore e 37 minuti)  azienda ALFA, autista
                 (fermo 2 minuti)
    07:27-07:47  Trasferimento a vuoto (VUOTO), da PR-01 a L-RIMESSA-ALFA (Valfonda, rimessa Autoservizi Alfa), km a vuoto 4,8
                 (fermo 3 minuti)
-   07:50-08:45  corsa C-DIS-R "Centro diurno, ramo di Montebrino"
-                servizi S-DIS (tipo riservato, contratto CT-SCU, committente CVA "Consorzio Valle Alta (inventato)")
+   07:50-08:45  corsa C-VAL-3R "Valfonda 3, ramo di Montebrino"
+                servizi S-VAL-3 (tipo riservato, contratto CT-SCU, committente CVA "Consorzio Valle Alta (inventato)")
                 modo per un dato particolare
-                calendario CAL-CENTRO "Centro diurno: lunedi', mercoledi' e giovedi'", 139 giorni nel periodo; km a pieno 11,2, a vuoto 19
+                calendario CAL-LMG "Lunedi', mercoledi' e giovedi'", 139 giorni nel periodo; km a pieno 11,2, a vuoto 19
       07:50  L-RIMESSA-ALFA  Valfonda, rimessa Autoservizi Alfa  a bordo 0
       08:05  PP-03  salgono 1  km a vuoto 9  a bordo 1
       08:25  L-TRASB-PONTE  Ponte di Sorgenta, piazzale  consegna il trasbordo T-01 (1)  km a pieno 11,2  a bordo 0
@@ -135,19 +135,19 @@ T-PRIMO "Primo"  07:15-17:15 (10 ore)  azienda ALFA, autista
    17:05-17:15  Spostamento della persona senza il mezzo (A-PIEDI), da F-VALFONDA-PIAZZA (Valfonda, Piazza Grande) a L-RIMESSA-ALFA (Valfonda, rimessa Autoservizi Alfa), senza il mezzo
    Totale del turno: km a pieno 59,2, a vuoto 15,8; fermo 2 ore e 29 minuti.
 
-T-DIS "Centro diurno"  07:25-09:35 (2 ore e 10 minuti)  azienda ALFA, autista
+T-VAL-3 "Valfonda 3"  07:25-09:35 (2 ore e 10 minuti)  azienda ALFA, autista
    Persona: P-A, rotazione ROT-ALFA, passo 3 (rotazioni.json /rotazioni/0/righe/0)
    Mezzo: ALFA-03 (AA 103 AA, M2, 12 posti, uso NCC), scritto nel turno
-   Calendario CAL-CENTRO "Centro diurno: lunedi', mercoledi' e giovedi'"; il turno c'e' in 139 giorni del periodo
+   Calendario CAL-LMG "Lunedi', mercoledi' e giovedi'"; il turno c'e' in 139 giorni del periodo
    Competenze richieste: riservato
    Comincia a L-RIMESSA-ALFA (Valfonda, rimessa Autoservizi Alfa), finisce a L-RIMESSA-ALFA (Valfonda, rimessa Autoservizi Alfa)
    Nota: Il mattino del secondo, con il mezzo attrezzato: poi il secondo cambia mezzo.
    07:25-07:38  Presa servizio con il controllo del mezzo (PRESA), a L-RIMESSA-ALFA (Valfonda, rimessa Autoservizi Alfa)
                 (fermo 2 minuti)
-   07:40-08:52  corsa C-DIS-1 "Centro diurno, giro principale"
-                servizi S-DIS (tipo riservato, contratto CT-SCU, committente CVA "Consorzio Valle Alta (inventato)")
+   07:40-08:52  corsa C-VAL-3 "Valfonda 3, giro principale"
+                servizi S-VAL-3 (tipo riservato, contratto CT-SCU, committente CVA "Consorzio Valle Alta (inventato)")
                 modo per un dato particolare
-                calendario CAL-CENTRO "Centro diurno: lunedi', mercoledi' e giovedi'", 139 giorni nel periodo; km a pieno 20,3, a vuoto 5,5; assistente fornito dal committente
+                calendario CAL-LMG "Lunedi', mercoledi' e giovedi'", 139 giorni nel periodo; km a pieno 20,3, a vuoto 5,5; assistente fornito dal committente
       07:40  L-RIMESSA-ALFA  Valfonda, rimessa Autoservizi Alfa  sale l'assistente  a bordo 0
       07:52  PP-01  salgono 1  km a vuoto 5,5  a bordo 1
       08:05  PP-02  salgono 1  km a pieno 4,8  a bordo 2
@@ -158,16 +158,16 @@ T-DIS "Centro diurno"  07:25-09:35 (2 ore e 10 minuti)  azienda ALFA, autista
    09:05-09:35  Pulizia del mezzo (PULIZIA), a L-RIMESSA-ALFA (Valfonda, rimessa Autoservizi Alfa)
    Totale del turno: km a pieno 20,3, a vuoto 6,5; fermo 5 minuti.
 
-T-PRIVATO-CENTRO "Noleggio privato"  07:45-09:20 (1 ora e 35 minuti)  azienda ALFA, autista
+T-PRIVATO "Noleggio privato"  07:45-09:20 (1 ora e 35 minuti)  azienda ALFA, autista
    Persona: P-G, assegnazione del singolo giorno (assegnazioni.json /assegnazioni/9)
    Mezzo: ALFA-06 (AA 106 AA, M2, 14 posti, uso NCC), scritto nel turno
-   Calendario CAL-PRIVATO-CENTRO "Giorno del noleggio privato"; il turno c'e' in 1 giorni del periodo
+   Calendario CAL-PRIVATO "Giorno del noleggio privato"; il turno c'e' in 1 giorni del periodo
    Comincia a L-RIMESSA-ALFA (Valfonda, rimessa Autoservizi Alfa), finisce a L-RIMESSA-ALFA (Valfonda, rimessa Autoservizi Alfa)
    07:45-08:00  Presa servizio con il controllo del mezzo (PRESA), a L-RIMESSA-ALFA (Valfonda, rimessa Autoservizi Alfa)
-   08:00-09:10  corsa C-PRIVATO-CENTRO "Noleggio privato, andata"
-                servizi S-PRIVATO-CENTRO (tipo riservato, contratto CT-PRIVATO-CENTRO, committente CP-02)
+   08:00-09:10  corsa C-PRIVATO "Noleggio privato, andata"
+                servizi S-PRIVATO (tipo riservato, contratto CT-PRIVATO, committente CP-02)
                 modo per un dato particolare
-                calendario CAL-PRIVATO-CENTRO "Giorno del noleggio privato", 1 giorni nel periodo; km a pieno 12, a vuoto 15,5
+                calendario CAL-PRIVATO "Giorno del noleggio privato", 1 giorni nel periodo; km a pieno 12, a vuoto 15,5
       08:00  L-RIMESSA-ALFA  Valfonda, rimessa Autoservizi Alfa  a bordo 0
       08:20  F-PRADELLO  Pradello, Piazza  salgono 1  km a vuoto 9,5  a bordo 1
       08:50  L-CENTRO  Valfonda, Centro diurno Il Faro  scendono 1  km a pieno 12  a bordo 0

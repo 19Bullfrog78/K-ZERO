@@ -4,7 +4,7 @@
   "contratti": [
     {
       "codice": "CT-SCU",
-      "nome": "Trasporto scolastico e disabili, lotto 2",
+      "nome": "Trasporto scolastico, lotto 2",
       "committente": "CVA",
       "azienda": "ALFA",
       "regolamento": "R-TN",
@@ -68,7 +68,7 @@
       "nota": "Il nome del contratto e dei servizi non dice chi e' il cliente: e' un dato comune (K-012)."
     },
     {
-      "codice": "CT-PRIVATO-CENTRO",
+      "codice": "CT-PRIVATO",
       "nome": "Noleggio con conducente di un privato",
       "committente": "CP-02",
       "azienda": "ALFA",

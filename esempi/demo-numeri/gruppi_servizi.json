@@ -6,7 +6,7 @@
       "codice": "LOTTO-2",
       "nome": "Lotto 2 Valle Alta",
       "contratto": "CT-SCU",
-      "servizi": ["S-SCU-AM", "S-SCU-RM", "S-DIS"]
+      "servizi": ["S-SCU-AM", "S-SCU-RM", "S-VAL-3"]
     }
   ]
 }

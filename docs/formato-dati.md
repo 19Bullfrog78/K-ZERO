@@ -17,7 +17,9 @@ quella di ALP, un servizio fisso solo il mercoledi', sostituzioni, un mezzo in r
 scorta, un autobus di linea con la distrazione al noleggio usato per una gita, il cambio dell'autista a meta' corsa,
 turni notturni, spezzati, di riserva e di reperibilita'; in Beta una linea 7 su 7 con orario feriale e festivo e un
 ciclo di 3 giorni. Dal K-012 la gita della Pro Loco e' un servizio NCC e ci sono due committenti privati: il matrimonio di
-CP-01 (sabato 2027-07-10) e il noleggio di CP-02 verso il centro diurno (mercoledi' 2027-07-07). La giornata di un giorno si
+CP-01 (sabato 2027-07-10) e il noleggio di CP-02 verso il centro diurno (mercoledi' 2027-07-07). Dal K-018 i nomi e i codici del
+demo non dicono piu' la salute (il servizio del centro diurno e' `S-VAL-3` "Servizio Valfonda 3"), tranne la nota del blocco
+`B-VAL-3`, lasciata apposta con il suo avviso; un falso allarme spegne il nome alternativo del parcheggio dei pullman. La giornata di un giorno si
 vede con `kzero giornata esempi/demo --data 2026-10-22`.
 
 ## Il pacchetto dati
@@ -755,14 +757,14 @@ stesso (K-CTR-049), direttamente o attraverso altri, e' un errore.
 
 ```json
 {
-  "codice": "CAL-CENTRO",
-  "nome": "Centro diurno: lunedi', mercoledi' e giovedi'",
+  "codice": "CAL-LMG",
+  "nome": "Lunedi', mercoledi' e giovedi'",
   "dal": "2026-09-01",
   "al": "2027-07-30",
   "giorni": ["lunedi", "mercoledi", "giovedi"],
   "date_aggiunte": ["2026-12-22"],
   "date_tolte": ["2027-06-02"],
-  "sospensioni": [{ "dal": "2026-12-24", "al": "2026-12-31", "motivo": "Chiusura del centro" }]
+  "sospensioni": [{ "dal": "2026-12-24", "al": "2026-12-31", "motivo": "Chiusura per le feste" }]
 }
 ```
 

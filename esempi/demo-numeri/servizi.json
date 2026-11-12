@@ -102,20 +102,20 @@
       }
     },
     {
-      "codice": "S-DIS",
-      "nome": "Trasporto al centro diurno Il Faro",
+      "codice": "S-VAL-3",
+      "nome": "Servizio Valfonda 3",
       "codici_esterni": [{ "sistema": "Consorzio Valle Alta", "tipo": "scheda", "codice": "48211" }],
       "tipo": "disabili",
       "contratto": "CT-SCU",
-      "calendario": "CAL-CENTRO",
+      "calendario": "CAL-LMG",
       "competenze_richieste": ["PEDANA"],
       "liberta_oraria": { "tipo": "libera", "soglia_da_concordare_minuti": 15 },
       "regole": { "pedana_obbligatoria": true },
       "domanda": {
         "gruppi": [
           {
-            "codice": "G-DIS",
-            "nome": "Centro diurno, andata",
+            "codice": "G-VAL-3",
+            "nome": "Servizio Valfonda 3, andata",
             "tipo": "disabili",
             "verso": "andata",
             "scuola": "SC-CENTRO",
@@ -185,18 +185,18 @@
       }
     },
     {
-      "codice": "S-DIS-GIO",
-      "nome": "Trasporto al centro diurno Il Faro, il giovedi'",
+      "codice": "S-VAL-4",
+      "nome": "Servizio Valfonda 4, il giovedi'",
       "codici_esterni": [{ "sistema": "Consorzio Valle Alta", "tipo": "scheda", "codice": "48230" }],
       "tipo": "disabili",
       "contratto": "CT-SCU",
-      "calendario": "CAL-CENTRO-GIO",
+      "calendario": "CAL-GIO",
       "liberta_oraria": { "tipo": "libera", "soglia_da_concordare_minuti": 15 },
       "domanda": {
         "gruppi": [
           {
-            "codice": "G-DIS-GIO",
-            "nome": "Centro diurno, andata del giovedi'",
+            "codice": "G-VAL-4",
+            "nome": "Servizio Valfonda 4, andata del giovedi'",
             "tipo": "disabili",
             "verso": "andata",
             "scuola": "SC-CENTRO",
@@ -304,16 +304,16 @@
       }
     },
     {
-      "codice": "S-PRIVATO-CENTRO",
+      "codice": "S-PRIVATO",
       "nome": "Noleggio privato di un giorno",
       "tipo": "ncc",
-      "contratto": "CT-PRIVATO-CENTRO",
-      "calendario": "CAL-PRIVATO-CENTRO",
+      "contratto": "CT-PRIVATO",
+      "calendario": "CAL-PRIVATO",
       "liberta_oraria": { "tipo": "fissa" },
       "domanda": {
         "gruppi": [
           {
-            "codice": "G-PRIVATO-CENTRO",
+            "codice": "G-PRIVATO",
             "nome": "Andata",
             "tipo": "disabili",
             "verso": "andata",

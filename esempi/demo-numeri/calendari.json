@@ -35,14 +35,14 @@
       "giorni": ["lunedi", "martedi", "mercoledi", "giovedi", "venerdi"]
     },
     {
-      "codice": "CAL-CENTRO",
-      "nome": "Centro diurno: lunedi', mercoledi' e giovedi'",
+      "codice": "CAL-LMG",
+      "nome": "Lunedi', mercoledi' e giovedi'",
       "dal": "2026-09-01",
       "al": "2027-07-30",
       "giorni": ["lunedi", "mercoledi", "giovedi"],
       "date_aggiunte": ["2026-12-22"],
       "date_tolte": ["2027-06-02"],
-      "sospensioni": [{ "dal": "2026-12-24", "al": "2026-12-31", "motivo": "Chiusura del centro" }]
+      "sospensioni": [{ "dal": "2026-12-24", "al": "2026-12-31", "motivo": "Chiusura per le feste" }]
     },
     {
       "codice": "CAL-FERIALI",
@@ -54,9 +54,9 @@
       "toglie": { "festivita": ["FEST-IT"] }
     },
     {
-      "codice": "CAL-CENTRO-GIO",
-      "nome": "Centro diurno: solo il giovedi'",
-      "base": "CAL-CENTRO",
+      "codice": "CAL-GIO",
+      "nome": "Solo il giovedi'",
+      "base": "CAL-LMG",
       "dal": "2026-09-01",
       "al": "2027-07-30",
       "giorni": ["giovedi"]
@@ -87,12 +87,12 @@
     },
     {
       "codice": "CAL-MAR-VEN",
-      "nome": "Martedi' e venerdi' di scuola, senza i giorni del centro diurno",
+      "nome": "Martedi' e venerdi' di scuola",
       "base": "CAL-SCUOLA-LV",
       "dal": "2026-09-14",
       "al": "2027-06-12",
       "giorni": ["martedi", "venerdi"],
-      "toglie": { "calendari": ["CAL-CENTRO"] }
+      "toglie": { "calendari": ["CAL-LMG"] }
     },
     {
       "codice": "CAL-FESTIVI",
@@ -119,7 +119,7 @@
       "date_aggiunte": ["2027-07-10"]
     },
     {
-      "codice": "CAL-PRIVATO-CENTRO",
+      "codice": "CAL-PRIVATO",
       "nome": "Giorno del noleggio privato",
       "dal": "2027-07-01",
       "al": "2027-07-31",

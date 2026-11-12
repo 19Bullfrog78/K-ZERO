@@ -197,7 +197,7 @@ TEST(Giornata, case_e_luoghi_sensibili) {
         EXPECT_EQ(testo.find("\"codice\":\"riservato\""), std::string::npos) << quale;
         EXPECT_NE(testo.find("Valfonda, Centro diurno Il Faro"), std::string::npos) << quale;
         const Json* turno = nullptr;
-        const Json* c = corsa(doc, "C-DIS-1", &turno);
+        const Json* c = corsa(doc, "C-VAL-3", &turno);
         ASSERT_NE(c, nullptr) << quale;
         EXPECT_EQ(c->at("passaggi").back().at("luogo"), "L-CENTRO") << quale;
         EXPECT_EQ(c->at("passaggi")[1].at("luogo"), "PP-01") << quale;
@@ -212,7 +212,7 @@ TEST(Giornata, case_e_luoghi_sensibili) {
     }
     // L'auto porta Neri al trasbordo per il centro: la sua casa resta un codice anche se la corsa non arriva al centro.
     const Json auto_elettrica = giornata({"--data", "2026-10-22", "--mezzo", "ALFA-04", "--includi-dati-personali"});
-    const Json* ramo = corsa(auto_elettrica, "C-DIS-R");
+    const Json* ramo = corsa(auto_elettrica, "C-VAL-3R");
     ASSERT_NE(ramo, nullptr);
     std::vector<std::string> luoghi;
     for (const Json& ps : ramo->at("passaggi")) luoghi.push_back(ps.at("luogo").get<std::string>());

@@ -20,16 +20,16 @@ using namespace kzero::prove;
 TEST(Dimostrazione, categorie_ricavate) {
     std::vector<std::pair<std::string, ServiceType>> attese = {
         {"C-AM-1", ServiceType::School},      {"C-AM-2", ServiceType::School},     {"C-AM-3", ServiceType::School},
-        {"C-RM-1", ServiceType::Mixed},       {"C-DIS-R", ServiceType::Disability}, {"C-DIS-1", ServiceType::Disability},
+        {"C-RM-1", ServiceType::Mixed},       {"C-VAL-3R", ServiceType::Disability}, {"C-VAL-3", ServiceType::Disability},
         {"C-ASILO-1", ServiceType::School},   {"C-LIN-533", ServiceType::Line},     {"C-LIN-560", ServiceType::Line},
-        {"C-DIS-GIO", ServiceType::Disability}};
+        {"C-VAL-4", ServiceType::Disability}};
     for (const char* c : {"C-LIN-537", "C-LIN-545", "C-LIN-549", "C-LIN-553", "C-B620-01", "C-B620-02", "C-B620-03", "C-B620-04",
                           "C-B620-05", "C-B620-06", "C-B620-11", "C-B620-12", "C-B620-13", "C-B620-14"})
         attese.push_back({c, ServiceType::Line});
     attese.push_back({"C-GITA-A", ServiceType::Ncc});
     attese.push_back({"C-GITA-R", ServiceType::Ncc});
     // K-012: il matrimonio e il noleggio privato verso il centro diurno (un gruppo di disabili): servizi NCC.
-    for (const char* c : {"C-MATRIMONIO-A", "C-MATRIMONIO-R", "C-PRIVATO-CENTRO"}) attese.push_back({c, ServiceType::Ncc});
+    for (const char* c : {"C-MATRIMONIO-A", "C-MATRIMONIO-R", "C-PRIVATO"}) attese.push_back({c, ServiceType::Ncc});
     const Index idx(demo());
     ASSERT_EQ(demo().trips.size(), attese.size());
     for (std::size_t i = 0; i < attese.size(); ++i) {
