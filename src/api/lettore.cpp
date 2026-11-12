@@ -83,32 +83,12 @@ FileLetto leggi_al_massimo(std::uintmax_t massimo, Leggi leggi_pezzo) {
     return out;
 }
 
-}  // namespace
-
-FileLetto leggi_dal_disco(const std::filesystem::path& cartella, const std::string& nome, std::uintmax_t massimo) {
+// Legge un file che deve essere un file normale (percorso gia' risolto o da seguire), al massimo "massimo" byte: la parte
+// comune della lettura blindata dei file del pacchetto e di quella dei file che arrivano da fuori (K-019).
+FileLetto leggi_file_normale(const std::filesystem::path& vero, std::uintmax_t massimo) {
     namespace fs = std::filesystem;
     FileLetto out;
-    const fs::path percorso = cartella / nome;
     std::error_code ec;
-    const fs::file_status proprio = fs::symlink_status(percorso, ec);
-    if (ec) return out;
-    fs::path vero = percorso;
-    if (fs::is_symlink(proprio)) {
-        // Un collegamento si segue fino in fondo; il file vero deve stare dentro la cartella del pacchetto, risolta
-        // anche lei (puo' essere a sua volta un collegamento, es. una cartella sincronizzata).
-        if (!fs::exists(percorso, ec)) {
-            out.esito = ec ? FileLetto::Esito::Illeggibile : FileLetto::Esito::CollegamentoRotto;
-            return out;
-        }
-        vero = fs::canonical(percorso, ec);
-        if (ec) return out;
-        const fs::path base = fs::canonical(cartella, ec);
-        if (ec) return out;
-        if (!dentro(vero, base)) {
-            out.esito = FileLetto::Esito::FuoriCartella;
-            return out;
-        }
-    }
     const fs::file_status tipo = fs::status(vero, ec);
     if (ec) return out;
     if (!fs::is_regular_file(tipo)) {
@@ -157,6 +137,55 @@ FileLetto leggi_dal_disco(const std::filesystem::path& cartella, const std::stri
         return static_cast<long long>(f.gcount());
     });
 #endif
+}
+
+}  // namespace
+
+FileLetto leggi_dal_disco(const std::filesystem::path& cartella, const std::string& nome, std::uintmax_t massimo) {
+    namespace fs = std::filesystem;
+    FileLetto out;
+    const fs::path percorso = cartella / nome;
+    std::error_code ec;
+    const fs::file_status proprio = fs::symlink_status(percorso, ec);
+    if (ec) return out;
+    fs::path vero = percorso;
+    if (fs::is_symlink(proprio)) {
+        // Un collegamento si segue fino in fondo; il file vero deve stare dentro la cartella del pacchetto, risolta
+        // anche lei (puo' essere a sua volta un collegamento, es. una cartella sincronizzata).
+        if (!fs::exists(percorso, ec)) {
+            out.esito = ec ? FileLetto::Esito::Illeggibile : FileLetto::Esito::CollegamentoRotto;
+            return out;
+        }
+        vero = fs::canonical(percorso, ec);
+        if (ec) return out;
+        const fs::path base = fs::canonical(cartella, ec);
+        if (ec) return out;
+        if (!dentro(vero, base)) {
+            out.esito = FileLetto::Esito::FuoriCartella;
+            return out;
+        }
+    }
+    return leggi_file_normale(vero, massimo);
+}
+
+FileLetto leggi_file_esterno(const std::filesystem::path& file, std::uintmax_t massimo) {
+    namespace fs = std::filesystem;
+    FileLetto out;
+    std::error_code ec;
+    const fs::file_status proprio = fs::symlink_status(file, ec);
+    if (ec) return out;
+    fs::path vero = file;
+    if (fs::is_symlink(proprio)) {
+        // Un collegamento si segue fino in fondo: deve portare a un file normale (qui senza il vincolo della cartella, perche'
+        // il file lo nomina l'utente e non arriva dentro un pacchetto preparato da altri).
+        if (!fs::exists(file, ec)) {
+            out.esito = ec ? FileLetto::Esito::Illeggibile : FileLetto::Esito::CollegamentoRotto;
+            return out;
+        }
+        vero = fs::canonical(file, ec);
+        if (ec) return out;
+    }
+    return leggi_file_normale(vero, massimo);
 }
 
 FileLetto CartellaSuDisco::leggi(const std::string& nome, std::uintmax_t massimo) const {

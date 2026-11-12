@@ -264,6 +264,94 @@
     },
     {
       "type": "library",
+      "bom-ref": "miniz",
+      "name": "miniz",
+      "version": "3.1.2",
+      "description": "Lettura in memoria degli archivi ZIP dei file Excel (.xlsx) dell'elenco utenti del committente (K-019). Si compila il solo miniz.c, senza file su disco, orologio, scrittura ne' compressione.",
+      "scope": "required",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "f0446d863f9c19926ad9483c523fdc42e42b8d4a6a431d27e09d49c79a140d9a"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "purl": "pkg:github/richgel999/miniz@3.1.2",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://github.com/richgel999/miniz/releases/download/3.1.2/miniz-3.1.2.zip"
+        },
+        {
+          "type": "vcs",
+          "url": "https://github.com/richgel999/miniz"
+        }
+      ],
+      "properties": [
+        {
+          "name": "k-zero:uso",
+          "value": "programma"
+        },
+        {
+          "name": "k-zero:nota",
+          "value": "Versione 3.1.2 del 1/7/2026 (commit 77d0dce8627735138c51770d1799a1ef48f2117d), verificata al K-019; nel fuzzing continuo OSS-Fuzz con i bersagli dell'autore (tests/, anche la convalida degli archivi)."
+        }
+      ]
+    },
+    {
+      "type": "library",
+      "bom-ref": "expat",
+      "name": "Expat",
+      "version": "2.8.5",
+      "description": "Lettura a flusso dell'XML dei fogli Excel (K-019), senza DTD ne' entita' (EXPAT_DTD e EXPAT_GE spenti) e senza spazi dei nomi; solo la libreria statica.",
+      "scope": "required",
+      "hashes": [
+        {
+          "alg": "SHA-256",
+          "content": "1e727b8933ec51a77a9a9d9afcf8e688bce45d907c13e36ab7393fe36e703182"
+        }
+      ],
+      "licenses": [
+        {
+          "license": {
+            "id": "MIT"
+          }
+        }
+      ],
+      "purl": "pkg:github/libexpat/libexpat@R_2_8_5",
+      "externalReferences": [
+        {
+          "type": "distribution",
+          "url": "https://github.com/libexpat/libexpat/releases/download/R_2_8_5/expat-2.8.5.tar.xz"
+        },
+        {
+          "type": "vcs",
+          "url": "https://github.com/libexpat/libexpat"
+        },
+        {
+          "type": "documentation",
+          "url": "https://libexpat.github.io/doc/api/latest/"
+        }
+      ],
+      "properties": [
+        {
+          "name": "k-zero:uso",
+          "value": "programma"
+        },
+        {
+          "name": "k-zero:nota",
+          "value": "Versione 2.8.5 del 22/09/2026 (avviso di sicurezza dello stesso giorno), firma GPG dell'autore verificata al K-019 (sottochiave CB8D E70A 90CF BF6C 3BF5 CC56 9626 2ACF FBD3 AEC6 della chiave 3176 EF7D B236 7F1F CA4F 306B 1F9B 0E90 9AF3 7285); nel fuzzing continuo OSS-Fuzz con i bersagli dell'autore (fuzz/)."
+        }
+      ]
+    },
+    {
+      "type": "library",
       "bom-ref": "googletest",
       "name": "GoogleTest",
       "version": "1.15.2",
@@ -2577,7 +2665,12 @@
       "dependsOn": [
         "cli11",
         "nlohmann_json",
-        "valijson"
+        "valijson",
+        "libsodium",
+        "utf8proc",
+        "password_comuni",
+        "miniz",
+        "expat"
       ]
     }
   ]
