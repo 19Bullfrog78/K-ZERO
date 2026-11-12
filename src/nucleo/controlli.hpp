@@ -38,6 +38,10 @@ enum class Check {
     KeysFromEnvelope,          // chi apre ha ricevuto chiavi nuove in una busta (un utente e' stato tolto)
     UserRemovedPasswords,      // dopo aver tolto un utente: le password che conosceva vanno cambiate
     PasswordWrittenByOther,    // password scritta da chi ha aggiunto l'utente o gliel'ha data
+    // Testi comuni (K-018): li segnala l'API (src/api/testi_liberi.cpp), che conosce le classi degli schemi.
+    NameInCommonText,          // il nome di una persona o di una casa dei dati in un testo comune
+    HealthWordInCommonText,    // una parola sulla salute (elenchi delle norme e delle aziende) in un testo comune
+    PlaceMaybeSensitive,       // un luogo pubblico non segnato sensibile con una parola sulla salute nel nome
     // Turni (K-008): errori.
     ShiftPartInvalid,
     ShiftItemsOrder,

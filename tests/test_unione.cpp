@@ -2591,6 +2591,9 @@ TEST(Unione, ProblemiPossibiliDeiTurni) {
             if (x.at("persona") != "P-B") tenute.push_back(x);                              // K-CTR-078 di T-PRIMO
         as["assenze"] = tenute;
         solo_possibili.file["assenze.json"] = as.dump(2);
+        JsonDati bl = JsonDati::parse(solo_possibili.file.at("blocchi.json"));
+        bl.at("blocchi")[0].erase("nota");                                                    // K-CTR-137 (K-018)
+        solo_possibili.file["blocchi.json"] = bl.dump(2);
     }
     const std::string testo = controlla_personali(solo_possibili, Formato::Testo);
     EXPECT_NE(testo.find("\nNessun problema certo.\n"), std::string::npos) << testo;

@@ -831,5 +831,9 @@ TEST(Controlli, catalogo_coperto) {
     // K-011 aggiunta 2: forzatura e dichiarazione che non servono.
     EXPECT_EQ(api::definizione_controllo(Check::ModeForcedUseless).codice, "K-CTR-134");
     EXPECT_EQ(api::definizione_controllo(Check::ModeDeclaredUseless).codice, "K-CTR-135");
-    EXPECT_EQ(api::catalogo_controlli().size(), 135u);
+    // K-018: testi comuni (le prove stanno in test_testi_liberi).
+    EXPECT_EQ(api::definizione_controllo(Check::NameInCommonText).codice, "K-CTR-136");
+    EXPECT_EQ(api::definizione_controllo(Check::HealthWordInCommonText).codice, "K-CTR-137");
+    EXPECT_EQ(api::definizione_controllo(Check::PlaceMaybeSensitive).codice, "K-CTR-138");
+    EXPECT_EQ(api::catalogo_controlli().size(), 138u);
 }

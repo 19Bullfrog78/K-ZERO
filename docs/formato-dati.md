@@ -581,7 +581,9 @@ Chi e' legato (calcolato sul pacchetto, dai dati comuni; una regola sola nel cod
 Non riguarda il personale (lavorare in un centro, o il garage presso la casa di un autista, non e' un dato sulla salute
 di nessuno) ne' i conteggi. Nel demo il centro diurno `L-CENTRO` e' sensibile e il porta a porta e' sensibile. I nomi e
 i codici liberi (servizi, gruppi, corse, turni, calendari, note) restano responsabilita' di chi scrive i dati: un nome
-come "Trasporto al centro diurno" accanto all'elenco dei passeggeri dice lo stesso (docs/sicurezza.md).
+come "Trasporto al centro diurno" accanto all'elenco dei passeggeri dice lo stesso (docs/sicurezza.md). Dal K-018 un avviso
+aiuta: una parola sulla salute in un testo comune (K-CTR-137) e un luogo pubblico non segnato sensibile con una di quelle parole
+nel nome (K-CTR-138, "forse e' un luogo sensibile"); un luogo segnato sensibile puo' averle nel nome (docs/controlli.md).
 
 ```json
 {
@@ -827,8 +829,9 @@ servizio resta un dato particolare).
 
 **Restano dati comuni, scelti dall'utente**: il codice del committente e i suoi codici esterni, il codice e il nome dei suoi
 servizi e dei suoi contratti. **Non devono contenere il nome del privato** (es. non "Matrimonio Rossi", ma "Noleggio per un
-matrimonio"; non il codice "ROSSI"): sono dati comuni e si vedono in tutte le uscite. L'avviso automatico sui nomi liberi
-arrivera' con il suo mandato.
+matrimonio"; non il codice "ROSSI"): sono dati comuni e si vedono in tutte le uscite. Dal K-018 lo dice un avviso (K-CTR-136,
+docs/controlli.md "Testi comuni"): il nome intero del privato in qualunque testo comune, una parola del suo nome nel suo codice e
+nei suoi codici esterni, nei suoi contratti e nei loro servizi e gruppi.
 
 ### contratti.json
 
