@@ -54,6 +54,8 @@ Solo il manifesto e' obbligatorio; un file che manca vuol dire "nessun elemento 
 | `servizi_fissi.json` | no | Turni assegnati sempre alla stessa persona nei giorni di un calendario |
 | `assegnazioni.json` | no | Assegnazioni del singolo giorno: sostituzioni, scambi, un mezzo al posto di un altro, lavori occasionali |
 | `blocchi.json` | no | Blocchi: corse fissate su un mezzo, per il calcolo futuro |
+| `profili_elenchi.json` | no | (K-019) Profili di lettura dell'elenco utenti di un committente: come e' fatto il suo file |
+| `elenco_utenti.json` | no | (K-019) Elenco utenti dei committenti come lo mandano: casa, scuola, stato, fermata indicata, ditta e orari di ogni tratta, sblocchi. Solo nel livello completo |
 
 Un file con un nome diverso da questi non viene letto (avviso K-CTR-008): di solito e' un nome scritto male.
 
@@ -1385,6 +1387,117 @@ controlla che le corse bloccate siano fatte con il loro mezzo (K-CTR-074) e che 
 ```json
 { "codice": "B-LINEA", "mezzo": "ALFA-05", "corse": ["C-LIN-533", "C-LIN-560"], "forza": "tutto_fisso" }
 ```
+
+### profili_elenchi.json
+
+(K-019) Il committente manda l'elenco degli utenti trasportati in un suo file (oggi Excel, una riga per utente). Il **profilo
+di lettura** dice com'e' fatto quel file: titoli delle colonne, parole dello stato, sigle delle tratte, dei giorni e dei periodi,
+separatori, mese d'inizio dell'anno scolastico, e come si collegano scuole, fermate e ditte del file agli elementi del
+pacchetto. E' un dato: il programma conosce solo le **forme** (es. orari "per tratta" o "per giorno"), mai le parole di un
+committente; un altro committente con un altro file = un altro profilo, non un altro lettore. Tutti dati comuni. Schema:
+[docs/schema/profili_elenchi.v1.schema.json](schema/profili_elenchi.v1.schema.json).
+
+| Campo | Obbl. | Classe | Significato |
+|---|---|---|---|
+| `profili[].codice` | si' | comune | Codice del profilo (si usa con `kzero leggi-elenco --profilo`) |
+| `profili[].nome` | no | comune | Nome |
+| `profili[].committente` | si' | comune | Il committente che manda l'elenco |
+| `profili[].foglio` | no | comune | Nome del foglio da leggere; senza, il primo della cartella di lavoro |
+| `profili[].mese_inizio_anno` | si' | comune | Mese d'inizio dell'anno scolastico (es. 9): le date senza anno dal mese d'inizio a dicembre sono del primo anno, le altre del secondo |
+| `profili[].codici_esterni` | si' | comune | `sistema`, `tipo_scuola`, `tipo_fermata`: le scuole e le fermate del file si cercano tra i codici esterni del pacchetto con questo sistema e questo tipo; il codice e' il testo del file |
+| `profili[].colonne` | si' | comune | Titoli delle colonne (prima riga del foglio): `nome`, `scuola`, `stato`, `percorsi` obbligatori; `fermata`, `comune`, `frazione`, `via`, `civico`, `classe`, `sezione` se il file li ha |
+| `profili[].stato` | si' | comune | `attivo` e `sospeso`: le parole dello stato; `separatore_nota`: dopo, la nota del committente |
+| `profili[].tratte[]` | si' | comune | `sigla` (es. AM), `verso` in K-Zero (`andata` o `ritorno`), `nome` |
+| `profili[].giorni[]` | si' | comune | `sigla` (es. LU) e `giorno` (`lunedi` ... `domenica`) |
+| `profili[].periodi[]` | no | comune | `sigla` dei periodi delle voci per giorno (es. o, f1, rm), la `tratta` che vogliono dire, `nome` |
+| `profili[].percorsi.separatore_ditta` | si' | comune | Tra la sigla della tratta e la ditta (es. "/" in "AM/ALP") |
+| `profili[].orari[]` | no | comune | Le colonne degli orari, ognuna con la sua `forma` (sotto) e i suoi separatori |
+| `profili[].ditte[]` | no | comune | `testo` della ditta nel file e `azienda` del pacchetto che e'; le altre ditte restano "altra ditta" con il nome com'e' |
+| `profili[].nota` | no | comune | Note |
+
+Titoli, parole dello stato e ditte si confrontano senza maiuscole, accenti, punteggiatura e spazi doppi (come i nomi dei luoghi,
+sotto "Ricerca dei luoghi"); le sigle e i separatori dentro le celle senza maiuscole, per il resto come sono scritti. Non sono
+testi liberi sulle persone: hanno una definizione loro nello schema (`parola`, `separatore`) e non entrano nell'avviso sui nomi
+liberi (K-018); il nome e la nota del profilo si'. Le ditte non hanno codici esterni (le aziende non li hanno): stanno nel
+profilo, perche' e' il committente che le scrive cosi'.
+
+**Forme degli orari.**
+- `per_tratta`: voci separate da `separatore_voci`; ogni voce e' la sigla della tratta, `separatore_tratta`, l'ora (ore,
+  `separatore_ora`, minuti) e i giorni (sigle separate da `separatore_giorni`). Vale tutto l'anno scolastico. Es. con `|`, `:`,
+  `-`, `:`: `AM: 08:00 LU-MA-ME-GI-VE | RM: 12:00 LU-MA-ME-GI-VE`.
+- `per_giorno`: un blocco per giorno che comincia con `inizio_giorno` e la sigla del giorno; poi le voci, separate da
+  `separatore_voci` oppure attaccate (l'ora seguita subito dalla sigla del periodo dopo, un caso vero: `12.00f2`): la sigla del
+  periodo, l'ora e, se c'e', il periodo tra `date.apertura` e `date.chiusura` (giorno, `separatore_giorno_mese`, mese,
+  `date.separatore`, giorno, `separatore_giorno_mese`, mese: senza anno). Senza date la voce vale tutto l'anno scolastico. Es.
+  con `//`, `-`, `.`, `[`, `]`, `-`, `/`: `//LU o 15.50 [15/09-09/06] //ME f1 15.50 [17/09-23/01] - f2 15.50 [28/01-05/06] //VE rm 12.00`.
+
+L'**anno scolastico** si da' al comando (`--anno-scolastico 2026-2027`): "tutto l'anno" e' dal primo giorno del mese d'inizio
+del primo anno al giorno prima dello stesso mese del secondo.
+
+### elenco_utenti.json
+
+(K-019) L'elenco degli utenti come lo manda il committente, uno per committente: chi ha diritto al servizio, dove abita, quale
+scuola, lo stato, la fermata indicata e, per ogni tratta, la ditta e gli orari. **Non sono i gruppi dei servizi**: il file del
+committente quasi mai dice la fermata e mai il servizio o il giro (le schede dei servizi arrivano a parte, con un altro
+mandato). Lo scrive `kzero leggi-elenco`, gli sblocchi `kzero sblocco`; solo in un pacchetto chiuso (i nomi e le case stanno
+solo nella cassaforte) e solo nel livello **completo** (nel livello "solo numeri" e' un errore, K-CTR-019). Schema:
+[docs/schema/elenco_utenti.v1.schema.json](schema/elenco_utenti.v1.schema.json).
+
+| Campo | Obbl. | Classe | Significato |
+|---|---|---|---|
+| `ultimo_numero` | si' | comune | Numero dell'ultimo codice dato (U-000001 = 1): i codici non si riusano mai |
+| `elenchi[].committente` | si' | comune | Il committente (un elenco per committente) |
+| `elenchi[].profilo` | si' | comune | Il profilo dell'ultima lettura |
+| `elenchi[].anno_scolastico` | si' | comune | Anno scolastico dell'ultima lettura, es. `2026-2027` |
+| `elenchi[].ultima_lettura` | no | comune | `impronta` (BLAKE2b-256) del file letto, mai il suo nome; `elenco`: `completo` o `parziale` |
+| `elenchi[].utenti[].codice` | si' | comune | Codice dato dal programma (`U-000001` ...), in ordine, mai ricavato dal nome, mai riusato, unico in tutto il pacchetto (anche rispetto ai passeggeri e agli altri elementi, K-CTR-141) |
+| `elenchi[].utenti[].nome` | si' | personale | Nome e cognome come nel file (spazi in fondo e doppi tolti) |
+| `elenchi[].utenti[].casa` | no | personale | `comune`, `frazione`, `via`, `civico` (es. "21/C"), separati come nel file |
+| `elenchi[].utenti[].scuola` | si' | comune | La scuola (scuole.json) |
+| `elenchi[].utenti[].classe` | no | personale | Classe (numero) |
+| `elenchi[].utenti[].sezione` | no | personale | Sezione |
+| `elenchi[].utenti[].stato.tipo` | si' | comune | `attivo` (ha diritto al servizio) o `sospeso` ("passivo": viaggia solo se sbloccato) |
+| `elenchi[].utenti[].stato.nota` | no | personale | Nota del committente dopo lo stato (es. "da attivare solo per ritorno su fermata via Roma") |
+| `elenchi[].utenti[].fermata` | no | comune | La fermata indicata: `luogo` e come e' stata `riconosciuta` (`codice_esterno` oppure `nome`), oppure `testo` (personale) se non e' un luogo del pacchetto |
+| `elenchi[].utenti[].tratte[]` | no | comune | Per ogni tratta del file (`sigla` del profilo) la ditta: `azienda` del pacchetto oppure `altra_ditta` con il nome com'e' |
+| `elenchi[].utenti[].orari[]` | no | comune | `tratta`, `giorno`, `ora`, `periodo` (la sigla, se c'e'), `dal` e `al` (date intere) |
+| `elenchi[].utenti[].sblocchi[]` | no | comune | `tratta`, `riferimento` (es. la mail del committente), `data` scritta dall'utente di K-Zero |
+| `elenchi[].utenti[].fuori_elenco` | no | comune | `true` = non e' piu' nell'elenco del committente, resta solo per uno sblocco |
+
+**Classi** (decisione dell'arbitro, D1): **classe e sezione sono dati personali**, a differenza della regola del 12/10 ("la
+classe non e' un dato personale"): con la scuola e gli orari (comuni) fanno riconoscere un bambino in una scuola piccola, e la
+classe dice l'eta' di un minore; per pianificare non servono. Nome, casa, nota del committente e testo di una fermata non
+riconosciuta sono personali; tutto il resto comune, come per i passeggeri. Se la scuola o la fermata indicata di un utente sta
+in un **luogo sensibile**, nome e casa valgono come dati particolari e nella cassaforte stanno tra i **legati** (la regola dei
+passeggeri, `LegameSensibile`). La nota del committente puo' parlare di salute (es. "per terapia"): resta personale, ed e' un
+rischio scritto in docs/sicurezza.md. I nomi entrano nell'avviso sui nomi liberi (K-CTR-136) come quelli dei passeggeri; le
+cose dell'utente (dove basta una parola del nome) sono il suo elemento (codice, ditte, riferimenti degli sblocchi).
+
+**Come si legge il file** (`kzero leggi-elenco <file.xlsx> <pacchetto chiuso> --profilo P --anno-scolastico 2026-2027 --elenco
+completo|parziale --utente U [--scrivi <pacchetto>]`):
+- la prima riga del foglio sono i titoli; le colonne che il profilo non nomina si ignorano e non si salvano mai (il formato non
+  ha posto per codice fiscale, telefoni, mail); colori e formattazione non sono dati;
+- ogni riga e' un utente. **Scuola**: dal codice esterno del profilo (una scuola del file senza la sua scuola nel pacchetto e'
+  un errore della riga). **Fermata**: prima dal codice esterno del profilo fra tutti i luoghi pubblici, poi dal nome o da un
+  nome alternativo, ma solo fra i luoghi dello stesso comune della casa (con 500 mezzi "Piazza" o "Chiesa" stanno in molti
+  comuni), e solo se il risultato e' uno; altrimenti resta il testo (K-CTR-152). **Ditte**: dalla tabella del profilo;
+- lo **stesso utente** tra due letture si riconosce da nome e scuola, normalizzati come i nomi dei luoghi. Due righe con lo
+  stesso nome nella stessa scuola si fermano (K-CTR-149): il programma non indovina;
+- **confronto**: nuovi (codice nuovo), cambiati (quali campi), invariati, usciti; la prima volta tutti nuovi. Con `--elenco
+  parziale` (es. una sola zona) nessuno esce; con `completo` escono solo se tutte le righe si leggono (K-CTR-151). Un utente di
+  una riga illeggibile gia' nell'elenco resta com'e';
+- un **uscito con uno sblocco** non si toglie: resta con `fuori_elenco: true` (K-CTR-147) e non entra mai nel piano; quando
+  l'utente di K-Zero toglie l'ultimo sblocco, se ne va alla lettura completa successiva (mai per effetto di `kzero sblocco`);
+- **forse lo stesso**: un uscito e un nuovo con la stessa casa nella stessa scuola, o con lo stesso nome e la stessa casa in
+  scuole diverse (es. dalla primaria alle medie), hanno un avviso (K-CTR-150), mai un'unione automatica;
+- senza `--scrivi` e' un'anteprima: niente cambia, solo la voce del registro. Con `--scrivi` (la cartella del pacchetto) le
+  novita' vanno nella cassaforte (docs/cassaforte.md).
+
+**Sblocco** (`kzero sblocco <pacchetto> --utente-elenco U-000012 --tratta RP --riferimento "..." --data AAAA-MM-GG --utente U
+--scrivi <pacchetto>`, o `--togli`): lo scrive l'utente di K-Zero (nel file del committente non c'e'), per tratta del file, con
+il riferimento e la data scritta da lui, come lo "sbloccato" dei passeggeri. Si aggiunge solo a un utente sospeso, per una
+tratta che il committente gli da' (i percorsi); errore K-ERR-049 altrimenti. Una lettura non lo cancella mai; uno sblocco di un
+utente diventato attivo o di una tratta che non ha piu' ha un avviso (K-CTR-146).
 
 ## Ricerca dei luoghi per nome o codice esterno
 

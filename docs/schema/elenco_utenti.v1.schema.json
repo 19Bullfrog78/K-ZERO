@@ -1,0 +1,355 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "K-Zero - file di dati elenco_utenti.json, versione 1",
+  "description": "Elenco degli utenti trasportati come lo manda il committente (K-019), uno per committente: chi ha diritto al servizio, dove abita, quale scuola, lo stato, la fermata indicata e, per ogni tratta, la ditta e gli orari. Non sono i gruppi dei servizi (il file non dice ne' la fermata ne' il giro). Solo nei pacchetti di livello completo. Lo scrive kzero leggi-elenco; gli sblocchi kzero sblocco.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "schema_versione",
+    "ultimo_numero",
+    "elenchi"
+  ],
+  "properties": {
+    "schema": {
+      "const": "elenco_utenti",
+      "x-kzero-classe": "comune"
+    },
+    "schema_versione": {
+      "const": 1,
+      "x-kzero-classe": "comune"
+    },
+    "ultimo_numero": {
+      "description": "Numero dell'ultimo codice dato (U-000001 = 1): i codici non si riusano mai.",
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 999999,
+      "x-kzero-classe": "comune"
+    },
+    "elenchi": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "x-kzero-chiave": [
+          "committente"
+        ],
+        "required": [
+          "committente",
+          "profilo",
+          "anno_scolastico",
+          "utenti"
+        ],
+        "properties": {
+          "committente": {
+            "$ref": "#/definitions/codice",
+            "x-kzero-classe": "comune"
+          },
+          "profilo": {
+            "$ref": "#/definitions/codice",
+            "description": "Profilo dell'ultima lettura (profili_elenchi.json).",
+            "x-kzero-classe": "comune"
+          },
+          "anno_scolastico": {
+            "description": "Anno scolastico dell'ultima lettura, es. 2026-2027.",
+            "type": "string",
+            "pattern": "^[0-9]{4}-[0-9]{4}$",
+            "x-kzero-classe": "comune"
+          },
+          "ultima_lettura": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "impronta",
+              "elenco"
+            ],
+            "properties": {
+              "impronta": {
+                "description": "Impronta BLAKE2b-256 del file letto (mai il suo nome).",
+                "type": "string",
+                "pattern": "^[0-9a-f]{64}$"
+              },
+              "elenco": {
+                "enum": [
+                  "completo",
+                  "parziale"
+                ]
+              }
+            },
+            "x-kzero-classe": "comune"
+          },
+          "utenti": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/utente"
+            }
+          }
+        }
+      },
+      "x-kzero-classe": "comune"
+    }
+  },
+  "definitions": {
+    "codice": {
+      "description": "Codice K-Zero: scelto da chi scrive i dati, unico per tipo di elemento. Lettere senza accenti, cifre, '-', '_' e '.'; inizia con una lettera o una cifra; al massimo 64 caratteri.",
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+    },
+    "testo": {
+      "description": "Testo di una riga, non vuoto (al massimo 300 caratteri).",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 300,
+      "pattern": "\\S"
+    },
+    "nota": {
+      "description": "Testo libero, non vuoto (al massimo 2000 caratteri).",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2000,
+      "pattern": "\\S"
+    },
+    "data": {
+      "description": "Data AAAA-MM-GG che esiste nel calendario (es. 2026-09-14; il 29 febbraio solo negli anni bisestili).",
+      "type": "string",
+      "pattern": "^([0-9]{4}-((0[13578]|1[02])-(0[1-9]|[12][0-9]|3[01])|(0[469]|11)-(0[1-9]|[12][0-9]|30)|02-(0[1-9]|1[0-9]|2[0-8]))|([0-9]{2}(0[48]|[2468][048]|[13579][26])|([02468][048]|[13579][26])00)-02-29)$"
+    },
+    "ora": {
+      "description": "Ora HH:MM.",
+      "type": "string",
+      "pattern": "^([01][0-9]|2[0-3]):[0-5][0-9]$"
+    },
+    "utente": {
+      "type": "object",
+      "x-kzero-trasportato": "utente",
+      "additionalProperties": false,
+      "required": [
+        "codice",
+        "nome",
+        "scuola",
+        "stato"
+      ],
+      "properties": {
+        "codice": {
+          "$ref": "#/definitions/codice",
+          "description": "Codice dato dal programma (U-000001...), stabile tra una lettura e l'altra, mai ricavato dal nome; unico in tutto il pacchetto.",
+          "x-kzero-classe": "comune"
+        },
+        "nome": {
+          "$ref": "#/definitions/testo",
+          "description": "Nome e cognome, come nel file del committente (senza gli spazi in fondo).",
+          "x-kzero-classe": "personale"
+        },
+        "casa": {
+          "type": "object",
+          "additionalProperties": false,
+          "minProperties": 1,
+          "properties": {
+            "comune": {
+              "$ref": "#/definitions/testo"
+            },
+            "frazione": {
+              "$ref": "#/definitions/testo"
+            },
+            "via": {
+              "$ref": "#/definitions/testo"
+            },
+            "civico": {
+              "$ref": "#/definitions/testo"
+            }
+          },
+          "x-kzero-classe": "personale"
+        },
+        "scuola": {
+          "$ref": "#/definitions/codice",
+          "description": "Scuola (scuole.json).",
+          "x-kzero-classe": "comune"
+        },
+        "classe": {
+          "description": "Classe (numero). Dato personale (K-019): con scuola e sezione fa riconoscere un bambino in una scuola piccola.",
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 20,
+          "x-kzero-classe": "personale"
+        },
+        "sezione": {
+          "$ref": "#/definitions/testo",
+          "description": "Sezione. Dato personale (K-019), come la classe.",
+          "x-kzero-classe": "personale"
+        },
+        "stato": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "tipo"
+          ],
+          "properties": {
+            "tipo": {
+              "description": "attivo = ha diritto al servizio; sospeso = passivo, viaggia solo se sbloccato (sblocchi).",
+              "enum": [
+                "attivo",
+                "sospeso"
+              ]
+            },
+            "nota": {
+              "$ref": "#/definitions/nota",
+              "description": "Nota del committente scritta dopo lo stato. Dato personale: puo' parlare della persona.",
+              "x-kzero-classe": "personale"
+            }
+          },
+          "x-kzero-classe": "comune"
+        },
+        "fermata": {
+          "description": "Fermata indicata dal committente: un luogo del pacchetto riconosciuto (dal codice esterno, o dal nome tra i luoghi del comune della casa), oppure il testo com'e'.",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "luogo": {
+              "$ref": "#/definitions/codice"
+            },
+            "riconosciuta": {
+              "enum": [
+                "codice_esterno",
+                "nome"
+              ]
+            },
+            "testo": {
+              "$ref": "#/definitions/testo",
+              "x-kzero-classe": "personale"
+            }
+          },
+          "oneOf": [
+            {
+              "required": [
+                "luogo",
+                "riconosciuta"
+              ]
+            },
+            {
+              "required": [
+                "testo"
+              ]
+            }
+          ],
+          "x-kzero-classe": "comune"
+        },
+        "tratte": {
+          "description": "Per ogni tratta del file (sigla del profilo) la ditta che la fa: un'azienda del pacchetto oppure un'altra ditta con il nome com'e'.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "sigla"
+            ],
+            "properties": {
+              "sigla": {
+                "$ref": "#/definitions/parola"
+              },
+              "azienda": {
+                "$ref": "#/definitions/codice"
+              },
+              "altra_ditta": {
+                "$ref": "#/definitions/testo"
+              }
+            },
+            "oneOf": [
+              {
+                "required": [
+                  "azienda"
+                ]
+              },
+              {
+                "required": [
+                  "altra_ditta"
+                ]
+              }
+            ]
+          },
+          "x-kzero-classe": "comune"
+        },
+        "orari": {
+          "description": "Orari come nel file: tratta, giorno, ora, sigla del periodo (se c'e') e periodo con le date intere.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "tratta",
+              "giorno",
+              "ora",
+              "dal",
+              "al"
+            ],
+            "properties": {
+              "tratta": {
+                "$ref": "#/definitions/parola"
+              },
+              "giorno": {
+                "enum": [
+                  "lunedi",
+                  "martedi",
+                  "mercoledi",
+                  "giovedi",
+                  "venerdi",
+                  "sabato",
+                  "domenica"
+                ]
+              },
+              "ora": {
+                "$ref": "#/definitions/ora"
+              },
+              "periodo": {
+                "$ref": "#/definitions/parola"
+              },
+              "dal": {
+                "$ref": "#/definitions/data"
+              },
+              "al": {
+                "$ref": "#/definitions/data"
+              }
+            }
+          },
+          "x-kzero-classe": "comune"
+        },
+        "sblocchi": {
+          "description": "Sblocchi scritti dall'utente di K-Zero (kzero sblocco), per tratta, con il riferimento (es. la mail del committente) e la data scritta dall'utente. Una lettura non li cancella mai.",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "tratta",
+              "riferimento",
+              "data"
+            ],
+            "properties": {
+              "tratta": {
+                "$ref": "#/definitions/parola"
+              },
+              "riferimento": {
+                "$ref": "#/definitions/testo"
+              },
+              "data": {
+                "$ref": "#/definitions/data"
+              }
+            }
+          },
+          "x-kzero-classe": "comune"
+        },
+        "fuori_elenco": {
+          "description": "true = non e' piu' nell'elenco del committente, resta solo per uno sblocco (non entra mai nel piano); se ne va alla lettura completa dopo che l'ultimo sblocco e' stato tolto.",
+          "const": true,
+          "x-kzero-classe": "comune"
+        }
+      }
+    },
+    "parola": {
+      "description": "Una sigla del profilo di lettura (es. AM): non e' un testo libero.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100,
+      "pattern": "\\S"
+    }
+  }
+}

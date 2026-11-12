@@ -55,6 +55,18 @@ add_executable(test_excel test_excel.cpp)
 target_link_libraries(test_excel PRIVATE kzero_api GTest::gtest_main)
 target_compile_options(test_excel PRIVATE ${KZERO_WARNINGS})
 gtest_discover_tests(test_excel PROPERTIES LABELS sicurezza)
+# K-019: strumenti delle prove dell'elenco utenti (file .xlsx da testo, pacchetto di prova dal demo).
+add_executable(crea_xlsx strumenti/crea_xlsx.cpp)
+target_compile_options(crea_xlsx PRIVATE ${KZERO_WARNINGS})
+add_executable(prepara_k019 strumenti/prepara_k019.cpp)
+target_link_libraries(prepara_k019 PRIVATE kzero_api)
+target_compile_options(prepara_k019 PRIVATE ${KZERO_WARNINGS})
+# K-019: elenco utenti del committente (righe, confronto, controlli, comandi con i tre utenti della cassaforte, scala).
+add_executable(test_elenco test_elenco.cpp)
+target_link_libraries(test_elenco PRIVATE kzero_api GTest::gtest_main)
+target_compile_options(test_elenco PRIVATE ${KZERO_WARNINGS})
+target_compile_definitions(test_elenco PRIVATE KZERO_CARTELLA_PROVE="${CMAKE_CURRENT_SOURCE_DIR}")
+gtest_discover_tests(test_elenco PROPERTIES LABELS sicurezza)
 add_executable(test_registro test_registro.cpp)
 target_link_libraries(test_registro PRIVATE kzero_api GTest::gtest_main)
 target_compile_options(test_registro PRIVATE ${KZERO_WARNINGS})
@@ -1584,6 +1596,55 @@ kzero_cassaforte(cassaforte_registro_dopo_giornata UFFICIO USCITA 0 FORMATO test
                  NON_CONTIENE ${DATI_PERSONALI} ${DATI_PARTICOLARI}
                  ARGOMENTI registro @PACCHETTO@)
 
+# --- Elenco utenti del committente (K-019) ---------------------------------------------------------------------------
+# Il pacchetto di prova chiuso e i file Excel (da testo) si preparano una volta; ogni prova lavora su una copia (BASE).
+set(KZERO_K019 ${CMAKE_CURRENT_BINARY_DIR}/k019)
+set(PW_K019 "una frase lunga per l'elenco di prova")
+add_test(NAME elenco.prepara
+         COMMAND ${CMAKE_COMMAND} -DKZERO=$<TARGET_FILE:kzero> -DPREPARA=$<TARGET_FILE:prepara_k019> -DCREA=$<TARGET_FILE:crea_xlsx>
+                 -DSORGENTI=${CMAKE_CURRENT_SOURCE_DIR}/esempi/k019-elenco -DUSCITA=${KZERO_K019}
+                 -P ${CMAKE_CURRENT_SOURCE_DIR}/programma/prepara_k019.cmake)
+set_tests_properties(elenco.prepara PROPERTIES FIXTURES_SETUP k019 LABELS programma)
+function(kzero_elenco nome)
+  cmake_parse_arguments(E "" "" "ARGOMENTI" ${ARGN})
+  kzero_prova(${nome} BASE ${KZERO_K019}/chiuso INGRESSO "${PW_K019}" ${E_UNPARSED_ARGUMENTS}
+              ARGOMENTI ${E_ARGOMENTI} --utente TITOLARE --password-da-ingresso)
+  set_tests_properties(programma.${nome} PROPERTIES FIXTURES_REQUIRED k019)
+endfunction()
+set(K019_LEGGI --profilo PR-CVA --anno-scolastico 2026-2027 --elenco completo)
+kzero_elenco(elenco_anteprima USCITA 0 FORMATO testo
+             CONTIENE "Anteprima (niente e' stato scritto" "Utenti: 5 nuovi, 0 cambiati, 0 invariati, 0 usciti." "Avviso K-CTR-152: Riga 6"
+             NON_CONTIENE "ROSSI" "VERDI" "via Roma" "000 0000" "riga gialla"
+             ARGOMENTI leggi-elenco ${KZERO_K019}/prima-lettura.xlsx @PACCHETTO@ ${K019_LEGGI})
+kzero_elenco(elenco_anteprima_json USCITA 0 FORMATO json SCHEMA elenco
+             CONTIENE "\"scritto\": false" "\"nuovi\": 5" "\"nome\": null"
+             NON_CONTIENE "ROSSI" "VERDI"
+             ARGOMENTI leggi-elenco ${KZERO_K019}/prima-lettura.xlsx @PACCHETTO@ ${K019_LEGGI} --formato json)
+kzero_elenco(elenco_seconda_lettura USCITA 0 FORMATO testo
+             PREPARA leggi-elenco ${KZERO_K019}/prima-lettura.xlsx @PACCHETTO@ ${K019_LEGGI} --scrivi @PACCHETTO@ --utente TITOLARE
+                     --password-da-ingresso
+             PREPARA_INGRESSO "${PW_K019}"
+             CONTIENE "Utenti: 0 nuovi, 3 cambiati, 1 invariati, 1 usciti." "U-000001 \"ROSSI ANNA\" (riga 2): cambiato (casa)."
+                      "U-000002 \"VERDI LUCA\" (riga 3): cambiato (stato, nota)." "U-000005 \"GIALLI PAOLO\": uscito"
+             ARGOMENTI leggi-elenco ${KZERO_K019}/seconda-lettura.xlsx @PACCHETTO@ ${K019_LEGGI} --includi-dati-personali)
+kzero_elenco(elenco_scrittura_json USCITA 0 FORMATO json SCHEMA elenco
+             CONTIENE "\"scritto\": true" "\"generazione\": 2"
+             ARGOMENTI leggi-elenco ${KZERO_K019}/prima-lettura.xlsx @PACCHETTO@ ${K019_LEGGI} --scrivi @PACCHETTO@ --formato json)
+kzero_elenco(elenco_sblocco_json USCITA 0 FORMATO json SCHEMA sblocco
+             PREPARA leggi-elenco ${KZERO_K019}/prima-lettura.xlsx @PACCHETTO@ ${K019_LEGGI} --scrivi @PACCHETTO@ --utente TITOLARE
+                     --password-da-ingresso
+             PREPARA_INGRESSO "${PW_K019}"
+             CONTIENE "\"azione\": \"aggiunto\"" "\"sblocchi_restanti\": 1"
+             ARGOMENTI sblocco @PACCHETTO@ --utente-elenco U-000002 --tratta RP --riferimento "mail del consorzio del 10/11"
+                       --data 2026-11-10 --scrivi @PACCHETTO@ --formato json)
+kzero_elenco(elenco_scrivi_altra_cartella USCITA 2 FORMATO testo ERRORE K-ERR-046
+             ARGOMENTI leggi-elenco ${KZERO_K019}/prima-lettura.xlsx @PACCHETTO@ ${K019_LEGGI} --scrivi @NUOVA@)
+# Un file che non e' un .xlsx (qui il testo da cui le prove costruiscono il file Excel): niente si apre, nemmeno la password.
+kzero_elenco(elenco_file_non_xlsx USCITA 1 FORMATO json SCHEMA errore ERRORE K-ERR-042
+             ARGOMENTI leggi-elenco ${CMAKE_CURRENT_SOURCE_DIR}/esempi/k019-elenco/prima-lettura.tsv @PACCHETTO@ ${K019_LEGGI} --formato json)
+kzero_prova(elenco_pacchetto_in_chiaro USCITA 2 FORMATO testo ERRORE K-ERR-031
+            ARGOMENTI leggi-elenco ${CMAKE_CURRENT_SOURCE_DIR}/esempi/k019-elenco/prima-lettura.tsv ${KZERO_DEMO} ${K019_LEGGI} --utente A)
+
 # Chiusura del demo: identica alla riapertura; manifesto 1, cartella che c'e' gia', password corta.
 kzero_prova(cassaforte_chiudi BASE ${KZERO_DEMO} USCITA 0 FORMATO testo VARIABILI INGRESSO "una frase lunga per chiudere"
             CONTIENE "riaperto e controllato, i dati sono identici all'originale" "Valori: 262 personali e 43 particolari"
@@ -2029,7 +2090,7 @@ foreach(cartella IN LISTS casi_fuzz)
   endif()
 endforeach()
 if(KZERO_FUZZ)
-  foreach(bersaglio pacchetto parametri date_e_orari cassaforte)
+  foreach(bersaglio pacchetto parametri date_e_orari cassaforte elenco)
     add_executable(fuzz_${bersaglio} fuzz/fuzz_${bersaglio}.cpp)
     target_link_libraries(fuzz_${bersaglio} PRIVATE kzero_bersagli_fuzz)
     target_compile_options(fuzz_${bersaglio} PRIVATE ${KZERO_WARNINGS})

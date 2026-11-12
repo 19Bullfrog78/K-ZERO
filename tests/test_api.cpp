@@ -883,8 +883,17 @@ TEST(Api, classi_marcate_negli_schemi) {
                     p.rfind("persone/persone/", 0) == 0 || p.rfind("assenze/assenze/", 0) == 0 ||
                     p == "rotazioni/rotazioni/*/nota" || p == "servizi_fissi/servizi_fissi/*/nota" ||
                     p == "assegnazioni/assegnazioni/*/nota" || modo_corse_personale(p) ||
-                    p == "committenti/committenti_privati/*/nome" || p == "committenti/committenti_privati/*/nota")
+                    p == "committenti/committenti_privati/*/nome" || p == "committenti/committenti_privati/*/nota" ||
+                    p.rfind("elenco_utenti/elenchi/*/utenti/*/", 0) == 0)
             << p;
+    // K-019: dell'elenco utenti sono personali nome, casa, classe e sezione (D1), la nota dello stato e il testo di una fermata non
+    // riconosciuta; nient'altro (codice, scuola, stato, tratte, orari, sblocchi sono comuni).
+    std::set<std::string> elenco;
+    for (const std::string& p : personali)
+        if (p.rfind("elenco_utenti/", 0) == 0) elenco.insert(p);
+    const std::string u = "elenco_utenti/elenchi/*/utenti/*/";
+    EXPECT_EQ(elenco, (std::set<std::string>{u + "casa/civico", u + "casa/comune", u + "casa/frazione", u + "casa/via", u + "classe",
+                                             u + "fermata/testo", u + "nome", u + "sezione", u + "stato/nota"}));
     // K-012: dei committenti privati sono personali nome e nota; codice e codici esterni restano comuni (li sceglie l'utente).
     for (const char* x : {"committenti/committenti_privati/*/nome", "committenti/committenti_privati/*/nota"})
         EXPECT_TRUE(personali.count(x)) << x;

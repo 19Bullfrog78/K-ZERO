@@ -46,6 +46,10 @@ public:
     const Rotation* rotation(const Code& c) const { return find(rotations_, c); }
     const FixedAssignment* fixed(const Code& c) const { return find(fixed_, c); }
     const Block* block(const Code& c) const { return find(blocks_, c); }
+    // K-019: profili di lettura, elenchi dei committenti (per committente) e loro utenti.
+    const ReadingProfile* reading_profile(const Code& c) const { return find(profiles_, c); }
+    const ClientList* client_list(const Code& client) const { return find(client_lists_, client); }
+    const ListUser* list_user(const Code& c) const { return find(list_users_, c); }
 
     // Regolamento che vale per un servizio (quello del suo contratto), se esiste.
     const Regulation* regulation_of(const Service& s) const;
@@ -93,6 +97,9 @@ private:
     Map<Rotation> rotations_;
     Map<FixedAssignment> fixed_;
     Map<Block> blocks_;
+    Map<ReadingProfile> profiles_;
+    Map<ClientList> client_lists_;
+    Map<ListUser> list_users_;
 };
 
 // Il calendario vale nel giorno d? (Regola completa accanto a Calendar, in domain_models.hpp.)

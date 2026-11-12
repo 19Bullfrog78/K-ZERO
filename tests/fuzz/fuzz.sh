@@ -4,7 +4,9 @@
 # copia del demo del K-007 per le versioni vecchie, del pacchetto di prova degli orari del K-011 (versioni 2), di quello dei
 # servizi del K-012 (versioni nuove) e di tests/fuzz/semi;
 # dal K-011 anche il resoconto degli orari di kzero ore), la riga di comando, date e orari; dal K-010 la
-# cassaforte (il file, il testo decifrato delle sezioni), il registro (il file, il testo decifrato) e le password.
+# cassaforte (il file, il testo decifrato delle sezioni), il registro (il file, il testo decifrato) e le password; dal K-019
+# l'elenco utenti del committente (il file .xlsx intero, l'XML di un foglio, le righe con i due profili di prova), con i semi
+# costruiti a ogni giro dai testi di tests/esempi/k019-elenco (nessun file binario nel deposito).
 # Un guasto (memoria, comportamento non definito, risultato incoerente, attesa oltre 10 secondi) ferma il bersaglio:
 # il file che lo provoca resta in <lavoro>/guasti/<bersaglio>/ e lo script esce con 1. Il file va corretto e messo in
 # tests/fuzz/casi/<bersaglio>/ (diventa una prova normale, fuzz.casi.<bersaglio>).
@@ -34,9 +36,10 @@ if [ $# -gt 0 ]; then
 else
   bersagli=()
   for f in "${file_formato[@]}"; do bersagli+=("pacchetto-$f"); done
-  bersagli+=(parametri date-e-orari cassaforte cassaforte-voci registro registro-voci password)
+  bersagli+=(parametri date-e-orari cassaforte cassaforte-voci registro registro-voci password elenco-archivio elenco-foglio elenco-righe)
 fi
-# Semi dei bersagli della cassaforte (K-010): preparati a ogni giro (chiavi casuali) da rigioca_fuzz.
+# Semi dei bersagli della cassaforte (K-010, chiavi casuali) e dell'elenco (K-019, file .xlsx costruiti dai testi): preparati a
+# ogni giro da rigioca_fuzz.
 semi_cassaforte="$lavoro/semi-cassaforte"
 rm -rf "$semi_cassaforte"
 if [ ! -x "$build/tests/rigioca_fuzz" ]; then
@@ -88,6 +91,10 @@ prova_bersaglio() {
       ;;
     parametri) programma="$build/tests/fuzz_parametri"; cp "$radice/tests/fuzz/semi/parametri/"* "$corpus/" ;;
     date-e-orari) programma="$build/tests/fuzz_date_e_orari"; cp "$radice/tests/fuzz/semi/date-e-orari/"* "$corpus/" ;;
+    elenco-archivio|elenco-foglio|elenco-righe)
+      programma="$build/tests/fuzz_elenco"
+      ambiente=(KZERO_BERSAGLIO="$b")
+      cp "$semi_cassaforte/$b/"* "$corpus/" ;;
     cassaforte|cassaforte-voci|registro|registro-voci|password)
       programma="$build/tests/fuzz_cassaforte"
       ambiente=(KZERO_BERSAGLIO="$b")

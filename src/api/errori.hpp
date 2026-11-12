@@ -71,6 +71,16 @@ enum class Errore {
     // Orari di lavoro (K-011)
     PeriodoRovesciato,
     PeriodoIncompleto,
+    // Elenco utenti del committente (K-019)
+    FileDaLeggereIlleggibile,
+    FileExcelNonValido,
+    FormatoXls,
+    ColonnaMancante,
+    ProfiloNonTrovato,
+    ScriviDiversa,
+    ElencoSoloNumeri,
+    UtenteElencoNonTrovato,
+    SbloccoNonAmmesso,
 };
 
 struct DefinizioneErrore {

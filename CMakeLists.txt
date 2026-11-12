@@ -262,6 +262,7 @@ add_library(kzero_nucleo STATIC
   src/nucleo/controlli_orari.cpp
   src/nucleo/controlli_turni.cpp
   src/nucleo/dimostrazione.cpp
+  src/nucleo/elenco.cpp
   src/nucleo/orari.cpp
   src/nucleo/orari_regole.cpp
   src/nucleo/pacchetto.cpp
@@ -293,6 +294,7 @@ add_library(kzero_api STATIC
   src/api/comando_controlla.cpp
   src/api/comando_descrivi.cpp
   src/api/comando_dimostrazione.cpp
+  src/api/comando_elenco.cpp
   src/api/comando_giornata.cpp
   src/api/comando_ore.cpp
   src/api/comando_versione.cpp
@@ -314,6 +316,7 @@ add_library(kzero_api STATIC
   src/api/parametri.cpp
   src/api/password.cpp
   src/api/registro.cpp
+  src/api/riscrittura.cpp
   src/api/riservatezza.cpp
   src/api/schemi_dati.cpp
   src/api/testi_liberi.cpp

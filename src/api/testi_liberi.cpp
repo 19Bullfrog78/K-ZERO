@@ -162,7 +162,7 @@ std::set<Code> aziende_del_testo(const std::string& file, const TestoComune& t, 
 
 // --- Nomi delle persone e delle case -----------------------------------------------------------------------------------------
 
-enum class Chi { Personale, Passeggero, Committente, Casa };
+enum class Chi { Personale, Passeggero, Committente, Casa, Utente };
 
 struct Nome {
     Chi chi = Chi::Personale;
@@ -178,6 +178,7 @@ std::string testo_persona(const Nome& n) {
         case Chi::Passeggero: return "del passeggero " + n.codice;
         case Chi::Committente: return "del committente privato " + n.codice;
         case Chi::Casa: return "della casa " + n.codice;
+        case Chi::Utente: return "dell'utente dell'elenco " + n.codice;
     }
     return n.codice;
 }
@@ -297,6 +298,13 @@ Nomi nomi_di(const kzero::Package& p, const LegameSensibile& legame) {
         for (const kzero::ServiceLot& l : p.lots)
             if (contratti.count(l.contract.code)) cosa(*i, "gruppi_servizi.json", "gruppi_servizi[]", l.code);
     }
+    // K-019: utenti dell'elenco del committente: il suo elemento (codice, sblocchi, ditte scritte com'e').
+    for (const kzero::ClientList& l : p.client_lists)
+        for (const kzero::ListUser& u : l.users) {
+            if (u.name.empty()) continue;
+            const auto i = aggiungi(Chi::Utente, u.code, u.name, legame.utente(u.code));
+            if (i) cosa(*i, "elenco_utenti.json", "elenchi[].utenti[]", u.code);
+        }
     // Case (luoghi privati): solo il nome intero.
     for (const kzero::Place& l : p.places)
         if (l.is_private && !l.name.empty()) aggiungi(Chi::Casa, l.code, l.name, legame.casa(l.code));

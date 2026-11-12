@@ -34,6 +34,15 @@ struct Parametri {
     std::string permessi;                 // --permessi: personali, particolari, tutti
     std::string utente_da_togliere;       // --utente-da-togliere
     std::string per_utente;               // --per-utente: password nuova per un altro utente
+    // Elenco utenti del committente (K-019)
+    std::string profilo;                  // --profilo: profilo di lettura (profili_elenchi.json)
+    int anno_scolastico = 0;              // --anno-scolastico AAAA-AAAA: il primo anno (0 = non scritto)
+    std::string elenco;                   // --elenco: completo o parziale
+    std::string utente_elenco;            // --utente-elenco: codice dell'utente dell'elenco (kzero sblocco)
+    std::string tratta;                   // --tratta: sigla della tratta del profilo (kzero sblocco)
+    std::string riferimento;              // --riferimento: riferimento dello sblocco (es. la mail del committente)
+    std::optional<kzero::Day> data_sblocco;   // --data dello sblocco, scritta dall'utente
+    bool togli = false;                   // --togli: toglie lo sblocco
     std::vector<std::string> argomenti;   // argomenti del comando (es. la cartella), nell'ordine della definizione
 };
 
@@ -54,6 +63,8 @@ enum class FormaValore {
     Data,      // AAAA-MM-GG, un giorno che esiste nel calendario
     Codice,    // codice K-Zero: lettere senza accenti, cifre, '-', '_' e '.'; al massimo 64 caratteri
     Percorso,  // una cartella: testo non vuoto, al massimo 4096 byte, senza a capo (K-010, --scrivi)
+    Testo,     // K-019: una riga di testo (UTF-8, da 1 a 300 byte, senza caratteri di controllo), es. --riferimento
+    AnnoScolastico,   // K-019: AAAA-AAAA, due anni di fila (es. 2026-2027)
 };
 
 struct DefinizioneParametro {

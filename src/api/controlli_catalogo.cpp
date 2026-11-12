@@ -163,6 +163,98 @@ void aggiungi_testi_liberi(std::vector<DefinizioneControllo>& c) {
                             "(o non c'e' piu' un nome uguale in quel campo)." + togli}});
 }
 
+// K-019: l'elenco utenti del committente. Sui dati (kzero controlla) e sulle righe del file letto (kzero leggi-elenco).
+void aggiungi_elenco(std::vector<DefinizioneControllo>& c) {
+    const Livello E = Livello::Errore, A = Livello::Avviso;
+    const Classe N = Classe::Comune, PE = Classe::Personale;
+    c.push_back({Check::ListProfileInvalid, "K-CTR-139", E, N, "Profilo di lettura ambiguo o incoerente",
+                 {"Nel profilo {profilo} la sigla di tratta \"{parola}\" c'e' due volte: non si saprebbe quale tratta vuol dire.",
+                  "Nel profilo {profilo} il giorno \"{parola}\" c'e' due volte (la stessa sigla, o due sigle per lo stesso giorno).",
+                  "Nel profilo {profilo} la sigla di periodo \"{parola}\" c'e' due volte.",
+                  "Nel profilo {profilo} il periodo \"{parola}\" vuol dire la tratta \"{tratta}\", che il profilo non ha.",
+                  "Nel profilo {profilo} il titolo di colonna \"{parola}\" vale per due campi: non si saprebbe quale colonna leggere.",
+                  "Nel profilo {profilo} la parola \"{parola}\" vuol dire sia attivo sia sospeso.",
+                  "Nel profilo {profilo} la ditta \"{parola}\" c'e' due volte.",
+                  "Nel profilo {profilo} la sigla \"{parola}\" e' sia di un periodo sia di un giorno: negli orari per giorno non si "
+                  "saprebbe cosa vuol dire."}});
+    c.push_back({Check::ListInvalid, "K-CTR-140", E, N, "Elenco utenti incoerente con il suo profilo",
+                 {"L'elenco del committente {committente} dice il profilo {profilo}, che e' di un altro committente.",
+                  "L'utente {utente} ha la tratta \"{tratta}\", che il profilo del suo elenco non ha.",
+                  "L'utente {utente} ha un orario del periodo \"{periodo}\", che il profilo del suo elenco non ha.",
+                  "L'utente {utente} ha la tratta \"{tratta}\" due volte."}});
+    c.push_back({Check::ListUserCodeClash, "K-CTR-141", E, N, "Codice di un utente dell'elenco usato da un altro elemento",
+                 {"Il codice dell'utente {utente} dell'elenco e' anche il codice di un altro elemento del pacchetto: i codici degli "
+                  "utenti dell'elenco sono unici in tutto il pacchetto (li da' kzero leggi-elenco). Cambiare il codice dell'altro "
+                  "elemento."}});
+    c.push_back({Check::ListHomonymsInList, "K-CTR-142", E, PE, "Due utenti con lo stesso nome nella stessa scuola",
+                 {"Gli utenti {utente} e {altro} dello stesso elenco hanno lo stesso nome nella stessa scuola ({scuola}): una lettura "
+                  "del file non saprebbe quale dei due e' quello di una riga. Correggere l'elenco (es. il nome com'e' nel file)."},
+                 {},
+                 {{0, "Due utenti dello stesso elenco hanno lo stesso nome nella stessa scuola ({scuola}): una lettura del file non "
+                      "saprebbe quale dei due e' quello di una riga (quali: --includi-dati-personali)."}}});
+    c.push_back({Check::ListOutboundWithoutReturn, "K-CTR-143", A, N, "Andata senza ritorno in un giorno",
+                 {"L'utente {utente} ha l'andata ma nessun ritorno di {giorno} in {giorni} giorni, dal {dal} al {al}: controllare gli "
+                  "orari del file (se e' giusto cosi', non serve fare niente)."}});
+    c.push_back({Check::ListTimesOverlap, "K-CTR-144", A, N, "Due orari dello stesso giorno con date che si sovrappongono",
+                 {"L'utente {utente} ha di {giorno} due orari della tratta \"{tratta}\" con date che si sovrappongono (dal {dal} al "
+                  "{al}) e ore diverse: {ora} e {altra_ora}. Controllare gli orari del file."}});
+    c.push_back({Check::ListDateOutsideSchoolYear, "K-CTR-145", A, N, "Date di un orario fuori dall'anno della scuola",
+                 {"L'utente {utente} ha un orario dal {dal} al {al}, fuori dagli orari della scuola {scuola} (dal {scuola_dal} al "
+                  "{scuola_al}): forse una data scritta male nel file, o un anno scolastico sbagliato (--anno-scolastico)."}});
+    c.push_back({Check::ListUnlockNotNeeded, "K-CTR-146", A, N, "Sblocco che forse non serve piu'",
+                 {"L'utente {utente} e' attivo: lo sblocco della tratta \"{tratta}\" non serve piu' (si toglie con kzero sblocco "
+                  "--togli).",
+                  "Lo sblocco della tratta \"{tratta}\" dell'utente {utente} riguarda una tratta che il committente non gli da' piu' "
+                  "(percorsi): forse non serve piu' (si toglie con kzero sblocco --togli)."}});
+    c.push_back({Check::ListUserOutOfList, "K-CTR-147", A, N, "Utente non piu' nell'elenco del committente",
+                 {"L'utente {utente} non e' piu' nell'elenco del committente: resta solo per gli sblocchi ({sblocchi}) e non entra mai "
+                  "nel piano. Quando non servono piu', toglierli (kzero sblocco --togli): l'utente se ne andra' alla prossima lettura "
+                  "completa.",
+                  "L'utente {utente} non e' piu' nell'elenco del committente e non ha piu' sblocchi: se ne andra' alla prossima "
+                  "lettura completa."}});
+    const std::string riga = "Riga {riga}, colonna \"{colonna}\": ";
+    const std::string non_si_legge = ": la riga non si legge (le altre si', e un utente gia' nell'elenco resta com'e').";
+    c.push_back({Check::ListRowUnreadable, "K-CTR-148", E, N, "Riga illeggibile del file del committente",
+                 {riga + "la cella ha un errore di Excel o e' troppo lunga" + non_si_legge,
+                  riga + "la cella e' vuota, e serve" + non_si_legge,
+                  riga + "la scuola \"{scuola}\" non e' una scuola del pacchetto (nessuna ha questo codice esterno del profilo)" +
+                      non_si_legge + " Aggiungere il codice esterno alla scuola (scuole.json).",
+                  riga + "la scuola \"{scuola}\" vale per piu' scuole del pacchetto (stesso codice esterno)" + non_si_legge,
+                  riga + "lo stato non e' una delle parole del profilo" + non_si_legge,
+                  riga + "i percorsi sono scritti in un modo che il profilo non conosce" + non_si_legge,
+                  riga + "i percorsi hanno la stessa tratta due volte" + non_si_legge,
+                  riga + "gli orari sono scritti in un modo che il profilo non conosce" + non_si_legge,
+                  riga + "gli orari hanno una sigla di tratta che il profilo non conosce" + non_si_legge,
+                  riga + "gli orari hanno una sigla di giorno che il profilo non conosce" + non_si_legge,
+                  riga + "gli orari hanno una sigla di periodo che il profilo non conosce" + non_si_legge,
+                  riga + "gli orari hanno un'ora scritta male o che non esiste" + non_si_legge,
+                  riga + "gli orari hanno una data che non esiste" + non_si_legge,
+                  riga + "gli orari hanno un periodo che finisce prima di cominciare" + non_si_legge,
+                  riga + "la classe non e' un numero da 0 a 20" + non_si_legge,
+                  riga + "nome e scuola sono di due utenti gia' nell'elenco, e non si sa quale sia (K-CTR-142)" + non_si_legge}});
+    c.push_back({Check::ListRowHomonyms, "K-CTR-149", E, N, "Righe con lo stesso nome nella stessa scuola",
+                 {"Righe {righe}: {quante} utenti con lo stesso nome nella stessa scuola ({scuola}): le righe si fermano, il programma non "
+                  "indovina quale sia chi. Gli utenti gia' nell'elenco restano come sono."}});
+    c.push_back({Check::ListMaybeSameUser, "K-CTR-150", A, PE, "Forse lo stesso utente, scritto diverso",
+                 {"Riga {riga}: il nuovo utente {nuovo} e l'utente {uscito}, che il file non ha piu', hanno la stessa casa e la stessa "
+                  "scuola ({scuola}): forse e' lo stesso, scritto diverso. Il programma non li unisce: controllare.",
+                  "Riga {riga}: il nuovo utente {nuovo} e l'utente {uscito}, che il file non ha piu', hanno lo stesso nome e la stessa "
+                  "casa, il primo nella scuola {scuola}, il secondo nella scuola {scuola_prima}: forse e' lo stesso, che ha cambiato "
+                  "scuola. Il programma non li unisce: controllare."},
+                 {},
+                 {{0, "Riga {riga}: il nuovo utente {nuovo} forse e' un utente che il file non ha piu', scritto diverso (stessa casa e "
+                      "stessa scuola). Il programma non li unisce: per vedere quale, --includi-dati-personali."},
+                  {1, "Riga {riga}: il nuovo utente {nuovo} forse e' un utente che il file non ha piu' e che ha cambiato scuola (stesso "
+                      "nome e stessa casa). Il programma non li unisce: per vedere quale, --includi-dati-personali."}}});
+    c.push_back({Check::ListExitsNotApplied, "K-CTR-151", A, N, "Elenco completo con righe illeggibili: uscite non applicate",
+                 {"L'elenco e' completo ma {righe} righe non si leggono: le uscite non si applicano (chi non e' nel file resta). "
+                  "Correggere le righe nel file, o chiedere al committente, e rileggerlo."}});
+    c.push_back({Check::ListStopNotRecognized, "K-CTR-152", A, N, "Fermata indicata non riconosciuta",
+                 {riga + "la fermata indicata non e' un luogo del pacchetto (ne' per il codice esterno del profilo ne' per il nome tra "
+                         "i luoghi del comune della casa): resta il testo, dato personale. Per riconoscerla, aggiungere il codice "
+                         "esterno o il nome alternativo al luogo (luoghi.json)."}});
+}
+
 void aggiungi_orari(std::vector<DefinizioneControllo>& c) {
     const Livello E = Livello::Errore, A = Livello::Avviso;
     const Classe N = Classe::Comune, PE = Classe::Personale;
@@ -639,7 +731,9 @@ const std::vector<DefinizioneControllo>& catalogo_controlli() {
               "Il pacchetto e' di livello \"solo numeri\": il committente privato {committente} ha il nome, ammesso solo nel livello "
               "\"completo\".",
               "Il pacchetto e' di livello \"solo numeri\": il committente privato {committente} ha una nota scritta a mano, ammessa "
-              "solo nel livello \"completo\"."},
+              "solo nel livello \"completo\".",
+              "Il pacchetto e' di livello \"solo numeri\": c'e' l'elenco utenti del committente {committente} ({utenti} utenti uno "
+              "per uno, con nome e casa), ammesso solo nel livello \"completo\"."},
              {{2, PE}, {3, PE}, {4, PE}, {8, PE}, {9, PE}}},
             {Check::NegativeOnBoard, "K-CTR-020", E, N, "Persone a bordo sotto zero",
              {"Nella corsa {corsa} le persone del gruppo {gruppo} che scendono ({scendono}) sono piu' di quelle a bordo "
@@ -1022,6 +1116,7 @@ const std::vector<DefinizioneControllo>& catalogo_controlli() {
         };
         aggiungi_orari(c);
         aggiungi_testi_liberi(c);
+        aggiungi_elenco(c);
         // Controlli che usano dati personali o particolari per giudicare altro (K-010, "non verificato" per chi non li puo'
         // aprire). P = personali, Q = particolari.
         struct Richiede {
@@ -1038,6 +1133,8 @@ const std::vector<DefinizioneControllo>& catalogo_controlli() {
             // K-018: i nomi delle persone e delle case (dati personali; quelli legati a un luogo sensibile si decifrano solo con
             // tutti e due i permessi). Tutti e due sempre (scelta del supervisore del 12/11): nessuna deduzione dai falsi allarmi.
             {Check::NameInCommonText, PQ},
+            // K-019: i nomi degli utenti dell'elenco (dati personali; legati a un luogo sensibile: tutti e due i permessi).
+            {Check::ListHomonymsInList, PQ},
             {Check::PlaceWithoutCoordinates, PQ},     // le coordinate dei luoghi privati (le case legate: tutti e due i permessi)
             {Check::DwellTimesUndefined, Q},          // chi viaggia (tipi dei gruppi)
             {Check::MaxRideUndefined, Q},             // regole dei regolamenti per tipo di servizio e di gruppo
@@ -1189,6 +1286,9 @@ const char* nome_elementi(kzero::Element e) {
         case kzero::Element::Block: return "i blocchi";
         case kzero::Element::Regime: return "i regimi sugli orari";
         case kzero::Element::WorkRule: return "le regole sugli orari";
+        case kzero::Element::ReadingProfile: return "i profili di lettura degli elenchi utenti";
+        case kzero::Element::ClientList: return "gli elenchi utenti dei committenti";
+        case kzero::Element::ListUser: return "gli utenti degli elenchi";
     }
     return "gli elementi";
 }
@@ -1410,7 +1510,10 @@ std::string Presentatore::riferimento(kzero::Element e, const std::string& codic
         case kzero::Element::FixedAssignment:
         case kzero::Element::Block:
         case kzero::Element::Regime:
-        case kzero::Element::WorkRule: break;
+        case kzero::Element::WorkRule:
+        case kzero::Element::ReadingProfile:
+        case kzero::Element::ClientList:
+        case kzero::Element::ListUser: break;   // K-019: solo il codice (il nome di un utente dell'elenco non serve nei messaggi)
     }
     if (!src || nome.empty() || !dati_->versioni) return codice;
     // La classe del nome viene dalla marcatura dello schema del file da cui viene l'elemento.

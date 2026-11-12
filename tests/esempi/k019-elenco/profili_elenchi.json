@@ -1,0 +1,104 @@
+{
+  "schema": "profili_elenchi",
+  "schema_versione": 1,
+  "profili": [
+    {
+      "codice": "PR-CVA",
+      "nome": "Elenco utenti del Consorzio Valle Alta (profilo di prova, inventato)",
+      "committente": "CVA",
+      "mese_inizio_anno": 9,
+      "codici_esterni": { "sistema": "Consorzio Valle Alta", "tipo_scuola": "scuola", "tipo_fermata": "fermata" },
+      "colonne": {
+        "scuola": "SCUOLA",
+        "fermata": "FERMATA",
+        "comune": "COMUNE",
+        "frazione": "FRAZIONE",
+        "via": "VIA",
+        "civico": "CIVICO",
+        "nome": "UTENTE",
+        "classe": "CLASSE",
+        "sezione": "SEZ.",
+        "stato": "STATO",
+        "percorsi": "PERCORSI"
+      },
+      "stato": { "attivo": ["ATTIVO"], "sospeso": ["SOSPESO"], "separatore_nota": "-" },
+      "tratte": [
+        { "sigla": "AM", "verso": "andata", "nome": "andata mattina" },
+        { "sigla": "RM", "verso": "ritorno", "nome": "ritorno mezzogiorno" },
+        { "sigla": "RP", "verso": "ritorno", "nome": "ritorno pomeriggio" }
+      ],
+      "giorni": [
+        { "sigla": "LU", "giorno": "lunedi" },
+        { "sigla": "MA", "giorno": "martedi" },
+        { "sigla": "ME", "giorno": "mercoledi" },
+        { "sigla": "GI", "giorno": "giovedi" },
+        { "sigla": "VE", "giorno": "venerdi" },
+        { "sigla": "SA", "giorno": "sabato" }
+      ],
+      "periodi": [
+        { "sigla": "o", "tratta": "RP", "nome": "tutto l'anno" },
+        { "sigla": "f1", "tratta": "RP", "nome": "primo periodo" },
+        { "sigla": "f2", "tratta": "RP", "nome": "secondo periodo" },
+        { "sigla": "f3", "tratta": "RP" },
+        { "sigla": "f4", "tratta": "RP" },
+        { "sigla": "rm", "tratta": "RM", "nome": "uscita a mezzogiorno" }
+      ],
+      "percorsi": { "separatore_ditta": "/" },
+      "orari": [
+        { "colonna": "ORARI MATTINA", "forma": "per_tratta", "separatore_voci": "|", "separatore_tratta": ":", "separatore_giorni": "-", "separatore_ora": ":" },
+        {
+          "colonna": "ORARI POMERIGGIO",
+          "forma": "per_giorno",
+          "inizio_giorno": "//",
+          "separatore_voci": "-",
+          "separatore_ora": ".",
+          "date": { "apertura": "[", "chiusura": "]", "separatore": "-", "separatore_giorno_mese": "/" }
+        }
+      ],
+      "ditte": [ { "testo": "ALFA", "azienda": "ALFA" }, { "testo": "BETA TRASPORTI", "azienda": "BETA" } ]
+    },
+    {
+      "codice": "PR-TPV",
+      "nome": "Elenco di un secondo committente, con un altro file (profilo di prova, inventato)",
+      "committente": "TPV",
+      "foglio": "Iscritti",
+      "mese_inizio_anno": 8,
+      "codici_esterni": { "sistema": "TPV iscrizioni", "tipo_scuola": "istituto", "tipo_fermata": "punto" },
+      "colonne": {
+        "nome": "Cognome Nome",
+        "scuola": "Istituto",
+        "stato": "Condizione",
+        "percorsi": "Vettori",
+        "comune": "Paese",
+        "via": "Indirizzo"
+      },
+      "stato": { "attivo": ["Regolare", "Ok"], "sospeso": ["In attesa"], "separatore_nota": ":" },
+      "tratte": [
+        { "sigla": "ANDATA", "verso": "andata" },
+        { "sigla": "RIT1", "verso": "ritorno" },
+        { "sigla": "RIT2", "verso": "ritorno" }
+      ],
+      "giorni": [
+        { "sigla": "lun", "giorno": "lunedi" },
+        { "sigla": "mar", "giorno": "martedi" },
+        { "sigla": "mer", "giorno": "mercoledi" },
+        { "sigla": "gio", "giorno": "giovedi" },
+        { "sigla": "ven", "giorno": "venerdi" }
+      ],
+      "periodi": [ { "sigla": "T", "tratta": "RIT2" }, { "sigla": "P1", "tratta": "RIT2" }, { "sigla": "X", "tratta": "RIT1" } ],
+      "percorsi": { "separatore_ditta": "=" },
+      "orari": [
+        { "colonna": "Entrate", "forma": "per_tratta", "separatore_voci": ";", "separatore_tratta": ">", "separatore_giorni": ",", "separatore_ora": "h" },
+        {
+          "colonna": "Uscite",
+          "forma": "per_giorno",
+          "inizio_giorno": "#",
+          "separatore_voci": "+",
+          "separatore_ora": ":",
+          "date": { "apertura": "(", "chiusura": ")", "separatore": "~", "separatore_giorno_mese": "." }
+        }
+      ],
+      "ditte": [ { "testo": "Trasporti Beta", "azienda": "BETA" } ]
+    }
+  ]
+}

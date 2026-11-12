@@ -656,6 +656,34 @@ struct PacchettoDiProva {
     InMemoria chiaro;
 };
 
+// K-019: il demo con i profili di lettura, i codici esterni e l'elenco utenti di prova (tests/esempi/k019-elenco: un utente
+// attivo, uno sospeso con nota, fermata non riconosciuta e sblocco, uno della scuola al centro diurno, legato).
+InMemoria pacchetto_k019() {
+    const std::string prove = KZERO_CARTELLA_PROVE;
+    InMemoria m = da_cartella(prove + "/../esempi/demo");
+    const std::string k019 = prove + "/esempi/k019-elenco/";
+    const auto testo = [](const std::string& f) {
+        std::ifstream in(f, std::ios::binary);
+        std::stringstream s;
+        s << in.rdbuf();
+        return s.str();
+    };
+    const JsonDati codici = JsonDati::parse(testo(k019 + "codici_esterni.json"));
+    for (const char* f : {"scuole", "luoghi"}) {
+        JsonDati d = JsonDati::parse(m.file.at(std::string(f) + ".json"));
+        for (JsonDati& x : d.at(f)) {
+            const std::string c = x.at("codice").get<std::string>();
+            if (!codici.at(f).contains(c)) continue;
+            if (!x.contains("codici_esterni")) x["codici_esterni"] = JsonDati::array();
+            for (const JsonDati& e : codici.at(f).at(c)) x["codici_esterni"].push_back(e);
+        }
+        m.file[std::string(f) + ".json"] = d.dump(2);
+    }
+    m.file["profili_elenchi.json"] = testo(k019 + "profili_elenchi.json");
+    m.file["elenco_utenti.json"] = testo(k019 + "elenco_utenti.json");
+    return m;
+}
+
 std::vector<PacchettoDiProva> pacchetti_delle_prove() {
     const std::string prove = KZERO_CARTELLA_PROVE;
     std::vector<PacchettoDiProva> out;
@@ -802,6 +830,57 @@ TEST(Unione, CommittentiPrivatiNellaCassaforte) {
     }
 }
 
+// K-019: l'elenco utenti nella cassaforte. Nome, casa, classe, sezione, nota dello stato e testo della fermata sono personali;
+// di chi va in un luogo sensibile (la scuola al centro diurno) nome e casa stanno tra i legati. Nei file normali solo codici,
+// stato, scuola, tratte, orari, sblocchi. Ogni utente della cassaforte legge solo quello che puo'.
+TEST(Unione, ElencoUtentiNellaCassaforte) {
+    const InMemoria chiaro = pacchetto_k019();
+    const Lettura l = leggi_pacchetto(chiaro);
+    ASSERT_TRUE(l.forma_valida()) << elenco(l.problemi);
+    const Chiuso c = chiudi(chiaro);
+    std::map<std::string, std::string> trovate;
+    for (const Voce& v : c.voci) {
+        if (v.file != "elenco_utenti.json") continue;
+        // Il percorso: "elenchi", {"chiave": {"committente": ...}}, "utenti", {"codice": ...}, poi i campi (es. "stato").
+        ASSERT_GE(v.percorso.size(), 4u) << v.percorso.dump();
+        EXPECT_EQ(v.percorso[1].dump(), R"({"chiave":{"committente":"CVA"}})");
+        std::string chiave = v.percorso[3].at("codice").get<std::string>() + "/" + v.campo;
+        for (std::size_t k = 4; k < v.percorso.size(); ++k) chiave += "@" + v.percorso[k].get<std::string>();
+        trovate[chiave] = std::string(v.classe == Classe::Particolare ? "particolare" : "personale") + (v.legato ? " legato" : "");
+    }
+    const std::map<std::string, std::string> attese = {
+        {"U-000001/nome", "personale"},   {"U-000001/casa", "personale"},    {"U-000001/classe", "personale"},
+        {"U-000001/sezione", "personale"}, {"U-000002/nome", "personale"},   {"U-000002/casa", "personale"},
+        {"U-000002/classe", "personale"}, {"U-000002/sezione", "personale"}, {"U-000002/nota@stato", "personale"},
+        {"U-000002/testo@fermata", "personale"}, {"U-000003/nome", "particolare legato"}, {"U-000003/casa", "particolare legato"}};
+    EXPECT_EQ(trovate, attese);
+    const std::string normale = c.normali.file.at("elenco_utenti.json");
+    for (const char* x : {"ZETA", "IOTA", "KAPPA", "Pradello", "segheria", "da attivare", "\"classe\"", "\"sezione\""})
+        EXPECT_EQ(normale.find(x), std::string::npos) << x;
+    for (const auto& [v, nomi] : std::vector<std::pair<Visibilita, std::string>>{
+             {Visibilita{true, true}, "U-000001:ZETA ORSOLA U-000002:IOTA BRUNO U-000003:KAPPA LIDIA "},
+             {Visibilita{true, false}, "U-000001:ZETA ORSOLA U-000002:IOTA BRUNO U-000003: "},
+             {Visibilita{false, true}, "U-000001: U-000002: U-000003: "}}) {
+        const ValoriCassaforte x = valori(c, v);
+        const Lettura lv = leggi_pacchetto(c.normali, &x);
+        ASSERT_TRUE(lv.forma_valida()) << elenco(lv.problemi);
+        std::string visti;
+        for (const kzero::ClientList& e : lv.pacchetto.client_lists)
+            for (const kzero::ListUser& u : e.users) visti += u.code + ":" + u.name + " ";
+        EXPECT_EQ(visti, nomi);
+        // I controlli sull'elenco che usano i nomi (K-CTR-142) per chi ha un permesso solo non sono verificati; gli altri uguali.
+        const Resoconto r = controlla_lettura(lv, v);
+        const Resoconto tutto = controlla_lettura(l, Visibilita{true, true});
+        const auto codici = [](const Resoconto& x) {
+            std::vector<std::string> out;
+            for (const ProblemaPresentato& p : x.problemi)
+                if (p.codice >= "K-CTR-139" && p.codice <= "K-CTR-152") out.push_back(p.codice + " " + p.messaggio);
+            return out;
+        };
+        EXPECT_EQ(codici(r), codici(tutto));
+    }
+}
+
 // K-011 aggiunta 2: la dichiarazione del modo delle corse e' un dato particolare; motivo e chi, personali dentro un dato
 // particolare, stanno tra i legati (tutti e due i permessi). La forzatura resta comune: motivo e chi solo personali.
 TEST(Unione, DichiarazioneParticolareConMotivoLegato) {
@@ -921,7 +1000,9 @@ TEST(Unione, OgniCampoRiservatoDegliSchemiCompareNeiPacchettiDelleProve) {
         return r;
     };
     std::map<std::string, std::set<std::string>> usati;   // schema -> percorsi usati nei file dell'ultima versione
-    for (const PacchettoDiProva& p : pacchetti_delle_prove())
+    std::vector<PacchettoDiProva> pacchetti = pacchetti_delle_prove();
+    pacchetti.push_back({"k019-elenco", pacchetto_k019()});   // K-019: profili ed elenco utenti
+    for (const PacchettoDiProva& p : pacchetti)
         for (const auto& [file, testo] : p.chiaro.file) {
             const FileDati* f = file_dati_per_nome(file);
             if (!f || file == "pacchetto.json") continue;

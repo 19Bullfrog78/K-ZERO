@@ -1,0 +1,251 @@
+{
+  "schema": "elenco_utenti",
+  "schema_versione": 1,
+  "ultimo_numero": 3,
+  "elenchi": [
+    {
+      "committente": "CVA",
+      "profilo": "PR-CVA",
+      "anno_scolastico": "2026-2027",
+      "ultima_lettura": {
+        "impronta": "0000000000000000000000000000000000000000000000000000000000000000",
+        "elenco": "completo"
+      },
+      "utenti": [
+        {
+          "codice": "U-000001",
+          "nome": "ZETA ORSOLA",
+          "casa": {
+            "comune": "Pradello",
+            "via": "via dei Pini",
+            "civico": "4"
+          },
+          "scuola": "SC-PRIM",
+          "classe": 2,
+          "sezione": "B",
+          "stato": {
+            "tipo": "attivo"
+          },
+          "fermata": {
+            "luogo": "F-PRADELLO",
+            "riconosciuta": "codice_esterno"
+          },
+          "tratte": [
+            {
+              "sigla": "AM",
+              "azienda": "ALFA"
+            },
+            {
+              "sigla": "RM",
+              "altra_ditta": "DITTA GAMMA"
+            }
+          ],
+          "orari": [
+            {
+              "dal": "2026-09-01",
+              "al": "2027-08-31",
+              "tratta": "AM",
+              "giorno": "lunedi",
+              "ora": "08:00"
+            },
+            {
+              "dal": "2026-09-01",
+              "al": "2027-08-31",
+              "tratta": "AM",
+              "giorno": "martedi",
+              "ora": "08:00"
+            },
+            {
+              "dal": "2026-09-01",
+              "al": "2027-08-31",
+              "tratta": "AM",
+              "giorno": "mercoledi",
+              "ora": "08:00"
+            },
+            {
+              "dal": "2026-09-01",
+              "al": "2027-08-31",
+              "tratta": "AM",
+              "giorno": "giovedi",
+              "ora": "08:00"
+            },
+            {
+              "dal": "2026-09-01",
+              "al": "2027-08-31",
+              "tratta": "AM",
+              "giorno": "venerdi",
+              "ora": "08:00"
+            },
+            {
+              "dal": "2026-09-01",
+              "al": "2027-08-31",
+              "tratta": "RM",
+              "giorno": "lunedi",
+              "ora": "12:00"
+            },
+            {
+              "dal": "2026-09-01",
+              "al": "2027-08-31",
+              "tratta": "RM",
+              "giorno": "martedi",
+              "ora": "12:00"
+            },
+            {
+              "dal": "2026-09-01",
+              "al": "2027-08-31",
+              "tratta": "RM",
+              "giorno": "mercoledi",
+              "ora": "12:00"
+            },
+            {
+              "dal": "2026-09-01",
+              "al": "2027-08-31",
+              "tratta": "RM",
+              "giorno": "giovedi",
+              "ora": "12:00"
+            },
+            {
+              "dal": "2026-09-01",
+              "al": "2027-08-31",
+              "tratta": "RM",
+              "giorno": "venerdi",
+              "ora": "12:00"
+            }
+          ]
+        },
+        {
+          "codice": "U-000002",
+          "nome": "IOTA BRUNO",
+          "casa": {
+            "comune": "Castelrovo",
+            "frazione": "Alto",
+            "via": "via Erta",
+            "civico": "12/B"
+          },
+          "scuola": "SC-MEDIE",
+          "classe": 1,
+          "sezione": "A",
+          "stato": {
+            "tipo": "sospeso",
+            "nota": "da attivare solo per il ritorno"
+          },
+          "fermata": {
+            "testo": "Bivio della segheria"
+          },
+          "tratte": [
+            {
+              "sigla": "AM",
+              "azienda": "ALFA"
+            },
+            {
+              "sigla": "RM",
+              "azienda": "ALFA"
+            }
+          ],
+          "orari": [
+            {
+              "dal": "2026-09-01",
+              "al": "2027-08-31",
+              "tratta": "AM",
+              "giorno": "lunedi",
+              "ora": "07:45"
+            },
+            {
+              "dal": "2026-09-01",
+              "al": "2027-08-31",
+              "tratta": "AM",
+              "giorno": "martedi",
+              "ora": "07:45"
+            },
+            {
+              "dal": "2026-09-01",
+              "al": "2027-08-31",
+              "tratta": "AM",
+              "giorno": "mercoledi",
+              "ora": "07:45"
+            },
+            {
+              "dal": "2026-09-01",
+              "al": "2027-08-31",
+              "tratta": "AM",
+              "giorno": "giovedi",
+              "ora": "07:45"
+            },
+            {
+              "dal": "2026-09-01",
+              "al": "2027-08-31",
+              "tratta": "AM",
+              "giorno": "venerdi",
+              "ora": "07:45"
+            },
+            {
+              "dal": "2026-09-01",
+              "al": "2027-08-31",
+              "tratta": "RM",
+              "giorno": "lunedi",
+              "ora": "13:00"
+            },
+            {
+              "dal": "2026-09-01",
+              "al": "2027-08-31",
+              "tratta": "RM",
+              "giorno": "martedi",
+              "ora": "13:00"
+            },
+            {
+              "dal": "2026-09-01",
+              "al": "2027-08-31",
+              "tratta": "RM",
+              "giorno": "mercoledi",
+              "ora": "13:00"
+            },
+            {
+              "dal": "2026-09-01",
+              "al": "2027-08-31",
+              "tratta": "RM",
+              "giorno": "giovedi",
+              "ora": "13:00"
+            },
+            {
+              "dal": "2026-09-01",
+              "al": "2027-08-31",
+              "tratta": "RM",
+              "giorno": "venerdi",
+              "ora": "13:00"
+            }
+          ],
+          "sblocchi": [
+            {
+              "tratta": "RM",
+              "riferimento": "mail del consorzio del 10/11",
+              "data": "2026-11-10"
+            }
+          ]
+        },
+        {
+          "codice": "U-000003",
+          "nome": "KAPPA LIDIA",
+          "casa": {
+            "comune": "Valfonda",
+            "via": "via del Faro",
+            "civico": "1"
+          },
+          "scuola": "SC-CENTRO",
+          "stato": {
+            "tipo": "attivo"
+          },
+          "tratte": [
+            {
+              "sigla": "AM",
+              "azienda": "ALFA"
+            },
+            {
+              "sigla": "RP",
+              "azienda": "ALFA"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
