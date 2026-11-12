@@ -207,6 +207,10 @@ Si parte da ALP (3 minibus + 1 auto) e si deve poter crescere fino a 500 mezzi e
 - Ogni nuova uscita, messaggio, posizione o registro passa dal filtro delle classi; nessun dato personale nei registri
   del programma. La lettura dei file e' blindata (solo file normali dentro la cartella del pacchetto, mai oltre il
   massimo di byte): ogni nuovo lettore di file esterni (es. il file del consorzio) la usa.
+- Testi comuni (K-018): un nuovo campo di testo libero usa le definizioni `testo` o `nota` dello schema (o e' il `codice` di un
+  elemento), cosi' entra da solo nell'avviso sui nomi liberi (K-CTR-136 ... 138, src/api/testi_liberi.hpp); un testo che non
+  deve entrarci (es. il testo copiato in un falso allarme) ha una definizione sua. Le parole sulla salute sono dati (norme e
+  aziende, versione 4), mai nel programma.
 - Due livelli di pacchetto: "solo numeri" (consigliato: conteggi, niente nomi, case, porta a porta, motivi)
   e "completo". Mai codice fiscale, telefoni, mail: il formato non ha campi per questi dati.
 - Problemi nei dati: codice fisso K-CTR-nnn (catalogo separato dai K-ERR, in docs/controlli.md, provato

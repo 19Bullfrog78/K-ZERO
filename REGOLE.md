@@ -323,6 +323,9 @@ Il programma le tratta oggi con prudenza: con la lettura certa da' errori, con q
   es. un centro diurno, servono tutti e due i permessi, come per i passeggeri); gli altri vedono il codice. Il codice del
   cliente e i nomi dei suoi servizi e contratti sono dati comuni: non devono contenere il nome (es. "Noleggio per un
   matrimonio", non "Matrimonio Rossi"). Mai telefono, mail o codice fiscale.
+- Nomi liberi (K-018, supervisore 12/11): nomi, codici e note scritti da chi prepara i dati sono dati comuni e li vede chiunque.
+  Il programma avvisa (solo avvisi) quando contengono il nome di una persona dei dati o una parola sulla salute degli elenchi
+  del paese e dell'azienda; un falso allarme si spegne con un motivo scritto. Niente controllo sui numeri dei codici esterni.
 
 ## Da confermare
 - Valori reali: tempo massimo a bordo, tempi di salita, tempo pedana, posti persi per carrozzina, costi.
