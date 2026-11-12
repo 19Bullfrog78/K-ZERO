@@ -165,7 +165,7 @@ TEST(Controlli, K_CTR_011_luogo_del_tipo_sbagliato) {
 
 TEST(Controlli, K_CTR_012_fine_prima_dell_inizio) {
     Package p = demo();
-    per_codice(p.calendars, "CAL-CENTRO").range.to = giorno("2026-08-31");
+    per_codice(p.calendars, "CAL-LMG").range.to = giorno("2026-08-31");
     EXPECT_TRUE(segnala(p, Check::InvertedPeriod, 0, "calendari.json", "/calendari/3"));
     Package q = demo();
     q.schools[0].timetables[0].end = ora("07:00");
@@ -174,22 +174,22 @@ TEST(Controlli, K_CTR_012_fine_prima_dell_inizio) {
 
 TEST(Controlli, K_CTR_013_data_fuori_dal_periodo) {
     Package p = demo();
-    per_codice(p.calendars, "CAL-CENTRO").added[0].day = giorno("2027-08-15");
+    per_codice(p.calendars, "CAL-LMG").added[0].day = giorno("2027-08-15");
     EXPECT_TRUE(segnala(p, Check::DateOutsideCalendar, 0, "calendari.json", "/calendari/3/date_aggiunte/0"));
     Package q = demo();
-    per_codice(q.calendars, "CAL-CENTRO").removed[0].day = giorno("2027-08-15");
+    per_codice(q.calendars, "CAL-LMG").removed[0].day = giorno("2027-08-15");
     EXPECT_TRUE(segnala(q, Check::DateOutsideCalendar, 1, "calendari.json", "/calendari/3/date_tolte/0"));
     Package r = demo();
-    per_codice(r.calendars, "CAL-CENTRO").suspensions[0].range.to = giorno("2027-08-05");
+    per_codice(r.calendars, "CAL-LMG").suspensions[0].range.to = giorno("2027-08-05");
     EXPECT_TRUE(segnala(r, Check::DateOutsideCalendar, 2, "calendari.json", "/calendari/3/sospensioni/0"));
 }
 
 TEST(Controlli, K_CTR_014_data_contraddittoria) {
     Package p = demo();
-    per_codice(p.calendars, "CAL-CENTRO").added[0].day = giorno("2027-06-02");   // e' anche tra le date tolte
+    per_codice(p.calendars, "CAL-LMG").added[0].day = giorno("2027-06-02");   // e' anche tra le date tolte
     EXPECT_TRUE(segnala(p, Check::ContradictoryDate, 0, "calendari.json", "/calendari/3/date_aggiunte/0"));
     Package q = demo();
-    per_codice(q.calendars, "CAL-CENTRO").added[0].day = giorno("2026-12-28");   // cade nella chiusura del centro
+    per_codice(q.calendars, "CAL-LMG").added[0].day = giorno("2026-12-28");   // cade nella chiusura del centro
     EXPECT_TRUE(segnala(q, Check::ContradictoryDate, 1, "calendari.json", "/calendari/3/date_aggiunte/0"));
 }
 
@@ -217,10 +217,10 @@ TEST(Controlli, K_CTR_016_calendario_circolare) {
 TEST(Controlli, K_CTR_049_calendario_combinato_con_se_stesso) {
     Package p = demo();
     per_codice(p.calendars, "CAL-FERIALI").adds = {
-        {CalendarLinkKind::Calendar, Ref{"CAL-CENTRO-GIO", dove("calendari.json", "/calendari/4/aggiunge/calendari/0")}}};
-    per_codice(p.calendars, "CAL-CENTRO").removes = {
+        {CalendarLinkKind::Calendar, Ref{"CAL-GIO", dove("calendari.json", "/calendari/4/aggiunge/calendari/0")}}};
+    per_codice(p.calendars, "CAL-LMG").removes = {
         {CalendarLinkKind::Calendar, Ref{"CAL-FERIALI", dove("calendari.json", "/calendari/3/toglie/calendari/0")}}};
-    // Giro: CAL-FERIALI aggiunge CAL-CENTRO-GIO, che ha base CAL-CENTRO, che toglie CAL-FERIALI.
+    // Giro: CAL-FERIALI aggiunge CAL-GIO, che ha base CAL-LMG, che toglie CAL-FERIALI.
     EXPECT_TRUE(segnala(p, Check::CalendarCombinationCycle, 0, "calendari.json", "/calendari/4/aggiunge/calendari/0"));
     EXPECT_TRUE(segnala(p, Check::CalendarCombinationCycle, 0, "calendari.json", "/calendari/3/toglie/calendari/0"));
     EXPECT_EQ(quanti(p, Check::CalendarCombinationCycle), 3);   // i tre calendari del giro
@@ -234,7 +234,7 @@ TEST(Controlli, K_CTR_049_calendario_combinato_con_se_stesso) {
     EXPECT_EQ(quanti(q, Check::CalendarCombinationCycle), 1);
     // Controprova: aggiungere o togliere calendari senza giri va bene.
     Package r = demo();
-    per_codice(r.calendars, "CAL-FERIALI").removes = {{CalendarLinkKind::Calendar, Ref{"CAL-CENTRO-GIO", {}}}};
+    per_codice(r.calendars, "CAL-FERIALI").removes = {{CalendarLinkKind::Calendar, Ref{"CAL-GIO", {}}}};
     EXPECT_EQ(quanti(r, Check::CalendarCombinationCycle), 0);
 }
 
@@ -260,10 +260,10 @@ TEST(Controlli, K_CTR_010_elenchi_di_norme_e_aziende) {
     per_codice(q.vehicles, "ALFA-01").use = Ref{"NOLEGGIO", dove("mezzi.json", "/mezzi/0/uso")};
     EXPECT_TRUE(segnala(q, Check::UnknownReference, 1, "mezzi.json", "/mezzi/0/uso"));
     Package r = demo();
-    per_codice(r.services, "S-DIS").competences[0] = Ref{"PEDANE", dove("servizi.json", "/servizi/3/competenze_richieste/0")};
+    per_codice(r.services, "S-VAL-3").competences[0] = Ref{"PEDANE", dove("servizi.json", "/servizi/3/competenze_richieste/0")};
     EXPECT_TRUE(segnala(r, Check::UnknownReference, 2, "servizi.json", "/servizi/3/competenze_richieste/0"));
     // Una competenza di un'altra azienda non vale: ogni azienda ha il suo elenco.
-    per_codice(r.services, "S-DIS").competences[0] = Ref{"INFANZIA", dove("servizi.json", "/servizi/3/competenze_richieste/0")};
+    per_codice(r.services, "S-VAL-3").competences[0] = Ref{"INFANZIA", dove("servizi.json", "/servizi/3/competenze_richieste/0")};
     EXPECT_TRUE(segnala(r, Check::UnknownReference, 2, "servizi.json", "/servizi/3/competenze_richieste/0"));
     Package s = demo();
     per_codice(s.regulations, "R-TN").vehicle_uses->values[0].uses[1] = Ref{"TAXI", dove("regolamenti.json", "/x")};
@@ -604,7 +604,7 @@ TEST(Controlli, K_CTR_031_conteggi_diversi_dai_passeggeri) {
     gruppo(q, "G-ASILO").stops[2].alighting = 8;
     EXPECT_TRUE(segnala(q, Check::CountsDifferFromPassengers, 1, "servizi.json", "/servizi/4/domanda/gruppi/0/fermate/2"));
     Package r = demo();
-    gruppo(r, "G-DIS").stops[0].wheelchairs = 0;   // P-D1 viaggia seduto sulla carrozzina
+    gruppo(r, "G-VAL-3").stops[0].wheelchairs = 0;   // P-D1 viaggia seduto sulla carrozzina
     EXPECT_TRUE(segnala(r, Check::CountsDifferFromPassengers, 2, "servizi.json", "/servizi/3/domanda/gruppi/0/fermate/0"));
     Package s = demo();
     per_codice(gruppo(s, "G-ASILO").passengers, "P-A1").boarding->place.code = "F-PRADELLO";
@@ -619,21 +619,21 @@ TEST(Controlli, K_CTR_031_carrozzine_e_ausili_piegati) {
     EXPECT_EQ(quanti(demo(), Check::CountsDifferFromPassengers), 0);
     // P-D2 ha un deambulatore dichiarato: la fermata PP-02 deve riportare un ausilio piegato.
     Package p = demo();
-    gruppo(p, "G-DIS").stops[1].folded_aids = 0;
+    gruppo(p, "G-VAL-3").stops[1].folded_aids = 0;
     EXPECT_TRUE(segnala(p, Check::CountsDifferFromPassengers, 4, "servizi.json", "/servizi/3/domanda/gruppi/0/fermate/1"));
     EXPECT_EQ(quanti(p, Check::CountsDifferFromPassengers), 1);
     // P-D4 viaggia con la carrozzina piegata: e' un ausilio piegato, non una carrozzina.
     Package q = demo();
-    gruppo(q, "G-DIS-GIO").stops[0].folded_aids = 0;
+    gruppo(q, "G-VAL-4").stops[0].folded_aids = 0;
     EXPECT_TRUE(segnala(q, Check::CountsDifferFromPassengers, 4, "servizi.json", "/servizi/6/domanda/gruppi/0/fermate/0"));
     Package r = demo();
-    gruppo(r, "G-DIS-GIO").stops[0].folded_aids = 0;
-    gruppo(r, "G-DIS-GIO").stops[0].wheelchairs = 1;
+    gruppo(r, "G-VAL-4").stops[0].folded_aids = 0;
+    gruppo(r, "G-VAL-4").stops[0].wheelchairs = 1;
     EXPECT_TRUE(segnala(r, Check::CountsDifferFromPassengers, 2, "servizi.json", "/servizi/6/domanda/gruppi/0/fermate/0"));
     EXPECT_TRUE(segnala(r, Check::CountsDifferFromPassengers, 4, "servizi.json", "/servizi/6/domanda/gruppi/0/fermate/0"));
     // Se P-D1 viaggiasse con la carrozzina piegata, a PP-01 cambierebbero tutti e due i conteggi.
     Package s = demo();
-    per_codice(gruppo(s, "G-DIS").passengers, "P-D1").needs.wheelchair = WheelchairUse::Folded;
+    per_codice(gruppo(s, "G-VAL-3").passengers, "P-D1").needs.wheelchair = WheelchairUse::Folded;
     EXPECT_TRUE(segnala(s, Check::CountsDifferFromPassengers, 2, "servizi.json", "/servizi/3/domanda/gruppi/0/fermate/0"));
     EXPECT_TRUE(segnala(s, Check::CountsDifferFromPassengers, 4, "servizi.json", "/servizi/3/domanda/gruppi/0/fermate/0"));
 }
@@ -642,7 +642,7 @@ TEST(Controlli, K_CTR_031_carrozzine_e_ausili_piegati) {
 TEST(Controlli, K_CTR_047_assistente_non_richiesto_dal_gruppo) {
     EXPECT_EQ(quanti(demo(), Check::AssistantNotRequested), 0);
     Package p = demo();
-    gruppo(p, "G-DIS").assistant_required = false;   // P-D1 ha bisogno dell'assistente
+    gruppo(p, "G-VAL-3").assistant_required = false;   // P-D1 ha bisogno dell'assistente
     EXPECT_TRUE(segnala(p, Check::AssistantNotRequested, 0, "servizi.json", "/servizi/3/domanda/gruppi/0/passeggeri/0"));
     EXPECT_EQ(quanti(p, Check::AssistantNotRequested), 1);
     EXPECT_EQ(api::definizione_controllo(Check::AssistantNotRequested).livello, api::Livello::Errore);
@@ -652,9 +652,9 @@ TEST(Controlli, K_CTR_047_assistente_non_richiesto_dal_gruppo) {
     ASSERT_NE(parametro(*x, "passeggero"), nullptr);
     EXPECT_EQ(parametro(*x, "passeggero")->text, "P-D1");
     ASSERT_NE(parametro(*x, "gruppo"), nullptr);
-    EXPECT_EQ(parametro(*x, "gruppo")->text, "G-DIS");
+    EXPECT_EQ(parametro(*x, "gruppo")->text, "G-VAL-3");
     // Un passeggero sospeso non viaggia: nessun errore.
-    per_codice(gruppo(p, "G-DIS").passengers, "P-D1").status = PassengerStatus::Suspended;
+    per_codice(gruppo(p, "G-VAL-3").passengers, "P-D1").status = PassengerStatus::Suspended;
     EXPECT_EQ(quanti(p, Check::AssistantNotRequested), 0);
 }
 
@@ -669,7 +669,7 @@ TEST(Controlli, K_CTR_033_servizio_in_due_lotti) {
     ServiceLot lotto;
     lotto.code = "LOTTO-3";
     lotto.contract = Ref{"CT-SCU", dove("gruppi_servizi.json", "/gruppi_servizi/1/contratto")};
-    lotto.services = {Ref{"S-DIS", dove("gruppi_servizi.json", "/gruppi_servizi/1/servizi/0")}};
+    lotto.services = {Ref{"S-VAL-3", dove("gruppi_servizi.json", "/gruppi_servizi/1/servizi/0")}};
     lotto.src = dove("gruppi_servizi.json", "/gruppi_servizi/1");
     p.lots.push_back(lotto);
     EXPECT_TRUE(segnala(p, Check::ServiceInTwoLots, 0, "gruppi_servizi.json", "/gruppi_servizi/1/servizi/0"));
@@ -831,5 +831,9 @@ TEST(Controlli, catalogo_coperto) {
     // K-011 aggiunta 2: forzatura e dichiarazione che non servono.
     EXPECT_EQ(api::definizione_controllo(Check::ModeForcedUseless).codice, "K-CTR-134");
     EXPECT_EQ(api::definizione_controllo(Check::ModeDeclaredUseless).codice, "K-CTR-135");
-    EXPECT_EQ(api::catalogo_controlli().size(), 135u);
+    // K-018: testi comuni (le prove stanno in test_testi_liberi).
+    EXPECT_EQ(api::definizione_controllo(Check::NameInCommonText).codice, "K-CTR-136");
+    EXPECT_EQ(api::definizione_controllo(Check::HealthWordInCommonText).codice, "K-CTR-137");
+    EXPECT_EQ(api::definizione_controllo(Check::PlaceMaybeSensitive).codice, "K-CTR-138");
+    EXPECT_EQ(api::catalogo_controlli().size(), 138u);
 }

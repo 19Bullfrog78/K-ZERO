@@ -175,8 +175,8 @@ TEST(Regole, solo_studenti_scolastico) {
 
 // Solo disabili = Handicap (anche sulla corsa che consegna un trasbordo).
 TEST(Regole, solo_handicap) {
-    EXPECT_EQ(categoria(demo(), "C-DIS-1"), ServiceType::Disability);
-    EXPECT_EQ(categoria(demo(), "C-DIS-R"), ServiceType::Disability);
+    EXPECT_EQ(categoria(demo(), "C-VAL-3"), ServiceType::Disability);
+    EXPECT_EQ(categoria(demo(), "C-VAL-3R"), ServiceType::Disability);
 }
 
 // Solo utenti di linea = Linea. La corsa non nomina gruppi (conteggi non noti): vale il gruppo anonimo del servizio.
@@ -267,8 +267,8 @@ TEST(Regole, infanzia_assistente_obbligatorio) {
 // Passeggero disabile che chiede l'assistente (P-D1) = assistente obbligatorio con ogni regolamento;
 // un disabile che non lo chiede, da solo, no con R-TN e si' con R-INV (che lo chiede per tutti i disabili).
 TEST(Regole, handicap_con_accompagnatore_assistente_obbligatorio) {
-    const Passenger d1 = per_codice(gruppo(demo(), "G-DIS").passengers, "P-D1");
-    const Passenger d3 = per_codice(gruppo(demo(), "G-DIS").passengers, "P-D3");
+    const Passenger d1 = per_codice(gruppo(demo(), "G-VAL-3").passengers, "P-D1");
+    const Passenger d3 = per_codice(gruppo(demo(), "G-VAL-3").passengers, "P-D3");
     ASSERT_TRUE(d1.needs.assistant);
     ASSERT_FALSE(d3.needs.assistant);
     OnBoard con_d1;

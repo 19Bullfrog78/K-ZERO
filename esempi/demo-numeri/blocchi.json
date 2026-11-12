@@ -3,9 +3,9 @@
   "schema_versione": 1,
   "blocchi": [
     {
-      "codice": "B-DIS",
+      "codice": "B-VAL-3",
       "mezzo": "ALFA-03",
-      "corse": ["C-DIS-1"],
+      "corse": ["C-VAL-3"],
       "forza": "mezzo_fisso",
       "nota": "Il centro diurno vuole sempre il mezzo con la pedana."
     },

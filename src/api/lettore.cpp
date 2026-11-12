@@ -846,6 +846,20 @@ void manifesto(const JsonDati& d, Package& pk) {
         m.vault_id = v->at("id").get<std::string>();
         m.vault_generation = v->at("generazione").get<int>();
     }
+    const auto& falsi = c.elenco(d, "falsi_allarmi");                                       // versione 3 (K-018)
+    for (std::size_t i = 0; i < falsi.size(); ++i) {
+        const auto& f = falsi[i];
+        FalseAlarm x;
+        x.check = f.at("controllo").get<std::string>();
+        x.file = f.at("file").get<std::string>();
+        x.field = f.at("campo").get<std::string>();
+        x.element = c.testo(f, "elemento");
+        x.text = f.at("testo").get<std::string>();
+        x.reason = f.at("motivo").get<std::string>();
+        x.when = c.data(f.at("quando"));
+        x.src = c.src(indice("/falsi_allarmi", i));
+        m.false_alarms.push_back(x);
+    }
     m.src = c.src("");
 }
 
@@ -910,6 +924,7 @@ void aziende(const JsonDati& d, Package& pk) {
         x.choices = scelte_orari(a, p, c);
         if (a.contains("rientro")) x.return_key = rientro(a.at("rientro"), c.src(p + "/rientro"));
         if (a.contains("modo_corse")) x.trip_modes = modo_corse(a.at("modo_corse"), p + "/modo_corse", c);
+        for (const auto& w : c.elenco(a, "parole_sulla_salute")) x.health_words.push_back(w.get<std::string>());   // versione 4
         const auto& spec = c.elenco(a, "speciali_esigenze");
         for (std::size_t k = 0; k < spec.size(); ++k) {
             const std::string ps = indice(p + "/speciali_esigenze", k);
@@ -998,6 +1013,7 @@ void norme(const JsonDati& d, Package& pk) {
                 x.clock_changes.push_back({c.data(date[k].at("data")), c.orario(date[k].at("da")), c.orario(date[k].at("a")),
                                            c.src(indice(p + "/cambi_ora/date", k))});
         }
+        for (const auto& w : c.elenco(n, "parole_sulla_salute")) x.health_words.push_back(w.get<std::string>());   // versione 4 (K-018)
         x.note = c.testo(n, "nota");
         x.src = c.src(p);
         pk.norms.push_back(x);

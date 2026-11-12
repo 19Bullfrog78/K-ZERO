@@ -136,22 +136,22 @@
       "testo_esposto": "SCUOLABUS"
     },
     {
-      "codice": "C-DIS-R",
-      "nome": "Centro diurno, ramo di Montebrino",
-      "servizi": ["S-DIS"],
-      "calendario": "CAL-CENTRO",
+      "codice": "C-VAL-3R",
+      "nome": "Valfonda 3, ramo di Montebrino",
+      "servizi": ["S-VAL-3"],
+      "calendario": "CAL-LMG",
       "passaggi": [
         { "luogo": "L-RIMESSA-ALFA", "orario": "07:50" },
         {
           "luogo": "F-MONTEBRINO",
           "orario": "08:05",
-          "persone": [{ "gruppo": "G-DIS", "salgono": 1 }],
+          "persone": [{ "gruppo": "G-VAL-3", "salgono": 1 }],
           "km": { "vuoti": 9.0 }
         },
         {
           "luogo": "L-TRASB-PONTE",
           "orario": "08:25",
-          "trasbordi": [{ "codice": "T-01", "azione": "consegna", "gruppo": "G-DIS", "persone": 1 }],
+          "trasbordi": [{ "codice": "T-01", "azione": "consegna", "gruppo": "G-VAL-3", "persone": 1 }],
           "km": { "pieni": 11.2 }
         },
         { "luogo": "L-RIMESSA-ALFA", "orario": "08:45", "km": { "vuoti": 10.0 } }
@@ -159,36 +159,36 @@
       "km_totali": { "pieni": 11.2, "vuoti": 19.0 }
     },
     {
-      "codice": "C-DIS-1",
-      "nome": "Centro diurno, giro principale",
-      "servizi": ["S-DIS"],
-      "calendario": "CAL-CENTRO",
+      "codice": "C-VAL-3",
+      "nome": "Valfonda 3, giro principale",
+      "servizi": ["S-VAL-3"],
+      "calendario": "CAL-LMG",
       "passaggi": [
         { "luogo": "L-RIMESSA-ALFA", "orario": "07:40", "assistente": "sale" },
         {
           "luogo": "F-PRADELLO",
           "orario": "07:52",
-          "persone": [{ "gruppo": "G-DIS", "salgono": 1 }],
+          "persone": [{ "gruppo": "G-VAL-3", "salgono": 1 }],
           "km": { "vuoti": 5.5 }
         },
         {
           "luogo": "F-CASTELROVO",
           "orario": "08:05",
-          "persone": [{ "gruppo": "G-DIS", "salgono": 1 }],
+          "persone": [{ "gruppo": "G-VAL-3", "salgono": 1 }],
           "km": { "pieni": 4.8 }
         },
         {
           "luogo": "L-TRASB-PONTE",
           "orario": "08:20",
           "partenza": "08:30",
-          "trasbordi": [{ "codice": "T-01", "azione": "ricezione", "gruppo": "G-DIS", "persone": 1 }],
+          "trasbordi": [{ "codice": "T-01", "azione": "ricezione", "gruppo": "G-VAL-3", "persone": 1 }],
           "km": { "pieni": 6.1 }
         },
         {
           "luogo": "L-CENTRO",
           "orario": "08:52",
           "assistente": "scende",
-          "persone": [{ "gruppo": "G-DIS", "scendono": 3 }],
+          "persone": [{ "gruppo": "G-VAL-3", "scendono": 3 }],
           "km": { "pieni": 9.4 }
         }
       ],
@@ -278,22 +278,22 @@
       "testo_esposto": "B610 STAZIONE"
     },
     {
-      "codice": "C-DIS-GIO",
-      "nome": "Centro diurno, giovedi'",
-      "servizi": ["S-DIS-GIO"],
-      "calendario": "CAL-CENTRO-GIO",
+      "codice": "C-VAL-4",
+      "nome": "Valfonda 4, giovedi'",
+      "servizi": ["S-VAL-4"],
+      "calendario": "CAL-GIO",
       "passaggi": [
         { "luogo": "L-RIMESSA-ALFA", "orario": "08:05" },
         {
           "luogo": "F-SORGENTA",
           "orario": "08:20",
-          "persone": [{ "gruppo": "G-DIS-GIO", "salgono": 1 }],
+          "persone": [{ "gruppo": "G-VAL-4", "salgono": 1 }],
           "km": { "vuoti": 6.4 }
         },
         {
           "luogo": "L-CENTRO",
           "orario": "08:45",
-          "persone": [{ "gruppo": "G-DIS-GIO", "scendono": 1 }],
+          "persone": [{ "gruppo": "G-VAL-4", "scendono": 1 }],
           "km": { "pieni": 9.1 }
         }
       ],
@@ -592,14 +592,14 @@
       "km_totali": { "pieni": 16.0, "vuoti": 9.5 }
     },
     {
-      "codice": "C-PRIVATO-CENTRO",
+      "codice": "C-PRIVATO",
       "nome": "Noleggio privato, andata",
-      "servizi": ["S-PRIVATO-CENTRO"],
-      "calendario": "CAL-PRIVATO-CENTRO",
+      "servizi": ["S-PRIVATO"],
+      "calendario": "CAL-PRIVATO",
       "passaggi": [
         { "luogo": "L-RIMESSA-ALFA", "orario": "08:00" },
-        { "luogo": "F-PRADELLO", "orario": "08:20", "persone": [{ "gruppo": "G-PRIVATO-CENTRO", "salgono": 1 }], "km": { "vuoti": 9.5 } },
-        { "luogo": "L-CENTRO", "orario": "08:50", "persone": [{ "gruppo": "G-PRIVATO-CENTRO", "scendono": 1 }], "km": { "pieni": 12.0 } },
+        { "luogo": "F-PRADELLO", "orario": "08:20", "persone": [{ "gruppo": "G-PRIVATO", "salgono": 1 }], "km": { "vuoti": 9.5 } },
+        { "luogo": "L-CENTRO", "orario": "08:50", "persone": [{ "gruppo": "G-PRIVATO", "scendono": 1 }], "km": { "pieni": 12.0 } },
         { "luogo": "L-RIMESSA-ALFA", "orario": "09:10", "km": { "vuoti": 6.0 } }
       ],
       "km_totali": { "pieni": 12.0, "vuoti": 15.5 }

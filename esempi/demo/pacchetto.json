@@ -1,6 +1,6 @@
 {
   "schema": "pacchetto",
-  "schema_versione": 2,
+  "schema_versione": 3,
   "codice": "DEMO-2026",
   "nome": "Pacchetto dimostrativo K-Zero",
   "dati_inventati": true,
@@ -14,5 +14,16 @@
   "fuso_orario": "Europe/Rome",
   "valuta": "EUR",
   "impostazioni": { "margine_trasbordo_minuti": 3, "porta_a_porta_sensibile": true },
-  "cassaforte": false
+  "cassaforte": false,
+  "falsi_allarmi": [
+    {
+      "controllo": "K-CTR-138",
+      "file": "luoghi.json",
+      "campo": "luoghi[].nomi_alternativi[]",
+      "elemento": "L-SOSTA-VALFONDA",
+      "testo": "Valfonda, parcheggio del centro diurno",
+      "motivo": "E' il parcheggio dove i pullman aspettano, accanto al centro: nessun passeggero sale o scende qui, quindi non e' un luogo sensibile.",
+      "quando": "2026-11-12"
+    }
+  ]
 }

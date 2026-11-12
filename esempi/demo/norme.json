@@ -1,6 +1,6 @@
 {
   "schema": "norme",
-  "schema_versione": 3,
+  "schema_versione": 4,
   "norme": [
     {
       "codice": "N-IT",
@@ -524,6 +524,7 @@
           { "data": "2027-10-31", "da": "03:00", "a": "02:00" }
         ]
       },
+      "parole_sulla_salute": ["disabili", "disabile", "handicap", "centro diurno", "terapia", "riabilitazione", "GSH", "individualizzato"],
       "nota": "Riassunto per il pacchetto dimostrativo: i valori segnati 'da confermare' vanno verificati sul testo delle norme."
     }
   ]

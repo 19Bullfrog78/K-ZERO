@@ -26,6 +26,7 @@ struct Nodo {
     bool marcato = false;                    // marcatura scritta proprio qui
     const JsonDati* trasportato = nullptr;   // "x-kzero-trasportato" (passeggero o casa), se c'e'
     const JsonDati* chiave = nullptr;        // "x-kzero-chiave": i campi che riconoscono un elemento senza codice
+    std::string ref;                         // la definizione a cui rimanda il campo ("$ref"), es. "#/definitions/testo"
 };
 
 Classe da_testo(const std::string& c) {
@@ -38,6 +39,7 @@ Classe da_testo(const std::string& c) {
 Nodo nodo_di(const JsonDati& radice, const JsonDati& nodo, Classe ereditata) {
     Nodo n;
     n.definizione = nodo.is_object() && nodo.contains("$ref") ? &SchemiDati::risolvi(radice, nodo) : &nodo;
+    if (nodo.is_object() && nodo.contains("$ref") && nodo.at("$ref").is_string()) n.ref = nodo.at("$ref").get<std::string>();
     n.classe = ereditata;
     for (const JsonDati* x : {n.definizione, &nodo}) {
         if (!x->is_object()) continue;
@@ -257,7 +259,125 @@ kzero::Problem problema(kzero::Check c, int variante, const std::string& file, c
     return kzero::Problem{c, variante, kzero::Source{file, puntatore, 0, 0}, std::move(param)};
 }
 
+// --- Testi comuni (K-018) ------------------------------------------------------------------------------------------------
+// Un testo libero e' un testo scritto da chi prepara i dati: un campo che rimanda alla definizione "testo" (una riga) o
+// "nota" (un testo lungo) del suo schema, oppure il codice di un elemento (il campo "codice", definizione "codice",
+// dell'elemento di un elenco che lo rende obbligatorio: dove l'elemento e' definito, non nei riferimenti). Valori a scelta
+// fissa, date, orari, numeri e codici di riferimento hanno altre definizioni e non lo sono. E' comune se la sua classe (la
+// marcatura piu' vicina, come sopra) e' comune.
+bool testo_libero(const Nodo& f, const std::string& campo, bool in_elemento_con_codice) {
+    if (f.ref == "#/definitions/testo" || f.ref == "#/definitions/nota") return true;
+    return f.ref == "#/definitions/codice" && campo == "codice" && in_elemento_con_codice;
+}
+
+struct PosizioneTesto {
+    std::string puntatore;
+    std::string campo;      // "servizi[].nome"
+    std::string elemento;   // codice dell'elemento piu' vicino con un codice
+    std::string campo_elemento;   // il suo elenco, es. "servizi[].domanda.gruppi[]"
+    std::string elenco;     // l'elenco principale del file e l'indice dell'elemento
+    long long indice = -1;
+    std::string radice;     // codice dell'elemento dell'elenco principale
+};
+
+void testi_in(const JsonDati& radice, const JsonDati& valore, const Nodo& n, const PosizioneTesto& pos, bool con_cod,
+              std::vector<TestoComune>& out, int profondita) {
+    if (profondita > kProfondita) return;
+    if (valore.is_object()) {
+        for (const auto& [k, v] : valore.items()) {
+            const Nodo f = campo_di(radice, n, k);
+            PosizioneTesto p = pos;
+            p.puntatore += "/" + escape(k);
+            p.campo += (p.campo.empty() ? "" : ".") + k;
+            if (v.is_string()) {
+                if (f.classe == Classe::Comune && testo_libero(f, k, con_cod))
+                    out.push_back({p.puntatore, p.campo, p.elemento, p.campo_elemento, p.elenco, p.indice, p.radice, v.get<std::string>()});
+                continue;
+            }
+            if (v.is_array()) {
+                const Nodo e = elemento_di(radice, f);
+                const bool codici = con_codice(e);
+                for (std::size_t i = 0; i < v.size(); ++i) {
+                    PosizioneTesto q = p;
+                    q.puntatore += "/" + std::to_string(i);
+                    q.campo += "[]";
+                    if (profondita == 0) {   // un elemento di un elenco principale del file
+                        q.elenco = k;
+                        q.indice = static_cast<long long>(i);
+                    }
+                    const JsonDati& x = v[i];
+                    const bool ha_codice = codici && x.is_object() && x.contains("codice") && x.at("codice").is_string();
+                    if (ha_codice) {
+                        q.elemento = x.at("codice").get<std::string>();
+                        q.campo_elemento = q.campo;
+                        if (profondita == 0) q.radice = q.elemento;
+                    }
+                    if (x.is_string()) {
+                        if (e.classe == Classe::Comune && testo_libero(e, "", false))
+                            out.push_back({q.puntatore, q.campo, q.elemento, q.campo_elemento, q.elenco, q.indice, q.radice, x.get<std::string>()});
+                    } else {
+                        testi_in(radice, x, e, q, ha_codice, out, profondita + 2);
+                    }
+                }
+                continue;
+            }
+            if (v.is_object()) testi_in(radice, v, f, p, false, out, profondita + 1);
+        }
+    }
+}
+
+// I campi dei testi comuni di uno schema, seguendo properties, items e $ref (per la tabella di docs/controlli.md).
+void campi_in(const JsonDati& radice, const Nodo& n, const std::string& campo, bool con_cod, std::set<std::string>& visti,
+              std::vector<std::string>& out, int profondita) {
+    if (profondita > kProfondita || !n.definizione->is_object()) return;
+    const auto props = n.definizione->find("properties");
+    if (props != n.definizione->end() && props->is_object())
+        for (const auto& [k, v] : props->items()) {
+            const Nodo f = nodo_di(radice, v, n.classe);
+            const std::string c = campo + (campo.empty() ? "" : ".") + k;
+            if (testo_libero(f, k, con_cod)) {
+                if (f.classe == Classe::Comune && visti.insert(c).second) out.push_back(c);
+                continue;
+            }
+            campi_in(radice, f, c, false, visti, out, profondita + 1);
+        }
+    const auto items = n.definizione->find("items");
+    if (items != n.definizione->end() && items->is_object()) {
+        const Nodo e = nodo_di(radice, *items, n.classe);
+        const std::string c = campo + "[]";
+        if (testo_libero(e, "", false)) {
+            if (e.classe == Classe::Comune && visti.insert(c).second) out.push_back(c);
+            return;
+        }
+        campi_in(radice, e, c, con_codice(e), visti, out, profondita + 1);
+    }
+}
+
 }  // namespace
+
+bool regole_pubbliche(const std::string& schema, int versione) {
+    const JsonDati* radice = SchemiDati::incorporati().schema(schema, versione);
+    if (!radice || !radice->is_object()) return false;
+    const auto m = radice->find("x-kzero-regole-pubbliche");
+    return m != radice->end() && m->is_boolean() && m->get<bool>();
+}
+
+std::vector<TestoComune> testi_comuni(const JsonDati& documento, const std::string& schema, int versione) {
+    std::vector<TestoComune> out;
+    const JsonDati* radice = SchemiDati::incorporati().schema(schema, versione);
+    if (!radice) return out;
+    testi_in(*radice, documento, nodo_di(*radice, *radice, Classe::Comune), PosizioneTesto{}, false, out, 0);
+    return out;
+}
+
+std::vector<std::string> campi_testi_comuni(const std::string& schema, int versione) {
+    std::vector<std::string> out;
+    const JsonDati* radice = SchemiDati::incorporati().schema(schema, versione);
+    if (!radice) return out;
+    std::set<std::string> visti;
+    campi_in(*radice, nodo_di(*radice, *radice, Classe::Comune), "", false, visti, out, 0);
+    return out;
+}
 
 JsonDati Voce::in_json() const {
     JsonDati j = JsonDati::object();

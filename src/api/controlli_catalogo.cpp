@@ -120,6 +120,49 @@ std::vector<Pezzo> straordinario(const std::string& quando) {
              quando + ", in un turno ricorrente con le speciali esigenze dell'azienda ({riferimento}): {obbligo}"}};
 }
 
+// --- Testi comuni (K-018, testi_liberi.hpp) ----------------------------------------------------------------------------
+// {testo} e' il testo comune (lo vede chiunque); {dove} il campo come nella tabella di docs/controlli.md e il codice
+// dell'elemento, cioe' quello che serve per scrivere un falso allarme; {persona} e {parola} sono dati personali (di base
+// "una persona o una casa dei dati" e "una parola"). Ultima variante di ogni controllo: un falso allarme che non spegne piu'
+// niente (pacchetto.json, falsi_allarmi), con la riservatezza del suo controllo.
+void aggiungi_testi_liberi(std::vector<DefinizioneControllo>& c) {
+    const Livello A = Livello::Avviso;
+    const Classe N = Classe::Comune, PE = Classe::Personale, PA = Classe::Particolare;
+    const std::string rimedio_nome =
+        " Il testo e' un dato comune: lo vede chiunque, anche senza permessi e senza la cassaforte. Scriverlo senza il nome; se e' un "
+        "caso (es. una via con lo stesso nome), scrivere un falso allarme con il motivo (pacchetto.json, falsi_allarmi).";
+    const std::string legato = ", che e' legato a un luogo sensibile (il suo nome si vede solo con i dati personali e particolari "
+                               "insieme)";
+    const std::string inutile =
+        "Il falso allarme del {quando} sul testo \"{testo}\" ({dove}, {file}) non spegne piu' niente: ";
+    const std::string togli = " Toglierlo, oppure correggere il campo, l'elemento o il testo.";
+    c.push_back({Check::NameInCommonText, "K-CTR-136", A, PE, "Nome di una persona o di una casa in un testo comune",
+                 {"Il testo \"{testo}\" ({dove}) contiene il nome intero {persona}." + rimedio_nome,
+                  "Il testo \"{testo}\" ({dove}) e' un testo delle cose {persona} e contiene una parola del suo nome {parola}." +
+                      rimedio_nome,
+                  "Il testo \"{testo}\" ({dove}) contiene il nome intero {persona}" + legato + "." + rimedio_nome,
+                  "Il testo \"{testo}\" ({dove}) e' un testo delle cose {persona}" + legato + ", e contiene una parola del suo nome "
+                  "{parola}." + rimedio_nome,
+                  inutile + "il testo non contiene piu' il nome di nessuna persona o casa dei dati (o non c'e' piu' un testo uguale "
+                            "in quel campo)." + togli},
+                 {{2, PA}, {3, PA}}});
+    c.push_back({Check::HealthWordInCommonText, "K-CTR-137", A, N, "Parola sulla salute in un testo comune",
+                 {"Il testo \"{testo}\" ({dove}) contiene parole sulla salute ({parole}): lascia capire un dato sulla salute ed e' un dato comune, che vede "
+                  "chiunque. Scriverlo senza quelle parole (il tipo di servizio e di gruppo va nel suo campo, che e' riservato); se non "
+                  "parla di salute, scrivere un falso allarme con il motivo (pacchetto.json, falsi_allarmi).",
+                  inutile + "il testo non contiene piu' nessuna parola sulla salute degli elenchi (o non c'e' piu' un testo uguale in "
+                            "quel campo)." + togli}});
+    c.push_back({Check::PlaceMaybeSensitive, "K-CTR-138", A, N, "Luogo con una parola sulla salute nel nome, non segnato sensibile",
+                 {"Il luogo {luogo} ha nel nome \"{testo}\" ({dove}) parole sulla salute ({parole}), ma non e' segnato sensibile: forse e' un luogo sensibile (es. un "
+                  "centro diurno o di terapia), dove chi ci va lascia capire un dato sulla salute. Se lo e', segnarlo (\"sensibile\": "
+                  "true); se no, scrivere un falso allarme con il motivo (pacchetto.json, falsi_allarmi).",
+                  "Il luogo {luogo} ha nel nome \"{testo}\" ({dove}) parole sulla salute ({parole}): forse e' un luogo sensibile (es. un centro diurno o di terapia), "
+                  "ma luoghi.json e' della versione 1, che non puo' segnare i luoghi sensibili. Se lo e', passare alla versione 2 e "
+                  "segnarlo (\"sensibile\": true); se no, scrivere un falso allarme con il motivo (pacchetto.json, falsi_allarmi).",
+                  inutile + "il nome non contiene piu' nessuna parola sulla salute degli elenchi, oppure il luogo e' segnato sensibile "
+                            "(o non c'e' piu' un nome uguale in quel campo)." + togli}});
+}
+
 void aggiungi_orari(std::vector<DefinizioneControllo>& c) {
     const Livello E = Livello::Errore, A = Livello::Avviso;
     const Classe N = Classe::Comune, PE = Classe::Personale;
@@ -978,6 +1021,7 @@ const std::vector<DefinizioneControllo>& catalogo_controlli() {
              {"Il regolamento {regolamento} non vale per una parte del periodo del contratto {contratto}: dal {dal} al {al}."}},
         };
         aggiungi_orari(c);
+        aggiungi_testi_liberi(c);
         // Controlli che usano dati personali o particolari per giudicare altro (K-010, "non verificato" per chi non li puo'
         // aprire). P = personali, Q = particolari.
         struct Richiede {
@@ -991,6 +1035,9 @@ const std::vector<DefinizioneControllo>& catalogo_controlli() {
         // cosa e' certo e cosa non e' verificato, e i controlli dei turni (T, piu' sotto) mostrano solo i problemi certi.
         const std::map<Check, Richiede> richiede = {
             {Check::NumbersOnlyPersonalData, PQ},     // la presenza di dati personali (anche quelli legati a luoghi sensibili)
+            // K-018: i nomi delle persone e delle case (dati personali; quelli legati a un luogo sensibile si decifrano solo con
+            // tutti e due i permessi). Tutti e due sempre (scelta del supervisore del 12/11): nessuna deduzione dai falsi allarmi.
+            {Check::NameInCommonText, PQ},
             {Check::PlaceWithoutCoordinates, PQ},     // le coordinate dei luoghi privati (le case legate: tutti e due i permessi)
             {Check::DwellTimesUndefined, Q},          // chi viaggia (tipi dei gruppi)
             {Check::MaxRideUndefined, Q},             // regole dei regolamenti per tipo di servizio e di gruppo

@@ -77,4 +77,29 @@ std::vector<Voce> separa(const std::string& file, JsonDati& documento, const std
 bool unisci(const std::string& file, JsonDati& documento, const std::vector<const Voce*>& voci,
             std::vector<kzero::Problem>& problemi);
 
+// --- Testi comuni (K-018, testi_liberi.hpp) ----------------------------------------------------------------------------
+// I testi liberi di classe comune di un documento (gia' conforme allo schema), ricavati dalle marcature degli schemi e non
+// da un elenco scritto a mano: un campo che rimanda alla definizione "testo" o "nota" del suo schema (nomi, codici esterni,
+// note, motivi...) e il codice di un elemento, dove l'elemento e' definito (il campo "codice" obbligatorio degli elementi di
+// un elenco), non nei riferimenti. Esclusi i valori a scelta fissa, le date, gli orari, i numeri, i riferimenti e ogni testo
+// personale o particolare. Li legge tutti chiunque: sono il posto dove un nome o una parola sulla salute non devono stare.
+struct TestoComune {
+    std::string puntatore;   // nel documento, es. "/servizi/3/domanda/gruppi/0/nome"
+    std::string campo;       // il campo come nella tabella di docs/controlli.md, es. "servizi[].domanda.gruppi[].nome"
+    std::string elemento;    // codice dell'elemento piu' vicino che ha un codice (es. il gruppo); vuoto se nessuno
+    std::string campo_elemento;   // l'elenco di quell'elemento, es. "servizi[].domanda.gruppi[]"
+    std::string elenco;      // l'elenco principale del file (es. "servizi") e l'indice dell'elemento; vuoto e -1 fuori
+    long long indice = -1;
+    std::string radice;      // codice dell'elemento dell'elenco principale, se ne ha uno
+    std::string testo;
+};
+std::vector<TestoComune> testi_comuni(const JsonDati& documento, const std::string& schema, int versione);
+
+// I campi dei testi comuni di uno schema (la tabella di docs/controlli.md la confronta).
+std::vector<std::string> campi_testi_comuni(const std::string& schema, int versione);
+
+// Il file contiene regole pubbliche di un paese o di un territorio, con la fonte (marcatura "x-kzero-regole-pubbliche" della
+// radice dello schema: norme, regolamenti): niente controllo delle parole sulla salute (K-018, scelta del supervisore).
+bool regole_pubbliche(const std::string& schema, int versione);
+
 }  // namespace kzero::api

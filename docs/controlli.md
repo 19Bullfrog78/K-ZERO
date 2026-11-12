@@ -171,6 +171,8 @@ comunque la regola qui sopra):
 | K-CTR-133 | particolare | alcuni casi | i tipi di servizio della corsa |
 | K-CTR-134 | particolare | alcuni casi | dove la legge vale con certezza (la forzatura vale ma non cambia niente), quando il regime dipende dal tipo di servizio delle corse (K-013) |
 | K-CTR-135 | particolare | tutti i casi | che la dichiarazione ci sia, come K-CTR-131 (K-011 aggiunta 2) |
+| K-CTR-136 | personale | alcuni casi | che un testo comune contenga il nome (o una parola del nome) di una persona o di una casa, e quale (il codice); che un falso allarme sui nomi non spenga piu' niente (K-018) |
+| K-CTR-136 | particolare | alcuni casi | lo stesso per una persona o una casa legata a un luogo sensibile (varianti 2 e 3): dice anche il legame con il luogo sensibile (K-018) |
 
 Nei problemi degli orari (K-CTR-107 ... K-CTR-125) quale legge vale per la persona e' un dato personale quando la legge
 dipende dal suo rapporto o dal suo contratto collettivo (es. la L. 138 vale per i dipendenti): allora la regola, la fonte
@@ -323,6 +325,123 @@ In JSON il problema ha anche il campo `giorni`, con tutti i periodi (`dal`, `al`
 giorni diversi: la riga della rotazione, il servizio fisso, l'assegnazione, il fatto (assenza, fermo), oppure
 il turno. Un turno scoperto tutti i giorni feriali di un anno e' quindi un solo avviso, non 261.
 
+## Testi comuni: nomi e parole sulla salute (K-018)
+
+I nomi, i codici e le note scritti da chi prepara i dati sono **dati comuni**: li vede chiunque, anche senza permessi e senza la
+cassaforte (stanno nei file normali, in chiaro). Se dentro c'e' il nome di un passeggero o di un cliente privato (es. un servizio
+"Matrimonio Rossi") o una parola che fa capire la salute (es. "Trasporto disabile scuola X", un calendario "HANDICAP"), la
+cassaforte e i permessi non servono piu'. Tre avvisi lo dicono (solo avvisi: non bloccano niente):
+
+- **K-CTR-136, nome di una persona o di una casa.** Le persone dei dati (personale, passeggeri, committenti privati) e le case
+  (luoghi privati). Nome e cognome stanno in un campo solo: il programma non sa quale parola e' il cognome. Il **nome intero**
+  (tutte le sue parole, una dopo l'altra in qualsiasi ordine, oppure attaccate in una parola sola, es. `ROSSIMARIO`; almeno 3
+  lettere in tutto) in qualsiasi testo comune. **Una sola parola** del nome di una persona (almeno 3 lettere) solo nei testi
+  delle cose di quella persona (sotto). Il messaggio dice il testo, dove sta (il campo e il codice dell'elemento) e il codice
+  della persona o della casa; mai il nome come sta nei suoi dati.
+- **K-CTR-137, parola sulla salute.** Un testo comune che contiene una parola o un'espressione degli elenchi delle parole sulla
+  salute (parole intere, una dopo l'altra). Il messaggio dice quale parola e di quale elenco (la parola e' gia' nel testo, che e'
+  comune). Gli elenchi sono dati, non stanno nel programma: uno per paese nelle norme (`norme.json` versione 4,
+  `parole_sulla_salute`; nel demo N-IT: disabili, disabile, handicap, centro diurno, terapia, riabilitazione, GSH,
+  individualizzato) e le parole in piu' di ogni azienda (`aziende.json` versione 4). Un testo di un'azienda si confronta con le
+  parole delle norme che l'azienda segue e con le sue; un testo che non e' di un'azienda (es. un luogo pubblico, un calendario)
+  con tutti gli elenchi del pacchetto. Senza elenchi (versioni vecchie) nessun avviso di questo tipo. Non si controllano: i
+  file di regole pubbliche di un paese o di un territorio, con la fonte (norme e regolamenti, marcatura
+  `x-kzero-regole-pubbliche` dei loro schemi; scelta del supervisore del 12/11: sono testi di legge e non parlano delle persone
+  del pacchetto), e i testi di un luogo segnato sensibile e della scuola o del centro che sta li' (il loro nome pubblico si vede
+  comunque).
+- **K-CTR-138, luogo forse sensibile.** Un luogo pubblico non segnato sensibile con una parola degli elenchi nel nome (`nome` o
+  `nomi_alternativi`, al posto di K-CTR-137 per quei campi): forse e' un luogo sensibile, da segnare con `"sensibile": true`. Un
+  luogo segnato sensibile puo' avere quelle parole nel nome. Con `luoghi.json` della versione 1 (che non ha `sensibile`) l'avviso
+  c'e' lo stesso, con la variante che dice di passare alla versione 2 per poterlo segnare: il rischio e' lo stesso.
+
+**Quali testi.** Tutti i testi liberi di classe comune, ricavati dalle marcature degli schemi (`x-kzero-classe`, la stessa regola
+delle classi di src/api/classi.hpp), non da un elenco scritto a mano: un campo che rimanda alla definizione `testo` o `nota` del
+suo schema (nomi, codici esterni, note, motivi, descrizioni) e il codice di un elemento dove l'elemento e' definito (il campo
+`codice` obbligatorio degli elementi di un elenco), non in ogni riferimento. Esclusi i valori a scelta fissa (enumerazioni), le
+date, gli orari, i numeri, i codici di riferimento e ogni dato personale o particolare (quelli li protegge la cassaforte). I
+campi controllati, ultima versione di ogni file (una prova li confronta con il programma):
+
+<!-- campi dei testi comuni: inizio -->
+| File | Campi |
+|---|---|
+| `pacchetto.json` | `aziende[].codice`, `aziende[].nome`, `falsi_allarmi[].motivo`, `nome`, `origine.nota` |
+| `aziende.json` | `aziende[].attivita[].codice`, `aziende[].attivita[].nome`, `aziende[].attivita[].nota`, `aziende[].competenze[].codice`, `aziende[].competenze[].nome`, `aziende[].competenze[].nota`, `aziende[].modo_corse.corse[].nota`, `aziende[].modo_corse.nota`, `aziende[].modo_corse.per_tipo_servizio[].nota`, `aziende[].modo_corse.servizi[].nota`, `aziende[].nota`, `aziende[].scelte_orari[].nota`, `aziende[].speciali_esigenze[].nota`, `aziende[].speciali_esigenze[].riferimento`, `aziende[].tipi_assenza[].codice`, `aziende[].tipi_assenza[].nome`, `aziende[].tipi_assenza[].nota`, `aziende[].tipi_fermo[].codice`, `aziende[].tipi_fermo[].nome`, `aziende[].tipi_fermo[].nota` |
+| `norme.json` | `norme[].abilitazioni[].codice`, `norme[].abilitazioni[].fonte.documento`, `norme[].abilitazioni[].fonte.punto`, `norme[].abilitazioni[].fonte.riferimenti`, `norme[].abilitazioni[].nome`, `norme[].abilitazioni[].nota`, `norme[].cambi_ora.fonte.documento`, `norme[].cambi_ora.fonte.punto`, `norme[].cambi_ora.fonte.riferimenti`, `norme[].codice`, `norme[].nome`, `norme[].nota`, `norme[].regimi[].casi_non_trattati[].fonte.documento`, `norme[].regimi[].casi_non_trattati[].fonte.punto`, `norme[].regimi[].casi_non_trattati[].fonte.riferimenti`, `norme[].regimi[].casi_non_trattati[].nota`, `norme[].regimi[].codice`, `norme[].regimi[].esclusioni[].fonte.documento`, `norme[].regimi[].esclusioni[].fonte.punto`, `norme[].regimi[].esclusioni[].fonte.riferimenti`, `norme[].regimi[].esclusioni[].nota`, `norme[].regimi[].estensione.fonte.documento`, `norme[].regimi[].estensione.fonte.punto`, `norme[].regimi[].estensione.fonte.riferimenti`, `norme[].regimi[].estensione.nota`, `norme[].regimi[].fonte.documento`, `norme[].regimi[].fonte.punto`, `norme[].regimi[].fonte.riferimenti`, `norme[].regimi[].guida_delle_corse_escluse.fonte.documento`, `norme[].regimi[].guida_delle_corse_escluse.fonte.punto`, `norme[].regimi[].guida_delle_corse_escluse.fonte.riferimenti`, `norme[].regimi[].guida_delle_corse_escluse.nota`, `norme[].regimi[].nome`, `norme[].regimi[].nota`, `norme[].regimi[].regole[].codice`, `norme[].regimi[].regole[].fonte.documento`, `norme[].regimi[].regole[].fonte.punto`, `norme[].regimi[].regole[].fonte.riferimenti`, `norme[].regimi[].regole[].nome_misura`, `norme[].regimi[].regole[].nota`, `norme[].regimi[].regole[].prudente.nome_misura`, `norme[].regimi[].regole[].prudente.nota`, `norme[].regimi[].regole[].straordinario.denuncia`, `norme[].regimi[].regole[].straordinario.ricorrente`, `norme[].regimi[].servizi_occasionali.fonte.documento`, `norme[].regimi[].servizi_occasionali.fonte.punto`, `norme[].regimi[].servizi_occasionali.fonte.riferimenti`, `norme[].regimi[].servizi_occasionali.nota`, `norme[].regimi[].si_applica.contratti_collettivi.certi[]`, `norme[].regimi[].si_applica.contratti_collettivi.da_confermare[]`, `norme[].requisiti_guida[].fonte.documento`, `norme[].requisiti_guida[].fonte.punto`, `norme[].requisiti_guida[].fonte.riferimenti`, `norme[].requisiti_guida[].nota`, `norme[].usi[].codice`, `norme[].usi[].fonte.documento`, `norme[].usi[].fonte.punto`, `norme[].usi[].fonte.riferimenti`, `norme[].usi[].nome`, `norme[].usi[].nota`, `norme[].usi_per_servizio[].fonte.documento`, `norme[].usi_per_servizio[].fonte.punto`, `norme[].usi_per_servizio[].fonte.riferimenti`, `norme[].usi_per_servizio[].nota` |
+| `luoghi.json` | `luoghi[].codice`, `luoghi[].codici_esterni[].codice`, `luoghi[].codici_esterni[].sistema`, `luoghi[].codici_esterni[].tipo`, `luoghi[].comune`, `luoghi[].limiti_accesso.divieti[].nota`, `luoghi[].nome`, `luoghi[].nomi_alternativi[]`, `luoghi[].nota`, `luoghi[].trasbordo.autorizzato_da`, `luoghi[].trasbordo.documento`, `luoghi[].trasbordo.nota`, `luoghi_privati[].codice` |
+| `tratti.json` | `tratti[].codice`, `tratti[].limiti.divieti[].nota`, `tratti[].nome`, `tratti[].nota` |
+| `regolamenti.json` | `regolamenti[].codice`, `regolamenti[].documento`, `regolamenti[].ente`, `regolamenti[].nota`, `regolamenti[].parametri.adulto_alla_discesa.fonte.documento`, `regolamenti[].parametri.adulto_alla_discesa.fonte.punto`, `regolamenti[].parametri.adulto_alla_discesa.fonte.riferimenti`, `regolamenti[].parametri.adulto_alla_discesa.nota`, `regolamenti[].parametri.alunni_minimi_per_servizio.fonte.documento`, `regolamenti[].parametri.alunni_minimi_per_servizio.fonte.punto`, `regolamenti[].parametri.alunni_minimi_per_servizio.fonte.riferimenti`, `regolamenti[].parametri.alunni_minimi_per_servizio.nota`, `regolamenti[].parametri.assistente_a_bordo.fonte.documento`, `regolamenti[].parametri.assistente_a_bordo.fonte.punto`, `regolamenti[].parametri.assistente_a_bordo.fonte.riferimenti`, `regolamenti[].parametri.assistente_a_bordo.nota`, `regolamenti[].parametri.attesa_massima_dopo_minuti.fonte.documento`, `regolamenti[].parametri.attesa_massima_dopo_minuti.fonte.punto`, `regolamenti[].parametri.attesa_massima_dopo_minuti.fonte.riferimenti`, `regolamenti[].parametri.attesa_massima_dopo_minuti.nota`, `regolamenti[].parametri.attesa_massima_prima_minuti.fonte.documento`, `regolamenti[].parametri.attesa_massima_prima_minuti.fonte.punto`, `regolamenti[].parametri.attesa_massima_prima_minuti.fonte.riferimenti`, `regolamenti[].parametri.attesa_massima_prima_minuti.nota`, `regolamenti[].parametri.autorizzazione_del_committente.fonte.documento`, `regolamenti[].parametri.autorizzazione_del_committente.fonte.punto`, `regolamenti[].parametri.autorizzazione_del_committente.fonte.riferimenti`, `regolamenti[].parametri.autorizzazione_del_committente.nota`, `regolamenti[].parametri.combinazioni_vietate.fonte.documento`, `regolamenti[].parametri.combinazioni_vietate.fonte.punto`, `regolamenti[].parametri.combinazioni_vietate.fonte.riferimenti`, `regolamenti[].parametri.combinazioni_vietate.nota`, `regolamenti[].parametri.discesa_senza_adulto_con_autorizzazione.fonte.documento`, `regolamenti[].parametri.discesa_senza_adulto_con_autorizzazione.fonte.punto`, `regolamenti[].parametri.discesa_senza_adulto_con_autorizzazione.fonte.riferimenti`, `regolamenti[].parametri.discesa_senza_adulto_con_autorizzazione.nota`, `regolamenti[].parametri.distanza_massima_casa_fermata_m.fonte.documento`, `regolamenti[].parametri.distanza_massima_casa_fermata_m.fonte.punto`, `regolamenti[].parametri.distanza_massima_casa_fermata_m.fonte.riferimenti`, `regolamenti[].parametri.distanza_massima_casa_fermata_m.nota`, `regolamenti[].parametri.distanza_massima_fermata_scuola_m.fonte.documento`, `regolamenti[].parametri.distanza_massima_fermata_scuola_m.fonte.punto`, `regolamenti[].parametri.distanza_massima_fermata_scuola_m.fonte.riferimenti`, `regolamenti[].parametri.distanza_massima_fermata_scuola_m.nota`, `regolamenti[].parametri.distanza_minima_casa_scuola_m.fonte.documento`, `regolamenti[].parametri.distanza_minima_casa_scuola_m.fonte.punto`, `regolamenti[].parametri.distanza_minima_casa_scuola_m.fonte.riferimenti`, `regolamenti[].parametri.distanza_minima_casa_scuola_m.nota`, `regolamenti[].parametri.distanza_minima_tra_fermate_m.fonte.documento`, `regolamenti[].parametri.distanza_minima_tra_fermate_m.fonte.punto`, `regolamenti[].parametri.distanza_minima_tra_fermate_m.fonte.riferimenti`, `regolamenti[].parametri.distanza_minima_tra_fermate_m.nota`, `regolamenti[].parametri.durata_massima_a_bordo_minuti.fonte.documento`, `regolamenti[].parametri.durata_massima_a_bordo_minuti.fonte.punto`, `regolamenti[].parametri.durata_massima_a_bordo_minuti.fonte.riferimenti`, `regolamenti[].parametri.durata_massima_a_bordo_minuti.nota`, `regolamenti[].parametri.passeggeri_in_piedi.fonte.documento`, `regolamenti[].parametri.passeggeri_in_piedi.fonte.punto`, `regolamenti[].parametri.passeggeri_in_piedi.fonte.riferimenti`, `regolamenti[].parametri.passeggeri_in_piedi.nota`, `regolamenti[].parametri.usi_dei_mezzi.fonte.documento`, `regolamenti[].parametri.usi_dei_mezzi.fonte.punto`, `regolamenti[].parametri.usi_dei_mezzi.fonte.riferimenti`, `regolamenti[].parametri.usi_dei_mezzi.nota`, `regolamenti[].titolo` |
+| `festivita.json` | `festivita[].codice`, `festivita[].date[].nome`, `festivita[].date[].nota`, `festivita[].fonte.documento`, `festivita[].fonte.punto`, `festivita[].fonte.riferimenti`, `festivita[].nome`, `festivita[].nota`, `festivita[].territorio` |
+| `calendari.json` | `calendari[].codice`, `calendari[].codici_esterni[].codice`, `calendari[].codici_esterni[].sistema`, `calendari[].codici_esterni[].tipo`, `calendari[].nome`, `calendari[].nota`, `calendari[].sospensioni[].motivo` |
+| `scuole.json` | `scuole[].codice`, `scuole[].codici_esterni[].codice`, `scuole[].codici_esterni[].sistema`, `scuole[].codici_esterni[].tipo`, `scuole[].nome`, `scuole[].nota`, `scuole[].orari[].attesa_concordata.accordo`, `scuole[].orari[].orari_autorizzati[].accordo`, `scuole[].tipo_centro.descrizione` |
+| `committenti.json` | `committenti[].codice`, `committenti[].codici_esterni[].codice`, `committenti[].codici_esterni[].sistema`, `committenti[].codici_esterni[].tipo`, `committenti[].nome`, `committenti[].nota`, `committenti_privati[].codice`, `committenti_privati[].codici_esterni[].codice`, `committenti_privati[].codici_esterni[].sistema`, `committenti_privati[].codici_esterni[].tipo` |
+| `contratti.json` | `contratti[].codice`, `contratti[].codici_esterni[].codice`, `contratti[].codici_esterni[].sistema`, `contratti[].codici_esterni[].tipo`, `contratti[].nome`, `contratti[].nota`, `contratti[].regole.categoria_riconosciuta` |
+| `gruppi_servizi.json` | `gruppi_servizi[].codice`, `gruppi_servizi[].nome`, `gruppi_servizi[].nota` |
+| `servizi.json` | `servizi[].codice`, `servizi[].codici_esterni[].codice`, `servizi[].codici_esterni[].sistema`, `servizi[].codici_esterni[].tipo`, `servizi[].domanda.gruppi[].codice`, `servizi[].domanda.gruppi[].nome`, `servizi[].domanda.gruppi[].passeggeri[].codice`, `servizi[].domanda.gruppi[].passeggeri[].stato.riferimento`, `servizi[].nome`, `servizi[].nota`, `servizi[].regole.categoria_riconosciuta` |
+| `corse.json` | `corse[].codice`, `corse[].codici_esterni[].codice`, `corse[].codici_esterni[].sistema`, `corse[].codici_esterni[].tipo`, `corse[].coincidenze[].servizio_esterno`, `corse[].nome`, `corse[].nota`, `corse[].passaggi[].nota`, `corse[].passaggi[].trasbordi[].codice`, `corse[].testo_esposto` |
+| `mezzi.json` | `mezzi[].alimentazione.descrizione`, `mezzi[].autorizzazioni_uso[].ente`, `mezzi[].autorizzazioni_uso[].prescrizioni`, `mezzi[].autorizzazioni_uso[].riferimento`, `mezzi[].codice`, `mezzi[].codici_esterni[].codice`, `mezzi[].codici_esterni[].sistema`, `mezzi[].codici_esterni[].tipo`, `mezzi[].nota`, `mezzi[].prestiti[].accordo`, `mezzi[].targa`, `mezzi[].vincolo_destinazione.fonte`, `mezzi[].vincolo_destinazione.nota` |
+| `rimesse.json` | `rimesse[].codice`, `rimesse[].nota` |
+| `tempi_sosta.json` | `tempi.nota` |
+| `persone.json` | `persone[].codice`, `persone[].prestiti[].accordo` |
+| `fermi.json` | `fermi[].nota` |
+| `turni.json` | `turni[].codice`, `turni[].elementi[].nota`, `turni[].nome`, `turni[].nota` |
+| `rotazioni.json` | `rotazioni[].codice`, `rotazioni[].nome` |
+| `servizi_fissi.json` | `servizi_fissi[].codice` |
+| `blocchi.json` | `blocchi[].codice`, `blocchi[].nota` |
+<!-- campi dei testi comuni: fine -->
+
+Le parole si confrontano senza maiuscole ne' accenti, con la normalizzazione della ricerca dei luoghi (formato-dati.md, "Ricerca
+dei luoghi"), poi divise agli spazi e dove una lettera e una cifra si toccano (`ROSSI2` e' `ROSSI` e `2`, come nel controllo del
+deposito).
+
+**Di quale azienda e' un testo** (per gli elenchi): dall'elemento dell'elenco principale del file e dai suoi riferimenti.
+`pacchetto.json` (le aziende del manifesto), `aziende.json`, `contratti.json`, `mezzi.json`, `rimesse.json`, `persone.json` e
+`turni.json`: l'azienda scritta nell'elemento; `servizi.json` e `gruppi_servizi.json`: l'azienda del contratto; `corse.json`:
+quelle dei contratti dei suoi servizi; `rotazioni.json`: quelle delle persone delle righe; `servizi_fissi.json` e
+`assegnazioni.json`: quella del turno; `fermi.json` e `blocchi.json`: quella del mezzo. Gli altri file (luoghi, tratti,
+calendari, scuole, committenti, festivita', tempi di sosta, e il resto del manifesto) non sono di un'azienda: tutti gli elenchi.
+Un riferimento che non si trova: tutti gli elenchi.
+
+**Le cose di una persona** (dove basta una parola del nome):
+- committente privato: il suo codice e i suoi codici esterni (`committenti_privati[]`); i suoi contratti (`contratti[]` con
+  quel committente); i servizi di quei contratti e i loro gruppi di passeggeri (`servizi[]`, `servizi[].domanda.gruppi[]`); i
+  gruppi di servizi di quei contratti (`gruppi_servizi[]`);
+- passeggero: il suo codice (`servizi[].domanda.gruppi[].passeggeri[]`), il suo gruppo e il servizio del gruppo;
+- persona del personale: il suo codice (`persone[]`), i suoi servizi fissi (`servizi_fissi[]`), i turni dei suoi servizi fissi e
+  delle rotazioni in cui sta (tutti i turni di quelle rotazioni).
+Il mandato chiedeva il codice solo per il committente; e' aggiunto anche per il passeggero e il personale (un codice
+`P-ROSSI` e' il caso piu' semplice) e i servizi fissi della persona (sono suoi). Testi dell'elemento stesso, non degli elementi
+con codice che contiene (es. il servizio, non gli altri gruppi). Le case: solo il nome intero.
+
+**Chi lo vede** (K-CTR-136). Il controllo legge i nomi, dati personali; quelli di chi e' legato a un luogo sensibile stanno tra i
+legati e si decifrano solo con tutti e due i permessi. Scelta del supervisore (12/11): il controllo richiede **tutti e due i
+permessi**, per ogni nome: per chi ne ha uno solo e' "non verificato" (con un permesso solo non si possono correggere i dati,
+`kzero esporta` e `kzero richiudi` vogliono tutti e due, e cosi' nessun avviso ne' falso allarme puo' far capire che un nome e'
+di una persona legata). Cosa rivela, variante per variante: 0 e 1 (nome intero, parola del nome) **personale** (che il testo
+contenga il nome di quella persona: di base al posto del codice "una persona o una casa dei dati", si vede con
+`--includi-dati-personali`); 2 e 3 (le stesse per chi e' legato a un luogo sensibile) **particolare** (dicono anche il legame:
+di base si contano soltanto, con `--includi-dati-particolari` si elencano, il codice sempre solo con i dati personali); 4 (falso
+allarme che non spegne piu' niente) **personale** (dice che nessun nome e' piu' nel testo). K-CTR-137 e K-CTR-138 non leggono
+dati personali: tutte le varianti **comuni**.
+
+**Falsi allarmi** (`pacchetto.json` versione 3, `falsi_allarmi`, formato-dati.md). Chi scrive i dati puo' spegnere un avviso di
+questi tre controlli per un testo preciso, con il motivo e la data (come la forzatura del K-011, senza dati personali: niente
+"chi"): `controllo`, `file`, `campo` (come nella tabella sopra), `elemento` (il codice dell'elemento piu' vicino con un codice,
+come nel messaggio) e `testo`, uguale carattere per carattere. Vale solo per quel controllo, quel campo, quell'elemento e quel
+testo: se il testo cambia, l'avviso torna. Un falso allarme scritto che non spegne piu' niente ha un avviso, la variante
+"falso allarme" del suo controllo (K-CTR-136 variante 4, K-CTR-137 variante 1, K-CTR-138 variante 2), con la riservatezza del
+suo controllo. Il motivo e' un testo comune: entra anche lui nei controlli. Nel demo: la nota del blocco B-VAL-3 resta apposta
+con il suo avviso (K-CTR-137), e un falso allarme spegne il nome alternativo del parcheggio dei pullman di Valfonda (K-CTR-138).
+
+Esempio (il demo con il servizio S-MATRIMONIO chiamato "Matrimonio Rossi" e il committente privato CP-01 chiamato Rossi Marta,
+prova `TestiLiberi.MatrimonioRossi`), con `--includi-dati-personali`:
+
+```
+Avviso K-CTR-136 (servizi.json, /servizi/9/nome): Il testo "Matrimonio Rossi" (servizi[].nome di S-MATRIMONIO) e' un testo delle cose del committente privato CP-01 e contiene una parola del suo nome (ROSSI). Il testo e' un dato comune: lo vede chiunque, anche senza permessi e senza la cassaforte. Scriverlo senza il nome; se e' un caso (es. una via con lo stesso nome), scrivere un falso allarme con il motivo (pacchetto.json, falsi_allarmi).
+```
+
+Di base: "...e' un testo delle cose di una persona o di una casa dei dati (quale: dati personali, riservati) e contiene una parola
+del suo nome (riservata)...". Cosa non copre (nomi scritti male, soprannomi, sigle, numeri dei codici esterni): docs/sicurezza.md.
+
 ## Elenco completo
 
 Questo elenco deve coincidere con `kzero descrivi`: una prova automatica
@@ -466,3 +585,6 @@ Un nuovo controllo prende il codice successivo all'ultimo.
 | K-CTR-133 | avviso | Corsa con servizi con scelte diverse (OUT e tachigrafo) | I servizi di una corsa (o i loro tipi) hanno scelte diverse e una e' il tachigrafo: decide l'impostazione dell'azienda (`tipi_diversi`, di base la piu' prudente, il tachigrafo). | Scrivere la scelta per quella corsa. |
 | K-CTR-134 | avviso | Forzatura che non serve | Calcolando gli orari, il programma vede che una forzatura (K-CTR-129) non cambia niente nel periodo del pacchetto: dove vale, con i dati scritti il regime non vale con certezza (se e' da confermare serve la dichiarazione, non la forzatura), oppure non c'e' nessun giorno in cui valga per una corsa fatta da una persona (la corsa non c'e', non la fa nessuno, la forzatura e' finita). K-011 aggiunta 2: il programma dice all'azienda quando sbaglia. | Togliere la forzatura, oppure scrivere la dichiarazione dove l'esclusione e' da confermare. |
 | K-CTR-135 | avviso | Dichiarazione che non serve | Calcolando gli orari, il programma vede che una dichiarazione (K-CTR-131) non cambia niente nel periodo del pacchetto: dove vale, l'esclusione dal regime non e' da confermare, oppure non c'e' nessun giorno in cui valga per una corsa fatta da una persona. Dato particolare, come la dichiarazione. | Togliere la dichiarazione. |
+| K-CTR-136 | avviso | Nome di una persona o di una casa in un testo comune | Un testo comune (sopra, "Testi comuni") contiene il nome intero di una persona dei dati (personale, passeggero, committente privato) o di una casa, oppure, in un testo delle cose di una persona, una parola del suo nome di almeno 3 lettere. Varianti 2 e 3 per chi e' legato a un luogo sensibile; variante 4: un falso allarme di questo controllo che non spegne piu' niente. Richiede tutti e due i permessi. | Scrivere il testo senza il nome; se e' un caso, scrivere un falso allarme con il motivo (pacchetto.json, falsi_allarmi); togliere un falso allarme che non serve piu'. |
+| K-CTR-137 | avviso | Parola sulla salute in un testo comune | Un testo comune contiene una parola o un'espressione degli elenchi delle parole sulla salute (norme del paese e azienda, versione 4). Non per norme e regolamenti, ne' per i testi di un luogo sensibile e della sua scuola o centro. Variante 1: un falso allarme che non spegne piu' niente. | Scrivere il testo senza quelle parole (il tipo di servizio e di gruppo va nel suo campo, riservato); se non parla di salute, un falso allarme con il motivo. |
+| K-CTR-138 | avviso | Luogo con una parola sulla salute nel nome, non segnato sensibile | Un luogo pubblico non segnato sensibile ha una parola degli elenchi nel nome o in un nome alternativo: forse e' un luogo sensibile. Variante 1: luoghi.json della versione 1, che non puo' segnarlo. Variante 2: un falso allarme che non spegne piu' niente. | Segnare il luogo sensibile (luoghi.json versione 2); se non lo e', un falso allarme con il motivo. |

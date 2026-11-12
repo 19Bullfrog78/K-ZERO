@@ -14,6 +14,8 @@
 // si danno il cambio sui turni della loro meta' della giornata (il riposo scorre): chi fa il pomeriggio non fa il mattino dopo.
 // Dal K-011 norme, aziende e persone sono alle versioni nuove: le leggi sugli orari sono quelle del pacchetto dimostrativo
 // (incorporate nel programma, cosi' la prova misura le regole vere), con le categorie dei tempi e le scelte delle aziende.
+// Dal K-018 le norme hanno anche le parole sulla salute della dimostrazione (versione 4), cosi' la prova misura anche l'avviso sui
+// nomi liberi; i nomi dei servizi non dicono piu' "(disabili)". Il pacchetto e' "solo numeri": nessun nome di persona.
 // I dati sono coerenti: "kzero controlla" deve finire senza errori; gli avvisi che restano sono spiegati in tests/CMakeLists.txt.
 // Uso: genera_scala <cartella>   (la cartella viene creata; i file del pacchetto vengono sostituiti)
 #include <algorithm>
@@ -462,7 +464,7 @@ int main(int argc, char** argv) {
                     gruppo["fermate"] = fermate;
                     Json servizio = {{"codice", g.servizio},
                                      {"nome", std::string(linea ? "Linea" : ncc ? "Noleggio" : disabili ? "Trasporto" : "Scuola") +
-                                                  " di prova " + cifre(i + 1, 4) + (n == 1 ? " (disabili)" : "")},
+                                                  " di prova " + cifre(i + 1, 4) + (n == 1 ? " (2)" : "")},   // K-018: non "(disabili)"
                                      {"tipo", disabili ? "disabili" : linea ? "linea" : ncc ? "ncc" : "scolastico"},
                                      {"contratto", (ncc ? "CT-NCC-" : "CT-") + cifre(a + 1, 2)},
                                      {"calendario", "CAL-SCUOLA"}};
@@ -579,7 +581,7 @@ int main(int argc, char** argv) {
         scrivi(cartella, "tempi_sosta.json", tempi);
 
         // --- K-008: norme, aziende, persone, turni, rotazioni, assenze e sostituzioni -------------------------------
-        Json norme = documento("norme", 3);
+        Json norme = documento("norme", 4);   // K-018: con le parole sulla salute della dimostrazione
         const Json fonte_norma = {{"documento", "Norme di prova (inventate)"}};
         const Json demo = norme_della_dimostrazione();
         norme["norme"] = Json::array({{
@@ -599,6 +601,7 @@ int main(int argc, char** argv) {
                                                {"fonte", fonte_norma}}})},
             {"regimi", demo.at("regimi")},
             {"cambi_ora", demo.at("cambi_ora")},
+            {"parole_sulla_salute", demo.at("parole_sulla_salute")},
         }});
         scrivi(cartella, "norme.json", norme);
 

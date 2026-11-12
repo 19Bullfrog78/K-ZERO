@@ -872,8 +872,8 @@ TEST(Unione, ServiziOccasionaliNelleVersioni) {
                 if (r.code == "R-561") return std::make_pair(l.versioni.at("norme.json"), r.occasional);
         return std::make_pair(0, kzero::Applies<kzero::ServiceKind>{});
     };
-    const auto [v3, demo] = occasionali("/../esempi/demo");
-    EXPECT_EQ(v3, 3);
+    const auto [v4, demo] = occasionali("/../esempi/demo");
+    EXPECT_EQ(v4, 4);   // K-018: le parole sulla salute; i servizi occasionali come nella versione 3
     EXPECT_TRUE(demo.present);
     EXPECT_EQ(demo.certain, std::vector<kzero::ServiceKind>{kzero::ServiceKind::Ncc});
     EXPECT_EQ(demo.to_confirm, std::vector<kzero::ServiceKind>{kzero::ServiceKind::Other});
@@ -913,13 +913,23 @@ TEST(Unione, ServiziOccasionaliVersione2Certi) {
 }
 
 TEST(Unione, OgniCampoRiservatoDegliSchemiCompareNeiPacchettiDelleProve) {
+    // I campi riservati di una versione dello schema.
+    const auto riservati_di = [](const std::string& schema, int versione) {
+        std::set<std::string> r;
+        const JsonDati* radice = SchemiDati::incorporati().schema(schema, versione);
+        if (radice) campi_riservati(*radice, *radice, "", r, 0);
+        return r;
+    };
     std::map<std::string, std::set<std::string>> usati;   // schema -> percorsi usati nei file dell'ultima versione
     for (const PacchettoDiProva& p : pacchetti_delle_prove())
         for (const auto& [file, testo] : p.chiaro.file) {
             const FileDati* f = file_dati_per_nome(file);
             if (!f || file == "pacchetto.json") continue;
             const JsonDati d = JsonDati::parse(testo);
-            if (d.value("schema_versione", 0) != f->versioni.back()) continue;
+            // Conta anche un file di una versione precedente con gli stessi campi riservati dell'ultima (es. aziende 3 e 4 del
+            // K-018, che aggiunge solo un campo comune).
+            const int v = d.value("schema_versione", 0);
+            if (v != f->versioni.back() && riservati_di(f->schema, v) != riservati_di(f->schema, f->versioni.back())) continue;
             percorsi_usati(d, "", usati[f->schema]);
         }
     std::string mancanti;
@@ -1773,17 +1783,17 @@ TEST(Unione, RequisitiSenzaDatiParticolariScuolaAndataMattina) {
     EXPECT_NE(r.find("che chiede un'autorizzazione del committente CVA"), std::string::npos) << r;
 }
 
-// S-DIS (disabili) sul minibus ALFA-03, il cui vincolo di destinazione ammette solo i servizi per disabili: con ogni altro tipo
+// S-VAL-3 (disabili) sul minibus ALFA-03, il cui vincolo di destinazione ammette solo i servizi per disabili: con ogni altro tipo
 // K-CTR-072; come linea anche l'uso LINEA, che ALFA-03 non ha (K-CTR-069).
 TEST(Unione, RequisitiSenzaDatiParticolariCentroDiurno) {
-    const EsitoDelServizio e = prova_per_differenza_dei_requisiti("S-DIS");
-    controlla_esito("S-DIS", e,
+    const EsitoDelServizio e = prova_per_differenza_dei_requisiti("S-VAL-3");
+    controlla_esito("S-VAL-3", e,
                     {"linea <-> scolastico", "linea <-> disabili", "linea <-> ncc", "linea <-> altro", "scolastico <-> disabili",
                      "disabili <-> ncc", "disabili <-> altro"});
-    const std::string scolastico = esito_dei_requisiti(leggi_pacchetto(demo_con_il_tipo("S-DIS", "scolastico")));
-    EXPECT_NE(scolastico.find("K-CTR-072 Nel turno T-DIS (Centro diurno) il mezzo ALFA-03 (AA 103 AA) fa il servizio S-DIS"), std::string::npos)
+    const std::string scolastico = esito_dei_requisiti(leggi_pacchetto(demo_con_il_tipo("S-VAL-3", "scolastico")));
+    EXPECT_NE(scolastico.find("K-CTR-072 Nel turno T-VAL-3 (Valfonda 3) il mezzo ALFA-03 (AA 103 AA) fa il servizio S-VAL-3"), std::string::npos)
         << scolastico;
-    const std::string linea = esito_dei_requisiti(leggi_pacchetto(demo_con_il_tipo("S-DIS", "linea")));
+    const std::string linea = esito_dei_requisiti(leggi_pacchetto(demo_con_il_tipo("S-VAL-3", "linea")));
     EXPECT_NE(linea.find("che chiede l'uso LINEA"), std::string::npos) << linea;
 }
 
@@ -1818,7 +1828,7 @@ TEST(Unione, RequisitiConDatiParticolariLeCauseSiVedono) {
     const DefinizioneComando* controlla = trova_comando("controlla");
     std::string tutte;
     for (const auto& [s, t] : std::vector<std::pair<std::string, std::string>>{
-             {"S-SCU-AM", "disabili"}, {"S-DIS", "scolastico"}, {"S-DIS", "linea"}, {"S-LIN-B610", "ncc"}}) {
+             {"S-SCU-AM", "disabili"}, {"S-VAL-3", "scolastico"}, {"S-VAL-3", "linea"}, {"S-LIN-B610", "ncc"}}) {
         accesso::LetturaPerComando lc;
         lc.lettura = leggi_pacchetto(demo_con_il_tipo(s, t));
         lc.visibilita = Visibilita{true, true};
@@ -2178,14 +2188,14 @@ void controlla_il_piano_del_servizio(const std::string& servizio) { controlla_il
 TEST(Unione, PianoSenzaParticolariScuolaAndataMattina) { controlla_il_piano_del_servizio("S-SCU-AM"); }
 TEST(Unione, PianoSenzaParticolariScuolaRitornoMezzogiorno) { controlla_il_piano_del_servizio("S-SCU-RM"); }
 TEST(Unione, PianoSenzaParticolariSuperiori) { controlla_il_piano_del_servizio("S-SUP-RM"); }
-TEST(Unione, PianoSenzaParticolariCentroDiurno) { controlla_il_piano_del_servizio("S-DIS"); }
+TEST(Unione, PianoSenzaParticolariCentroDiurno) { controlla_il_piano_del_servizio("S-VAL-3"); }
 TEST(Unione, PianoSenzaParticolariAsilo) { controlla_il_piano_del_servizio("S-ASILO"); }
 TEST(Unione, PianoSenzaParticolariLineaB610) { controlla_il_piano_del_servizio("S-LIN-B610"); }   // tutti i tipi, sempre
-TEST(Unione, PianoSenzaParticolariCentroDiurnoGiovedi) { controlla_il_piano_del_servizio("S-DIS-GIO"); }
+TEST(Unione, PianoSenzaParticolariCentroDiurnoGiovedi) { controlla_il_piano_del_servizio("S-VAL-4"); }
 TEST(Unione, PianoSenzaParticolariLineaB620) { controlla_il_piano_del_servizio("S-LIN-B620"); }
 TEST(Unione, PianoSenzaParticolariGita) { controlla_il_piano_del_servizio("S-GITA"); }
 TEST(Unione, PianoSenzaParticolariMatrimonio) { controlla_il_piano_del_servizio("S-MATRIMONIO"); }
-TEST(Unione, PianoSenzaParticolariNoleggioPrivato) { controlla_il_piano_del_servizio("S-PRIVATO-CENTRO"); }
+TEST(Unione, PianoSenzaParticolariNoleggioPrivato) { controlla_il_piano_del_servizio("S-PRIVATO"); }
 
 // Due casi che nel demo non ci sono, con la stessa prova (sabotaggi del K-017).
 // Il mezzo abituale segue chi fa il turno: T-SCUOLA-1 con il mezzo abituale di P-E e la sua autorizzazione del committente CVA
@@ -2216,17 +2226,17 @@ TEST(Unione, PianoSenzaParticolariMezzoAbituale) {
     EXPECT_GT(tutti_e_due, 100);   // i giorni di scuola dal 2026-10-01
 }
 
-// Una sovrapposizione con un turno non verificato: il 2027-07-07 ALFA-05 anche su T-DIS (assegnazione del singolo giorno, certa);
+// Una sovrapposizione con un turno non verificato: il 2027-07-07 ALFA-05 anche su T-VAL-3 (assegnazione del singolo giorno, certa);
 // su T-PRIMO non e' verificato (come linea si', come NCC o "altro" no): la sovrapposizione dei mezzi (K-CTR-064) non e' verificata.
 // Senza il blocco della corsa del centro diurno su ALFA-03 (sarebbe un errore in ogni variante: nessuna da provare per (b)).
 void alfa05_su_tdis(InMemoria& m) {
     JsonDati a = JsonDati::parse(m.file.at("assegnazioni.json"));
-    a.at("assegnazioni").push_back({{"data", "2027-07-07"}, {"turno", "T-DIS"}, {"mezzo", "ALFA-05"}});
+    a.at("assegnazioni").push_back({{"data", "2027-07-07"}, {"turno", "T-VAL-3"}, {"mezzo", "ALFA-05"}});
     m.file["assegnazioni.json"] = a.dump(2);
     JsonDati b = JsonDati::parse(m.file.at("blocchi.json"));
     JsonDati tenuti = JsonDati::array();
     for (const JsonDati& x : b.at("blocchi"))
-        if (x.at("codice") != "B-DIS") tenuti.push_back(x);
+        if (x.at("codice") != "B-VAL-3") tenuti.push_back(x);
     b["blocchi"] = tenuti;
     m.file["blocchi.json"] = b.dump(2);
 }
@@ -2242,7 +2252,7 @@ TEST(Unione, PianoSenzaParticolariSovrapposizione) {
         if (k.rfind("K-CTR-064", 0) == 0) trovati += " [" + k + "]";
     for (const std::string& k : p.mostrati)
         if (k.rfind("K-CTR-064", 0) == 0) trovati += " mostrato [" + k + "]";
-    EXPECT_TRUE(p.non_verificati.count("K-CTR-064 turno=T-DIS mezzo=ALFA-05 2027-07-07"))
+    EXPECT_TRUE(p.non_verificati.count("K-CTR-064 turno=T-VAL-3 mezzo=ALFA-05 2027-07-07"))
         << "la sovrapposizione non e' tra i non verificati:" << trovati;
 }
 
@@ -2425,8 +2435,8 @@ TEST(Unione, PianoSenzaParticolariTuttiIServizi) {
     const Lettura l = leggi_pacchetto(demo_in_chiaro());
     std::set<std::string> servizi;
     for (const kzero::Service& s : l.pacchetto.services) servizi.insert(s.code);
-    EXPECT_EQ(servizi, (std::set<std::string>{"S-SCU-AM", "S-SCU-RM", "S-SUP-RM", "S-DIS", "S-ASILO", "S-LIN-B610", "S-DIS-GIO", "S-LIN-B620",
-                                              "S-GITA", "S-MATRIMONIO", "S-PRIVATO-CENTRO"}));
+    EXPECT_EQ(servizi, (std::set<std::string>{"S-SCU-AM", "S-SCU-RM", "S-SUP-RM", "S-VAL-3", "S-ASILO", "S-LIN-B610", "S-VAL-4", "S-LIN-B620",
+                                              "S-GITA", "S-MATRIMONIO", "S-PRIVATO"}));
 }
 
 // Per chi non puo' leggerlo il tipo dei servizi e dei gruppi non e' noto (mai "altro"); per chi puo', sempre noto. I tipi possibili
@@ -2581,6 +2591,9 @@ TEST(Unione, ProblemiPossibiliDeiTurni) {
             if (x.at("persona") != "P-B") tenute.push_back(x);                              // K-CTR-078 di T-PRIMO
         as["assenze"] = tenute;
         solo_possibili.file["assenze.json"] = as.dump(2);
+        JsonDati bl = JsonDati::parse(solo_possibili.file.at("blocchi.json"));
+        bl.at("blocchi")[0].erase("nota");                                                    // K-CTR-137 (K-018)
+        solo_possibili.file["blocchi.json"] = bl.dump(2);
     }
     const std::string testo = controlla_personali(solo_possibili, Formato::Testo);
     EXPECT_NE(testo.find("\nNessun problema certo.\n"), std::string::npos) << testo;

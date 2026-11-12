@@ -723,7 +723,43 @@
   normale tutto come prima. Ogni prova scrive quali varianti ha fatto; nuova prova PianoSenzaParticolariVariantiDelSanitizer
   sulla regola. CLAUDE.md (Comandi) e DECISIONI.md.
 
+- 2026-11-12 - K-018 (programma e documenti, proposta "K-018: avviso sui nomi liberi"). Scelte del supervisore del 12/11:
+  K-018 piccolo, solo avvisi, niente controllo sui numeri dei codici esterni. Due domande prima del codice: norme e
+  regolamenti fuori dal controllo delle parole sulla salute (risposta "Escluse") e i nomi solo con tutti e due i permessi
+  (risposta "Due permessi"). **Tre avvisi nuovi** (docs/controlli.md, "Testi comuni"): K-CTR-136 nome di una persona o di una
+  casa in un testo comune (nome intero ovunque, una parola del nome nei testi delle cose della persona), K-CTR-137 parola sulla
+  salute, K-CTR-138 luogo pubblico non segnato sensibile con una parola sulla salute nel nome. I testi si ricavano dagli schemi
+  (`testi_comuni`, src/api/classi.cpp; 25 file, tabella dei campi in docs/controlli.md confrontata da una prova); il controllo
+  sta in src/api/testi_liberi.cpp e passa dal filtro di sempre. **Formato**: norme versione 4 e aziende versione 4 (parole
+  sulla salute), manifesto versione 3 (falsi allarmi), marcatura `x-kzero-regole-pubbliche` sugli schemi di norme e
+  regolamenti (tutte le versioni). **Demo** (e demo "solo numeri"): codici e nomi neutri al posto di quelli che dicevano la
+  salute (elenco in DECISIONI.md), N-IT con le otto parole, una nota lasciata apposta (B-VAL-3, K-CTR-137) e un falso allarme
+  (K-CTR-138 sul parcheggio dei pullman). `kzero controlla esempi/demo`: 31 avvisi, ora 32 (il K-CTR-137 voluto); con
+  `--includi-dati-personali --includi-dati-particolari` lo stesso; nessun nome di persona trovato. **Attese cambiate**: i
+  codici del demo nelle prove (test_api, test_controlli, test_dimostrazione, test_giornata, test_orari, test_pacchetto,
+  test_regole, test_turni, test_unione, tests/CMakeLists.txt) e le 8 uscite attese di tests/attesi (rigenerate: solo i nomi
+  nuovi e "32 avvisi"); il conteggio degli avvisi delle prove sul demo +1 (9 prove); il file "ANSI" (colonna 34, prima 37:
+  il nome della corsa e' piu' corto); le versioni del demo lette (norme 4, manifesto 3); il catalogo (138 controlli);
+  ProblemiPossibiliDeiTurni toglie la nota voluta per restare senza problemi certi; k012_controlla cerca "La persona
+  P-GITA-SCUOLA" (il codice ora compare in un K-CTR-136). **Copie congelate** (file non toccati): k011-orari 107 -> 184
+  avvisi e k012-servizi 108 -> 210 (nomi di prova come "Linea Lunga" e "Senza Km" che sono parole dei loro testi, e codici
+  come P-SENZA-KM); k007 e k010 invariate. **Scala**: norme 4 con le parole del demo; il generatore chiamava "(disabili)" il
+  secondo servizio delle corse promiscue (80 avvisi K-CTR-137 veri), ora "(2)": 0 avvisi nuovi (resta l'avviso del
+  D.Lgs. 234). `kzero controlla` della scala 12,8 s (3 giri: 13,2, 12,8, 12,8), senza il controllo nuovo 12,3-12,6 s: il
+  controllo costa circa mezzo secondo. La scala e' "solo numeri" (nessun nome): provata a parte con 1.320 nomi inventati
+  (livello completo), nessun avviso e nessuna differenza misurabile. **Prove**: 1.019 su 1.019 (prima 1.006), 13 nuove in
+  tests/test_testi_liberi.cpp (Matrimonio Rossi, nome intero in ogni ordine e attaccato, accenti, legati, cose del
+  personale, i tre utenti della cassaforte, senza elenco nessun avviso, elenchi per azienda, regole pubbliche, luoghi forse
+  sensibili e versione 1, falsi allarmi, tabella dei campi). Sabotaggi sul codice finale, tutti presi: messaggio con il nome
+  della persona (3 prove), nome a chi ha i soli particolari (2), legato a chi ha i soli personali (1), una parola del nome in
+  tutti i testi (9), confronto senza accenti (3), falso allarme con il testo cambiato (1), elenco delle parole nel codice (1,
+  dopo aver rinforzato la prova con un testo che non e' di un'azienda: la prima versione non lo prendeva), luogo sensibile
+  con l'avviso (5).
 ## Bug e limiti noti
+- (K-018) L'avviso sui nomi liberi trova solo il nome scritto come nei dati (senza maiuscole ne' accenti, parole intere):
+  non i nomi scritti male, i soprannomi, le iniziali, le sigle ("S-DIS"), un nome dentro una parola piu' lunga, le parole
+  sulla salute che non sono negli elenchi, i numeri dei codici esterni (scelta del supervisore del 12/11). Un nome uguale a
+  una parola comune o a una via da' un falso allarme, che si spegne con il motivo (docs/sicurezza.md).
 - (K-017) Per chi non apre i dati particolari la regola "certo solo se vale per ogni tipo" e' prudente: valuta ogni requisito
   del tipo da solo e un fatto che dipende da un risultato non verificato e' non verificato. Quando due fatti dipendono dallo
   stesso tipo in modo opposto (es. il mezzo non va solo come NCC e l'autorizzazione serve solo per i disabili) puo' dire "non
@@ -849,16 +885,14 @@
   cambia, serve un segno nella sua fessura ("password scritta da un altro"): un dato in piu' nel formato.
 
 ## Prossimi passi
-1. Mandato piccolo "avviso sui nomi liberi": un avviso quando un nome libero (servizi, gruppi, turni, scuole e centri)
-   lascia capire un dato personale o particolare.
-2. Lettore del file alunni del consorzio, che lo trasforma nel formato K-Zero (con la lettura blindata del K-009) e scrive i
+1. Lettore del file alunni del consorzio, che lo trasforma nel formato K-Zero (con la lettura blindata del K-009) e scrive i
    dati personali e particolari solo nella cassaforte, mai in file in chiaro.
-3. Scadenziario: le scadenze in un posto solo (abilitazioni, autorizzazioni, revisioni, contratti, data di
+2. Scadenziario: le scadenze in un posto solo (abilitazioni, autorizzazioni, revisioni, contratti, data di
    conservazione, giornate a chiamata vicine al limite).
-4. Viste per zona e per ora: giornata e orari di un gruppo di comuni o di una fascia oraria.
-5. Programma per Windows da scaricare (i dati veri restano sul PC del supervisore), con le prove di sicurezza su Windows (anche
+3. Viste per zona e per ora: giornata e orari di un gruppo di comuni o di una fascia oraria.
+4. Programma per Windows da scaricare (i dati veri restano sul PC del supervisore), con le prove di sicurezza su Windows (anche
    quelle della cassaforte) e la correzione dei dati senza file in chiaro.
-6. Raccolta dati veri ALP (solo sul PC del supervisore, fuori dalla cartella del deposito): mezzi, autisti (paese), giri
+5. Raccolta dati veri ALP (solo sul PC del supervisore, fuori dalla cartella del deposito): mezzi, autisti (paese), giri
    di una giornata tipo; le letture "da confermare" degli orari di lavoro al consulente del lavoro (REGOLE.md).
-7. "Fotografia" dei giri attuali: km pieni, km a vuoto, tempi morti.
-8. Lettura dei paper e proposta del metodo di calcolo con OR-Tools.
+6. "Fotografia" dei giri attuali: km pieni, km a vuoto, tempi morti.
+7. Lettura dei paper e proposta del metodo di calcolo con OR-Tools.

@@ -19,29 +19,29 @@ bool vale(const Package& p, const std::string& calendario, const std::string& da
 
 }  // namespace
 
-// Centro diurno: lunedi', mercoledi' e giovedi', con una data aggiunta, una tolta e la chiusura di fine anno.
+// Lunedi', mercoledi' e giovedi', con una data aggiunta, una tolta e la chiusura di fine anno.
 TEST(Calendari, giorni_eccezioni_e_sospensioni) {
     const Package& p = demo();
-    EXPECT_TRUE(vale(p, "CAL-CENTRO", "2026-09-02"));    // mercoledi'
-    EXPECT_TRUE(vale(p, "CAL-CENTRO", "2026-09-03"));    // giovedi'
-    EXPECT_FALSE(vale(p, "CAL-CENTRO", "2026-09-01"));   // martedi'
-    EXPECT_FALSE(vale(p, "CAL-CENTRO", "2026-09-05"));   // sabato
-    EXPECT_TRUE(vale(p, "CAL-CENTRO", "2026-12-22"));    // martedi', data aggiunta
-    EXPECT_FALSE(vale(p, "CAL-CENTRO", "2026-12-28"));   // lunedi' nella chiusura del centro
-    EXPECT_FALSE(vale(p, "CAL-CENTRO", "2026-12-24"));   // primo giorno della chiusura
-    EXPECT_TRUE(vale(p, "CAL-CENTRO", "2027-01-04"));    // lunedi' dopo la chiusura
-    EXPECT_FALSE(vale(p, "CAL-CENTRO", "2027-06-02"));   // mercoledi', data tolta
-    EXPECT_FALSE(vale(p, "CAL-CENTRO", "2027-08-02"));   // lunedi' fuori dal periodo
+    EXPECT_TRUE(vale(p, "CAL-LMG", "2026-09-02"));    // mercoledi'
+    EXPECT_TRUE(vale(p, "CAL-LMG", "2026-09-03"));    // giovedi'
+    EXPECT_FALSE(vale(p, "CAL-LMG", "2026-09-01"));   // martedi'
+    EXPECT_FALSE(vale(p, "CAL-LMG", "2026-09-05"));   // sabato
+    EXPECT_TRUE(vale(p, "CAL-LMG", "2026-12-22"));    // martedi', data aggiunta
+    EXPECT_FALSE(vale(p, "CAL-LMG", "2026-12-28"));   // lunedi' nella chiusura del centro
+    EXPECT_FALSE(vale(p, "CAL-LMG", "2026-12-24"));   // primo giorno della chiusura
+    EXPECT_TRUE(vale(p, "CAL-LMG", "2027-01-04"));    // lunedi' dopo la chiusura
+    EXPECT_FALSE(vale(p, "CAL-LMG", "2027-06-02"));   // mercoledi', data tolta
+    EXPECT_FALSE(vale(p, "CAL-LMG", "2027-08-02"));   // lunedi' fuori dal periodo
 }
 
 // Le date tolte e le sospensioni prevalgono sulle date aggiunte.
 TEST(Calendari, tolte_e_sospensioni_prevalgono) {
     Package p = demo();
-    Calendar& c = per_codice(p.calendars, "CAL-CENTRO");
+    Calendar& c = per_codice(p.calendars, "CAL-LMG");
     c.added.push_back({giorno("2027-06-02"), {}});   // aggiunta e tolta
     c.added.push_back({giorno("2026-12-29"), {}});   // aggiunta nella chiusura
-    EXPECT_FALSE(vale(p, "CAL-CENTRO", "2027-06-02"));
-    EXPECT_FALSE(vale(p, "CAL-CENTRO", "2026-12-29"));
+    EXPECT_FALSE(vale(p, "CAL-LMG", "2027-06-02"));
+    EXPECT_FALSE(vale(p, "CAL-LMG", "2026-12-29"));
 }
 
 // Calendario di base: l'infanzia vale nei giorni di scuola escluso il sabato, dal 21 settembre.
@@ -58,7 +58,7 @@ TEST(Calendari, calendario_di_base) {
     EXPECT_TRUE(vale(p, "CAL-INFANZIA", "2027-02-10"));
     const Index idx(p);
     EXPECT_EQ(first_active_day(per_codice(p.calendars, "CAL-INFANZIA"), p.manifest.period, idx), giorno("2026-09-21"));
-    EXPECT_EQ(first_active_day(per_codice(p.calendars, "CAL-CENTRO"), p.manifest.period, idx), giorno("2026-09-02"));
+    EXPECT_EQ(first_active_day(per_codice(p.calendars, "CAL-LMG"), p.manifest.period, idx), giorno("2026-09-02"));
 }
 
 // Una catena circolare di basi (errore segnalato dai controlli) non blocca il programma: nessun giorno.
@@ -125,7 +125,7 @@ TEST(Calendari, aggiunge_e_toglie_altri_calendari) {
     c.code = "CAL-PROVA";
     c.range = p.manifest.period;
     c.days.add(Weekday::Monday);
-    c.adds = {{CalendarLinkKind::Calendar, Ref{"CAL-CENTRO-GIO", {}}}};   // piu' i giovedi' del centro
+    c.adds = {{CalendarLinkKind::Calendar, Ref{"CAL-GIO", {}}}};   // piu' i giovedi' del centro
     c.removes = {{CalendarLinkKind::Calendar, Ref{"CAL-SCUOLA", {}}}};    // meno i giorni di scuola
     p.calendars.push_back(c);
     EXPECT_TRUE(vale(p, "CAL-PROVA", "2026-09-07"));    // lunedi' prima della scuola
@@ -145,10 +145,10 @@ TEST(Calendari, aggiunge_e_toglie_altri_calendari) {
 // Un calendario che si combina con se stesso (errore K-CTR-049) non blocca il programma.
 TEST(Calendari, combinato_con_se_stesso) {
     Package p = demo();
-    per_codice(p.calendars, "CAL-FERIALI").adds = {{CalendarLinkKind::Calendar, Ref{"CAL-CENTRO-GIO", {}}}};
-    per_codice(p.calendars, "CAL-CENTRO").removes = {{CalendarLinkKind::Calendar, Ref{"CAL-FERIALI", {}}}};
+    per_codice(p.calendars, "CAL-FERIALI").adds = {{CalendarLinkKind::Calendar, Ref{"CAL-GIO", {}}}};
+    per_codice(p.calendars, "CAL-LMG").removes = {{CalendarLinkKind::Calendar, Ref{"CAL-FERIALI", {}}}};
     EXPECT_NO_THROW(vale(p, "CAL-FERIALI", "2026-12-08"));
-    EXPECT_NO_THROW(first_active_day(per_codice(p.calendars, "CAL-CENTRO"), p.manifest.period, Index(p)));
+    EXPECT_NO_THROW(first_active_day(per_codice(p.calendars, "CAL-LMG"), p.manifest.period, Index(p)));
 }
 
 // I giorni calcolati una volta sola coincidono con il calendario, giorno per giorno.
@@ -196,11 +196,11 @@ TEST(ABordo, gruppi_sulla_corsa) {
 // L'assistente non e' un passeggero.
 TEST(ABordo, trasbordi) {
     const Index idx(demo());
-    const auto consegna = on_board(per_codice(demo().trips, "C-DIS-R"), idx);
+    const auto consegna = on_board(per_codice(demo().trips, "C-VAL-3R"), idx);
     ASSERT_EQ(consegna.size(), 4u);
     EXPECT_EQ(consegna[1].total, 1);
     EXPECT_EQ(consegna[2].total, 0);
-    const auto riceve = on_board(per_codice(demo().trips, "C-DIS-1"), idx);
+    const auto riceve = on_board(per_codice(demo().trips, "C-VAL-3"), idx);
     ASSERT_EQ(riceve.size(), 5u);
     const std::vector<int> totali = {0, 1, 2, 3, 0};
     for (std::size_t i = 0; i < riceve.size(); ++i) EXPECT_EQ(riceve[i].total, totali[i]) << "passaggio " << i;

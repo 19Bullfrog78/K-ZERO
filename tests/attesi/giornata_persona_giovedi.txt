@@ -1,22 +1,22 @@
 Giornata del 2026-10-22, giovedi' - pacchetto DEMO-2026 "Pacchetto dimostrativo K-Zero" (dati inventati)
 Persona P-C, azienda ALFA, presa servizio a L-RIMESSA-ALFA (Valfonda, rimessa Autoservizi Alfa)
 Festivita': nessuna.
-Controllo del pacchetto: nessun errore, 31 avvisi (dettagli con kzero controlla).
+Controllo del pacchetto: nessun errore, 32 avvisi (dettagli con kzero controlla).
 Dati personali: sostituiti dal codice; dati particolari: riservati.
 
-T-DIS "Centro diurno"  07:25-09:35 (2 ore e 10 minuti)  azienda ALFA, autista
+T-VAL-3 "Valfonda 3"  07:25-09:35 (2 ore e 10 minuti)  azienda ALFA, autista
    Persona: P-C, assegnazione del singolo giorno (assegnazioni.json /assegnazioni/2)
    Mezzo: ALFA-03 (AA 103 AA, M2, 12 posti, uso NCC), scritto nel turno
-   Calendario CAL-CENTRO "Centro diurno: lunedi', mercoledi' e giovedi'"; il turno c'e' in 139 giorni del periodo
+   Calendario CAL-LMG "Lunedi', mercoledi' e giovedi'"; il turno c'e' in 139 giorni del periodo
    Competenze richieste: riservato
    Comincia a L-RIMESSA-ALFA (Valfonda, rimessa Autoservizi Alfa), finisce a L-RIMESSA-ALFA (Valfonda, rimessa Autoservizi Alfa)
    Nota: Il mattino del secondo, con il mezzo attrezzato: poi il secondo cambia mezzo.
    07:25-07:38  Presa servizio con il controllo del mezzo (PRESA), a L-RIMESSA-ALFA (Valfonda, rimessa Autoservizi Alfa)
                 (fermo 2 minuti)
-   07:40-08:52  corsa C-DIS-1 "Centro diurno, giro principale"
-                servizi S-DIS (tipo riservato, contratto CT-SCU, committente CVA "Consorzio Valle Alta (inventato)")
+   07:40-08:52  corsa C-VAL-3 "Valfonda 3, giro principale"
+                servizi S-VAL-3 (tipo riservato, contratto CT-SCU, committente CVA "Consorzio Valle Alta (inventato)")
                 modo per un dato particolare
-                calendario CAL-CENTRO "Centro diurno: lunedi', mercoledi' e giovedi'", 139 giorni nel periodo; km a pieno 20,3, a vuoto 5,5; assistente fornito dal committente
+                calendario CAL-LMG "Lunedi', mercoledi' e giovedi'", 139 giorni nel periodo; km a pieno 20,3, a vuoto 5,5; assistente fornito dal committente
       07:40  L-RIMESSA-ALFA  Valfonda, rimessa Autoservizi Alfa  sale l'assistente  a bordo 0
       07:52  PP-01  salgono 1  km a vuoto 5,5  a bordo 1
       08:05  PP-02  salgono 1  km a pieno 4,8  a bordo 2

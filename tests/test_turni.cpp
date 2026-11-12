@@ -261,18 +261,18 @@ TEST(Turni, demo_giorni_controllati_a_mano) {
     const Package& p = demo();
     // Giovedi' 2026-10-15, giorno 4 del ciclo: P-A primo, P-B secondo (mattino al centro diurno, sera sulla linea).
     EXPECT_EQ(chi(p, "T-PRIMO", "2026-10-15"), "P-A");
-    EXPECT_EQ(chi(p, "T-DIS", "2026-10-15"), "P-B");
+    EXPECT_EQ(chi(p, "T-VAL-3", "2026-10-15"), "P-B");
     EXPECT_EQ(chi(p, "T-SECONDO", "2026-10-15"), "P-B");
-    EXPECT_EQ(chi(p, "T-DIS-GIO", "2026-10-15"), "P-E");
+    EXPECT_EQ(chi(p, "T-VAL-4", "2026-10-15"), "P-E");
     EXPECT_EQ(chi(p, "T-NOTTE", "2026-10-15"), "P-NUOVO");   // autista ipotetico
     EXPECT_EQ(chi(p, "T-RISERVA", "2026-10-15"), "assente");  // solo martedi' e venerdi'
     // Mercoledi' 2026-10-21, giorno 10: il secondo e' del titolare P-C (servizio fisso), il mattino resta a P-B.
     EXPECT_EQ(chi(p, "T-PRIMO", "2026-10-21"), "P-A");
-    EXPECT_EQ(chi(p, "T-DIS", "2026-10-21"), "P-B");
+    EXPECT_EQ(chi(p, "T-VAL-3", "2026-10-21"), "P-B");
     EXPECT_EQ(chi(p, "T-SECONDO", "2026-10-21"), "P-C");
     // Giovedi' 2026-10-22, giorno 11: P-A (secondo) e' in ferie, lo sostituisce P-C con due assegnazioni del giorno.
     EXPECT_EQ(chi(p, "T-PRIMO", "2026-10-22"), "P-B");
-    EXPECT_EQ(chi(p, "T-DIS", "2026-10-22"), "P-C");
+    EXPECT_EQ(chi(p, "T-VAL-3", "2026-10-22"), "P-C");
     EXPECT_EQ(chi(p, "T-SECONDO", "2026-10-22"), "P-C");
     // Sabato 2026-10-24, giorno 13: tutta la linea a P-A.
     EXPECT_EQ(chi(p, "T-SABATO", "2026-10-24"), "P-A");
@@ -796,7 +796,7 @@ TEST(Turni, K_CTR_068_autista_senza_abilitazione_o_autorizzazione) {
     EXPECT_EQ(quanti(q, Check::DriverWithoutLicence), 0);
     // Servizio disabili (R-TN): serve l'autorizzazione del committente (P-F non ha il cartellino).
     Package r = base();
-    turno(r, "DIS", "ALFA", "CAL-CENTRO", {corsa("C-DIS-1")}, ShiftVehicleMode::Specific, "ALFA-03");
+    turno(r, "DIS", "ALFA", "CAL-LMG", {corsa("C-VAL-3")}, ShiftVehicleMode::Specific, "ALFA-03");
     rotazione(r, "ROT", 1, "2026-09-01", {{"P-F", {"DIS"}}});
     EXPECT_TRUE(segnala(r, Check::DriverWithoutLicence, 1, "rotazioni.json", "/rotazioni/0/righe/0"));
     r.rotations[0].rows[0].person = Ref{"P-D", {}};   // P-D ha il cartellino
@@ -824,7 +824,7 @@ TEST(Turni, K_CTR_069_mezzo_senza_l_uso_richiesto) {
 
 TEST(Turni, K_CTR_071_persona_senza_competenza) {
     Package p = base();
-    turno(p, "DIS", "ALFA", "CAL-CENTRO", {corsa("C-DIS-1")}, ShiftVehicleMode::Specific, "ALFA-03");   // S-DIS chiede PEDANA
+    turno(p, "DIS", "ALFA", "CAL-LMG", {corsa("C-VAL-3")}, ShiftVehicleMode::Specific, "ALFA-03");   // S-VAL-3 chiede PEDANA
     rotazione(p, "ROT", 1, "2026-09-01", {{"P-D", {"DIS"}}});
     EXPECT_EQ(quanti(p, Check::PersonWithoutCompetence), 0);
     per_codice(p.persons, "P-D").competences = {Ref{"ELETTRICO", {}}};
@@ -926,9 +926,9 @@ TEST(Turni, K_CTR_086_087_assistente) {
     const ShiftDay* ass = turno_del_giorno(giornata_ass, "ASILO-ASS");
     ASSERT_NE(ass, nullptr);
     EXPECT_EQ(ass->aboard->code, "BETA-01");   // a bordo del mezzo del turno dell'autista
-    // C-DIS-1: il contratto CT-SCU dice committente; il turno dice azienda.
+    // C-VAL-3: il contratto CT-SCU dice committente; il turno dice azienda.
     Package q = base();
-    turno(q, "DIS", "ALFA", "CAL-CENTRO", {corsa("C-DIS-1")}, ShiftVehicleMode::Specific, "ALFA-03");
+    turno(q, "DIS", "ALFA", "CAL-LMG", {corsa("C-VAL-3")}, ShiftVehicleMode::Specific, "ALFA-03");
     EXPECT_EQ(quanti(q, Check::EscortWithoutPerson), 0);   // fornito dal committente: nessuna persona dell'azienda
     q.shifts[0].items[0].trip.escort = EscortProvider::Company;
     EXPECT_TRUE(segnala(q, Check::EscortProviderDiffers, 0, "turni.json", "/turni/0/elementi/0"));
@@ -1066,11 +1066,11 @@ TEST(Turni, problemi_dei_requisiti_del_tipo_con_il_segno) {
         EXPECT_EQ(autorizzazione, 2);
         EXPECT_GT(patente, 0);
     }
-    // S-DIS come servizio di linea: le norme chiedono l'uso LINEA (K-CTR-069) e ALFA-03 ha il vincolo di destinazione per i
+    // S-VAL-3 come servizio di linea: le norme chiedono l'uso LINEA (K-CTR-069) e ALFA-03 ha il vincolo di destinazione per i
     // servizi per disabili (K-CTR-072): tutti e due dal tipo. Con un vincolo solo per contratto, K-CTR-072 non dipende dal tipo.
     {
         Package p = demo();
-        per_codice(p.services, "S-DIS").kind = ServiceKind::Line;
+        per_codice(p.services, "S-VAL-3").kind = ServiceKind::Line;
         const auto v = check_package(p);
         const auto usi = del_controllo(v, Check::VehicleWithoutUseForService);
         const auto vincolo = del_controllo(v, Check::VehicleAgainstConstraint);
@@ -1089,7 +1089,7 @@ TEST(Turni, problemi_dei_requisiti_del_tipo_con_il_segno) {
     // l'autorizzazione all'uso che non vale (variante 6) dipendono dal tipo; l'assenza (variante 0) no.
     {
         Package p = demo();
-        // Il 2026-10-22 P-C fa T-DIS (servizio per disabili, chiede l'autorizzazione del committente CVA).
+        // Il 2026-10-22 P-C fa T-VAL-3 (servizio per disabili, chiede l'autorizzazione del committente CVA).
         per_codice(p.persons, "P-C").authorizations.at(0).expiry = giorno("2026-10-01");
         // Il 2026-11-15 l'assegnazione di T-GITA da' anche il mezzo ALFA-05, la cui distrazione (uso NCC) comincia dopo.
         for (DayAssignment& a : p.day_assignments)

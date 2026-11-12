@@ -282,6 +282,7 @@ add_library(kzero_api STATIC
   src/api/registro.cpp
   src/api/riservatezza.cpp
   src/api/schemi_dati.cpp
+  src/api/testi_liberi.cpp
   src/api/unicode.cpp
   src/api/uscita.cpp
   src/api/validazione.cpp

@@ -259,16 +259,31 @@ non ha una password; non protegge da tutto. Detto onestamente:
   che il permesso gli consente. Il registro lo mostra.
 - **I file normali** restano in chiaro: dati comuni (fermate, orari, mezzi, codici, conteggi senza esigenze) e i nomi
   liberi (punto sotto).
-- **Nomi liberi.** Nomi di servizi, gruppi, corse, turni, calendari, note e codici sono dati comuni scelti da chi scrive
-  i dati: il programma li mostra sempre e stanno nei file normali, in chiaro. Un nome come "Trasporto al centro diurno"
-  accanto all'elenco dei passeggeri dice lo stesso di un luogo sensibile. E' responsabilita' di chi scrive i dati
-  (sezione 5); un avviso sui nomi liberi arrivera' con un mandato piccolo. Il pacchetto dimostrativo, che ha dati
-  inventati ed e' stato scritto prima di questa regola, ha proprio nomi e codici cosi' (il servizio `S-DIS` "Trasporto al
-  centro diurno Il Faro", il gruppo "Centro diurno, andata", il turno `T-DIS` "Centro diurno", il calendario `CAL-CENTRO`
-  "Centro diurno: lunedi', mercoledi' e giovedi'", la corsa "Centro diurno, giro principale"): restano come esempio di
-  cosa evitare, e perche' le prove li usano. Questi nomi dicono "centro diurno" e il nome del servizio dice anche quale
-  ("Il Faro", che si legge per esempio nel JSON della giornata): con la regola del K-010 il centro si vede comunque, e
-  nome e casa di chi ci va restano dati particolari.
+- **Nomi liberi** (dal K-018 con un avviso). Nomi di servizi, gruppi, corse, turni, calendari, note e codici sono dati comuni
+  scelti da chi scrive i dati: il programma li mostra sempre e stanno nei file normali, in chiaro. Un nome come "Trasporto al
+  centro diurno" accanto all'elenco dei passeggeri dice lo stesso di un luogo sensibile, e un servizio "Matrimonio Rossi" dice il
+  nome del cliente a chi non ha il permesso di leggerlo. Resta responsabilita' di chi scrive i dati (sezione 5), ma dal K-018
+  `kzero controlla` lo segnala con tre avvisi (docs/controlli.md, "Testi comuni"), solo avvisi:
+  - **cosa copre:** in tutti i testi comuni ricavati dagli schemi (nomi, codici scelti dall'utente, codici esterni, note,
+    motivi), il nome intero di una persona dei dati (personale, passeggeri, committenti privati) o di una casa, anche con le
+    parole in un altro ordine o attaccate, senza maiuscole ne' accenti; una parola del nome di una persona nei testi delle sue
+    cose (es. "Matrimonio Rossi" per il servizio del cliente Rossi Marta); le parole sulla salute degli elenchi del paese e
+    dell'azienda (dati, non nel programma); un luogo pubblico con una di quelle parole nel nome ma non segnato sensibile. Il
+    controllo dei nomi richiede tutti e due i permessi (per chi ne ha uno solo e' "non verificato") e il messaggio non ripete
+    mai il nome come sta nei dati;
+  - **cosa non copre:** un nome scritto male o abbreviato ("Rosi", "M. Rossi" trova solo "Rossi" e solo nelle cose della
+    persona), un soprannome, un nome di battesimo da solo fuori dalle cose della persona, le sigle e le iniziali ("MR", "S-DIS"
+    per "disabili"), una parola sulla salute che non e' negli elenchi (es. "carrozzina", "dialisi", se nessuno la aggiunge: gli
+    elenchi del demo sono brevi), le parole di un'altra lingua non elencate, un nome dentro una parola piu' lunga ("Rossini"
+    non e' "Rossi"), e i numeri: un codice esterno del committente (es. il numero di una pratica o di un fascicolo) puo' dire
+    chi e' la persona a chi ha accesso a quel sistema, e il programma non lo puo' sapere (scelta del supervisore del 12/11:
+    niente controllo sui numeri dei codici esterni). Norme e regolamenti non si controllano per le parole sulla salute
+    (testi di legge pubblici); i nomi si'. Un falso allarme spento con un motivo sbagliato spegne anche un avviso vero: il
+    motivo resta scritto e si vede nel manifesto;
+  - **falsi allarmi:** un nome uguale a una via, a un paese o a una parola comune (es. una persona di nome "Bruno" e una "via
+    Bruno") da' un avviso; si spegne con un falso allarme scritto (testo preciso e motivo, nel manifesto), che torna a
+    suonare se il testo cambia. Il demo, rifatto nel K-018, non ha piu' nomi o codici che dicono la salute, tranne una nota
+    lasciata apposta con il suo avviso (blocco `B-VAL-3`), e nessun nome di persona nei testi comuni.
 - **Collegamenti tra i codici.** Chi ha i soli dati personali non legge mai nome e casa di chi e' legato a un luogo
   sensibile (sono dati particolari in tutte le uscite), e nemmeno chi ha i soli dati particolari (nella cassaforte si
   decifrano solo con tutti e due i permessi). Restano gli orari e i km, per chi conosce la zona, e i nomi liberi.
@@ -362,7 +377,9 @@ non ha una password; non protegge da tutto. Detto onestamente:
 - **Nomi liberi senza dati sulla salute.** Da evitare: "Trasporto al centro diurno", "Disabili Pradello", "Corsa
   carrozzina Rossi", "Turno terapie", una nota "Mario deve andare in dialisi", un codice `S-DIS`. Meglio: "Servizio Valfonda
   3", "Andata Il Faro" (se il luogo non e' sensibile), "Turno 4"; il tipo "disabili" va nel campo apposta, che e' gia'
-  riservato.
+  riservato. Guardare gli avvisi K-CTR-136, 137 e 138 di `kzero controlla` (K-018) e aggiungere alle parole sulla salute
+  dell'azienda (aziende.json versione 4) quelle usate in azienda (nomi di centri, sigle). Un falso allarme si spegne solo con un
+  motivo vero.
 - **Luoghi sensibili segnati**: un centro diurno, di terapia o di riabilitazione con `"sensibile": true` (luoghi.json,
   versione 2). Un doposcuola di solito no. Il porta a porta: la scelta `porta_a_porta_sensibile` del manifesto (versione
   2) e' dell'azienda ([formato-dati.md](formato-dati.md)).

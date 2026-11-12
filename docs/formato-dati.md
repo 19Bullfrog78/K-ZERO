@@ -17,7 +17,9 @@ quella di ALP, un servizio fisso solo il mercoledi', sostituzioni, un mezzo in r
 scorta, un autobus di linea con la distrazione al noleggio usato per una gita, il cambio dell'autista a meta' corsa,
 turni notturni, spezzati, di riserva e di reperibilita'; in Beta una linea 7 su 7 con orario feriale e festivo e un
 ciclo di 3 giorni. Dal K-012 la gita della Pro Loco e' un servizio NCC e ci sono due committenti privati: il matrimonio di
-CP-01 (sabato 2027-07-10) e il noleggio di CP-02 verso il centro diurno (mercoledi' 2027-07-07). La giornata di un giorno si
+CP-01 (sabato 2027-07-10) e il noleggio di CP-02 verso il centro diurno (mercoledi' 2027-07-07). Dal K-018 i nomi e i codici del
+demo non dicono piu' la salute (il servizio del centro diurno e' `S-VAL-3` "Servizio Valfonda 3"), tranne la nota del blocco
+`B-VAL-3`, lasciata apposta con il suo avviso; un falso allarme spegne il nome alternativo del parcheggio dei pullman. La giornata di un giorno si
 vede con `kzero giornata esempi/demo --data 2026-10-22`.
 
 ## Il pacchetto dati
@@ -347,7 +349,9 @@ dell'elenco `luoghi`), **obbligatorio** (si'/no), **classe** (comune, personale,
 ### pacchetto.json
 
 Il manifesto: chi, quando, da dove vengono i dati, che livello di dati contiene, se ha una cassaforte. Schemi:
-[docs/schema/pacchetto.v2.schema.json](schema/pacchetto.v2.schema.json) (versione attuale, K-010) e
+[docs/schema/pacchetto.v3.schema.json](schema/pacchetto.v3.schema.json) (versione attuale, K-018: i falsi allarmi),
+[docs/schema/pacchetto.v2.schema.json](schema/pacchetto.v2.schema.json) (versione 2, K-010, ancora letta: e' la versione 3 senza
+`falsi_allarmi`; per passare alla 3 si cambia solo `"schema_versione"`) e
 [docs/schema/pacchetto.v1.schema.json](schema/pacchetto.v1.schema.json) (versione 1, ancora letta: e' la versione 2 senza
 `cassaforte` e `porta_a_porta_sensibile`, e il fuso orario senza lunghezza massima; un manifesto 1 vale come "nessuna
 cassaforte" e "il porta a porta non e' sensibile"). Per passare alla 2 si scrive `"schema_versione": 2`, si aggiunge
@@ -369,11 +373,37 @@ cassaforte" e "il porta a porta non e' sensibile"). Per passare alla 2 si scrive
 | `impostazioni.margine_trasbordo_minuti` | si' | comune | Scelta di chi pianifica: la corsa che riceve un trasbordo deve arrivare almeno tanti minuti prima della corsa che consegna |
 | `impostazioni.porta_a_porta_sensibile` | si' (v2) | comune | `true` = chi viaggia porta a porta lascia capire un dato sulla salute (es. in Trentino il porta a porta e' di regola un servizio per persone con disabilita'): nome e casa di ogni passeggero porta a porta valgono come dati particolari, come quelli di chi va in un luogo sensibile (vedi "Luoghi sensibili"). `false` = il porta a porta non dice nulla sulla salute (es. trasporto scolastico in campagna) |
 | `cassaforte` | si' (v2) | comune | `false` = nessuna cassaforte; altrimenti `id` (codice della cassaforte, 32 cifre esadecimali) e `generazione` (cresce a ogni richiusura). Lo scrive il programma (`kzero chiudi`, `kzero richiudi`): vedi [cassaforte.md](cassaforte.md) |
+| `falsi_allarmi[]` | no (v3) | comune | Avvisi sui testi comuni spenti da chi scrive i dati (K-018, sotto): `controllo` (`K-CTR-136`, `K-CTR-137` o `K-CTR-138`), `file`, `campo`, `elemento` (facoltativo), `testo`, `motivo`, `quando` |
+
+**Falsi allarmi** (K-018, versione 3). Gli avvisi sui nomi e sulle parole sulla salute nei testi comuni (docs/controlli.md, "Testi
+comuni") possono sbagliare: una via che si chiama come un passeggero, un parcheggio che ha il nome del centro vicino. Chi scrive
+i dati spegne l'avviso per quel testo, con il motivo: il controllo, il file, il campo come nella tabella dei campi di
+docs/controlli.md (es. `servizi[].nome`, `luoghi[].nomi_alternativi[]`), il codice dell'elemento piu' vicino che ha un codice
+(`elemento`, come nel messaggio dell'avviso) e il testo, uguale carattere per carattere. Vale solo per quel controllo, quel campo,
+quell'elemento e quel testo: se il testo cambia l'avviso torna, e un falso allarme che non spegne piu' niente ha a sua volta un
+avviso. Niente dati personali (come la forzatura del K-011 ma senza "chi"): solo `motivo` (testo comune, che entra anche lui nei
+controlli) e `quando`. Sta nel manifesto perche' vale per qualunque file, anche per i testi che non sono di un'azienda (luoghi,
+calendari), e perche' lo scrive chi prepara il pacchetto, come le altre impostazioni del manifesto. Il testo spento non e' un
+testo libero (ha una sua definizione nello schema): non entra nei controlli, altrimenti si segnalerebbe da solo.
+
+```json
+"falsi_allarmi": [
+  {
+    "controllo": "K-CTR-138",
+    "file": "luoghi.json",
+    "campo": "luoghi[].nomi_alternativi[]",
+    "elemento": "L-SOSTA-VALFONDA",
+    "testo": "Valfonda, parcheggio del centro diurno",
+    "motivo": "E' il parcheggio dove i pullman aspettano, accanto al centro: nessun passeggero sale o scende qui, quindi non e' un luogo sensibile.",
+    "quando": "2026-11-12"
+  }
+]
+```
 
 ```json
 {
   "schema": "pacchetto",
-  "schema_versione": 2,
+  "schema_versione": 3,
   "codice": "DEMO-2026",
   "nome": "Pacchetto dimostrativo K-Zero",
   "dati_inventati": true,
@@ -393,10 +423,11 @@ cassaforte" e "il porta a porta non e' sensibile"). Per passare alla 2 si scrive
 L'organizzazione la sceglie ogni azienda: qui stanno i suoi elenchi, con i suoi nomi, e le sue impostazioni.
 In un consorzio ogni azienda del manifesto ha la sua riga. Le `impostazioni` del manifesto sono un'altra cosa:
 scelte di chi pianifica, valide per tutto il pacchetto. Schemi: versione 3 (K-012: il tipo di servizio `ncc` nel modo delle
-corse) [docs/schema/aziende.v3.schema.json](schema/aziende.v3.schema.json); versione 2 (K-011, orari di lavoro), che si
-legge ancora, [docs/schema/aziende.v2.schema.json](schema/aziende.v2.schema.json); versione 1, che si legge ancora (senza
-le categorie di tempo: avviso K-CTR-101), [docs/schema/aziende.v1.schema.json](schema/aziende.v1.schema.json). Per passare
-alla 3 si scrive `"schema_versione": 3`: nient'altro cambia.
+corse) [docs/schema/aziende.v3.schema.json](schema/aziende.v3.schema.json), che si legge ancora; versione 4 (K-018: le
+parole sulla salute dell'azienda) [docs/schema/aziende.v4.schema.json](schema/aziende.v4.schema.json); versione 2 (K-011, orari
+di lavoro), che si legge ancora, [docs/schema/aziende.v2.schema.json](schema/aziende.v2.schema.json); versione 1, che si legge
+ancora (senza le categorie di tempo: avviso K-CTR-101), [docs/schema/aziende.v1.schema.json](schema/aziende.v1.schema.json). Per
+passare alla 3 o alla 4 si scrive `"schema_versione"`: nient'altro cambia (la 4 aggiunge un campo facoltativo).
 
 | Campo | Obbl. | Classe | Significato |
 |---|---|---|---|
@@ -416,6 +447,7 @@ alla 3 si scrive `"schema_versione": 3`: nient'altro cambia.
 | `aziende[].tipi_assenza[]` | no | comune | Tipi di assenza delle persone (es. ferie, permesso, formazione): `codice`, `nome`, `nota`. Mai la causa |
 | `aziende[].tipi_fermo[]` | no | comune | Tipi di fermo dei mezzi (es. revisione, manutenzione): `codice`, `nome`, `nota` |
 | `aziende[].competenze[]` | no | comune | Competenze che un turno o un servizio puo' richiedere (es. conosce la linea B610, formato per la pedana): `codice`, `nome`, `nota` |
+| `aziende[].parole_sulla_salute[]` | no (v4) | comune | K-018: parole ed espressioni in piu' di quelle delle norme del paese che per l'azienda lasciano capire un dato sulla salute (es. il nome di un centro, una sigla usata in azienda): per l'avviso K-CTR-137 sui testi dell'azienda e su quelli che non sono di un'azienda (docs/controlli.md, "Testi comuni") |
 | `aziende[].nota` | no | comune | Note |
 
 Le impostazioni sono solo dati: il costo delle scelte lo mostrera' il calcolo. Nel codice non c'e' nessun tipo di
@@ -431,7 +463,9 @@ consorzio le aziende che si scambiano persone usano gli stessi codici per le ste
 Le norme di un paese che servono a controllare chi guida cosa e quale mezzo fa quale servizio e, dalla versione 2
 (K-011), le leggi e i contratti collettivi sugli orari di lavoro. **Nessuna patente, nessun uso e nessun limite di
 orario e' scritto nel programma**: tutto e' un dato con la fonte, e cio' che non e' certo si segna `da_confermare`.
-Schemi: versione 3 (K-012) [docs/schema/norme.v3.schema.json](schema/norme.v3.schema.json): il tipo di servizio `ncc` e i
+Schemi: versione 4 (K-018) [docs/schema/norme.v4.schema.json](schema/norme.v4.schema.json): le parole sulla salute del paese
+(`parole_sulla_salute`); versione 3 (K-012), che si legge ancora (senza l'elenco: nessun avviso sulle parole sulla salute da
+queste norme), [docs/schema/norme.v3.schema.json](schema/norme.v3.schema.json): il tipo di servizio `ncc` e i
 servizi occasionali di un regime tipo per tipo; versione 2, che si legge ancora (un solo `da_confermare` per tutti i
 servizi occasionali: vale per ogni tipo dell'elenco, e `altro` resta `altro`),
 [docs/schema/norme.v2.schema.json](schema/norme.v2.schema.json); versione 1, che si legge ancora (nessun regime: per i
@@ -456,6 +490,7 @@ dipendenti l'avviso K-CTR-107), [docs/schema/norme.v1.schema.json](schema/norme.
 | `regimi[].esclude[]` | no | comune | Altri regimi esclusi (o lasciati da confermare) per alcune famiglie nei giorni o nelle settimane in cui questo vale con certezza: `regime`, `famiglie`, `effetto` (`esclude`, `da_confermare`) |
 | `regimi[].regole[]` | si' | comune | Regole: `codice` (unico nelle norme), `tipo`, `famiglia`, `fonte`, `periodo`, `misura`, i campi del tipo, `prudente`, `da_confermare`, `nota` |
 | `norme[].cambi_ora` | no | comune | Versione 2: `fonte` e `date` (`data`, `da`, `a`) dei cambi dell'ora del paese |
+| `norme[].parole_sulla_salute[]` | no (v4) | comune | K-018: parole ed espressioni che nel paese lasciano capire un dato sulla salute (sotto), per gli avvisi K-CTR-137 e K-CTR-138 |
 | `norme[].nota` | no | comune | Note |
 
 Come si usano:
@@ -468,6 +503,14 @@ Come si usano:
   `usi_dei_mezzi`), poi le norme dell'azienda del contratto. Senza regola, nessun uso e' richiesto. Il mezzo va bene
   se il suo `uso` e' tra quelli ammessi, oppure se ha un'autorizzazione a un uso ammesso valida quel giorno (la
   distrazione, vedi `mezzi.json`).
+
+**Parole sulla salute** (K-018, versione 4). Le parole e le espressioni che, scritte in un testo comune (un nome, un codice, una
+nota), lasciano capire un dato sulla salute: si confrontano per parole intere, senza maiuscole ne' accenti (una voce di due parole,
+es. "centro diurno", le cerca una dopo l'altra). Sono un dato, come le regole: il programma non ne conosce nessuna. Valgono per i
+testi delle aziende che seguono queste norme e per i testi che non sono di un'azienda; un'azienda ne aggiunge altre in
+`aziende.json` (versione 4). I testi delle norme e dei regolamenti non si controllano: sono regole pubbliche con la fonte
+(marcatura `x-kzero-regole-pubbliche` dei loro schemi). Nel demo (N-IT): disabili, disabile, handicap, centro diurno, terapia,
+riabilitazione, GSH, individualizzato.
 
 Nel demo le norme italiane (`N-IT`): patenti e usi dal Codice della strada (artt. 82 e 116), la CQC dal D.Lgs.
 286/2005; il certificato KB per le autovetture a noleggio e la patente DE sono segnati "da confermare". Dalla versione 2
@@ -538,7 +581,9 @@ Chi e' legato (calcolato sul pacchetto, dai dati comuni; una regola sola nel cod
 Non riguarda il personale (lavorare in un centro, o il garage presso la casa di un autista, non e' un dato sulla salute
 di nessuno) ne' i conteggi. Nel demo il centro diurno `L-CENTRO` e' sensibile e il porta a porta e' sensibile. I nomi e
 i codici liberi (servizi, gruppi, corse, turni, calendari, note) restano responsabilita' di chi scrive i dati: un nome
-come "Trasporto al centro diurno" accanto all'elenco dei passeggeri dice lo stesso (docs/sicurezza.md).
+come "Trasporto al centro diurno" accanto all'elenco dei passeggeri dice lo stesso (docs/sicurezza.md). Dal K-018 un avviso
+aiuta: una parola sulla salute in un testo comune (K-CTR-137) e un luogo pubblico non segnato sensibile con una di quelle parole
+nel nome (K-CTR-138, "forse e' un luogo sensibile"); un luogo segnato sensibile puo' averle nel nome (docs/controlli.md).
 
 ```json
 {
@@ -714,14 +759,14 @@ stesso (K-CTR-049), direttamente o attraverso altri, e' un errore.
 
 ```json
 {
-  "codice": "CAL-CENTRO",
-  "nome": "Centro diurno: lunedi', mercoledi' e giovedi'",
+  "codice": "CAL-LMG",
+  "nome": "Lunedi', mercoledi' e giovedi'",
   "dal": "2026-09-01",
   "al": "2027-07-30",
   "giorni": ["lunedi", "mercoledi", "giovedi"],
   "date_aggiunte": ["2026-12-22"],
   "date_tolte": ["2027-06-02"],
-  "sospensioni": [{ "dal": "2026-12-24", "al": "2026-12-31", "motivo": "Chiusura del centro" }]
+  "sospensioni": [{ "dal": "2026-12-24", "al": "2026-12-31", "motivo": "Chiusura per le feste" }]
 }
 ```
 
@@ -784,8 +829,9 @@ servizio resta un dato particolare).
 
 **Restano dati comuni, scelti dall'utente**: il codice del committente e i suoi codici esterni, il codice e il nome dei suoi
 servizi e dei suoi contratti. **Non devono contenere il nome del privato** (es. non "Matrimonio Rossi", ma "Noleggio per un
-matrimonio"; non il codice "ROSSI"): sono dati comuni e si vedono in tutte le uscite. L'avviso automatico sui nomi liberi
-arrivera' con il suo mandato.
+matrimonio"; non il codice "ROSSI"): sono dati comuni e si vedono in tutte le uscite. Dal K-018 lo dice un avviso (K-CTR-136,
+docs/controlli.md "Testi comuni"): il nome intero del privato in qualunque testo comune, una parola del suo nome nel suo codice e
+nei suoi codici esterni, nei suoi contratti e nei loro servizi e gruppi.
 
 ### contratti.json
 

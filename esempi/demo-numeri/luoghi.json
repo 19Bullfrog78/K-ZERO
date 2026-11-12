@@ -20,6 +20,7 @@
       "codice": "L-SOSTA-VALFONDA",
       "tipo": "punto_sosta",
       "nome": "Valfonda, parcheggio pullman",
+      "nomi_alternativi": ["Valfonda, parcheggio del centro diurno"],
       "comune": "Valfonda",
       "coordinate": { "lat": 46.3988, "lon": 11.0466 }
     },
