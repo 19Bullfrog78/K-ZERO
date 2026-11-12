@@ -223,6 +223,10 @@ struct Problem {
     // contato da quei regimi). Che ci sia, e il suo messaggio, rivelano allora un dato particolare: il catalogo dell'API dice
     // per quali controlli puo' succedere.
     bool by_service_kind = false;
+    // K-017: il problema dipende da un risultato del piano dei turni non verificato (il tipo di un servizio non e' noto a chi non
+    // puo' leggerlo: turni.hpp, ShiftDay). Per quell'utente non si mostra: si conta soltanto, tra i non verificati. Con tutti i
+    // tipi noti mai.
+    bool unverified = false;
 };
 
 // Controlli sul contenuto del pacchetto (dati gia' conformi agli schemi). Ordine dei problemi: quello dei dati.

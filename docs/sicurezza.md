@@ -80,6 +80,16 @@ dell'elemento, un dato particolare diventa "riservato"; si vedono solo con `--in
   i requisiti dei turni che dipendono dal tipo (usi dei mezzi, autorizzazione del committente, vincolo di destinazione,
   K-014): i loro problemi si contano soltanto, e di un turno scoperto o senza mezzo si vede il fatto ma non il perche'
   (rischio che resta: sezione 4). Lo controlla una prova per differenza su pacchetti uguali tranne il tipo di un servizio;
+- **tipo non noto** (K-017): a chi non puo' aprire i dati particolari il tipo dei servizi e dei gruppi non arriva, e il
+  programma non lo inventa (prima diventava "altro", e il piano dei turni applicava i requisiti di "altro": turni senza mezzo
+  che non esistevano). Un fatto del piano che dipende dal tipo si valuta per ogni tipo possibile dello schema: uguale per
+  tutti = certo, diverso = "non verificato". Il calcolo non legge il tipo in nessun altro modo (ne' dai codici esterni dei
+  servizi, ne' dai nomi, ne' dai gruppi, il cui tipo e' anch'esso particolare): cosi' che un turno sia certo o non
+  verificato dipende solo dai dati comuni e personali, e non dice niente del tipo. Nella giornata e nei controlli dei turni
+  quell'utente vede i risultati certi (con i testi del K-014: il fatto, non il perche') e quanti non sono verificati, mai
+  un risultato calcolato su un tipo che non conosce. Il tipo non noto e' un valore che il compilatore obbliga a trattare
+  (MaybeKnown): leggerlo come noto e' un errore del programma, mai un risultato. Lo controllano le prove per differenza del
+  K-017 (tests/test_unione.cpp);
 - gli errori del programma (K-ERR) non nominano mai un file di soli dati personali.
 
 **Cassaforte dei dati personali** (K-010, [cassaforte.md](cassaforte.md)). I dati veri stanno solo nella cassaforte:
@@ -275,6 +285,13 @@ non ha una password; non protegge da tutto. Detto onestamente:
   il perche' e lasciare visibile il fatto, perche' chi pianifica deve sapere quali turni vanno coperti e quando, anche senza
   i dati sulla salute; nascondere anche il fatto renderebbe il piano inutilizzabile, e un testo a parte solo per le cause del
   tipo direbbe proprio quello. Chi deve vedere il perche' usa `--includi-dati-particolari`, con il permesso di quei dati.
+- **Turni non verificati** (K-017). Chi ha i soli dati personali vede quali turni non sono verificati (la persona, il mezzo)
+  e quanti problemi possibili hanno i controlli dei turni. Non lo dice il tipo: lo dicono i dati comuni (i regolamenti e le norme che
+  chiedono usi o autorizzazioni per tipo, le autorizzazioni dei mezzi con le loro date) e personali (abilitazioni e
+  autorizzazioni delle persone), che quell'utente vede comunque; la stessa cosa vale per tutti i tipi. Un turno non
+  verificato dice solo che, per qualche tipo possibile, il piano cambierebbe; un problema possibile dei turni non e' un problema
+  dei dati (con i tipi veri puo' non esserci), e il loro numero non e' un massimo. Il titolare, con i dati particolari, vede il
+  piano intero (scelta A del supervisore, K-014: il fatto si', il perche' no senza il parametro).
 - **Deposito pubblico** (K-015). La storia del deposito prima del 5/11/2026 contiene i quattro nomi tolti dai file di
   oggi (nei documenti, nei commenti e nei messaggi dei salvataggi di allora) e alcuni codici di esempio sostituiti: la
   storia non si riscrive (scelta del supervisore), quindi restano leggibili. Le reti sono solo reti: un pacchetto vero

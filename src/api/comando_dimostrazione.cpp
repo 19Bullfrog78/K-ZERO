@@ -88,7 +88,7 @@ Json in_json(const DefinizioneComando& comando, const Resoconto& r, const Vista&
         Json x = Json::object();
         x["codice"] = s.code;
         x["nome"] = s.name;
-        x["tipo"] = vista.campo(s.src, "tipo", nome_tipo_servizio(s.kind), s.code);
+        x["tipo"] = vista.tipo_servizio(s);
         x["contratto"] = s.contract.code;
         const kzero::Contract* c = idx.contract(s.contract.code);
         x["committente"] = c ? Json(c->client.code) : Json(nullptr);
@@ -99,7 +99,7 @@ Json in_json(const DefinizioneComando& comando, const Resoconto& r, const Vista&
         for (const auto& g : s.groups) {
             Json y = Json::object();
             y["codice"] = g.code;
-            y["tipo"] = vista.campo(g.src, "tipo", nome_tipo_gruppo(g.type), g.code);
+            y["tipo"] = vista.tipo_gruppo(g);
             y["scuola"] = g.school ? Json(g.school->code) : Json(nullptr);
             y["persone"] = g.counts == kzero::CountKind::Unknown ? Json(nullptr) : Json(g.total_boarding());
             y["fermate"] = g.stops.size();
@@ -153,8 +153,11 @@ Json in_json(const DefinizioneComando& comando, const Resoconto& r, const Vista&
         Json x = Json::object();
         x["codice"] = t.code;
         x["nome"] = t.name;
-        const auto categoria = idx.category(t);
-        x["categoria"] = vista.filtra(classe_categoria, categoria ? Json(nome_categoria(*categoria)) : Json(nullptr), t.code);
+        // K-017: la categoria non e' nota se un tipo che serve non lo e' (solo a chi non puo' leggerlo): "riservato".
+        const kzero::TripCategory categoria = idx.category(t);
+        x["categoria"] = !categoria.known() ? Json(kRiservato)
+                                            : vista.filtra(classe_categoria,
+                                                           categoria.value() ? Json(nome_categoria(*categoria.value())) : Json(nullptr), t.code);
         Json servizi_corsa = Json::array();
         for (const auto& s : t.services) servizi_corsa.push_back(s.code);
         x["servizi"] = servizi_corsa;

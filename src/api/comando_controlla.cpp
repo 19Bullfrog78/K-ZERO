@@ -45,6 +45,15 @@ std::string errori_e_avvisi(int errori, int avvisi) {
     return n(errori, "errore", "errori") + " e " + n(avvisi, "avviso", "avvisi");
 }
 
+// "20 errori possibili e 5 avvisi possibili", "1 errore possibile e nessun avviso possibile" (K-017 aggiunta 1).
+std::string possibili_testo(int errori, int avvisi) {
+    const auto n = [](int x, const char* uno, const char* molti) {
+        if (x == 0) return std::string("nessun ") + uno + " possibile";
+        return std::to_string(x) + " " + (x == 1 ? std::string(uno) + " possibile" : std::string(molti) + " possibili");
+    };
+    return n(errori, "errore", "errori") + " e " + n(avvisi, "avviso", "avvisi");
+}
+
 Json posizione_json(const kzero::Source& s) {
     Json j = Json::object();
     j["file"] = s.file;
@@ -131,7 +140,10 @@ std::string in_testo(const Resoconto& r, const Visibilita& visibilita, const acc
         if (!pos.empty()) t += " (" + pos + ")";
         t += ": " + p.messaggio + "\n";
     }
-    if (r.problemi.empty() && r.errori_riservati + r.avvisi_riservati == 0) t += "Nessun problema.\n";
+    // K-017 aggiunta 1: con solo problemi possibili (nessuno certo) "Nessun problema certo.", e la riga dei problemi possibili dice
+    // quali.
+    const int possibili = r.problemi_possibili_dei_turni ? r.problemi_possibili_dei_turni->first + r.problemi_possibili_dei_turni->second : 0;
+    if (r.problemi.empty() && r.errori_riservati + r.avvisi_riservati == 0) t += possibili == 0 ? "Nessun problema.\n" : "Nessun problema certo.\n";
     if (!r.contenuto_controllato)
         t += "Controlli sul contenuto non eseguiti: prima vanno corretti gli errori nella forma dei file.\n";
     for (const Resoconto::NonVerificati& nv : r.non_verificati) {
@@ -140,6 +152,18 @@ std::string in_testo(const Resoconto& r, const Visibilita& visibilita, const acc
         t += std::string("Non verificato (servono i dati ") + nome_classe(nv.classe) + ", che l'utente non puo' aprire): i " +
              "controlli sui dati " + nome_classe(nv.classe) + " stessi e quelli che li usano (" + codici +
              "). I loro risultati non sono ne' tra i problemi ne' nel riepilogo.\n";
+    }
+    // K-017: i controlli dei turni per chi non apre i dati particolari: la riga c'e' sempre, che ce ne siano o no. Aggiunta 1: sono
+    // problemi possibili, non problemi dei dati (con i tipi veri possono anche non esserci); mai "fino a N".
+    if (r.problemi_possibili_dei_turni) {
+        const auto [errori, avvisi] = *r.problemi_possibili_dei_turni;
+        if (errori + avvisi == 0)
+            t += "Controlli dei turni: si vedono i problemi certi; nessun problema possibile (nessun loro risultato dipende dal tipo di "
+                 "servizio, dato particolare).\n";
+        else
+            t += "Controlli dei turni: si vedono i problemi certi. Ci sono anche problemi possibili (" + possibili_testo(errori, avvisi) +
+                 "): dipendono dal tipo di servizio (dato particolare, che l'utente non puo' aprire) e possono esserci o no; con i tipi "
+                 "veri anche nessuno. Non sono problemi certi: non sono ne' tra i problemi ne' nel riepilogo.\n";
     }
     t += "Dati personali e particolari nel pacchetto: " + valori_riservati_testo(r.lettura, visibilita, cf) + ".\n";
     const Conteggi c = conteggi(r);
@@ -183,6 +207,10 @@ std::string in_json(const DefinizioneComando& comando, const Resoconto& r, const
     j["non_verificato"] = nv;
     j["controlli_sul_contenuto"] = r.contenuto_controllato;
     j["problemi_riservati"] = {{"errori", r.errori_riservati}, {"avvisi", r.avvisi_riservati}};
+    j["problemi_possibili_dei_turni"] =
+        r.problemi_possibili_dei_turni
+            ? Json{{"errori", r.problemi_possibili_dei_turni->first}, {"avvisi", r.problemi_possibili_dei_turni->second}}
+            : Json(nullptr);
     Json problemi = Json::array();
     for (const ProblemaPresentato& p : r.problemi) {
         Json x = Json::object();

@@ -278,9 +278,10 @@ cassaforte.
 
 I comandi della cassaforte rispondono con lo schema `cassaforte` (versione 1: [schema/cassaforte.v1.schema.json](
 schema/cassaforte.v1.schema.json)); `kzero registro` con lo schema `registro` (versione 1:
-[schema/registro.v1.schema.json](schema/registro.v1.schema.json)). `kzero controlla` (versione 4) e `kzero giornata`
-(versione 2) hanno i campi `cassaforte` (chi l'ha aperta, con quali permessi, la data di conservazione) e
-`non_verificato`. Nessuna uscita contiene mai i valori della cassaforte se non quelli che l'utente puo' aprire e ha
+[schema/registro.v1.schema.json](schema/registro.v1.schema.json)). `kzero controlla` (dalla versione 4) e `kzero giornata`
+(dalla versione 2) hanno i campi `cassaforte` (chi l'ha aperta, con quali permessi, la data di conservazione) e
+`non_verificato`; dal K-017 `kzero controlla` (versione 6) anche `problemi_possibili_dei_turni` e `kzero giornata`
+(versione 5) quello che non e' verificato turno per turno. Nessuna uscita contiene mai i valori della cassaforte se non quelli che l'utente puo' aprire e ha
 chiesto di vedere.
 
 Orari di lavoro e tipo di servizio (K-013): quello che dipende dal tipo di servizio delle corse (i regimi che ne dipendono,
@@ -298,10 +299,18 @@ DECISIONI.md, K-013.
 Turni scoperti o senza mezzo (K-014): senza i dati particolari, se il pacchetto ha almeno un requisito che dipende dal tipo di
 servizio, il perche' di un turno scoperto o senza mezzo non si dice (stesso testo e stessa posizione per ogni causa). Per il
 titolare senza `--includi-dati-particolari` il motivo e' **"riservato"** (lo vede con il parametro); per chi non ha il permesso
-dei dati particolari e' **"non verificato"** in `kzero giornata` (il suo piano dei turni non e' verificato), e K-CTR-078 e 079
-restano tra i controlli non verificati, come prima. I problemi dei requisiti del tipo (K-CTR-067, 068, 069, 072) si contano
-soltanto per il titolare senza il parametro; per l'altro restano non verificati. Il titolare senza il parametro vede come il
-pacchetto in chiaro senza il parametro (una prova).
+dei dati particolari e' **"non verificato"**. I problemi dei requisiti del tipo (K-CTR-067, 068, 069, 072) si contano
+soltanto. Il titolare senza il parametro vede come il pacchetto in chiaro senza il parametro (una prova).
+
+Il piano di chi non apre i dati particolari (K-017, scelta A del supervisore dell'11/11): il tipo dei servizi e dei gruppi non
+gli arriva e non diventa mai un altro tipo. Il piano dei turni dice cosa e' certo: un fatto che dipende dal tipo (un uso del
+mezzo, un'autorizzazione del committente) si valuta per ogni tipo possibile; uguale per tutti e' certo, altrimenti non e'
+verificato, e quello che ne segue anche (es. l'abilitazione di una persona per un mezzo che forse non c'e'). In `kzero
+giornata` ogni turno mostra la persona e il mezzo: certi come per il titolare, oppure "non verificato" con la persona o il
+mezzo previsti; i totali contano solo cio' che e' certo e dicono quanti turni non sono verificati. In `kzero controlla` i
+controlli dei turni si fanno: i problemi certi si vedono (con i testi del K-014), quelli che dipendono dal tipo sono problemi
+possibili (possono esserci o no, con i tipi veri anche nessuno) e si contano soltanto ("Controlli dei turni: ..."). `kzero ore` resta com'era (K-013: le leggi, il lavoro e i rientri non sono verificati);
+cambia solo il totale del controllo del pacchetto, perche' ora conta anche i problemi certi dei turni.
 
 Gli avvisi della cassaforte (K-CTR-097 data di conservazione passata, K-CTR-098 ... K-CTR-100 password da cambiare) hanno
 i testi del catalogo dei controlli, uguali in testo ("Avviso K-CTR-nnn: ...") e in JSON (`codice` e `messaggio`): in

@@ -36,6 +36,11 @@ public:
     // Valore di una classe nota: visibile, oppure sostituito dal codice (personale) o da "riservato".
     Json filtra(Classe c, Json valore, const std::string& codice) const;
 
+    // Il tipo di un servizio e quello di un gruppo (dati particolari), filtrati come campo(). K-017: non noto solo a chi non puo'
+    // leggerlo (cassaforte): "riservato", come ogni dato particolare che non vede; mai un tipo inventato.
+    Json tipo_servizio(const kzero::Service& s) const;
+    Json tipo_gruppo(const kzero::PassengerGroup& g) const;
+
     // Il nome del committente (K-012): di un ente si vede sempre; di un privato e' un dato personale (di base il suo codice) e,
     // se e' legato a un luogo sensibile, si vede solo insieme ai dati particolari. null se non c'e' il committente, oppure se
     // si potrebbe vedere ma il nome non e' scritto (es. un pacchetto "solo numeri").

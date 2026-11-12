@@ -51,7 +51,7 @@ public:
     const Regulation* regulation_of(const Service& s) const;
 
     // Categoria della corsa (vedi derive_service).
-    std::optional<ServiceType> category(const Trip& t) const;
+    TripCategory category(const Trip& t) const;   // K-017: non nota se un tipo che serve non e' noto
 
 private:
     template <class T>

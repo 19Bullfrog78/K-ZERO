@@ -102,8 +102,15 @@ struct TripMode {
     bool mixed = false;                     // scelte diverse tra i servizi o i tipi, con il tachigrafo da una parte sola
     bool mixed_kinds = false;               // ... tra i tipi di servizio (rivela i tipi della corsa: dato particolare)
     bool by_kinds = false;                  // la scelta viene dai tipi di servizio (rivela il tipo: dato particolare)
+    // K-017: il tipo di un servizio della corsa non e' noto (chi non puo' leggerlo) e l'azienda ha scelte per tipo: la scelta si
+    // decide sulle voci di tutti i tipi possibili, come per una corsa con tipi diversi (diverse = l'impostazione dell'azienda).
+    bool kinds_unknown = false;
 };
 TripMode trip_mode(const Trip& t, const CompanySettings* s, const Index& idx, Day d);
+
+// K-017: gli insiemi possibili dei tipi di servizio di una corsa. Con tutti i tipi noti uno solo; ogni servizio con il tipo non
+// noto aggiunge uno qualunque dei tipi dello schema (insiemi diversi: al piu' 31 per corsa). Mai ricavati da altri dati.
+std::vector<std::set<ServiceKind>> possible_kind_sets(const Trip& t, const Index& idx);
 // K-011 aggiunta 2: l'azienda ha almeno una scelta del tachigrafo per tipo di servizio.
 bool kind_tachograph(const CompanySettings* s);
 // I regimi seguiti per scelta dell'azienda (tachigrafo) di una persona dipendono anche da scelte per tipo di servizio (dato
@@ -144,7 +151,8 @@ struct ApplyReason {
     const Shift* shift = nullptr;
     ShiftRole role = ShiftRole::Driver;
     Certainty role_level = Certainty::Certain;
-    std::vector<ServiceKind> kinds;          // tipi di servizio della corsa (dato particolare)
+    std::vector<ServiceKind> kinds;          // tipi di servizio della corsa (dato particolare), quelli noti
+    bool kinds_known = true;                 // K-017: false se il tipo di un servizio non e' noto (non e' in kinds)
     Certainty kinds_level = Certainty::Certain;   // cosa dicono i tipi di servizio (inclusione ed esclusioni)
     const Vehicle* vehicle = nullptr;        // nullptr: mezzo non noto
     int persons = 0;                         // persone trasportabili del mezzo, compreso il conducente
@@ -177,7 +185,8 @@ struct TripOnDay {
     const Trip* trip = nullptr;
     const Shift* shift = nullptr;
     ShiftRole role = ShiftRole::Driver;
-    std::vector<ServiceKind> kinds;          // dato particolare
+    std::vector<ServiceKind> kinds;          // dato particolare: quelli noti
+    bool kinds_known = true;                 // K-017: false se il tipo di un servizio non e' noto
     const Vehicle* vehicle = nullptr;        // nullptr: mezzo non noto
     int persons = 0;                         // persone trasportabili, compreso il conducente
     bool km_known = false;

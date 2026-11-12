@@ -108,14 +108,14 @@ PartResolution resolve_part(const ShiftTrip& part, const Trip& trip) {
 
 // --- Usi dei mezzi, requisiti di guida, autorizzazioni ----------------------------------------------------------
 
-std::optional<std::vector<Code>> allowed_uses(const Service& s, const Index& idx) {
+std::optional<std::vector<Code>> allowed_uses(const Service& s, ServiceKind kind, const Index& idx) {
     const auto codes = [](const std::vector<Ref>& refs) {
         std::vector<Code> v;
         for (const Ref& r : refs) v.push_back(r.code);
         return v;
     };
-    const auto has_kind = [&s](const std::vector<ServiceKind>& kinds) {
-        return std::find(kinds.begin(), kinds.end(), s.kind) != kinds.end();
+    const auto has_kind = [kind](const std::vector<ServiceKind>& kinds) {
+        return std::find(kinds.begin(), kinds.end(), kind) != kinds.end();
     };
     if (const Regulation* r = idx.regulation_of(s); r && r->vehicle_uses)
         for (const ServiceUses& u : r->vehicle_uses->values)
@@ -125,6 +125,12 @@ std::optional<std::vector<Code>> allowed_uses(const Service& s, const Index& idx
         for (const ServiceUsesNorm& u : n->service_uses)
             if (has_kind(u.value.kinds)) return codes(u.value.uses);
     return std::nullopt;
+}
+
+UsesByKind allowed_uses_by_kind(const Service& s, const Index& idx) {
+    UsesByKind v;
+    for (const ServiceKind k : possible_kinds(s.kind)) v.push_back(allowed_uses(s, k, idx));
+    return v;
 }
 
 KindRequirements kind_requirements(const Package& p) {
@@ -222,7 +228,7 @@ LicenceResult check_licences(const Person& p, const Vehicle& v, const Norms& n, 
 
 std::vector<RequiredAuthorization> required_authorizations(const ShiftDay& sd, const Index& idx) {
     std::vector<RequiredAuthorization> out;
-    std::set<Code> clients;
+    std::map<Code, std::size_t> clients;
     for (const PlannedItem& it : sd.items) {
         if (!it.trip) continue;
         for (const Ref& sr : it.trip->services) {
@@ -230,9 +236,15 @@ std::vector<RequiredAuthorization> required_authorizations(const ShiftDay& sd, c
             const Contract* c = s ? idx.contract(s->contract.code) : nullptr;
             const Regulation* r = c ? idx.regulation(c->regulation.code) : nullptr;
             if (!r || !r->client_authorization) continue;
+            // K-017: per ogni tipo possibile del servizio (uno solo se noto).
             const auto& kinds = r->client_authorization->kinds;
-            if (std::find(kinds.begin(), kinds.end(), s->kind) == kinds.end()) continue;
-            if (clients.insert(c->client.code).second) out.push_back({c, s});
+            bool yes = false, no = false;
+            for (const ServiceKind k : possible_kinds(s->kind)) (std::find(kinds.begin(), kinds.end(), k) != kinds.end() ? yes : no) = true;
+            const Outcome required = outcome_of(yes, no);
+            if (required == Outcome::No) continue;
+            const auto [pos, inserted] = clients.emplace(c->client.code, out.size());
+            if (inserted) out.push_back({c, s, required});
+            else if (out[pos->second].required == Outcome::Unverified && required == Outcome::Yes) out[pos->second] = {c, s, required};
         }
     }
     return out;
@@ -241,7 +253,7 @@ std::vector<RequiredAuthorization> required_authorizations(const ShiftDay& sd, c
 // --- Il piano di un giorno ---------------------------------------------------------------------------------------
 
 Planner::Planner(const Package& p) : p_(p), idx_(p), days_(idx_, p.manifest.period) {
-    for (const Service& s : p.services) service_uses_.emplace(&s, allowed_uses(s, idx_));
+    for (const Service& s : p.services) service_uses_.emplace(&s, allowed_uses_by_kind(s, idx_));
     // Rotazioni: turni di ogni passo e persona di ogni riga cercati una volta sola (un turno doppio vale il primo, come
     // nell'indice; un turno che non esiste si salta: K-CTR-010).
     std::unordered_map<Code, std::size_t> shift_pos;
@@ -339,61 +351,84 @@ void Planner::resolve_person(ShiftDay& sd) const {
     sd.person = sd.planned;
 }
 
-void Planner::person_facts(ShiftDay& sd, bool with_vehicle) const {
+// Fatti con le date sulla persona prevista che non dipendono dal mezzo ne' dal tipo di servizio: assenza, disponibilita',
+// prestito. Sempre certi.
+void Planner::person_facts(ShiftDay& sd) const {
     const Person* p = sd.planned;
-    if (!p || sd.person_impediment != PersonImpediment::None) return;
+    if (!p) return;
     const long long a = absolute(sd.day, sd.start), b = absolute(sd.day, sd.end);
-    if (!with_vehicle) {
-        const auto ab = absences_.find(p->code);
-        if (ab != absences_.end())
-            for (const Absence* x : ab->second)
-                if (overlaps(x->days, x->start, x->end, sd.day, a, b)) {
-                    sd.person_impediment = PersonImpediment::Absent;
-                    sd.absence = x;
-                    break;
-                }
-        if (sd.person_impediment == PersonImpediment::None && !available(*p, sd.day, sd.start, sd.end))
-            sd.person_impediment = PersonImpediment::OutsideAvailability;
-        if (sd.person_impediment == PersonImpediment::None && p->company.code != sd.shift->company.code) {
-            const Loan* any = nullptr;
-            bool covered = false;
-            for (const Loan& l : p->loans)
-                if (l.company.code == sd.shift->company.code) {
-                    if (!any) any = &l;
-                    covered = covered || l.covers(sd.day);
-                }
-            if (any && !covered) {   // senza nessun prestito a quell'azienda e' un errore (K-CTR-073), non un fatto
-                sd.person_impediment = PersonImpediment::LoanNotValid;
-                sd.person_loan = any;
+    const auto ab = absences_.find(p->code);
+    if (ab != absences_.end())
+        for (const Absence* x : ab->second)
+            if (overlaps(x->days, x->start, x->end, sd.day, a, b)) {
+                sd.person_impediment = PersonImpediment::Absent;
+                sd.absence = x;
+                break;
             }
+    if (sd.person_impediment == PersonImpediment::None && !available(*p, sd.day, sd.start, sd.end))
+        sd.person_impediment = PersonImpediment::OutsideAvailability;
+    if (sd.person_impediment == PersonImpediment::None && p->company.code != sd.shift->company.code) {
+        const Loan* any = nullptr;
+        bool covered = false;
+        for (const Loan& l : p->loans)
+            if (l.company.code == sd.shift->company.code) {
+                if (!any) any = &l;
+                covered = covered || l.covers(sd.day);
+            }
+        if (any && !covered) {   // senza nessun prestito a quell'azienda e' un errore (K-CTR-073), non un fatto
+            sd.person_impediment = PersonImpediment::LoanNotValid;
+            sd.person_loan = any;
         }
-    } else if (sd.shift->role == ShiftRole::Driver && sd.vehicle) {
-        if (const Norms* n = idx_.norms_of(sd.shift->company.code)) {
-            const LicenceResult r = check_licences(*p, *sd.vehicle, *n, sd.day);
-            if (r.status == LicenceStatus::Expired) {
-                sd.person_impediment = PersonImpediment::LicenceExpired;
-                sd.licence = r.expired;
-            }
-        }
-        if (sd.person_impediment == PersonImpediment::None)
-            for (const RequiredAuthorization& ra : required_authorizations(sd, idx_)) {
-                const ClientAuthorization* any = nullptr;
-                bool valid = false;
-                for (const ClientAuthorization& x : p->authorizations)
-                    if (x.client.code == ra.contract->client.code) {
-                        if (!any) any = &x;
-                        valid = valid || x.valid_on(sd.day);
-                    }
-                if (any && !valid) {   // senza nessuna autorizzazione e' un errore (K-CTR-068), non un fatto
-                    sd.person_impediment = PersonImpediment::AuthorizationExpired;
-                    sd.authorization = any;
-                    break;
-                }
-            }
     }
     // Un fatto con le date colpisce un turno ricorrente: quel giorno il turno e' scoperto (avviso). Su
     // un'assegnazione del singolo giorno la persona resta: e' un errore (K-CTR-067).
     if (sd.person_impediment != PersonImpediment::None && sd.person_source != PersonSource::Day) sd.person = nullptr;
+}
+
+// Fatti con le date sull'autista che dipendono dal mezzo del turno: abilitazione scaduta per quel mezzo, autorizzazione del
+// committente scaduta (chiesta per tipo di servizio). Ci sono solo se il mezzo c'e': con il mezzo non verificato (K-017) anche
+// il fatto non e' verificato; l'autorizzazione chiesta solo per alcuni tipi possibili non e' verificata.
+void Planner::person_vehicle_facts(ShiftDay& sd) const {
+    const Person* p = sd.planned;
+    if (!p || sd.person_impediment != PersonImpediment::None || sd.shift->role != ShiftRole::Driver || !sd.vehicle) return;
+    bool certain = true;
+    if (const Norms* n = idx_.norms_of(sd.shift->company.code)) {
+        const LicenceResult r = check_licences(*p, *sd.vehicle, *n, sd.day);
+        if (r.status == LicenceStatus::Expired) {
+            sd.person_impediment = PersonImpediment::LicenceExpired;
+            sd.licence = r.expired;
+        }
+    }
+    if (sd.person_impediment == PersonImpediment::None) {
+        const ClientAuthorization* possible = nullptr;   // scaduta, per un'autorizzazione chiesta solo per alcuni tipi
+        for (const RequiredAuthorization& ra : required_authorizations(sd, idx_)) {
+            const ClientAuthorization* any = nullptr;
+            bool valid = false;
+            for (const ClientAuthorization& x : p->authorizations)
+                if (x.client.code == ra.contract->client.code) {
+                    if (!any) any = &x;
+                    valid = valid || x.valid_on(sd.day);
+                }
+            if (!any || valid) continue;   // senza nessuna autorizzazione e' un errore (K-CTR-068), non un fatto
+            if (ra.required == Outcome::Yes) {
+                sd.person_impediment = PersonImpediment::AuthorizationExpired;
+                sd.authorization = any;
+                break;
+            }
+            if (!possible) possible = any;
+        }
+        if (sd.person_impediment == PersonImpediment::None && possible) {
+            sd.person_impediment = PersonImpediment::AuthorizationExpired;
+            sd.authorization = possible;
+            certain = false;
+        }
+    }
+    if (sd.person_impediment == PersonImpediment::None) return;
+    certain = certain && sd.vehicle_verified;
+    sd.person_fact_verified = certain;
+    if (sd.person_source == PersonSource::Day) return;   // la persona resta: e' un errore (K-CTR-067)
+    if (certain) sd.person = nullptr;
+    else sd.person_verified = false;   // tiene la persona prevista
 }
 
 void Planner::resolve_vehicle(ShiftDay& sd) const {
@@ -448,32 +483,103 @@ void Planner::vehicle_facts(ShiftDay& sd) const {
             sd.vehicle_loan = any;
         }
     }
+    // L'uso del mezzo che chiede il servizio dipende dal tipo di servizio (K-014): per ogni tipo possibile (K-017). Il primo
+    // servizio per cui il mezzo non va con certezza decide; se nessuno e' certo, il primo per cui non va con alcuni tipi lo rende
+    // non verificato.
+    const UseAuthorization* possible = nullptr;
     if (sd.vehicle_impediment == VehicleImpediment::None && v->use) {
         for (const PlannedItem& it : sd.items) {
             if (!it.trip || sd.vehicle_impediment != VehicleImpediment::None) continue;
             for (const Ref& sr : it.trip->services) {
                 const Service* s = idx_.service(sr.code);
                 if (!s) continue;
-                const std::optional<std::vector<Code>>& allowed = uses_of(*s);
-                if (!allowed) continue;
-                const auto ok = [&allowed](const Code& u) { return std::find(allowed->begin(), allowed->end(), u) != allowed->end(); };
-                if (ok(v->use->code)) continue;
-                const UseAuthorization* any = nullptr;
-                bool valid = false;
-                for (const UseAuthorization& x : v->use_authorizations)
-                    if (ok(x.use.code)) {
-                        if (!any) any = &x;
-                        valid = valid || (sd.day >= x.period.from && sd.day <= x.period.to);
+                bool yes = false, no = false;
+                const UseAuthorization* failing = nullptr;
+                for (const std::optional<std::vector<Code>>& allowed : uses_of(*s)) {
+                    const auto ok = [&allowed](const Code& u) { return std::find(allowed->begin(), allowed->end(), u) != allowed->end(); };
+                    const UseAuthorization* any = nullptr;
+                    bool valid = false;
+                    if (allowed && !ok(v->use->code))
+                        for (const UseAuthorization& x : v->use_authorizations)
+                            if (ok(x.use.code)) {
+                                if (!any) any = &x;
+                                valid = valid || (sd.day >= x.period.from && sd.day <= x.period.to);
+                            }
+                    // Senza nessuna autorizzazione e' un errore (K-CTR-069), non un fatto.
+                    if (any && !valid) {
+                        yes = true;
+                        if (!failing) failing = any;
+                    } else {
+                        no = true;
                     }
-                if (any && !valid) {   // senza nessuna autorizzazione e' un errore (K-CTR-069), non un fatto
+                }
+                const Outcome o = outcome_of(yes, no);
+                if (o == Outcome::Yes) {
                     sd.vehicle_impediment = VehicleImpediment::UseNotAuthorized;
-                    sd.use_authorization = any;
+                    sd.use_authorization = failing;
                     break;
                 }
+                if (o == Outcome::Unverified && !possible) possible = failing;
+            }
+        }
+        if (sd.vehicle_impediment == VehicleImpediment::None && possible) {
+            sd.vehicle_impediment = VehicleImpediment::UseNotAuthorized;
+            sd.use_authorization = possible;
+            sd.vehicle_fact_verified = false;
+        }
+    }
+    if (sd.vehicle_impediment == VehicleImpediment::None || sd.vehicle_source == VehicleSource::Day) return;
+    // Su un turno ricorrente il mezzo non c'e' quel giorno; con il fatto non verificato il turno tiene il mezzo previsto.
+    if (sd.vehicle_fact_verified) sd.vehicle = nullptr;
+    else sd.vehicle_verified = false;
+}
+
+void Planner::aboard(ShiftDay& sd, const std::vector<ShiftDay>& day) const {
+    // Il mezzo e' quello del primo turno da autista (nell'ordine dei turni) che fa un pezzo delle stesse corse, per la prima corsa
+    // del turno che ne ha uno. K-017: un mezzo non verificato puo' non esserci, e allora sarebbe quello dopo: si raccolgono i
+    // mezzi possibili fino al primo certo; tutti uguali = certo.
+    std::vector<const Vehicle*> possible;
+    bool certain = false;
+    for (const PlannedItem& it : sd.items) {
+        if (!it.trip || certain) continue;
+        for (const ShiftDay& other : day) {
+            if (other.shift->role != ShiftRole::Driver || !other.vehicle) continue;
+            const bool shares = std::any_of(other.items.begin(), other.items.end(),
+                                            [&it](const PlannedItem& o) { return o.trip == it.trip && o.from < it.to && it.from < o.to; });
+            if (!shares) continue;
+            possible.push_back(other.vehicle);
+            if (other.vehicle_verified) {
+                certain = true;
+                break;
             }
         }
     }
-    if (sd.vehicle_impediment != VehicleImpediment::None && sd.vehicle_source != VehicleSource::Day) sd.vehicle = nullptr;
+    if (!certain) possible.push_back(nullptr);   // nessun mezzo, se quelli non verificati non ci sono
+    sd.aboard = possible.front();
+    sd.aboard_verified = std::all_of(possible.begin(), possible.end(), [&possible](const Vehicle* v) { return v == possible.front(); });
+    // Il secondo autista deve avere le abilitazioni per quel mezzo (per ognuno dei mezzi possibili).
+    if (sd.shift->role != ShiftRole::SecondDriver || !sd.person || sd.person_impediment != PersonImpediment::None) return;
+    const Norms* n = idx_.norms_of(sd.shift->company.code);
+    if (!n) return;
+    bool yes = false, no = false;
+    const Licence* expired = nullptr;
+    for (const Vehicle* v : possible) {
+        const LicenceResult r = v ? check_licences(*sd.person, *v, *n, sd.day) : LicenceResult{};
+        if (r.status == LicenceStatus::Expired) {
+            yes = true;
+            if (!expired) expired = r.expired;
+        } else {
+            no = true;
+        }
+    }
+    const Outcome o = outcome_of(yes, no);
+    if (o == Outcome::No) return;
+    sd.person_impediment = PersonImpediment::LicenceExpired;
+    sd.licence = expired;
+    sd.person_fact_verified = o == Outcome::Yes;
+    if (sd.person_source == PersonSource::Day) return;
+    if (o == Outcome::Yes) sd.person = nullptr;
+    else sd.person_verified = false;
 }
 
 bool Planner::item_on(const ShiftItem& item, Day d) const {
@@ -487,10 +593,10 @@ bool Planner::item_on(const ShiftItem& item, Day d) const {
     return ti.trip && days_.active(ti.days, d) && ti.part.problem == PartProblem::None;
 }
 
-const std::optional<std::vector<Code>>& Planner::uses_of(const Service& s) const {
+const UsesByKind& Planner::uses_of(const Service& s) const {
     const auto it = service_uses_.find(&s);
     if (it != service_uses_.end()) return it->second;
-    static const std::optional<std::vector<Code>> nessuna_regola;   // servizio che non e' nel pacchetto
+    static const UsesByKind nessuna_regola;   // servizio che non e' nel pacchetto
     return nessuna_regola;
 }
 
@@ -573,38 +679,27 @@ std::vector<ShiftDay> Planner::day(Day d) const {
         }
         sd.rotation_candidates = std::move(rotation_candidates[si]);
         resolve_person(sd);
-        person_facts(sd, false);
+        person_facts(sd);
         resolve_vehicle(sd);
         vehicle_facts(sd);
-        person_facts(sd, true);
-        if (sd.vehicle_source == VehicleSource::Usual && !sd.person) sd.vehicle = nullptr;
+        person_vehicle_facts(sd);
+        // Il mezzo abituale e' di chi fa il turno: se il turno e' scoperto non c'e'; se chi lo fa non e' verificato, nemmeno il
+        // mezzo (K-017).
+        if (sd.vehicle_source == VehicleSource::Usual && sd.vehicle) {
+            if (!sd.person) {
+                sd.vehicle = nullptr;
+                sd.vehicle_verified = sd.person_verified;
+            } else if (!sd.person_verified) {
+                sd.vehicle_verified = false;
+            }
+        }
         out.push_back(std::move(sd));
     }
 
     // Assistenti e secondi autisti: il mezzo e' quello del turno dell'autista che fa le stesse corse. Il secondo
     // autista deve avere le abilitazioni per quel mezzo.
-    for (ShiftDay& sd : out) {
-        if (sd.shift->role == ShiftRole::Driver) continue;
-        for (const PlannedItem& it : sd.items) {
-            if (!it.trip || sd.aboard) continue;
-            for (const ShiftDay& other : out) {
-                if (other.shift->role != ShiftRole::Driver || !other.vehicle) continue;
-                for (const PlannedItem& o : other.items)
-                    if (o.trip == it.trip && o.from < it.to && it.from < o.to) sd.aboard = other.vehicle;
-                if (sd.aboard) break;
-            }
-        }
-        if (sd.shift->role == ShiftRole::SecondDriver && sd.person && sd.aboard &&
-            sd.person_impediment == PersonImpediment::None)
-            if (const Norms* n = idx_.norms_of(sd.shift->company.code)) {
-                const LicenceResult r = check_licences(*sd.person, *sd.aboard, *n, d);
-                if (r.status == LicenceStatus::Expired) {
-                    sd.person_impediment = PersonImpediment::LicenceExpired;
-                    sd.licence = r.expired;
-                    if (sd.person_source != PersonSource::Day) sd.person = nullptr;
-                }
-            }
-    }
+    for (ShiftDay& sd : out)
+        if (sd.shift->role != ShiftRole::Driver) aboard(sd, out);
 
     std::stable_sort(out.begin(), out.end(), [](const ShiftDay& a, const ShiftDay& b) {
         return std::tie(a.start, a.shift->code) < std::tie(b.start, b.shift->code);

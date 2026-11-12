@@ -241,7 +241,8 @@ bool motivo_dei_turni_riservato(const kzero::Package& pacchetto, const Visibilit
     return !visibile(Classe::Particolare, visibilita) && kzero::kind_requirements(pacchetto).any();
 }
 
-std::vector<kzero::Problem> turni_senza_motivo(std::vector<kzero::Problem> problemi, const kzero::Package& pacchetto) {
+std::vector<kzero::Problem> turni_senza_motivo(std::vector<kzero::Problem> problemi, const kzero::Package& pacchetto,
+                                               bool non_verificato) {
     std::map<kzero::Code, const kzero::Source*> persone, mezzi;
     for (const kzero::Person& x : pacchetto.persons) persone.emplace(x.code, &x.src);
     for (const kzero::Vehicle& x : pacchetto.vehicles) mezzi.emplace(x.code, &x.src);
@@ -260,7 +261,8 @@ std::vector<kzero::Problem> turni_senza_motivo(std::vector<kzero::Problem> probl
             }
             tenuti.push_back(p);
         }
-        x.variant = persona ? kScopertoSenzaMotivo : kSenzaMezzoSenzaMotivo;
+        x.variant = persona ? (non_verificato ? kScopertoMotivoNonVerificato : kScopertoSenzaMotivo)
+                            : (non_verificato ? kSenzaMezzoMotivoNonVerificato : kSenzaMezzoSenzaMotivo);
         x.params = std::move(tenuti);
         x.where = dove ? *dove : kzero::Source{};   // la persona o il mezzo ci sono sempre: il piano li ha trovati
     }

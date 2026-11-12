@@ -34,6 +34,16 @@ Json Vista::filtra(Classe c, Json valore, const std::string& codice) const {
     return c == Classe::Personale ? Json(codice) : Json(kRiservato);
 }
 
+Json Vista::tipo_servizio(const kzero::Service& s) const {
+    if (!s.kind.known()) return Json(kRiservato);
+    return campo(s.src, "tipo", nome_tipo_servizio(s.kind.value()), s.code);
+}
+
+Json Vista::tipo_gruppo(const kzero::PassengerGroup& g) const {
+    if (!g.type.known()) return Json(kRiservato);
+    return campo(g.src, "tipo", nome_tipo_gruppo(g.type.value()), g.code);
+}
+
 Json Vista::modo_corsa(const kzero::TripMode& m) const {
     // Nessuna riga per l'azienda senza il modo delle corse (non ha niente da dire).
     if (!m.modes) return Json(nullptr);

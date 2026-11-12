@@ -8,6 +8,7 @@
 #include <filesystem>
 #include <set>
 #include <string>
+#include <vector>
 
 #include "accesso.hpp"
 #include "controllo.hpp"
@@ -71,6 +72,9 @@ const char* modo_mezzo(kzero::VehicleSource s) {
 
 // K-014: il perche' di un turno scoperto o senza mezzo per un fatto con le date (riservatezza.hpp).
 enum class Motivo { Visibile, Riservato, NonVerificato };
+
+// K-017: perche' un risultato del turno non e' verificato.
+constexpr const char* kDipendeDalTipo = "dipende dal tipo di servizio (dato particolare)";
 
 class Giornata {
 public:
@@ -244,7 +248,7 @@ public:
             Json x = Json::object();
             x["codice"] = r.code;
             x["nome"] = sv && !sv->name.empty() ? Json(sv->name) : Json(nullptr);
-            x["tipo"] = sv ? vista_.campo(sv->src, "tipo", nome_tipo_servizio(sv->kind), sv->code) : Json(nullptr);
+            x["tipo"] = sv ? vista_.tipo_servizio(*sv) : Json(nullptr);
             const kzero::Contract* c = sv ? idx_.contract(sv->contract.code) : nullptr;
             if (c && !primo_contratto) primo_contratto = c;
             x["contratto"] = sv ? Json(sv->contract.code) : Json(nullptr);
@@ -318,7 +322,12 @@ public:
         j["luogo_inizio"] = luogo(s.start_place.code);
         j["luogo_fine"] = luogo(s.end_place.code);
 
-        j["persona"] = sd.person ? persona(*sd.person) : Json(nullptr);
+        // K-017: un risultato non verificato (dipende dal tipo di servizio, che l'utente non puo' aprire) e' null; si vedono la
+        // persona e il mezzo previsti.
+        j["non_verificato"] = sd.verified() ? Json(nullptr)
+                                            : Json{{"persona", !sd.person_verified}, {"mezzo", !sd.vehicle_verified},
+                                                   {"a_bordo", !sd.aboard_verified}, {"motivo", kDipendeDalTipo}};
+        j["persona"] = sd.person && sd.person_verified ? persona(*sd.person) : Json(nullptr);
         Json assegnazione = Json::object();
         assegnazione["modo"] = modo_persona(sd.person_source);
         if (sd.person_source == kzero::PersonSource::Rotation) {
@@ -328,13 +337,13 @@ public:
         if (sd.person_source == kzero::PersonSource::Fixed) assegnazione["servizio_fisso"] = sd.fixed->code;
         assegnazione["posizione"] = sd.person_source == kzero::PersonSource::None ? Json(nullptr) : posizione(sd.person_position());
         j["assegnazione"] = assegnazione;
-        j["persona_prevista"] = sd.planned && sd.planned != sd.person ? persona(*sd.planned) : Json(nullptr);
-        j["scoperto"] = sd.uncovered();
-        j["motivo_scoperto"] = sd.uncovered() ? Json(motivo_persona(sd)) : Json(nullptr);
+        j["persona_prevista"] = sd.planned && (sd.planned != sd.person || !sd.person_verified) ? persona(*sd.planned) : Json(nullptr);
+        j["scoperto"] = sd.person_verified ? Json(sd.uncovered()) : Json(nullptr);
+        j["motivo_scoperto"] = sd.person_verified && sd.uncovered() ? Json(motivo_persona(sd)) : Json(nullptr);
 
         const bool impegna_il_mezzo = s.role == kzero::ShiftRole::Driver && s.vehicle_mode != kzero::ShiftVehicleMode::None &&
                                       sd.vehicle_start.has_value();
-        j["mezzo"] = sd.vehicle ? mezzo(*sd.vehicle) : Json(nullptr);
+        j["mezzo"] = sd.vehicle && sd.vehicle_verified ? mezzo(*sd.vehicle) : Json(nullptr);
         j["mezzo_da"] = modo_mezzo(sd.vehicle_source);
         // Il mezzo scritto nel turno, quando quel giorno un'assegnazione del singolo giorno ne da' un altro.
         j["mezzo_del_turno"] = sd.vehicle_source == kzero::VehicleSource::Day && s.vehicle_mode == kzero::ShiftVehicleMode::Specific &&
@@ -342,11 +351,13 @@ public:
                                    ? Json(s.vehicle->code)
                                    : Json(nullptr);
         j["posizione_mezzo"] = sd.vehicle_source == kzero::VehicleSource::Day ? posizione(sd.vehicle_position()) : Json(nullptr);
-        j["mezzo_previsto"] = sd.planned_vehicle && sd.planned_vehicle != sd.vehicle ? mezzo(*sd.planned_vehicle) : Json(nullptr);
+        j["mezzo_previsto"] = sd.planned_vehicle && (sd.planned_vehicle != sd.vehicle || !sd.vehicle_verified) ? mezzo(*sd.planned_vehicle)
+                                                                                                             : Json(nullptr);
         const bool senza_mezzo = impegna_il_mezzo && !sd.vehicle;
-        j["senza_mezzo"] = senza_mezzo;
-        j["motivo_senza_mezzo"] = senza_mezzo ? Json(motivo_mezzo(sd)) : Json(nullptr);
-        j["a_bordo_di"] = sd.aboard ? mezzo(*sd.aboard) : Json(nullptr);
+        j["senza_mezzo"] = sd.vehicle_verified ? Json(senza_mezzo) : Json(nullptr);
+        j["motivo_senza_mezzo"] = sd.vehicle_verified && senza_mezzo ? Json(motivo_mezzo(sd)) : Json(nullptr);
+        j["a_bordo_di"] = sd.aboard && sd.aboard_verified ? mezzo(*sd.aboard) : Json(nullptr);
+        j["a_bordo_previsto"] = sd.aboard && !sd.aboard_verified ? mezzo(*sd.aboard) : Json(nullptr);
         Json competenze = Json::array();
         for (const kzero::Ref& c : s.competences) competenze.push_back(c.code);
         j["competenze_richieste"] = s.competences.empty() ? competenze : vista_.campo(s.src, "competenze_richieste", competenze, s.code);
@@ -377,17 +388,27 @@ private:
 // Dettaglio di una persona (assenze) da mostrare solo con i dati personali.
 Json personale(const Vista& vista, Json valore) { return vista.visibilita().personali ? valore : Json(kRiservato); }
 
-// Cassaforte (K-010): cosa non e' verificato per chi non puo' aprire una classe (il piano del giorno dipende da tutte e due).
-Json non_verificato(const Visibilita& leggibili) {
+// Cassaforte (K-010): cosa non e' verificato per chi non puo' aprire una classe. Senza i dati personali tutto il piano del giorno;
+// senza i dati particolari (K-017) solo i turni il cui risultato dipende dal tipo di servizio: quanti (tra quelli mostrati).
+Json non_verificato(const Visibilita& leggibili, std::size_t turni, std::size_t non_verificati) {
     Json nv = Json::array();
     if (!leggibili.personali)
         nv.push_back({{"servono", "personali"},
                       {"cosa", "chi fa i turni e con quali mezzi: dipende da assenze, disponibilita', abilitazioni e "
-                               "autorizzazioni delle persone, che l'utente non puo' aprire"}});
-    if (!leggibili.particolari)
-        nv.push_back({{"servono", "particolari"},
-                      {"cosa", "chi fa i turni e con quali mezzi: dipende dagli usi dei mezzi e dalle autorizzazioni richiesti "
-                               "per tipo di servizio (dato particolare), che l'utente non puo' aprire"}});
+                               "autorizzazioni delle persone, che l'utente non puo' aprire"},
+                      {"turni", nullptr}});
+    if (!leggibili.particolari) {
+        const std::string su = " su " + std::to_string(turni);
+        const std::string cosa =
+            turni == 0 ? std::string("nessun turno da mostrare")
+            : non_verificati == 0
+                ? "nessun turno" + su + ": chi li fa e con quali mezzi non dipende dagli usi dei mezzi e dalle autorizzazioni richiesti "
+                                        "per tipo di servizio (dato particolare)"
+                : "in " + std::to_string(non_verificati) + (non_verificati == 1 ? " turno" : " turni") + su +
+                      " chi li fa o con quale mezzo, perche' dipende dagli usi dei mezzi e dalle autorizzazioni richiesti per tipo "
+                      "di servizio (dato particolare), che l'utente non puo' aprire";
+        nv.push_back({{"servono", "particolari"}, {"cosa", cosa}, {"turni", non_verificati}});
+    }
     return nv;
 }
 
@@ -430,7 +451,6 @@ Json in_json(const DefinizioneComando& comando, const Resoconto& r, const Parame
     } else {
         j["cassaforte"] = nullptr;
     }
-    j["non_verificato"] = non_verificato(r.lettura.leggibili);
     j["data"] = kzero::text_from_day(d);
     j["giorno_della_settimana"] = chiave_giorno(kzero::weekday_of(d));
     Json festivita = Json::array();
@@ -484,8 +504,12 @@ Json in_json(const DefinizioneComando& comando, const Resoconto& r, const Parame
         j["mezzo"] = x;
     }
 
+    // K-017: i totali contano solo cio' che e' certo. Un risultato non verificato (la persona, il mezzo) resta fuori: scoperti e
+    // senza mezzo sono quelli certi, le persone e i mezzi quelli che fanno o usano il turno con certezza, i km della persona o del
+    // mezzo quelli dei turni che fa o in cui e' usato con certezza. I km di tutti i turni da autista e i tempi fermi dei turni
+    // mostrati non dipendono dal piano (i turni mostrati si scelgono per la persona o il mezzo previsti).
     Json turni = Json::array();
-    int scoperti = 0, senza_mezzo = 0;
+    int scoperti = 0, senza_mezzo = 0, non_verificati = 0;
     long long fermi = 0;
     double pieni = 0.0, vuoti = 0.0;
     std::set<kzero::Code> persone, mezzi;
@@ -493,24 +517,28 @@ Json in_json(const DefinizioneComando& comando, const Resoconto& r, const Parame
         const kzero::ShiftDay& sd = *p_sd;
         const auto e = [](const auto* x, const auto* y) { return x && y && x->code == y->code; };
         Json t = g.turno(sd);
-        scoperti += t.at("scoperto").get<bool>() ? 1 : 0;
-        senza_mezzo += t.at("senza_mezzo").get<bool>() ? 1 : 0;
+        scoperti += t.at("scoperto") == true ? 1 : 0;
+        senza_mezzo += t.at("senza_mezzo") == true ? 1 : 0;
+        non_verificati += sd.verified() ? 0 : 1;
         fermi += kzero::idle_minutes(sd);
         // I km sono quelli dei mezzi guidati: della persona, del mezzo o di tutti i turni da autista del giorno.
-        const bool guidato = sd.shift->role == kzero::ShiftRole::Driver && (!sola_persona || e(sd.person, sola_persona)) &&
-                             (!solo_mezzo || e(sd.vehicle, solo_mezzo));
+        const bool guidato = sd.shift->role == kzero::ShiftRole::Driver &&
+                             (!sola_persona || (e(sd.person, sola_persona) && sd.person_verified)) &&
+                             (!solo_mezzo || (e(sd.vehicle, solo_mezzo) && sd.vehicle_verified));
         if (guidato) {
             pieni += kzero::loaded_km(sd);
             vuoti += kzero::empty_km(sd);
         }
-        if (sd.person) persone.insert(sd.person->code);
-        if (sd.vehicle) mezzi.insert(sd.vehicle->code);
+        if (sd.person && sd.person_verified) persone.insert(sd.person->code);
+        if (sd.vehicle && sd.vehicle_verified) mezzi.insert(sd.vehicle->code);
         turni.push_back(t);
     }
+    j["non_verificato"] = non_verificato(r.lettura.leggibili, scelti.size(), static_cast<std::size_t>(non_verificati));
     Json totali = Json::object();
     totali["turni"] = turni.size();
     totali["scoperti"] = scoperti;
     totali["senza_mezzo"] = senza_mezzo;
+    totali["non_verificati"] = non_verificati;
     totali["persone"] = persone.size();
     totali["mezzi"] = mezzi.size();
     totali["km_pieni"] = arrotonda(pieni, 3);
@@ -631,7 +659,21 @@ void turno_testo(std::string& t, const Json& x) {
     t += "  " + x.at("inizio").get<std::string>() + "-" + x.at("fine").get<std::string>() + " (" +
          durata(x.at("durata_minuti").get<long long>()) + ")  azienda " + x.at("azienda").get<std::string>() + ", " +
          testo(x.at("ruolo")) + "\n";
-    if (x.at("scoperto").get<bool>()) {
+    // K-017: i risultati non verificati (dipendono dal tipo di servizio) con la persona e il mezzo previsti.
+    const Json& nv = x.at("non_verificato");
+    if (!nv.is_null()) {
+        std::vector<std::string> cosa;
+        if (nv.at("persona").get<bool>()) cosa.push_back("la persona");
+        if (nv.at("mezzo").get<bool>()) cosa.push_back("il mezzo");
+        if (nv.at("a_bordo").get<bool>()) cosa.push_back("il mezzo a bordo");
+        std::string elenco;
+        for (std::size_t i = 0; i < cosa.size(); ++i) elenco += (i == 0 ? "" : i + 1 == cosa.size() ? " e " : ", ") + cosa[i];
+        t += "   NON VERIFICATO: " + elenco + (cosa.size() == 1 ? " dipende" : " dipendono") + " dal tipo di servizio (dato particolare).\n";
+    }
+    if (x.at("scoperto").is_null()) {
+        t += "   Persona: non verificata - prevista " + persona_testo(x.at("persona_prevista")) + ", " +
+             assegnazione_testo(x.at("assegnazione")) + "\n";
+    } else if (x.at("scoperto").get<bool>()) {
         t += "   Persona: nessuna - TURNO SCOPERTO: " + x.at("motivo_scoperto").get<std::string>() + "\n";
         if (!x.at("persona_prevista").is_null())
             t += "   Prevista: " + persona_testo(x.at("persona_prevista")) + ", " + assegnazione_testo(x.at("assegnazione")) + "\n";
@@ -639,7 +681,10 @@ void turno_testo(std::string& t, const Json& x) {
         t += "   Persona: " + persona_testo(x.at("persona")) + ", " + assegnazione_testo(x.at("assegnazione")) + "\n";
     }
     const std::string da = x.at("mezzo_da").get<std::string>();
-    if (!x.at("mezzo").is_null()) {
+    if (x.at("senza_mezzo").is_null()) {
+        t += "   Mezzo: non verificato - previsto " + mezzo_testo(x.at("mezzo_previsto")) + ", " +
+             (da == "abituale" ? std::string("mezzo abituale della persona") : std::string("scritto nel turno")) + "\n";
+    } else if (!x.at("mezzo").is_null()) {
         t += "   Mezzo: " + mezzo_testo(x.at("mezzo")) + ", " +
              (da == "giorno"     ? "assegnazione del singolo giorno" + posizione_testo(x.at("posizione_mezzo")) +
                                    (x.at("mezzo_del_turno").is_null()
@@ -652,6 +697,9 @@ void turno_testo(std::string& t, const Json& x) {
         t += "   Mezzo: nessuno - TURNO SENZA MEZZO: " + x.at("motivo_senza_mezzo").get<std::string>() + "\n";
     } else if (!x.at("a_bordo_di").is_null()) {
         t += "   A bordo del mezzo: " + mezzo_testo(x.at("a_bordo_di")) + " (il mezzo del turno dell'autista)\n";
+    } else if (!x.at("a_bordo_previsto").is_null()) {
+        t += "   A bordo del mezzo: non verificato - previsto " + mezzo_testo(x.at("a_bordo_previsto")) +
+             " (il mezzo del turno dell'autista)\n";
     } else {
         t += "   Mezzo: nessuno (il turno non usa un mezzo)\n";
     }
@@ -731,9 +779,11 @@ std::string in_testo(const Json& j) {
     if (j.at("turni").empty()) t += "\nNessun turno in questo giorno.\n";
     for (const auto& x : j.at("turni")) turno_testo(t, x);
     const Json& tot = j.at("totali");
+    const long long non_verificati = tot.at("non_verificati").get<long long>();
     t += "\nTotali: " + quanti(tot.at("turni").get<long long>(), "turno", "turni") + " (" +
          quanti_turni(tot.at("scoperti").get<long long>(), "scoperto", "scoperti") + ", " +
-         quanti_turni(tot.at("senza_mezzo").get<long long>(), "senza mezzo", "senza mezzo") + "), " +
+         quanti_turni(tot.at("senza_mezzo").get<long long>(), "senza mezzo", "senza mezzo") +
+         (non_verificati > 0 ? ", " + quanti(non_verificati, "non verificato", "non verificati") : std::string()) + "), " +
          (tot.at("persone").get<long long>() == 0 ? std::string("nessuna persona")
                                                    : quanti(tot.at("persone").get<long long>(), "persona", "persone")) +
          ", " +

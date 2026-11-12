@@ -34,7 +34,7 @@ TEST(Dimostrazione, categorie_ricavate) {
     ASSERT_EQ(demo().trips.size(), attese.size());
     for (std::size_t i = 0; i < attese.size(); ++i) {
         EXPECT_EQ(demo().trips[i].code, attese[i].first);
-        EXPECT_EQ(idx.category(demo().trips[i]), attese[i].second) << attese[i].first;
+        EXPECT_EQ(idx.category(demo().trips[i]).value(), attese[i].second) << attese[i].first;
     }
 }
 

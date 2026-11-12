@@ -2,6 +2,7 @@
 #include "controllo.hpp"
 
 #include <algorithm>
+#include <stdexcept>
 #include <tuple>
 
 #include "formato_dati.hpp"
@@ -60,12 +61,22 @@ Resoconto controlla_lettura(Lettura lettura, const Visibilita& visibilita, const
         std::vector<kzero::Problem> contenuto = kzero::check_package(r.lettura.pacchetto, richiesta, orari);
         problemi.insert(problemi.end(), contenuto.begin(), contenuto.end());
         // K-014: senza i dati particolari, il perche' dei turni scoperti o senza mezzo non si dice (riservatezza.hpp).
-        if (motivo_dei_turni_riservato(r.lettura.pacchetto, visibilita)) problemi = turni_senza_motivo(std::move(problemi), r.lettura.pacchetto);
+        if (motivo_dei_turni_riservato(r.lettura.pacchetto, visibilita))
+            problemi = turni_senza_motivo(std::move(problemi), r.lettura.pacchetto, !r.lettura.leggibili.particolari);
     }
     const Presentatore presentatore(r.contenuto_controllato ? &r.lettura.pacchetto : nullptr, &r.lettura.versioni, visibilita);
     const Visibilita& leggibili = r.lettura.leggibili;
+    // K-017: chi apre i dati personali ma non quelli particolari vede i problemi certi dei controlli dei turni; quelli che dipendono
+    // dal tipo di servizio (non verificati nel piano, o nati da un requisito del tipo) sono solo possibili e si contano soltanto.
+    if (leggibili.personali && !leggibili.particolari) r.problemi_possibili_dei_turni = std::pair<int, int>{0, 0};
     for (const kzero::Problem& p : problemi) {
         const DefinizioneControllo& d = definizione_controllo(p.check);
+        if (p.unverified && leggibili.particolari)   // con il permesso dei particolari il tipo e' sempre noto
+            throw std::logic_error("problema non verificato per chi puo' leggere il tipo di servizio");
+        if (d.turni && r.problemi_possibili_dei_turni && (p.unverified || p.by_service_kind)) {
+            (d.livello == Livello::Errore ? r.problemi_possibili_dei_turni->first : r.problemi_possibili_dei_turni->second) += 1;
+            continue;
+        }
         const Classe posizione = classe_della_posizione(p.where, r.lettura);
         // Cassaforte (K-010): un problema che l'utente non puo' calcolare con le classi che apre non si mostra e non si conta
         // (sarebbe fatto su dati mancanti): il resoconto dice quali controlli non sono verificati.

@@ -87,7 +87,11 @@ Si parte da ALP (3 minibus + 1 auto) e si deve poter crescere fino a 500 mezzi e
   (CMake lo segnala); il controllo GitHub le rende obbligatorie (`-DKZERO_SCHEMI_OBBLIGATORI=ON`).
 - Prove con i sanitizer (AddressSanitizer e UndefinedBehaviorSanitizer, si fermano al primo problema; clang come nel
   controllo GitHub; su Ubuntu serve il pacchetto libclang-rt-18-dev): `CC=clang CXX=clang++ cmake -S . -B build-san -DKZERO_SANITIZER=ON -DKZERO_WERROR=ON
-  -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build-san && ctest --test-dir build-san --output-on-failure`
+  -DCMAKE_BUILD_TYPE=RelWithDebInfo && cmake --build build-san && ctest --test-dir build-san --output-on-failure`. Con il
+  sanitizer la prova per differenza del piano del K-017 (test_unione, `PianoSenzaParticolari*`) fa solo una parte delle
+  varianti: per ogni servizio il suo tipo e quello dopo nell'elenco, S-LIN-B610 e i casi mirati (mezzo abituale,
+  sovrapposizione, mezzo a bordo, secondo autista) tutti i tipi; lo sa dalla costruzione (KZERO_SANITIZER), mai da una
+  variabile d'ambiente, e scrive quali varianti ha fatto. Nella costruzione normale tutte le varianti.
 - Fuzzing (prove con dati casuali e deformati, libFuzzer, solo clang; su Ubuntu serve il pacchetto libclang-rt-18-dev):
   `CC=clang CXX=clang++ cmake -S . -B build-fuzz -DKZERO_FUZZ=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo &&
   cmake --build build-fuzz --target fuzz_pacchetto fuzz_parametri fuzz_date_e_orari fuzz_cassaforte rigioca_fuzz`
@@ -194,6 +198,12 @@ Si parte da ALP (3 minibus + 1 auto) e si deve poter crescere fino a 500 mezzi e
   dai permessi e dai parametri insieme; un controllo o un calcolo che ha bisogno di una classe che l'utente non puo'
   aprire dice "non verificato", mai un risultato fatto su dati mancanti. Ogni apertura scrive prima la voce del registro:
   senza voce, nessun dato.
+- IMPORTANTE (K-017): il tipo di un servizio o di un gruppo che l'utente non puo' leggere e' "non noto" (`MaybeKnown`) e non
+  diventa mai un altro tipo. Ogni requisito che dipende dal tipo (oggi `kind_requirements`, e i regimi degli orari) con il tipo
+  non noto si valuta per ogni tipo dello schema (`possible_kinds`): uguale per tutti = certo, diverso = non verificato; mai un
+  tipo ricavato da altri dati (codici esterni, nomi, gruppi). Un fatto che dipende da un risultato non verificato non e'
+  verificato. Ogni nuovo requisito del tipo e ogni nuova uscita del piano seguono questa regola (giornata e controlla:
+  `ShiftDay::*_verified`, `Problem::unverified`).
 - Ogni nuova uscita, messaggio, posizione o registro passa dal filtro delle classi; nessun dato personale nei registri
   del programma. La lettura dei file e' blindata (solo file normali dentro la cartella del pacchetto, mai oltre il
   massimo di byte): ogni nuovo lettore di file esterni (es. il file del consorzio) la usa.

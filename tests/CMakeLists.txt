@@ -38,6 +38,11 @@ add_executable(test_unione test_unione.cpp)
 target_link_libraries(test_unione PRIVATE kzero_api GTest::gtest_main)
 target_compile_options(test_unione PRIVATE ${KZERO_WARNINGS})
 target_compile_definitions(test_unione PRIVATE KZERO_CARTELLA_PROVE="${CMAKE_CURRENT_SOURCE_DIR}")
+# K-017 aggiunta 1: con il sanitizer la prova per differenza del piano fa una parte delle varianti (test_unione.cpp,
+# tipi_del_servizio). La prova lo sa dalla costruzione, non da una variabile d'ambiente.
+if(KZERO_SANITIZER)
+  target_compile_definitions(test_unione PRIVATE KZERO_PROVE_COL_SANITIZER=1)
+endif()
 gtest_discover_tests(test_unione PROPERTIES LABELS sicurezza)
 add_executable(test_registro test_registro.cpp)
 target_link_libraries(test_registro PRIVATE kzero_api GTest::gtest_main)
@@ -464,6 +469,13 @@ foreach(caso "persona_giovedi;--data;2026-10-22;--persona;P-C" "mezzo_giovedi;--
               NON_CONTIENE ${DATI_PERSONE} ${DATI_PERSONALI} ${DATI_PARTICOLARI} "PEDANA"
               ARGOMENTI ${GIORNATA_DEMO} ${caso} --formato json)
 endforeach()
+# K-017: per il titolare (e il pacchetto in chiaro) la giornata del 2027-07-07 resta quella di prima del K-017 (uscite attese
+# prese dal programma del K-016): 1 turno scoperto (T-SECONDO), nessuno senza mezzo, 5 mezzi.
+kzero_prova(giornata_tutti_2027_07_07 USCITA 0 FORMATO testo ATTESO ${CMAKE_CURRENT_SOURCE_DIR}/attesi/giornata_tutti_2027-07-07.txt
+            ARGOMENTI ${GIORNATA_DEMO} --data 2027-07-07)
+kzero_prova(giornata_tutti_2027_07_07_dati_particolari USCITA 0 FORMATO testo
+            ATTESO ${CMAKE_CURRENT_SOURCE_DIR}/attesi/giornata_tutti_2027-07-07_dati_particolari.txt
+            ARGOMENTI ${GIORNATA_DEMO} --data 2027-07-07 --includi-dati-particolari)
 # Tutti i turni di un giorno di scuola: di base senza nomi e senza dati sulla salute; con i due parametri si vedono.
 kzero_prova(giornata_tutti USCITA 0 FORMATO testo
             CONTIENE "Tutti i turni del giorno" "T-B-ACCOMP" "A bordo del mezzo: BETA-01" "Totali: 13 turni (nessuno scoperto"
@@ -1222,6 +1234,20 @@ kzero_prova(tipo_altro_senza_descrizione_dati_particolari USCITA 1 FORMATO json 
             MODIFICA IMPOSTA servizi.json /servizi/3/tipo "\"altro\""
             PROBLEMI "K-CTR-007|servizi.json|/servizi/3" CONTIENE "manca il campo obbligatorio 'tipo_descrizione'"
             ARGOMENTI controlla @PACCHETTO@ --includi-dati-particolari --formato json)
+# K-017, prova mancante C9 (controllo del K-014): un campo obbligatorio personale che manca (i ruoli di una persona, l'inizio di
+# un'assenza) non rivela un valore: da' il suo messaggio come prima e non e' contato tra i problemi sui dati particolari (solo un
+# campo particolare che manca lo e', variante 1 di K-CTR-007). Un problema contato soltanto non avrebbe il messaggio.
+kzero_rotto(c9_ruoli_mancanti FORMATO testo MODIFICA TOGLI persone.json /persone/0/ruoli
+            PROBLEMI "K-CTR-007|persone.json|/persone/0" CONTIENE "manca il campo obbligatorio 'ruoli'"
+            NON_CONTIENE "Problemi sui dati particolari")
+kzero_rotto(c9_ruoli_mancanti_json FORMATO json MODIFICA TOGLI persone.json /persone/0/ruoli
+            PROBLEMI "K-CTR-007|persone.json|/persone/0"
+            CONTIENE "manca il campo obbligatorio 'ruoli'")
+kzero_rotto(c9_inizio_assenza_mancante FORMATO testo MODIFICA TOGLI assenze.json /assenze/0/dal
+            CONTIENE "Errore K-CTR-007 (il punto preciso con --includi-dati-personali): Non rispetta lo schema: manca il campo obbligatorio 'dal'."
+            NON_CONTIENE "Problemi sui dati particolari")
+kzero_rotto(c9_inizio_assenza_mancante_json FORMATO json MODIFICA TOGLI assenze.json /assenze/0/dal
+            CONTIENE "manca il campo obbligatorio 'dal'")
 kzero_rotto(rotto_trasbordo_non_autorizzato FORMATO testo MODIFICA TOGLI luoghi.json /luoghi/16/trasbordo
             PROBLEMI "K-CTR-023|corse.json|/corse/4/passaggi/2/trasbordi/0" "K-CTR-023|corse.json|/corse/5/passaggi/3/trasbordi/0")
 kzero_rotto(rotto_trasbordo_senza_meta FORMATO testo MODIFICA IMPOSTA corse.json /corse/5/passaggi/3/trasbordi/0/codice "\"T-02\""
@@ -1407,18 +1433,27 @@ kzero_cassaforte(cassaforte_controlla_titolare_json TITOLARE USCITA 0 FORMATO js
 kzero_cassaforte(cassaforte_controlla_titolare_tutti_i_dati TITOLARE USCITA 0 FORMATO testo PROBLEMI ${AVVISI_DEMO_COMPLETI}
                  CONTIENE "248 valori personali e 37 particolari, nella cassaforte: luoghi.json 25 personali"
                  ARGOMENTI controlla @PACCHETTO@ --includi-dati-personali --includi-dati-particolari)
+# K-017: senza i dati particolari i controlli dei turni mostrano i problemi certi (qui K-CTR-078 e K-CTR-082) e contano soltanto
+# quelli che dipendono dal tipo di servizio; K-CTR-068 (l'autorizzazione del committente, per tipo) e' tra questi. Aggiunta 1: sono
+# problemi possibili, non errori dei dati.
 kzero_cassaforte(cassaforte_controlla_ufficio UFFICIO USCITA 0 FORMATO testo
                  CONTIENE "Cassaforte aperta dall'utente UFFICIO (dati personali)"
-                          "Non verificato (servono i dati particolari, che l'utente non puo' aprire)" "K-CTR-068"
-                 NON_CONTIENE "servono i dati personali" ${DATI_PERSONALI} ${DATI_PARTICOLARI}
+                          "Non verificato (servono i dati particolari, che l'utente non puo' aprire)" "K-CTR-071"
+                          "Controlli dei turni: si vedono i problemi certi" "problemi possibili (18 errori possibili e 5 avvisi possibili)"
+                          "possono esserci o no; con i tipi veri anche nessuno" "Avviso K-CTR-078 (persone.json, /persone/1)"
+                          "Avviso K-CTR-082 (servizi_fissi.json, /servizi_fissi/2)" " 0 errori, 7 avvisi."
+                 NON_CONTIENE "servono i dati personali" "K-CTR-068" ${DATI_PERSONALI} ${DATI_PARTICOLARI}
                  ARGOMENTI controlla @PACCHETTO@)
 kzero_cassaforte(cassaforte_controlla_ufficio_json UFFICIO USCITA 0 FORMATO json SCHEMA controlla
-                 CONTIENE "\"servono\": \"particolari\"" "\"utente\": \"UFFICIO\"" NON_CONTIENE "\"servono\": \"personali\""
+                 CONTIENE "\"servono\": \"particolari\"" "\"utente\": \"UFFICIO\"" "\"problemi_possibili_dei_turni\": {"
+                 NON_CONTIENE "\"servono\": \"personali\""
                  ARGOMENTI controlla @PACCHETTO@ --formato json)
 kzero_cassaforte(cassaforte_controlla_ufficio_dati_personali UFFICIO USCITA 0 FORMATO testo
                  CONTIENE "nella cassaforte: luoghi.json" "persone.json 161 personali e 0 particolari"
-                 PROBLEMI "K-CTR-050|persone.json|/persone/2/abilitazioni/2"
-                 NON_CONTIENE ${DATI_PERSONALI_LEGATI} ${DATI_PARTICOLARI} "K-CTR-078 ("
+                          # K-017: il turno scoperto per un fatto certo si vede, il motivo no (scelta A del 5/11, K-014).
+                          "il motivo non e' verificato (servono i dati particolari"
+                 PROBLEMI "K-CTR-050|persone.json|/persone/2/abilitazioni/2" "K-CTR-078|persone.json|/persone/1"
+                 NON_CONTIENE ${DATI_PERSONALI_LEGATI} ${DATI_PARTICOLARI} "K-CTR-078 (assenze.json" "e' assente"
                  ARGOMENTI controlla @PACCHETTO@ --includi-dati-personali)
 kzero_cassaforte(cassaforte_controlla_salute SALUTE USCITA 0 FORMATO testo
                  CONTIENE "Cassaforte aperta dall'utente SALUTE (dati particolari)"

@@ -99,7 +99,7 @@ std::vector<Problem> group_by_days(std::vector<Problem> problems) {
     // Chiave: tutto tranne i giorni.
     const auto key = [](const Problem& x) {
         std::string k = std::to_string(static_cast<int>(x.check)) + "|" + std::to_string(x.variant) + "|" + x.where.file + "|" +
-                        x.where.pointer + (x.by_service_kind ? "|tipo" : "");
+                        x.where.pointer + (x.by_service_kind ? "|tipo" : "") + (x.unverified ? "|non verificato" : "");
         for (const Param& p : x.params) {
             if (p.kind == Param::Kind::Days) continue;
             k += "|" + p.name + "=" + std::to_string(static_cast<int>(p.kind)) + ":" + p.text + ":" + std::to_string(p.number) + ":" +

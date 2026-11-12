@@ -507,7 +507,7 @@ private:
             j["ruolo"] = nome_ruolo(w.role);
             Json kinds = Json::array();
             for (kzero::ServiceKind k : w.kinds) kinds.push_back(nome_tipo_servizio(k));
-            j["tipi_servizio"] = particolare(kinds);
+            j["tipi_servizio"] = w.kinds_known ? particolare(kinds) : Json(kRiservato);   // K-017: non noti a chi non li legge
             j["mezzo"] = w.vehicle ? Json(w.vehicle->code) : Json(nullptr);
             j["persone_trasportabili"] = w.vehicle ? Json(w.persons) : Json(nullptr);
             j["percorso_km"] = arrotonda(w.km, 3);

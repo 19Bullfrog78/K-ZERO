@@ -1,0 +1,1464 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "kzero - giornata, versione 5",
+  "description": "Uscita di 'kzero giornata <cartella> --data AAAA-MM-GG [--persona CODICE | --mezzo CODICE] --formato json': i turni del giorno (tutti, di una persona o di un mezzo) con chi li fa e da dove viene l'assegnazione, il mezzo, le corse e le attivita' in ordine con i passaggi, i tempi fermi e i km; i turni scoperti o senza mezzo con il motivo; i totali. I dati sono filtrati secondo le loro classi: di base i dati personali sono sostituiti dal codice dell'elemento e quelli particolari sono 'riservato'. Con errori nei dati del pacchetto la giornata non si produce (errore K-ERR-018); gli errori del piano (K-011, le regole sugli orari) non la bloccano. Versione 2 (K-010): 'cassaforte' (chi l'ha aperta e con quali permessi) e 'non_verificato' (cosa non e' verificato per chi non puo' aprire una classe). Sostituisce la versione 1, che non e' piu' prodotta. Versione 3 (K-011): 'controllo' con gli errori del piano, che non bloccano. Sostituisce la versione 2, che non e' piu' prodotta. Versione 4 (K-012): il nome del committente di ogni servizio ('nome_committente'; di un committente privato e' un dato personale, legato a un luogo sensibile come quello dei passeggeri). Sostituisce la versione 3, che non e' piu' prodotta. Versione 5 (K-017): per chi non puo' aprire i dati particolari (cassaforte) il tipo dei servizi non e' noto e il piano dice cosa e' certo: in ogni turno 'non_verificato' (null se tutto e' certo; altrimenti quali risultati dipendono dal tipo di servizio: la persona, il mezzo, il mezzo a bordo), con i risultati non verificati a null e la persona e il mezzo previsti; 'a_bordo_previsto'; nei totali 'non_verificati', e gli altri totali contano solo cio' che e' certo; in 'non_verificato' della giornata quanti turni non sono verificati ('turni'). Sostituisce la versione 4, che non e' piu' prodotta.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "schema_versione",
+    "dati_inventati",
+    "dati_personali_inclusi",
+    "dati_particolari_inclusi",
+    "pacchetto",
+    "controllo",
+    "cassaforte",
+    "non_verificato",
+    "data",
+    "giorno_della_settimana",
+    "festivita",
+    "vista",
+    "turni",
+    "totali"
+  ],
+  "properties": {
+    "schema": {
+      "const": "giornata"
+    },
+    "schema_versione": {
+      "const": 5
+    },
+    "dati_inventati": {
+      "type": "boolean"
+    },
+    "dati_personali_inclusi": {
+      "type": "boolean"
+    },
+    "dati_particolari_inclusi": {
+      "type": "boolean"
+    },
+    "pacchetto": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "codice",
+        "nome",
+        "livello",
+        "periodo"
+      ],
+      "properties": {
+        "codice": {
+          "$ref": "#/definitions/codice"
+        },
+        "nome": {
+          "type": "string"
+        },
+        "livello": {
+          "enum": [
+            "completo",
+            "solo_numeri"
+          ]
+        },
+        "periodo": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "dal",
+            "al"
+          ],
+          "properties": {
+            "dal": {
+              "$ref": "#/definitions/data"
+            },
+            "al": {
+              "$ref": "#/definitions/data"
+            }
+          }
+        }
+      }
+    },
+    "controllo": {
+      "description": "Esito di kzero controlla sullo stesso pacchetto: gli avvisi e gli errori del piano non bloccano; gli errori nei dati si' (allora la giornata non si produce).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "errori",
+        "errori_del_piano",
+        "avvisi"
+      ],
+      "properties": {
+        "errori": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "errori_del_piano": {
+          "description": "Quanti degli errori sono errori del piano (K-011: violazioni delle regole sugli orari), che non bloccano kzero giornata e kzero ore.",
+          "type": "integer",
+          "minimum": 0
+        },
+        "avvisi": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "cassaforte": {
+      "description": "Cassaforte (K-010): null per un pacchetto senza cassaforte; altrimenti chi l'ha aperta, i suoi permessi e la data di conservazione dei dati.",
+      "oneOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "utente",
+            "permessi",
+            "conservazione",
+            "conservazione_scaduta",
+            "avvisi"
+          ],
+          "properties": {
+            "utente": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+            },
+            "permessi": {
+              "description": "Le classi che l'utente puo' aprire.",
+              "type": "array",
+              "uniqueItems": true,
+              "items": {
+                "enum": [
+                  "personali",
+                  "particolari"
+                ]
+              }
+            },
+            "conservazione": {
+              "type": "string",
+              "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+            },
+            "conservazione_scaduta": {
+              "description": "La data di conservazione e' passata (orologio del PC).",
+              "type": "boolean"
+            },
+            "avvisi": {
+              "description": "Gli avvisi di ogni apertura, uguali a quelli dell'uscita in testo: data di conservazione passata (K-CTR-097), chiavi nuove ricevute in una busta e password da cambiare (K-CTR-098). Testi del catalogo dei controlli, docs/controlli.md.",
+              "type": "array",
+              "items": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "codice",
+                  "messaggio"
+                ],
+                "properties": {
+                  "codice": {
+                    "enum": [
+                      "K-CTR-097",
+                      "K-CTR-098"
+                    ]
+                  },
+                  "messaggio": {
+                    "type": "string",
+                    "minLength": 1
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    },
+    "non_verificato": {
+      "description": "Per ogni classe che l'utente non puo' aprire: cosa della giornata non e' verificato. Senza i dati personali tutto il piano (chi fa i turni e con quali mezzi dipende da assenze, disponibilita', abilitazioni). Senza i dati particolari (K-017) solo i turni il cui risultato dipende dal tipo di servizio, quanti in 'turni' (tra quelli mostrati); il resto del piano e' certo. Vuoto senza cassaforte o con tutti i permessi.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "servono",
+          "cosa",
+          "turni"
+        ],
+        "properties": {
+          "servono": {
+            "enum": [
+              "personali",
+              "particolari"
+            ]
+          },
+          "cosa": {
+            "type": "string",
+            "minLength": 1
+          },
+          "turni": {
+            "description": "K-017, con 'servono' = 'particolari': quanti dei turni mostrati non sono verificati (persona, mezzo o mezzo a bordo dipendono dal tipo di servizio); null con 'personali'.",
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 0
+          }
+        }
+      }
+    },
+    "data": {
+      "$ref": "#/definitions/data"
+    },
+    "giorno_della_settimana": {
+      "enum": [
+        "lunedi",
+        "martedi",
+        "mercoledi",
+        "giovedi",
+        "venerdi",
+        "sabato",
+        "domenica"
+      ]
+    },
+    "festivita": {
+      "description": "Le festivita' del giorno, dai calendari delle festivita' del pacchetto.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "calendario",
+          "nome",
+          "da_confermare"
+        ],
+        "properties": {
+          "calendario": {
+            "$ref": "#/definitions/codice"
+          },
+          "nome": {
+            "type": "string",
+            "minLength": 1
+          },
+          "da_confermare": {
+            "type": "boolean"
+          }
+        }
+      }
+    },
+    "vista": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tipo",
+        "codice"
+      ],
+      "properties": {
+        "tipo": {
+          "enum": [
+            "tutti",
+            "persona",
+            "mezzo"
+          ]
+        },
+        "codice": {
+          "oneOf": [
+            {
+              "$ref": "#/definitions/codice"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        }
+      }
+    },
+    "persona": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "codice",
+        "nome",
+        "azienda",
+        "ipotetica",
+        "presa_servizio",
+        "mezzo_abituale",
+        "assenze"
+      ],
+      "properties": {
+        "codice": {
+          "$ref": "#/definitions/codice"
+        },
+        "nome": {
+          "description": "Nome; di base il codice della persona (dato personale). null se il pacchetto non ha il nome.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "azienda": {
+          "$ref": "#/definitions/codice"
+        },
+        "ipotetica": {
+          "type": "boolean"
+        },
+        "presa_servizio": {
+          "oneOf": [
+            {
+              "$ref": "#/definitions/luogo"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "mezzo_abituale": {
+          "oneOf": [
+            {
+              "$ref": "#/definitions/codice"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "assenze": {
+          "description": "Assenze del giorno: tipo e orari sono dati personali ('riservato' di base).",
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "tipo",
+              "dalle",
+              "alle"
+            ],
+            "properties": {
+              "tipo": {
+                "type": "string",
+                "minLength": 1
+              },
+              "dalle": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "minLength": 1
+              },
+              "alle": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "minLength": 1
+              }
+            }
+          }
+        }
+      },
+      "description": "Solo con --persona: la persona, dove prende servizio, il mezzo abituale e le assenze del giorno."
+    },
+    "mezzo": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "codice",
+        "azienda",
+        "targa",
+        "categoria",
+        "posti",
+        "posti_in_piedi",
+        "uso",
+        "scorta",
+        "ipotetico",
+        "fermi"
+      ],
+      "properties": {
+        "codice": {
+          "$ref": "#/definitions/codice"
+        },
+        "azienda": {
+          "$ref": "#/definitions/codice"
+        },
+        "targa": {
+          "type": "string",
+          "minLength": 1
+        },
+        "categoria": {
+          "enum": [
+            "M1",
+            "M2",
+            "M3"
+          ]
+        },
+        "posti": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "posti_in_piedi": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "uso": {
+          "oneOf": [
+            {
+              "$ref": "#/definitions/codice"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "scorta": {
+          "type": "boolean"
+        },
+        "ipotetico": {
+          "type": "boolean"
+        },
+        "fermi": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "tipo",
+              "dalle",
+              "alle"
+            ],
+            "properties": {
+              "tipo": {
+                "$ref": "#/definitions/codice"
+              },
+              "dalle": {
+                "oneOf": [
+                  {
+                    "$ref": "#/definitions/orario"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "alle": {
+                "oneOf": [
+                  {
+                    "$ref": "#/definitions/orario"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              }
+            }
+          }
+        }
+      },
+      "description": "Solo con --mezzo: il mezzo e i suoi fermi del giorno."
+    },
+    "turni": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/turno"
+      }
+    },
+    "totali": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "turni",
+        "scoperti",
+        "senza_mezzo",
+        "non_verificati",
+        "persone",
+        "mezzi",
+        "km_pieni",
+        "km_vuoti",
+        "minuti_fermi"
+      ],
+      "properties": {
+        "turni": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "scoperti": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Turni scoperti con certezza."
+        },
+        "senza_mezzo": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Turni senza mezzo con certezza."
+        },
+        "non_verificati": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "K-017: turni con un risultato non verificato (dipende dal tipo di servizio, dato particolare che l'utente non puo' aprire); fuori da 'scoperti', 'senza_mezzo', 'persone' e 'mezzi' per la parte non verificata."
+        },
+        "persone": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Persone diverse che fanno con certezza almeno uno dei turni mostrati (K-017: non chi e' solo prevista in un turno non verificato)."
+        },
+        "mezzi": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Mezzi diversi usati con certezza dai turni mostrati (K-017: non un mezzo solo previsto in un turno non verificato)."
+        },
+        "km_pieni": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Km dei mezzi guidati: di tutti i turni da autista, della persona (--persona, solo i turni che fa con certezza) o del solo mezzo (--mezzo, solo i turni in cui lo usa con certezza)."
+        },
+        "km_vuoti": {
+          "type": "number",
+          "minimum": 0
+        },
+        "minuti_fermi": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    }
+  },
+  "definitions": {
+    "codice": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+    },
+    "data": {
+      "description": "Data AAAA-MM-GG che esiste nel calendario (es. 2026-09-14; il 29 febbraio solo negli anni bisestili).",
+      "type": "string",
+      "pattern": "^([0-9]{4}-((0[13578]|1[02])-(0[1-9]|[12][0-9]|3[01])|(0[469]|11)-(0[1-9]|[12][0-9]|30)|02-(0[1-9]|1[0-9]|2[0-8]))|([0-9]{2}(0[48]|[2468][048]|[13579][26])|([02468][048]|[13579][26])00)-02-29)$"
+    },
+    "orario": {
+      "description": "HH:MM; dopo la mezzanotte si continua a contare (24:12 = 00:12 del giorno dopo, nello stesso turno).",
+      "type": "string",
+      "pattern": "^([0-3][0-9]|4[0-7]):[0-5][0-9]$"
+    },
+    "posizione": {
+      "description": "Punto dei dati (file e percorso JSON) in cui e' scritta l'assegnazione.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "file",
+        "puntatore"
+      ],
+      "properties": {
+        "file": {
+          "type": "string",
+          "minLength": 1
+        },
+        "puntatore": {
+          "type": "string",
+          "pattern": "^(/[^/]*)+$"
+        }
+      }
+    },
+    "luogo": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "codice",
+        "nome"
+      ],
+      "properties": {
+        "codice": {
+          "description": "Codice del luogo. Luogo sensibile (K-009): con i dati personali e senza quelli particolari, in una giornata che mostra la casa di un passeggero, 'riservato'. In quel caso anche il nome e' 'riservato'.",
+          "$ref": "#/definitions/codice"
+        },
+        "nome": {
+          "description": "Nome del luogo; per un luogo privato, di base, il codice. Valore visibile, oppure il codice dell'elemento (dato personale non mostrato) o 'riservato' (dato particolare non mostrato).",
+          "type": [
+            "string",
+            "null"
+          ]
+        }
+      }
+    },
+    "calendario": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "codice",
+        "nome",
+        "giorni_nel_periodo"
+      ],
+      "properties": {
+        "codice": {
+          "$ref": "#/definitions/codice"
+        },
+        "nome": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1
+        },
+        "giorni_nel_periodo": {
+          "description": "In quanti giorni del periodo del pacchetto vale il calendario.",
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "persona": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "codice",
+        "nome",
+        "azienda",
+        "ipotetica"
+      ],
+      "properties": {
+        "codice": {
+          "$ref": "#/definitions/codice"
+        },
+        "nome": {
+          "description": "Nome; di base il codice della persona (dato personale). null se il pacchetto non ha il nome.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "azienda": {
+          "$ref": "#/definitions/codice"
+        },
+        "ipotetica": {
+          "type": "boolean"
+        }
+      }
+    },
+    "mezzo": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "codice",
+        "azienda",
+        "targa",
+        "categoria",
+        "posti",
+        "posti_in_piedi",
+        "uso",
+        "scorta",
+        "ipotetico"
+      ],
+      "properties": {
+        "codice": {
+          "$ref": "#/definitions/codice"
+        },
+        "azienda": {
+          "$ref": "#/definitions/codice"
+        },
+        "targa": {
+          "type": "string",
+          "minLength": 1
+        },
+        "categoria": {
+          "enum": [
+            "M1",
+            "M2",
+            "M3"
+          ]
+        },
+        "posti": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "posti_in_piedi": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "uso": {
+          "oneOf": [
+            {
+              "$ref": "#/definitions/codice"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "scorta": {
+          "type": "boolean"
+        },
+        "ipotetico": {
+          "type": "boolean"
+        }
+      }
+    },
+    "passaggio": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "orario",
+        "partenza",
+        "luogo",
+        "nome_luogo",
+        "transito",
+        "salgono",
+        "scendono",
+        "km_pieni",
+        "km_vuoti",
+        "assistente",
+        "trasbordi",
+        "a_bordo"
+      ],
+      "properties": {
+        "orario": {
+          "$ref": "#/definitions/orario"
+        },
+        "partenza": {
+          "oneOf": [
+            {
+              "$ref": "#/definitions/orario"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "luogo": {
+          "description": "Codice del luogo. Luogo sensibile (K-009): con i dati personali e senza quelli particolari, in una giornata che mostra la casa di un passeggero, 'riservato'.",
+          "$ref": "#/definitions/codice"
+        },
+        "nome_luogo": {
+          "description": "Valore visibile, oppure il codice dell'elemento (dato personale non mostrato) o 'riservato' (dato particolare non mostrato, o luogo sensibile come per 'luogo').",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "transito": {
+          "type": "boolean"
+        },
+        "salgono": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "scendono": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "km_pieni": {
+          "type": "number",
+          "minimum": 0,
+          "description": "Km dal passaggio precedente, come nei dati; al primo passaggio del pezzo di corsa 0."
+        },
+        "km_vuoti": {
+          "type": "number",
+          "minimum": 0
+        },
+        "assistente": {
+          "enum": [
+            "sale",
+            "scende",
+            null
+          ]
+        },
+        "trasbordi": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "codice",
+              "azione",
+              "persone"
+            ],
+            "properties": {
+              "codice": {
+                "$ref": "#/definitions/codice"
+              },
+              "azione": {
+                "enum": [
+                  "consegna",
+                  "ricezione"
+                ]
+              },
+              "persone": {
+                "type": "integer",
+                "minimum": 0
+              }
+            }
+          }
+        },
+        "a_bordo": {
+          "description": "Persone a bordo dopo il passaggio; null se un gruppo della corsa ha i conteggi non noti.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 0
+        }
+      }
+    },
+    "attivita": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tipo",
+        "attivita",
+        "nome",
+        "luogo",
+        "verso",
+        "inizio",
+        "fine",
+        "fermo_prima_minuti",
+        "km_vuoti",
+        "usa_il_mezzo",
+        "nota"
+      ],
+      "properties": {
+        "tipo": {
+          "const": "attivita"
+        },
+        "attivita": {
+          "$ref": "#/definitions/codice"
+        },
+        "nome": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1,
+          "description": "Nome del tipo di attivita' nell'elenco dell'azienda."
+        },
+        "luogo": {
+          "$ref": "#/definitions/luogo"
+        },
+        "verso": {
+          "oneOf": [
+            {
+              "$ref": "#/definitions/luogo"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "inizio": {
+          "$ref": "#/definitions/orario"
+        },
+        "fine": {
+          "$ref": "#/definitions/orario"
+        },
+        "fermo_prima_minuti": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Minuti fermi tra la fine dell'elemento precedente e l'inizio di questo."
+        },
+        "km_vuoti": {
+          "type": "number",
+          "minimum": 0
+        },
+        "usa_il_mezzo": {
+          "type": "boolean"
+        },
+        "nota": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1
+        }
+      }
+    },
+    "corsa": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tipo",
+        "corsa",
+        "nome",
+        "intera",
+        "inizio",
+        "fine",
+        "fermo_prima_minuti",
+        "km_pieni",
+        "km_vuoti",
+        "servizi",
+        "calendario",
+        "assistente",
+        "passaggi",
+        "modo"
+      ],
+      "properties": {
+        "tipo": {
+          "const": "corsa"
+        },
+        "corsa": {
+          "$ref": "#/definitions/codice"
+        },
+        "nome": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1
+        },
+        "intera": {
+          "description": "false = solo un pezzo della corsa (cambio dell'autista lungo la corsa).",
+          "type": "boolean"
+        },
+        "inizio": {
+          "$ref": "#/definitions/orario"
+        },
+        "fine": {
+          "$ref": "#/definitions/orario"
+        },
+        "fermo_prima_minuti": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "km_pieni": {
+          "type": "number",
+          "minimum": 0
+        },
+        "km_vuoti": {
+          "type": "number",
+          "minimum": 0
+        },
+        "servizi": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "codice",
+              "nome",
+              "tipo",
+              "contratto",
+              "committente",
+              "nome_committente"
+            ],
+            "properties": {
+              "codice": {
+                "$ref": "#/definitions/codice"
+              },
+              "nome": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "minLength": 1
+              },
+              "tipo": {
+                "description": "Tipo del servizio (dato particolare): Valore visibile, oppure il codice dell'elemento (dato personale non mostrato) o 'riservato' (dato particolare non mostrato).",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "contratto": {
+                "oneOf": [
+                  {
+                    "$ref": "#/definitions/codice"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "committente": {
+                "oneOf": [
+                  {
+                    "$ref": "#/definitions/codice"
+                  },
+                  {
+                    "type": "null"
+                  }
+                ]
+              },
+              "nome_committente": {
+                "description": "Nome del committente (K-012). Di un ente si vede sempre; di un committente privato e' un dato personale: di base il codice del committente, il nome con --includi-dati-personali (e il permesso) e, se un suo servizio e' legato a un luogo sensibile, solo insieme ai dati particolari. null senza committente, o se il nome si potrebbe vedere ma non e' scritto (es. un pacchetto 'solo numeri').",
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "minLength": 1
+              }
+            }
+          }
+        },
+        "calendario": {
+          "$ref": "#/definitions/calendario"
+        },
+        "assistente": {
+          "description": "Chi fornisce l'assistente a bordo (il turno o, se non lo dice, il contratto); null se a bordo non c'e'.",
+          "enum": [
+            "azienda",
+            "committente",
+            null
+          ]
+        },
+        "passaggi": {
+          "description": "I passaggi della corsa, o del suo pezzo, in ordine.",
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/definitions/passaggio"
+          }
+        },
+        "modo": {
+          "$ref": "#/definitions/modo_corsa"
+        }
+      }
+    },
+    "turno": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "codice",
+        "nome",
+        "azienda",
+        "ruolo",
+        "calendario",
+        "giorni_nel_periodo",
+        "inizio",
+        "fine",
+        "durata_minuti",
+        "luogo_inizio",
+        "luogo_fine",
+        "non_verificato",
+        "persona",
+        "assegnazione",
+        "persona_prevista",
+        "scoperto",
+        "motivo_scoperto",
+        "mezzo",
+        "mezzo_da",
+        "mezzo_del_turno",
+        "posizione_mezzo",
+        "mezzo_previsto",
+        "senza_mezzo",
+        "motivo_senza_mezzo",
+        "a_bordo_di",
+        "a_bordo_previsto",
+        "competenze_richieste",
+        "nota",
+        "elementi",
+        "totali"
+      ],
+      "properties": {
+        "codice": {
+          "$ref": "#/definitions/codice"
+        },
+        "nome": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1
+        },
+        "azienda": {
+          "$ref": "#/definitions/codice"
+        },
+        "ruolo": {
+          "enum": [
+            "autista",
+            "assistente",
+            "secondo_autista"
+          ]
+        },
+        "calendario": {
+          "$ref": "#/definitions/calendario"
+        },
+        "giorni_nel_periodo": {
+          "description": "In quanti giorni del periodo c'e' il turno (vale il calendario e c'e' almeno una corsa o attivita').",
+          "type": "integer",
+          "minimum": 0
+        },
+        "inizio": {
+          "$ref": "#/definitions/orario"
+        },
+        "fine": {
+          "$ref": "#/definitions/orario"
+        },
+        "durata_minuti": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "luogo_inizio": {
+          "$ref": "#/definitions/luogo"
+        },
+        "luogo_fine": {
+          "$ref": "#/definitions/luogo"
+        },
+        "non_verificato": {
+          "description": "K-017: null se il risultato del turno e' certo. Altrimenti (solo per chi non puo' aprire i dati particolari) quali risultati dipendono dal tipo di servizio e non sono verificati: chi lo fa ('persona'), il suo mezzo ('mezzo'), il mezzo su cui e' a bordo ('a_bordo'); i risultati non verificati sono null e si vedono la persona e il mezzo previsti. Il calcolo non legge il tipo: certo o non verificato non dice niente del tipo.",
+          "oneOf": [
+            {
+              "type": "null"
+            },
+            {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "persona",
+                "mezzo",
+                "a_bordo",
+                "motivo"
+              ],
+              "properties": {
+                "persona": {
+                  "type": "boolean"
+                },
+                "mezzo": {
+                  "type": "boolean"
+                },
+                "a_bordo": {
+                  "type": "boolean"
+                },
+                "motivo": {
+                  "type": "string",
+                  "minLength": 1
+                }
+              }
+            }
+          ]
+        },
+        "persona": {
+          "oneOf": [
+            {
+              "$ref": "#/definitions/persona"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Chi fa il turno; null = turno scoperto, oppure (K-017) non verificato: allora la persona prevista e' in 'persona_prevista'."
+        },
+        "assegnazione": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "modo",
+            "posizione"
+          ],
+          "properties": {
+            "modo": {
+              "description": "Da dove viene la persona: rotazione, servizio fisso, assegnazione del singolo giorno (vince il piu' preciso), nessuno.",
+              "enum": [
+                "rotazione",
+                "servizio_fisso",
+                "giorno",
+                "nessuno"
+              ]
+            },
+            "rotazione": {
+              "$ref": "#/definitions/codice"
+            },
+            "passo": {
+              "description": "Passo del ciclo, contato da 1.",
+              "type": "integer",
+              "minimum": 1
+            },
+            "servizio_fisso": {
+              "$ref": "#/definitions/codice"
+            },
+            "posizione": {
+              "oneOf": [
+                {
+                  "$ref": "#/definitions/posizione"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        },
+        "persona_prevista": {
+          "oneOf": [
+            {
+              "$ref": "#/definitions/persona"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "La persona prevista quando un fatto con le date (assenza, disponibilita', scadenza, prestito) le impedisce il turno, oppure (K-017) quando chi fa il turno non e' verificato."
+        },
+        "scoperto": {
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "description": "null (K-017) se chi fa il turno non e' verificato."
+        },
+        "motivo_scoperto": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1,
+          "description": "Perche' il turno e' scoperto; i fatti sulle persone si dicono solo con i dati personali."
+        },
+        "mezzo": {
+          "oneOf": [
+            {
+              "$ref": "#/definitions/mezzo"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Il mezzo del turno; null = senza mezzo, nessun mezzo, oppure (K-017) non verificato: allora il mezzo previsto e' in 'mezzo_previsto'."
+        },
+        "mezzo_da": {
+          "enum": [
+            "turno",
+            "abituale",
+            "giorno",
+            "nessuno"
+          ]
+        },
+        "mezzo_del_turno": {
+          "description": "Il mezzo scritto nel turno, quando quel giorno un'assegnazione del singolo giorno ne da' un altro.",
+          "oneOf": [
+            {
+              "$ref": "#/definitions/codice"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "posizione_mezzo": {
+          "oneOf": [
+            {
+              "$ref": "#/definitions/posizione"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "mezzo_previsto": {
+          "oneOf": [
+            {
+              "$ref": "#/definitions/mezzo"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Il mezzo previsto quando un fatto con le date (fermo, distrazione, prestito) lo impedisce, oppure (K-017) quando il mezzo del turno non e' verificato."
+        },
+        "senza_mezzo": {
+          "type": [
+            "boolean",
+            "null"
+          ],
+          "description": "null (K-017) se il mezzo del turno non e' verificato."
+        },
+        "motivo_senza_mezzo": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1
+        },
+        "a_bordo_di": {
+          "oneOf": [
+            {
+              "$ref": "#/definitions/mezzo"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "Turni da assistente o da secondo autista: il mezzo del turno dell'autista; null anche se non e' verificato (K-017, vedi 'a_bordo_previsto')."
+        },
+        "a_bordo_previsto": {
+          "oneOf": [
+            {
+              "$ref": "#/definitions/mezzo"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "description": "K-017: con il mezzo a bordo non verificato, il primo mezzo possibile (quello del turno dell'autista, se c'e'); null altrimenti."
+        },
+        "competenze_richieste": {
+          "description": "Competenze richieste (dato particolare): l'elenco, oppure 'riservato'.",
+          "oneOf": [
+            {
+              "type": "array",
+              "items": {
+                "$ref": "#/definitions/codice"
+              }
+            },
+            {
+              "const": "riservato"
+            }
+          ]
+        },
+        "nota": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "minLength": 1
+        },
+        "elementi": {
+          "description": "Corse (intere o a pezzi) e attivita' che ci sono quel giorno, in ordine.",
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "oneOf": [
+              {
+                "$ref": "#/definitions/corsa"
+              },
+              {
+                "$ref": "#/definitions/attivita"
+              }
+            ]
+          }
+        },
+        "totali": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "km_pieni",
+            "km_vuoti",
+            "minuti_fermi"
+          ],
+          "properties": {
+            "km_pieni": {
+              "type": "number",
+              "minimum": 0
+            },
+            "km_vuoti": {
+              "type": "number",
+              "minimum": 0
+            },
+            "minuti_fermi": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        }
+      }
+    },
+    "modo_corsa": {
+      "description": "K-011 aggiunte 1 e 2: il modo della corsa per l'azienda del turno: out, tachigrafo o nessuna scelta (decide la legge), da dove viene la scelta, la forza del tachigrafo, la forzatura (motivo e chi personali) e la dichiarazione (dato particolare). null se l'azienda non ha il modo delle corse; 'riservato' (dato particolare) se dipende dalle scelte per tipo di servizio (che ci siano, che manchino, cosa dicono) e mancano i dati particolari.",
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "const": "riservato"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "modo",
+            "da",
+            "regime",
+            "forza",
+            "forzatura",
+            "dichiarazione"
+          ],
+          "properties": {
+            "modo": {
+              "enum": [
+                "out",
+                "tachigrafo",
+                "nessuna"
+              ]
+            },
+            "da": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "corsa",
+                    "servizio",
+                    "tipo_di_servizio",
+                    "impostazione"
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "regime": {
+              "type": "string",
+              "minLength": 1
+            },
+            "forza": {
+              "anyOf": [
+                {
+                  "enum": [
+                    "preferenza",
+                    "limite"
+                  ]
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            },
+            "forzatura": {
+              "$ref": "#/definitions/giustificazione_modo"
+            },
+            "dichiarazione": {
+              "description": "K-011 aggiunta 2: dato particolare; senza i dati particolari 'riservato' su ogni corsa, che ci sia o no.",
+              "anyOf": [
+                {
+                  "$ref": "#/definitions/giustificazione_modo"
+                },
+                {
+                  "const": "riservato"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "giustificazione_modo": {
+      "anyOf": [
+        {
+          "type": "null"
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "motivo",
+            "chi",
+            "quando",
+            "fino_al"
+          ],
+          "properties": {
+            "motivo": {
+              "type": "string",
+              "minLength": 1
+            },
+            "chi": {
+              "type": "string",
+              "minLength": 1
+            },
+            "quando": {
+              "type": "string",
+              "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+            },
+            "fino_al": {
+              "anyOf": [
+                {
+                  "type": "string",
+                  "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+                },
+                {
+                  "type": "null"
+                }
+              ]
+            }
+          }
+        }
+      ]
+    }
+  }
+}

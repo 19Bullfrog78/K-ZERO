@@ -6,6 +6,7 @@
 #include <cmath>
 #include <functional>
 #include <map>
+#include <set>
 #include <tuple>
 
 #include "orari_interno.hpp"
@@ -271,8 +272,13 @@ int occasional_trip(const Regime& r, const Index& idx, const Trip& t) {
     for (const Ref& sr : t.services) {
         const Service* sv = idx.service(sr.code);
         if (!sv) return 0;
-        const auto has = [&](const std::vector<ServiceKind>& v) { return std::find(v.begin(), v.end(), sv->kind) != v.end(); };
-        level = std::min(level, has(r.occasional.certain) ? 2 : has(r.occasional.to_confirm) ? 1 : 0);
+        // K-017: per ogni tipo possibile del servizio; un livello diverso tra i tipi e' da confermare.
+        std::set<int> levels;
+        for (const ServiceKind k : possible_kinds(sv->kind)) {
+            const auto has = [k](const std::vector<ServiceKind>& v) { return std::find(v.begin(), v.end(), k) != v.end(); };
+            levels.insert(has(r.occasional.certain) ? 2 : has(r.occasional.to_confirm) ? 1 : 0);
+        }
+        level = std::min(level, levels.size() == 1 ? *levels.begin() : 1);
     }
     return level;
 }

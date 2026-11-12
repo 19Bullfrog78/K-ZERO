@@ -11,7 +11,9 @@
 #include <cmath>
 #include <cstdint>
 #include <optional>
+#include <iterator>
 #include <set>
+#include <stdexcept>
 #include <string>
 #include <vector>
 
@@ -78,8 +80,56 @@ enum class VehicleCategory { M1, M2, M3 };   // categorie europee dei veicoli pe
 // natura del servizio, non la licenza del mezzo. "Promiscuo" non si dichiara: lo ricava derive_service sulla corsa.
 enum class ServiceKind { Line, School, Disability, Ncc, Other };
 
+// Tutti i tipi di servizio dello schema dei servizi (una prova lo confronta con lo schema), per valutare un requisito quando il
+// tipo non e' noto (K-017).
+inline constexpr ServiceKind kServiceKinds[] = {ServiceKind::Line, ServiceKind::School, ServiceKind::Disability, ServiceKind::Ncc,
+                                                ServiceKind::Other};
+
 // Chi viaggia: tipo di un gruppo di passeggeri della domanda.
 enum class GroupType { Students, Disabled, LineUsers, AuthorizedAdults, Other };
+
+// K-017: un dato particolare obbligatorio che l'utente puo' non poter leggere (pacchetto chiuso, senza il permesso dei dati
+// particolari): il tipo di un servizio e quello di un gruppo. Non noto non diventa mai un valore (nessun "altro" di comodo):
+// non c'e' un confronto diretto ne' una conversione, cosi' il compilatore rifiuta ogni uso che lo dimentica. Chi lo usa chiede
+// known() e poi value(), oppure valuta il suo requisito per ogni valore possibile (possible_kinds). value() su un valore non
+// noto e' un errore del programma (uscita 3), mai un risultato inventato.
+template <class T>
+class MaybeKnown {
+public:
+    MaybeKnown(T v) : v_(v) {}   // un valore noto (dai dati, o nelle prove)
+    static MaybeKnown unknown() { return MaybeKnown(); }
+    bool known() const { return v_.has_value(); }
+    const T& value() const {
+        if (!v_) throw std::logic_error("un dato non noto (K-017) e' stato letto come noto");
+        return *v_;
+    }
+
+private:
+    MaybeKnown() = default;
+    std::optional<T> v_;
+};
+
+// I tipi che un servizio puo' avere: il suo, se e' noto; altrimenti tutti quelli dello schema. Mai ricavati da altri dati (codici
+// esterni, nomi, gruppi): cosi' un esito "certo" o "non verificato" non dice niente del tipo (K-017).
+inline std::vector<ServiceKind> possible_kinds(const MaybeKnown<ServiceKind>& k) {
+    if (k.known()) return {k.value()};
+    return {std::begin(kServiceKinds), std::end(kServiceKinds)};
+}
+
+// K-017: l'esito di un fatto che dipende dal tipo di servizio, valutato per ogni tipo possibile: uguale per tutti = certo (No o
+// Yes), diverso = non verificato (Unverified). Con il tipo noto e' sempre certo.
+enum class Outcome { No, Yes, Unverified };
+// L'esito di una domanda fatta per ogni tipo possibile: c'e' stato almeno un si', almeno un no.
+inline Outcome outcome_of(bool some_yes, bool some_no) {
+    return some_yes && some_no ? Outcome::Unverified : some_yes ? Outcome::Yes : Outcome::No;
+}
+// "Almeno uno" tra esiti indipendenti (es. un servizio della corsa per cui il mezzo non va): certo se uno e' certo, non verificato
+// se nessuno e' certo e uno non e' verificato.
+inline Outcome any_of_outcomes(Outcome a, Outcome b) {
+    if (a == Outcome::Yes || b == Outcome::Yes) return Outcome::Yes;
+    if (a == Outcome::Unverified || b == Outcome::Unverified) return Outcome::Unverified;
+    return Outcome::No;
+}
 
 enum class CenterType { Day, Therapy, SocioEducational, Other };   // diurno, terapie, socio-educativo, altro
 
@@ -904,7 +954,7 @@ struct Passenger {
 struct PassengerGroup {
     Code code;
     std::string name;
-    GroupType type = GroupType::Students;
+    MaybeKnown<GroupType> type = GroupType::Students;   // dato particolare: non noto a chi non puo' leggerlo (K-017)
     std::string type_description;
     Direction direction = Direction::Outbound;
     std::optional<Ref> school;   // scuola o centro di arrivo (andata) o di partenza (ritorno)
@@ -934,7 +984,7 @@ struct Service {
     Code code;
     std::string name;
     std::vector<ExternalCode> external;
-    ServiceKind kind = ServiceKind::School;
+    MaybeKnown<ServiceKind> kind = ServiceKind::School;   // dato particolare: non noto a chi non puo' leggerlo (K-017)
     std::string kind_description;
     Ref contract;
     Ref calendar;
@@ -1602,12 +1652,16 @@ struct Package {
 // dal committente. Se la corsa non elenca i servizi (un errore nei dati, K-CTR-034) i servizi sono quelli dei suoi gruppi,
 // solo per riconoscere l'NCC: i gruppi di un solo servizio NCC = NCC; di piu' servizi, uno NCC = Promiscuo; altrimenti i
 // tipi dei gruppi, come sempre. Nessun valore se la corsa non ha ne' servizi ne' gruppi.
+// K-017: la categoria nasce dai tipi dei servizi e dei gruppi (dati particolari). Se uno dei tipi che servono non e' noto (chi
+// non puo' leggerlo), la categoria non e' nota: mai ricavata da un tipo inventato. Piu' servizi fanno sempre il promiscuo.
+using TripCategory = MaybeKnown<std::optional<ServiceType>>;
 template <class FindService, class FindGroup, class FindSchool, class FindGroupService>
-std::optional<ServiceType> derive_service(const Trip& t, FindService find_service, FindGroup find_group,
-                                          FindSchool find_school, FindGroupService find_group_service) {
+TripCategory derive_service(const Trip& t, FindService find_service, FindGroup find_group, FindSchool find_school,
+                            FindGroupService find_group_service) {
+    const auto is = [](ServiceType x) { return TripCategory(std::optional<ServiceType>(x)); };
     std::set<Code> services;
     for (const auto& s : t.services) services.insert(s.code);
-    if (services.size() > 1) return ServiceType::Mixed;
+    if (services.size() > 1) return is(ServiceType::Mixed);
 
     std::set<Code> group_codes;
     for (const auto& p : t.passages) {
@@ -1615,16 +1669,18 @@ std::optional<ServiceType> derive_service(const Trip& t, FindService find_servic
         for (const auto& h : p.transfers) group_codes.insert(h.group.code);
     }
     const Service* service = services.empty() ? nullptr : find_service(*services.begin());
-    if (service && service->kind == ServiceKind::Ncc) return ServiceType::Ncc;
+    if (service && !service->kind.known()) return TripCategory::unknown();
+    if (service && service->kind.value() == ServiceKind::Ncc) return is(ServiceType::Ncc);
     if (services.empty()) {
         std::set<Code> of_groups;
         bool ncc = false;
         for (const auto& g : group_codes)
             if (const Service* s = find_group_service(g)) {
+                if (!s->kind.known()) return TripCategory::unknown();
                 of_groups.insert(s->code);
-                ncc = ncc || s->kind == ServiceKind::Ncc;
+                ncc = ncc || s->kind.value() == ServiceKind::Ncc;
             }
-        if (ncc) return of_groups.size() > 1 ? ServiceType::Mixed : ServiceType::Ncc;
+        if (ncc) return is(of_groups.size() > 1 ? ServiceType::Mixed : ServiceType::Ncc);
     }
     std::vector<const PassengerGroup*> groups;
     for (const auto& g : group_codes)
@@ -1634,7 +1690,8 @@ std::optional<ServiceType> derive_service(const Trip& t, FindService find_servic
 
     bool students = false, disabled = false, line = false, other = false, students_to_center = false;
     for (const PassengerGroup* g : groups) {
-        switch (g->type) {
+        if (!g->type.known()) return TripCategory::unknown();
+        switch (g->type.value()) {
             case GroupType::Students: {
                 students = true;
                 const School* s = g->school ? find_school(g->school->code) : nullptr;
@@ -1648,20 +1705,20 @@ std::optional<ServiceType> derive_service(const Trip& t, FindService find_servic
         }
     }
     const int kinds = int(students) + int(disabled) + int(line) + int(other);
-    if (kinds > 1 || students_to_center) return ServiceType::Mixed;
-    if (disabled) return ServiceType::Disability;
-    if (students) return ServiceType::School;
-    if (line) return ServiceType::Line;
-    if (other) return ServiceType::Other;
-    if (!service) return std::nullopt;
-    switch (service->kind) {
-        case ServiceKind::Line: return ServiceType::Line;
-        case ServiceKind::School: return ServiceType::School;
-        case ServiceKind::Disability: return ServiceType::Disability;
-        case ServiceKind::Ncc: return ServiceType::Ncc;
-        case ServiceKind::Other: return ServiceType::Other;
+    if (kinds > 1 || students_to_center) return is(ServiceType::Mixed);
+    if (disabled) return is(ServiceType::Disability);
+    if (students) return is(ServiceType::School);
+    if (line) return is(ServiceType::Line);
+    if (other) return is(ServiceType::Other);
+    if (!service) return TripCategory(std::optional<ServiceType>());
+    switch (service->kind.value()) {
+        case ServiceKind::Line: return is(ServiceType::Line);
+        case ServiceKind::School: return is(ServiceType::School);
+        case ServiceKind::Disability: return is(ServiceType::Disability);
+        case ServiceKind::Ncc: return is(ServiceType::Ncc);
+        case ServiceKind::Other: return is(ServiceType::Other);
     }
-    return std::nullopt;
+    return TripCategory(std::optional<ServiceType>());
 }
 
 // Chi viaggia insieme su una corsa: serve alle regole dei regolamenti.

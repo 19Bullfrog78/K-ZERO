@@ -28,6 +28,7 @@ struct Interval {
     Day day = 0;
     const Shift* shift = nullptr;
     const Source* where = nullptr;   // punto dei dati dell'assegnazione (resta valido: e' nel pacchetto)
+    bool unverified = false;         // K-017: la persona o il mezzo del turno non sono verificati
 };
 
 // Pezzi delle corse di un giorno: per ogni corsa del pacchetto (stessa posizione), i turni da autista che la fanno.
@@ -66,9 +67,10 @@ public:
 
 private:
     // by_kind: il problema nasce da un requisito che dipende dal tipo di servizio (K-014, KindRequirements): senza i dati
-    // particolari si conta soltanto.
-    void add(Check c, const Source& where, std::vector<Param> params, int variant = 0, bool by_kind = false) {
-        out_.push_back(Problem{c, variant, where, std::move(params), by_kind});
+    // particolari si conta soltanto. unverified: dipende da un risultato del piano non verificato (K-017, ShiftDay): chi non puo'
+    // leggere il tipo lo conta soltanto, tra i non verificati.
+    void add(Check c, const Source& where, std::vector<Param> params, int variant = 0, bool by_kind = false, bool unverified = false) {
+        out_.push_back(Problem{c, variant, where, std::move(params), by_kind, unverified});
     }
 
     static Param personal(Param p, const std::string& hidden = "riservato") {
@@ -246,25 +248,28 @@ private:
         // Fatti con le date: avviso sul turno ricorrente, errore sull'assegnazione del giorno.
         if (sd.person_impediment != PersonImpediment::None) {
             const auto [variant, where, detail] = person_fact(sd);
+            const bool nv = !sd.person_fact_verified;   // K-017
             // L'autorizzazione del committente serve solo per alcuni tipi di servizio (K-014).
             if (sd.person_source == PersonSource::Day)
                 add(Check::DayAssignmentAgainstFact, sd.person_assignment->src, {shift_param(s), person_param(p), detail, date_param("data", sd.day)},
-                    variant, sd.person_impediment == PersonImpediment::AuthorizationExpired);
+                    variant, sd.person_impediment == PersonImpediment::AuthorizationExpired, nv);
             else
-                add(Check::RecurringShiftPersonFact, where, {shift_param(s), person_param(p), detail, days()}, variant);
+                add(Check::RecurringShiftPersonFact, where, {shift_param(s), person_param(p), detail, days()}, variant, false, nv);
         }
         if (!sd.person) return;
-        persons_[&p].push_back({absolute(sd.day, sd.start), absolute(sd.day, sd.end), sd.day, &s, &sd.person_position()});
-        used_persons_.insert(p.code);
+        // K-017: se non e' verificato che la persona faccia il turno, non lo sono nemmeno i problemi che nascono da lei.
+        const bool pu = !sd.person_verified;
+        persons_[&p].push_back({absolute(sd.day, sd.start), absolute(sd.day, sd.end), sd.day, &s, &sd.person_position(), pu});
+        (pu ? maybe_persons_ : used_persons_).insert(p.code);
         const Source& where = sd.person_position();
 
         const bool driver = s.role == ShiftRole::Driver || s.role == ShiftRole::SecondDriver;
         if ((driver && !p.has_role(PersonRole::Driver)) || (s.role == ShiftRole::Escort && !p.has_role(PersonRole::Escort)))
-            add(Check::PersonRoleMismatch, where, {shift_param(s), person_param(p), days()}, s.role == ShiftRole::Escort ? 1 : 0);
+            add(Check::PersonRoleMismatch, where, {shift_param(s), person_param(p), days()}, s.role == ShiftRole::Escort ? 1 : 0, false, pu);
         if (p.company.code != s.company.code &&
             std::none_of(p.loans.begin(), p.loans.end(), [&s](const Loan& l) { return l.company.code == s.company.code; }))
             add(Check::OtherCompanyWithoutLoan, where,
-                {shift_param(s), person_param(p), ref_param("azienda", Element::Company, s.company.code), days()}, 0);
+                {shift_param(s), person_param(p), ref_param("azienda", Element::Company, s.company.code), days()}, 0, false, pu);
         // Competenze richieste dal turno e (per l'autista) dai servizi delle sue corse.
         std::set<Code> required;
         for (const Ref& k : s.competences) required.insert(k.code);
@@ -276,16 +281,18 @@ private:
                             for (const Ref& k : sv->competences) required.insert(k.code);
         for (const Code& k : required)
             if (!p.has_competence(k))
-                add(Check::PersonWithoutCompetence, where, {shift_param(s), person_param(p), particular(text_param("competenza", k)), days()});
+                add(Check::PersonWithoutCompetence, where, {shift_param(s), person_param(p), particular(text_param("competenza", k)), days()}, 0,
+                    false, pu);
         // Abilitazioni e autorizzazioni del committente.
         const Vehicle* v = s.role == ShiftRole::Driver ? sd.vehicle : s.role == ShiftRole::SecondDriver ? sd.aboard : nullptr;
+        const bool vu = s.role == ShiftRole::Driver ? !sd.vehicle_verified : s.role == ShiftRole::SecondDriver && !sd.aboard_verified;
         if (v)
             if (const Norms* n = idx_.norms_of(s.company.code)) {
                 const LicenceResult r = check_licences(p, *v, *n, sd.day);
                 if (r.status == LicenceStatus::Missing)
                     add(Check::DriverWithoutLicence, where,
                         {shift_param(s), person_param(p), vehicle_param(*v), personal(text_param("alternative", alternatives(*r.requirement, *v))), days()},
-                        0);
+                        0, false, pu || vu);
             }
         if (s.role == ShiftRole::Driver)
             for (const RequiredAuthorization& ra : required_authorizations(sd, idx_)) {
@@ -295,10 +302,10 @@ private:
                     add(Check::DriverWithoutLicence, where,
                         {shift_param(s), person_param(p), ref_param("committente", Element::Client, ra.contract->client.code),
                          ref_param("servizio", Element::Service, ra.service->code), days()},
-                        1, true);   // K-014: l'autorizzazione la chiede il regolamento per tipo di servizio
+                        1, true, pu || ra.required == Outcome::Unverified);   // K-014: la chiede il regolamento per tipo di servizio
             }
-        preferences(sd, p);
-        pairing(sd, p);
+        preferences(sd, p, pu);
+        pairing(sd, p, pu || !sd.vehicle_verified);
     }
 
     // Variante, punto dei dati e dettaglio (dato personale) di un fatto con le date che colpisce la persona.
@@ -332,7 +339,7 @@ private:
         return s;
     }
 
-    void preferences(const ShiftDay& sd, const Person& p) {
+    void preferences(const ShiftDay& sd, const Person& p, bool unverified) {
         const auto days = [&] { return days_param("giorni", sd.day); };   // solo se serve
         const int variant = sd.person_source == PersonSource::Day ? 1 : 0;
         for (const Preference& f : p.preferences) {
@@ -350,12 +357,12 @@ private:
                     break;
                 case PreferenceKind::Other: break;
             }
-            if (violated) add(Check::PreferenceNotRespected, f.src, {person_param(p), shift_param(*sd.shift), days()}, variant);
+            if (violated) add(Check::PreferenceNotRespected, f.src, {person_param(p), shift_param(*sd.shift), days()}, variant, false, unverified);
         }
     }
 
     // Abbinamento autista-mezzo dell'azienda del turno.
-    void pairing(const ShiftDay& sd, const Person& p) {
+    void pairing(const ShiftDay& sd, const Person& p, bool unverified) {
         if (sd.shift->role != ShiftRole::Driver || !sd.vehicle) return;
         const CompanySettings* settings = idx_.settings(sd.shift->company.code);
         if (!settings || settings->pairing == DriverVehiclePairing::None) return;
@@ -366,10 +373,10 @@ private:
         const int with_usual = p.usual_vehicle ? 0 : 1;
         if (settings->pairing == DriverVehiclePairing::Fixed) {
             const bool day = sd.person_source == PersonSource::Day || sd.vehicle_source == VehicleSource::Day;
-            if (day) add(Check::PairingNotRespected, day_source(sd), params, 2 + with_usual);
-            else add(Check::PairingFixedViolated, sd.person_position(), params, with_usual);
+            if (day) add(Check::PairingNotRespected, day_source(sd), params, 2 + with_usual, false, unverified);
+            else add(Check::PairingFixedViolated, sd.person_position(), params, with_usual, false, unverified);
         } else if (p.usual_vehicle) {
-            add(Check::PairingNotRespected, sd.person_position(), params, 0);
+            add(Check::PairingNotRespected, sd.person_position(), params, 0, false, unverified);
         }
     }
 
@@ -386,7 +393,8 @@ private:
         if (s.vehicle_mode == ShiftVehicleMode::ToAssign && sd.vehicle_source == VehicleSource::None)
             add(Check::ShiftVehicleToAssign, s.vehicle_src, {shift_param(s), days()});
         if (s.vehicle_mode == ShiftVehicleMode::Usual && sd.vehicle_source == VehicleSource::Usual && sd.person && !sd.person->usual_vehicle)
-            add(Check::ShiftVehicleInconsistent, sd.person_position(), {shift_param(s), person_param(*sd.person), days()}, 2);
+            add(Check::ShiftVehicleInconsistent, sd.person_position(), {shift_param(s), person_param(*sd.person), days()}, 2, false,
+                !sd.person_verified);
         if (!sd.planned_vehicle) return;
         const Vehicle& v = *sd.planned_vehicle;
         if (sd.vehicle_impediment != VehicleImpediment::None) {
@@ -411,22 +419,25 @@ private:
                     break;
                 case VehicleImpediment::None: break;
             }
+            const bool nv = !sd.vehicle_fact_verified;   // K-017
             // Gli usi richiesti dipendono dal tipo di servizio (K-014).
             if (sd.vehicle_source == VehicleSource::Day)
                 add(Check::DayAssignmentAgainstFact, sd.vehicle_assignment->src, {shift_param(s), vehicle_param(v), detail, date_param("data", sd.day)},
-                    5 + variant, sd.vehicle_impediment == VehicleImpediment::UseNotAuthorized);
+                    5 + variant, sd.vehicle_impediment == VehicleImpediment::UseNotAuthorized, nv);
             else
-                add(Check::RecurringShiftVehicleFact, where, {shift_param(s), vehicle_param(v), detail, days()}, variant);
+                add(Check::RecurringShiftVehicleFact, where, {shift_param(s), vehicle_param(v), detail, days()}, variant, false, nv);
         }
         if (!sd.vehicle) return;
-        used_vehicles_.insert(v.code);
+        // K-017: se non e' verificato che il turno abbia il mezzo, non lo sono nemmeno i problemi che nascono dal mezzo.
+        const bool vu = !sd.vehicle_verified;
+        (vu ? maybe_vehicles_ : used_vehicles_).insert(v.code);
         const Source& where = sd.vehicle_position();
         vehicles_[&v].push_back({absolute(sd.day, sd.vehicle_start.value_or(sd.start)), absolute(sd.day, sd.vehicle_end.value_or(sd.end)),
-                                 sd.day, &s, &where});
+                                 sd.day, &s, &where, vu});
         if (v.company.code != s.company.code &&
             std::none_of(v.loans.begin(), v.loans.end(), [&s](const Loan& l) { return l.company.code == s.company.code; }))
             add(Check::OtherCompanyWithoutLoan, where, {shift_param(s), vehicle_param(v), ref_param("azienda", Element::Company, s.company.code), days()},
-                1);
+                1, false, vu);
         const bool constrained = v.constraint && (!v.constraint->until || sd.day <= *v.constraint->until);
         std::set<Code> reported;
         for (const PlannedItem& it : sd.items) {
@@ -434,30 +445,46 @@ private:
             for (const Ref& sr : it.trip->services) {
                 const Service* sv = idx_.service(sr.code);
                 if (!sv || !reported.insert(sv->code).second) continue;
-                // Uso dei mezzi: senza nessuna autorizzazione a un uso ammesso e' sempre sbagliato.
-                const std::optional<std::vector<Code>>& allowed = plan_.uses_of(*sv);
-                if (allowed && v.use) {
-                    const auto ok = [&allowed](const Code& u) { return std::find(allowed->begin(), allowed->end(), u) != allowed->end(); };
-                    const bool authorized = std::any_of(v.use_authorizations.begin(), v.use_authorizations.end(),
-                                                        [&ok](const UseAuthorization& a) { return ok(a.use.code); });
-                    if (!ok(v.use->code) && !authorized) {
-                        std::string uses;
-                        for (const Code& u : *allowed) uses += (uses.empty() ? "" : ", ") + u;
+                // Uso dei mezzi: senza nessuna autorizzazione a un uso ammesso e' sempre sbagliato. Gli usi richiesti dipendono dal
+                // tipo di servizio (K-014): per ogni tipo possibile (K-017).
+                if (v.use) {
+                    bool yes = false, no = false;
+                    std::string uses;
+                    for (const std::optional<std::vector<Code>>& allowed : plan_.uses_of(*sv)) {
+                        if (!allowed) {
+                            no = true;
+                            continue;
+                        }
+                        const auto ok = [&allowed](const Code& u) { return std::find(allowed->begin(), allowed->end(), u) != allowed->end(); };
+                        const bool authorized = std::any_of(v.use_authorizations.begin(), v.use_authorizations.end(),
+                                                            [&ok](const UseAuthorization& a) { return ok(a.use.code); });
+                        if (ok(v.use->code) || authorized) {
+                            no = true;
+                            continue;
+                        }
+                        if (!yes)
+                            for (const Code& u : *allowed) uses += (uses.empty() ? "" : ", ") + u;
+                        yes = true;
+                    }
+                    const Outcome o = outcome_of(yes, no);
+                    if (o != Outcome::No)
                         add(Check::VehicleWithoutUseForService, where,
                             {shift_param(s), vehicle_param(v), text_param("uso", v.use->code), ref_param("servizio", Element::Service, sv->code),
                              text_param("usi", uses), days()},
-                            0, true);   // K-014: gli usi richiesti dipendono dal tipo di servizio
-                    }
+                            0, true, vu || o == Outcome::Unverified);
                 }
                 if (constrained) {
                     const DestinationConstraint& c = *v.constraint;
-                    const bool kind_ok = std::find(c.kinds.begin(), c.kinds.end(), sv->kind) != c.kinds.end();
                     const bool contract_ok = std::any_of(c.contracts.begin(), c.contracts.end(),
                                                          [sv](const Ref& r) { return r.code == sv->contract.code; });
-                    // K-014: se il vincolo nomina tipi di servizio, l'esito dipende dal tipo.
-                    if (!kind_ok && !contract_ok)
+                    // K-014: se il vincolo nomina tipi di servizio, l'esito dipende dal tipo: per ogni tipo possibile (K-017).
+                    bool against = false, admitted = false;
+                    for (const ServiceKind k : possible_kinds(sv->kind))
+                        (std::find(c.kinds.begin(), c.kinds.end(), k) != c.kinds.end() ? admitted : against) = true;
+                    const Outcome o = contract_ok ? Outcome::No : outcome_of(against, admitted);
+                    if (o != Outcome::No)
                         add(Check::VehicleAgainstConstraint, where, {shift_param(s), vehicle_param(v), ref_param("servizio", Element::Service, sv->code), days()},
-                            0, !c.kinds.empty());
+                            0, !c.kinds.empty(), vu || o == Outcome::Unverified);
                 }
             }
         }
@@ -529,9 +556,12 @@ private:
                     add(Check::EscortProviderDiffers, it.item->src, {shift_param(*sd.shift), trip, contract, days()},
                         *it.item->trip.escort == EscortProvider::Company ? 0 : 1);
                 const std::vector<const ShiftDay*>& e = escorts_[trip_index(it.trip)];
-                const bool company_escort = std::any_of(e.begin(), e.end(), [](const ShiftDay* x) { return x->person != nullptr; });
+                // K-017: una persona non verificata puo' non esserci.
+                const bool company_escort =
+                    std::any_of(e.begin(), e.end(), [](const ShiftDay* x) { return x->person != nullptr && x->person_verified; });
+                const bool maybe_escort = std::any_of(e.begin(), e.end(), [](const ShiftDay* x) { return x->person != nullptr; });
                 if (aboard && provider == EscortProvider::Company && !company_escort)
-                    add(Check::EscortWithoutPerson, it.item->src, {shift_param(*sd.shift), trip, days()});
+                    add(Check::EscortWithoutPerson, it.item->src, {shift_param(*sd.shift), trip, days()}, 0, false, maybe_escort);
                 if (!e.empty() && provider == EscortProvider::Client && !it.item->trip.escort)
                     add(Check::EscortProviderDiffers, e.front()->shift->src,
                         {ref_param("turno", Element::Shift, e.front()->shift->code), trip, contract, days()}, 2);
@@ -552,7 +582,8 @@ private:
                         add(Check::BlockedTripOtherVehicle, sd->vehicle_position(),
                             {ref_param("corsa", Element::Trip, t->code), ref_param("blocco", Element::Block, b.code),
                              vehicle_param_code(b.vehicle.code), ref_param("altro", Element::Vehicle, sd->vehicle->code),
-                             shift_param(*sd->shift), days()});
+                             shift_param(*sd->shift), days()},
+                            0, false, !sd->vehicle_verified);
             }
         }
     }
@@ -561,30 +592,52 @@ private:
     // 47:59: il turno sovrapposto e' dello stesso giorno o del giorno prima). Il messaggio non scrive la data dell'altro
     // turno: e' il giorno prima di ogni giorno elencato, e cosi' lo stesso problema di molti giorni si raggruppa.
     // L'elenco e' per persona o per mezzo (in ordine di posizione nel pacchetto).
+    // K-017: un turno non verificato puo' non esserci e cambiare il turno "piu' lungo" con cui si confrontano i successivi. Un
+    // problema e' certo solo se viene uguale con tutti i turni e con i soli turni certi (allora e' uguale con qualunque parte di
+    // quelli non verificati); gli altri non sono verificati.
     template <class T>
     void overlaps(std::map<const T*, std::vector<Interval>>& all, Check c, Element e) {
-        for (auto& [who, v] : all) {
-            const Code& code = who->code;
+        using Pair = std::pair<const Interval*, const Interval*>;
+        for (auto& entry : all) {
+            const Code& code = entry.first->code;
+            std::vector<Interval>& v = entry.second;
             std::sort(v.begin(), v.end(), [](const Interval& a, const Interval& b) { return std::tie(a.a, a.b) < std::tie(b.a, b.b); });
-            const Interval* longest = nullptr;
-            for (const Interval& x : v) {
-                if (longest && x.a < longest->b)
-                    add(c, *x.where,
-                        {ref_param(e == Element::Person ? "persona" : "mezzo", e, code), shift_param(*x.shift),
-                         ref_param("altro", Element::Shift, longest->shift->code), days_param("giorni", x.day)},
-                        longest->day == x.day ? 0 : 1);
-                if (!longest || x.b > longest->b) longest = &x;
-            }
+            const auto pairs = [&v](bool only_certain) {
+                std::vector<Pair> out;
+                const Interval* longest = nullptr;
+                for (const Interval& x : v) {
+                    if (only_certain && x.unverified) continue;
+                    if (longest && x.a < longest->b) out.push_back({&x, longest});
+                    if (!longest || x.b > longest->b) longest = &x;
+                }
+                return out;
+            };
+            const std::vector<Pair> every = pairs(false);
+            const bool some_unverified = std::any_of(v.begin(), v.end(), [](const Interval& x) { return x.unverified; });
+            const std::vector<Pair> certain = some_unverified ? pairs(true) : every;
+            const auto in = [](const std::vector<Pair>& w, const Pair& p) { return std::find(w.begin(), w.end(), p) != w.end(); };
+            const auto report = [&](const Pair& p, bool unverified) {
+                add(c, *p.first->where,
+                    {ref_param(e == Element::Person ? "persona" : "mezzo", e, code), shift_param(*p.first->shift),
+                     ref_param("altro", Element::Shift, p.second->shift->code), days_param("giorni", p.first->day)},
+                    p.second->day == p.first->day ? 0 : 1, false, unverified);
+            };
+            for (const Pair& p : every) report(p, !in(certain, p));
+            for (const Pair& p : certain)
+                if (!in(every, p)) report(p, true);
         }
     }
 
     // Persone senza turni e mezzi mai usati (in un pacchetto che ha turni). Le persone e i mezzi ipotetici e i mezzi
     // di scorta non contano.
+    // K-017: con un turno non verificato e nessuno certo, non e' verificato nemmeno che la persona o il mezzo non lavorino.
     void never_used() {
         for (const Person& x : p_.persons)
-            if (!x.hypothetical && !used_persons_.count(x.code)) add(Check::PersonWithoutShifts, x.src, {person_param(x)});
+            if (!x.hypothetical && !used_persons_.count(x.code))
+                add(Check::PersonWithoutShifts, x.src, {person_param(x)}, 0, false, maybe_persons_.count(x.code) > 0);
         for (const Vehicle& v : p_.vehicles)
-            if (!v.hypothetical && !v.spare && !used_vehicles_.count(v.code)) add(Check::VehicleNeverUsed, v.src, {vehicle_param(v)});
+            if (!v.hypothetical && !v.spare && !used_vehicles_.count(v.code))
+                add(Check::VehicleNeverUsed, v.src, {vehicle_param(v)}, 0, false, maybe_vehicles_.count(v.code) > 0);
     }
 
     std::size_t trip_index(const Trip* t) const { return static_cast<std::size_t>(t - p_.trips.data()); }
@@ -601,7 +654,8 @@ private:
     std::vector<char> assistant_aboard_;
     std::map<const Person*, std::vector<Interval>> persons_;
     std::map<const Vehicle*, std::vector<Interval>> vehicles_;
-    std::set<Code> used_persons_, used_vehicles_;
+    std::set<Code> used_persons_, used_vehicles_;     // in un turno certo
+    std::set<Code> maybe_persons_, maybe_vehicles_;   // K-017: in un turno non verificato
 };
 
 }  // namespace

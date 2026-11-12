@@ -26,7 +26,7 @@ Load con_carrozzine(int seduti, int carrozzine) { return {seduti, carrozzine, 0,
 Load con_ausili(int seduti, int ausili) { return {seduti, 0, ausili, false}; }
 
 std::optional<ServiceType> categoria(const Package& p, const std::string& corsa) {
-    return Index(p).category(per_codice(p.trips, corsa));
+    return Index(p).category(per_codice(p.trips, corsa)).value();   // K-017: con i tipi noti la categoria e' nota
 }
 
 const ConditionsRule* regola_assistente(const std::string& regolamento) {

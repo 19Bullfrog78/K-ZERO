@@ -1393,8 +1393,10 @@ void servizi(const JsonDati& d, Package& pk) {
         x.code = s.at("codice").get<std::string>();
         x.name = c.testo(s, "nome");
         x.external = c.esterni(s);
-        // Il tipo del servizio e quello del gruppo sono dati particolari obbligatori: mancano solo a chi non puo' leggerli.
-        x.kind = s.contains("tipo") ? valore_di(kTipiServizio, s.at("tipo").get<std::string>()) : ServiceKind::Other;
+        // Il tipo del servizio e quello del gruppo sono dati particolari obbligatori: mancano solo a chi non puo' leggerli. K-017:
+        // allora non sono noti, mai un altro tipo (prima diventavano "altro" e il piano ne applicava i requisiti).
+        x.kind = s.contains("tipo") ? MaybeKnown<ServiceKind>(valore_di(kTipiServizio, s.at("tipo").get<std::string>()))
+                                    : MaybeKnown<ServiceKind>::unknown();
         x.kind_description = c.testo(s, "tipo_descrizione");
         x.contract = c.ref(s, "contratto", p);
         x.calendar = c.ref(s, "calendario", p);
@@ -1410,7 +1412,8 @@ void servizi(const JsonDati& d, Package& pk) {
             PassengerGroup y;
             y.code = g.at("codice").get<std::string>();
             y.name = c.testo(g, "nome");
-            y.type = g.contains("tipo") ? valore_di(kTipiGruppo, g.at("tipo").get<std::string>()) : GroupType::Other;
+            y.type = g.contains("tipo") ? MaybeKnown<GroupType>(valore_di(kTipiGruppo, g.at("tipo").get<std::string>()))
+                                        : MaybeKnown<GroupType>::unknown();
             y.type_description = c.testo(g, "tipo_descrizione");
             y.direction = g.at("verso").get<std::string>() == "ritorno" ? Direction::Return : Direction::Outbound;
             y.school = c.ref_opz(g, "scuola", pg);
