@@ -1,0 +1,319 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "K-Zero - file di dati pacchetto.json, versione 3",
+  "description": "Manifesto del pacchetto dati (file pacchetto.json, obbligatorio): aziende presenti, periodo, origine, livello dei dati personali, fuso orario, valuta, impostazioni e cassaforte. Gli orari di tutti i file sono orari locali del fuso indicato; i costi sono nella valuta indicata. Versione 2 (K-010): dichiara se il pacchetto ha una cassaforte dei dati personali (cosi' una cassaforte mancante e' un errore, non un pacchetto senza dati personali), la scelta sul porta a porta e la lunghezza massima del fuso orario. Versione 3 (K-018): i falsi allarmi (falsi_allarmi), cioe' gli avvisi sui testi comuni spenti da chi scrive i dati, uno per uno, con il motivo.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "schema_versione",
+    "codice",
+    "aziende",
+    "periodo",
+    "origine",
+    "livello",
+    "fuso_orario",
+    "valuta",
+    "impostazioni",
+    "cassaforte"
+  ],
+  "properties": {
+    "schema": {
+      "const": "pacchetto",
+      "x-kzero-classe": "comune"
+    },
+    "schema_versione": {
+      "const": 3,
+      "x-kzero-classe": "comune"
+    },
+    "codice": {
+      "description": "Codice del pacchetto (serve a dire da quale pacchetto ne deriva un altro).",
+      "$ref": "#/definitions/codice",
+      "x-kzero-classe": "comune"
+    },
+    "nome": {
+      "$ref": "#/definitions/testo",
+      "x-kzero-classe": "comune"
+    },
+    "dati_inventati": {
+      "description": "true = dati inventati (esempi, prove): non usarli come dati reali.",
+      "type": "boolean",
+      "x-kzero-classe": "comune"
+    },
+    "aziende": {
+      "description": "Aziende presenti nel pacchetto (una o piu').",
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "codice",
+          "nome"
+        ],
+        "properties": {
+          "codice": {
+            "$ref": "#/definitions/codice",
+            "x-kzero-classe": "comune"
+          },
+          "nome": {
+            "$ref": "#/definitions/testo",
+            "x-kzero-classe": "comune"
+          }
+        }
+      }
+    },
+    "periodo": {
+      "$ref": "#/definitions/periodo",
+      "x-kzero-classe": "comune"
+    },
+    "origine": {
+      "description": "Da dove vengono i dati.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "tipo"
+      ],
+      "properties": {
+        "tipo": {
+          "enum": [
+            "rilevato_a_mano",
+            "calcolato",
+            "importato",
+            "scenario"
+          ]
+        },
+        "deriva_da": {
+          "description": "Codice del pacchetto da cui deriva.",
+          "$ref": "#/definitions/codice"
+        },
+        "nota": {
+          "$ref": "#/definitions/nota"
+        }
+      },
+      "x-kzero-classe": "comune"
+    },
+    "livello": {
+      "description": "solo_numeri = solo conteggi per fermata, nessun nome, indirizzo, porta a porta o motivo scritto (livello consigliato); completo = anche i passeggeri uno per uno e i punti porta a porta.",
+      "enum": [
+        "solo_numeri",
+        "completo"
+      ],
+      "x-kzero-classe": "comune"
+    },
+    "fuso_orario": {
+      "description": "Fuso orario, nome IANA (es. Europe/Rome), al massimo 64 caratteri.",
+      "type": "string",
+      "pattern": "^(UTC|[A-Za-z]+(/[A-Za-z0-9_+-]+){1,2})$",
+      "x-kzero-classe": "comune",
+      "maxLength": 64
+    },
+    "valuta": {
+      "description": "Valuta dei costi, codice ISO 4217 (es. EUR).",
+      "type": "string",
+      "pattern": "^[A-Z]{3}$",
+      "x-kzero-classe": "comune"
+    },
+    "impostazioni": {
+      "description": "Scelte di chi pianifica, valide per tutto il pacchetto.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "margine_trasbordo_minuti",
+        "porta_a_porta_sensibile"
+      ],
+      "properties": {
+        "margine_trasbordo_minuti": {
+          "description": "La corsa che riceve un trasbordo deve arrivare almeno tanti minuti prima della corsa che consegna.",
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 120
+        },
+        "porta_a_porta_sensibile": {
+          "description": "true = chi viaggia porta a porta lascia capire un dato sulla salute (es. in Trentino il porta a porta e' di regola un servizio per persone con disabilita'): il nome e la casa di ogni passeggero porta a porta valgono come dati particolari, come quelli di chi va in un luogo sensibile. false = il porta a porta non dice nulla sulla salute (es. trasporto scolastico in campagna). Lo sceglie chi scrive i dati.",
+          "type": "boolean"
+        }
+      },
+      "x-kzero-classe": "comune"
+    },
+    "cassaforte": {
+      "description": "La cassaforte dei dati personali del pacchetto (K-010): false = nessuna cassaforte (i dati personali e particolari, se ci sono, sono in chiaro nei file); altrimenti il codice della cassaforte e la generazione dei dati (cresce a ogni richiusura). Lo scrive il programma: kzero chiudi e kzero richiudi.",
+      "anyOf": [
+        {
+          "const": false
+        },
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "id",
+            "generazione"
+          ],
+          "properties": {
+            "id": {
+              "description": "Codice della cassaforte: 32 cifre esadecimali, uguale a quello scritto nella cassaforte.",
+              "type": "string",
+              "pattern": "^[0-9a-f]{32}$"
+            },
+            "generazione": {
+              "description": "Generazione dei dati: la cassaforte e i file devono avere la stessa (una correzione interrotta a meta' si scopre).",
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 2147483647
+            }
+          }
+        }
+      ],
+      "x-kzero-classe": "comune"
+    },
+    "falsi_allarmi": {
+      "description": "K-018: falsi allarmi. Chi scrive i dati spegne un avviso sui testi comuni (K-CTR-136 nome di una persona, K-CTR-137 parola sulla salute, K-CTR-138 luogo forse sensibile) per un testo preciso, con il motivo e la data. Vale solo per quel controllo, quel file, quel campo, quell'elemento e quel testo, uguale carattere per carattere: se il testo cambia l'avviso torna. Un falso allarme che non spegne piu' niente ha un avviso (la variante 'falso allarme' del suo controllo). Nessun dato personale: solo motivo e data; il motivo e' un testo comune ed entra anche lui nei controlli.",
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "controllo",
+          "file",
+          "campo",
+          "testo",
+          "motivo",
+          "quando"
+        ],
+        "properties": {
+          "controllo": {
+            "description": "Il controllo da spegnere.",
+            "enum": [
+              "K-CTR-136",
+              "K-CTR-137",
+              "K-CTR-138"
+            ]
+          },
+          "file": {
+            "description": "Il file del testo, es. \"servizi.json\".",
+            "type": "string",
+            "pattern": "^[a-z_]{1,40}\\.json$"
+          },
+          "campo": {
+            "description": "Il campo del testo come nella tabella di docs/controlli.md e nel messaggio dell'avviso, es. \"servizi[].nome\", \"luoghi[].nomi_alternativi[]\".",
+            "type": "string",
+            "pattern": "^[a-z0-9_]{1,64}(\\[\\])?(\\.[a-z0-9_]{1,64}(\\[\\])?){0,15}$"
+          },
+          "elemento": {
+            "description": "Il codice dell'elemento piu' vicino che ha un codice (es. il servizio, il gruppo), come nel messaggio dell'avviso; senza, il testo non sta in un elemento con il codice.",
+            "$ref": "#/definitions/codice"
+          },
+          "testo": {
+            "description": "Il testo spento, uguale carattere per carattere: se cambia, l'avviso torna. Non e' un testo libero: non entra nei controlli.",
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 2000
+          },
+          "motivo": {
+            "description": "Perche' e' un falso allarme. Testo comune: entra anche lui nei controlli (non deve contenere nomi ne' dati sulla salute).",
+            "$ref": "#/definitions/nota"
+          },
+          "quando": {
+            "description": "Quando e' stato scritto.",
+            "$ref": "#/definitions/data"
+          }
+        }
+      },
+      "x-kzero-classe": "comune"
+    }
+  },
+  "definitions": {
+    "codice": {
+      "description": "Codice K-Zero: scelto da chi scrive i dati, unico per tipo di elemento. Lettere senza accenti, cifre, '-', '_' e '.'; inizia con una lettera o una cifra; al massimo 64 caratteri.",
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+    },
+    "testo": {
+      "description": "Testo di una riga, non vuoto (al massimo 300 caratteri).",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 300,
+      "pattern": "\\S"
+    },
+    "nota": {
+      "description": "Testo libero, non vuoto (al massimo 2000 caratteri).",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2000,
+      "pattern": "\\S"
+    },
+    "data": {
+      "description": "Data AAAA-MM-GG che esiste nel calendario (es. 2026-09-14; il 29 febbraio solo negli anni bisestili).",
+      "type": "string",
+      "pattern": "^([0-9]{4}-((0[13578]|1[02])-(0[1-9]|[12][0-9]|3[01])|(0[469]|11)-(0[1-9]|[12][0-9]|30)|02-(0[1-9]|1[0-9]|2[0-8]))|([0-9]{2}(0[48]|[2468][048]|[13579][26])|([02468][048]|[13579][26])00)-02-29)$"
+    },
+    "orario": {
+      "description": "Orario HH:MM, ora locale del fuso del pacchetto. Dopo mezzanotte si continua a contare come in GTFS: 24:15 = 00:15 del giorno dopo; al massimo 47:59.",
+      "type": "string",
+      "pattern": "^([0-3][0-9]|4[0-7]):[0-5][0-9]$"
+    },
+    "coordinate": {
+      "description": "Posizione WGS84 in gradi decimali.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "lat",
+        "lon"
+      ],
+      "properties": {
+        "lat": {
+          "type": "number",
+          "minimum": -90,
+          "maximum": 90
+        },
+        "lon": {
+          "type": "number",
+          "minimum": -180,
+          "maximum": 180
+        }
+      }
+    },
+    "codici_esterni": {
+      "description": "Codici dello stesso elemento in altri sistemi (committenti, orari pubblici, piattaforme).",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "sistema",
+          "tipo",
+          "codice"
+        ],
+        "properties": {
+          "sistema": {
+            "$ref": "#/definitions/testo"
+          },
+          "tipo": {
+            "$ref": "#/definitions/testo"
+          },
+          "codice": {
+            "$ref": "#/definitions/testo"
+          }
+        }
+      }
+    },
+    "periodo": {
+      "description": "Periodo: dal primo all'ultimo giorno compresi.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "dal",
+        "al"
+      ],
+      "properties": {
+        "dal": {
+          "$ref": "#/definitions/data"
+        },
+        "al": {
+          "$ref": "#/definitions/data"
+        }
+      }
+    }
+  }
+}

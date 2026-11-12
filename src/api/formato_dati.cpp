@@ -5,16 +5,17 @@ namespace kzero::api {
 
 const std::vector<FileDati>& file_dati() {
     static const std::vector<FileDati> elenco = {
-        {"pacchetto.json", "pacchetto", {1, 2}, true,
-         "Manifesto: aziende, periodo, origine, livello dei dati, fuso orario, valuta, impostazioni, cassaforte."},
-        {"aziende.json", "aziende", {1, 2, 3}, false,
+        {"pacchetto.json", "pacchetto", {1, 2, 3}, true,
+         "Manifesto: aziende, periodo, origine, livello dei dati, fuso orario, valuta, impostazioni, cassaforte; dalla versione 3 i "
+         "falsi allarmi sui testi comuni."},
+        {"aziende.json", "aziende", {1, 2, 3, 4}, false,
          "Elenchi e impostazioni di ogni azienda: attivita', assenze, fermi, competenze, norme, ricovero, abbinamento; dalla "
          "versione 2 le categorie di tempo, le soste non scritte, le scelte sugli orari e la chiave del rientro; dalla versione 3 il "
-         "tipo di servizio ncc nel modo delle corse."},
-        {"norme.json", "norme", {1, 2, 3}, false,
+         "tipo di servizio ncc nel modo delle corse; dalla versione 4 le parole sulla salute dell'azienda."},
+        {"norme.json", "norme", {1, 2, 3, 4}, false,
          "Norme di un paese: abilitazioni, usi dei mezzi, requisiti per guidare, usi per tipo di servizio, con la fonte; dalla "
          "versione 2 le leggi e i contratti collettivi sugli orari di lavoro (regimi) e i cambi dell'ora; dalla versione 3 il tipo "
-         "di servizio ncc e i servizi occasionali tipo per tipo."},
+         "di servizio ncc e i servizi occasionali tipo per tipo; dalla versione 4 le parole sulla salute del paese."},
         {"luoghi.json", "luoghi", {1, 2}, false, "Luoghi pubblici (fermate, scuole, centri, rimesse...) e luoghi privati."},
         {"tratti.json", "tratti", {1}, false, "Tratti di strada tra due luoghi con i loro limiti."},
         {"regolamenti.json", "regolamenti", {1, 2, 3}, false, "Regolamenti di un territorio o di un committente."},

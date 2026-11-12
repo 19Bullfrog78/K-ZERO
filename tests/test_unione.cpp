@@ -913,13 +913,23 @@ TEST(Unione, ServiziOccasionaliVersione2Certi) {
 }
 
 TEST(Unione, OgniCampoRiservatoDegliSchemiCompareNeiPacchettiDelleProve) {
+    // I campi riservati di una versione dello schema.
+    const auto riservati_di = [](const std::string& schema, int versione) {
+        std::set<std::string> r;
+        const JsonDati* radice = SchemiDati::incorporati().schema(schema, versione);
+        if (radice) campi_riservati(*radice, *radice, "", r, 0);
+        return r;
+    };
     std::map<std::string, std::set<std::string>> usati;   // schema -> percorsi usati nei file dell'ultima versione
     for (const PacchettoDiProva& p : pacchetti_delle_prove())
         for (const auto& [file, testo] : p.chiaro.file) {
             const FileDati* f = file_dati_per_nome(file);
             if (!f || file == "pacchetto.json") continue;
             const JsonDati d = JsonDati::parse(testo);
-            if (d.value("schema_versione", 0) != f->versioni.back()) continue;
+            // Conta anche un file di una versione precedente con gli stessi campi riservati dell'ultima (es. aziende 3 e 4 del
+            // K-018, che aggiunge solo un campo comune).
+            const int v = d.value("schema_versione", 0);
+            if (v != f->versioni.back() && riservati_di(f->schema, v) != riservati_di(f->schema, f->versioni.back())) continue;
             percorsi_usati(d, "", usati[f->schema]);
         }
     std::string mancanti;

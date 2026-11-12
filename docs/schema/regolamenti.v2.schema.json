@@ -2,6 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "K-Zero - file di dati regolamenti.json, versione 2",
   "description": "Regolamenti: i parametri di un territorio o di un committente, con la fonte di ogni valore (file regolamenti.json). Ogni contratto indica il regolamento che vale per i suoi servizi. Versione 2: in piu' gli usi dei mezzi ammessi per tipo di servizio e l'autorizzazione del committente richiesta agli autisti. La versione 1 resta valida.",
+  "x-kzero-regole-pubbliche": true,
   "type": "object",
   "additionalProperties": false,
   "required": ["schema", "schema_versione", "regolamenti"],

@@ -2,6 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "K-Zero - file di dati norme.json, versione 2",
   "description": "Norme di un paese (file norme.json): elenco delle abilitazioni per guidare, elenco degli usi dei mezzi, requisiti per guidare un mezzo e usi ammessi per tipo di servizio, ognuno con la sua fonte. Nessuna patente e nessun uso e' scritto nel programma. Ogni azienda indica le norme che valgono per lei (aziende.json). Versione 2 (K-011): le leggi e i contratti collettivi sugli orari di lavoro come regimi con i loro tipi di regola (i numeri e le fonti stanno qui, il programma conosce solo i tipi), e i cambi dell'ora del paese.",
+  "x-kzero-regole-pubbliche": true,
   "type": "object",
   "additionalProperties": false,
   "required": [

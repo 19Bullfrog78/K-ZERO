@@ -709,6 +709,7 @@ struct Norms {
     std::vector<Regime> regimes;
     std::vector<ClockChange> clock_changes;
     RuleSource clock_source;
+    std::vector<std::string> health_words;   // versione 4 (K-018): parole sulla salute del paese
     std::string note;
     Source src;
 
@@ -1571,6 +1572,7 @@ struct CompanySettings {
     std::vector<SpecialNeed> special_needs;
     std::optional<int> days_margin;            // avviso quando mancano tante giornate al limite (giornate_massime)
     std::optional<TripModes> trip_modes;       // OUT o tachigrafo (K-011 aggiunta 1)
+    std::vector<std::string> health_words;     // versione 4 (K-018): parole sulla salute dell'azienda, in piu' delle norme
     std::string note;
     Source src;
 
@@ -1583,6 +1585,19 @@ struct CompanySettings {
 };
 
 enum class Level { NumbersOnly, Full };                      // "solo numeri", "completo"
+
+// Un falso allarme (K-018, manifesto versione 3): un avviso sui testi comuni spento per un testo preciso, con il motivo. Vale
+// solo per quel controllo, quel file, quel campo, quell'elemento e quel testo (uguale carattere per carattere).
+struct FalseAlarm {
+    std::string check;     // codice del controllo, es. "K-CTR-137" (il catalogo dell'API)
+    std::string file;      // es. "servizi.json"
+    std::string field;     // il campo come nella tabella dei testi comuni, es. "servizi[].nome"
+    std::string element;   // codice dell'elemento piu' vicino con un codice; vuoto se non c'e'
+    std::string text;
+    std::string reason;    // testo comune
+    Day when = 0;
+    Source src;
+};
 enum class Origin { Manual, Computed, Imported, Scenario };  // rilevato a mano, calcolato, importato, scenario
 
 // Manifesto del pacchetto: chi, quando, da dove viene, che livello di dati contiene.
@@ -1605,6 +1620,9 @@ struct Manifest {
     std::string vault_id;
     int vault_generation = 0;
     bool has_vault() const { return !vault_id.empty(); }
+    // Manifesto versione 3 (K-018): i falsi allarmi sui testi comuni, scritti da chi prepara i dati (li usa il controllo dei
+    // testi liberi dell'API, src/api/testi_liberi.hpp).
+    std::vector<FalseAlarm> false_alarms;
     Source src;
 };
 
