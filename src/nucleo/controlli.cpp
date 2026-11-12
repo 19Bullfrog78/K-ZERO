@@ -6,6 +6,7 @@
 #include <set>
 #include <tuple>
 
+#include "elenco.hpp"
 #include "orari.hpp"
 #include "pacchetto.hpp"
 #include "ricerca.hpp"
@@ -291,6 +292,9 @@ private:
             case Element::Competence: return true;   // elenchi di norme o aziende: controllati con ref_in
             case Element::Regime:
             case Element::WorkRule: return true;     // regimi e regole: controllati in controlli_orari.cpp
+            case Element::ReadingProfile: return idx_.reading_profile(c) != nullptr;
+            case Element::ClientList:
+            case Element::ListUser: return true;     // K-019: controllati in controlli_elenco (elenco.cpp)
         }
         return false;
     }
@@ -1292,10 +1296,11 @@ private:
 
 std::vector<Problem> check_package(const Package& p, const HoursRequest* request, HoursReport* report) {
     std::vector<Problem> out = Checker(p).run();
+    const Index idx(p);
+    check_lists(p, idx, out);   // K-019: profili di lettura ed elenchi utenti dei committenti
     PlanCollector collector(p);
     check_shifts(p, out, &collector);
     // Orari di lavoro (K-011): i dati, poi il piano di tutto il periodo (le giornate raccolte dai controlli sui turni).
-    const Index idx(p);
     check_hours_data(p, idx, out);
     PlanData plans = collector.take(p);
     if (request && report) {

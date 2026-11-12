@@ -76,14 +76,17 @@ public:
     bool passeggero(const kzero::Code& codice) const { return passeggeri_.count(codice) > 0; }
     bool casa(const kzero::Code& codice) const { return case_.count(codice) > 0; }
     bool committente(const kzero::Code& codice) const { return committenti_.count(codice) > 0; }   // un privato (K-012)
-    // Per un elemento marcato "x-kzero-trasportato" negli schemi ("passeggero", "casa" o "committente") e il suo codice.
+    bool utente(const kzero::Code& codice) const { return utenti_.count(codice) > 0; }   // un utente dell'elenco (K-019)
+    // Per un elemento marcato "x-kzero-trasportato" negli schemi ("passeggero", "casa", "committente" o, K-019, "utente") e il
+    // suo codice.
     bool legato(const std::string& tipo, const kzero::Code& codice) const;
-    bool nessuno() const { return passeggeri_.empty() && case_.empty() && committenti_.empty(); }
+    bool nessuno() const { return passeggeri_.empty() && case_.empty() && committenti_.empty() && utenti_.empty(); }
 
 private:
     std::set<kzero::Code> passeggeri_;
     std::set<kzero::Code> case_;
     std::set<kzero::Code> committenti_;
+    std::set<kzero::Code> utenti_;
 };
 
 // Il tipo "x-kzero-trasportato" dell'elemento che sta in quella posizione (es. "/servizi/3/domanda/gruppi/0/passeggeri/0"),

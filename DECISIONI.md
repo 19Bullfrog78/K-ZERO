@@ -148,3 +148,79 @@ Formato: data - decisione - perche'.
 - 2026-11-12 - K-018 - **Nomi di persone** (K-CTR-136): personale, passeggeri, committenti privati e case. Il nome intero (tutte le parole, una dopo l'altra in qualsiasi ordine, o attaccate in una parola sola) in ogni testo comune; una parola sola (almeno 3 lettere) solo nei testi delle cose della persona (elenco esatto in docs/controlli.md; in piu' del mandato il codice del passeggero e della persona del personale e i servizi fissi della persona). Parole intere con la normalizzazione della ricerca dei luoghi, divise anche tra lettere e cifre (come il controllo del deposito, K-016: "ROSSI2" contiene "ROSSI"). **Permessi** (domanda prima del codice, scelta del supervisore "Due permessi"): il controllo richiede tutti e due i permessi per ogni nome, non i soli personali per chi non e' legato come chiedeva il mandato. Perche': un falso allarme sui nomi che "non spegne piu' niente", visto da chi ha i soli personali insieme al conteggio dei problemi riservati, poteva far capire che un nome nel testo e' di una persona legata al centro (salute); e con un permesso solo i dati non si possono correggere (esporta e richiudi vogliono tutti e due). Per chi ne ha uno solo il controllo e' "non verificato". Cosa rivela: varianti 0, 1 e 4 personale (di base al posto del codice "una persona o una casa dei dati"), 2 e 3 particolare (legati: dicono anche il legame, di base si contano soltanto). Il messaggio non ripete mai il nome come sta nei dati: il testo (comune), dove sta e il codice.
 - 2026-11-12 - K-018 - **Falsi allarmi nel manifesto** (`pacchetto.json` versione 3, `falsi_allarmi`): controllo, file, campo (come nella tabella), elemento (il codice piu' vicino) e testo uguale carattere per carattere, con motivo e data, senza dati personali (come la forzatura del K-011 senza "chi"). Nel manifesto perche' vale per ogni file, anche per i testi che non sono di un'azienda (luoghi, calendari), e lo scrive chi prepara il pacchetto; scartati `aziende.json` (un falso allarme su un luogo pubblico avrebbe dovuto scegliere un'azienda) e un file nuovo (un file e un bersaglio di fuzzing in piu' per pochi dati). Il testo spento ha una sua definizione nello schema, non `testo`: altrimenti si segnalerebbe da solo; il motivo e' `nota` ed entra nei controlli. Un falso allarme che non spegne piu' niente e' la variante "falso allarme" del suo controllo, non un codice a parte: cosi' ha la stessa riservatezza del controllo che spegne (per i nomi tutti e due i permessi).
 - 2026-11-12 - K-018 - **Demo ripulito**: tolti i codici e i nomi che dicevano la salute (S-DIS, S-DIS-GIO, G-DIS, G-DIS-GIO, T-DIS, T-DIS-GIO, CAL-CENTRO, CAL-CENTRO-GIO, C-DIS-1, C-DIS-R, C-DIS-GIO e, trovati, SF-DIS-GIO, B-DIS, i sei codici `*-PRIVATO-CENTRO`, il contratto "Trasporto scolastico e disabili", il calendario "senza i giorni del centro diurno", la sospensione "Chiusura del centro"), con nomi neutri ("Servizio Valfonda 3"), anche nel demo "solo numeri". Resta apposta la nota del blocco B-VAL-3 ("Il centro diurno vuole sempre il mezzo con la pedana.") con il suo avviso; un falso allarme spegne il nome alternativo del parcheggio dei pullman ("Valfonda, parcheggio del centro diurno"). Nessun nome di persona nei testi comuni del demo (il controllo non ne trova). Le copie congelate k007, k010, k011 e k012 non cambiano: cambiano i conteggi (k011 e k012 hanno persone di prova con nomi che sono parole dei loro testi, es. "Linea Lunga"). La prova di scala ha le parole del demo (norme 4): il generatore chiamava "(disabili)" il secondo servizio delle corse promiscue (80 avvisi veri), ora "(2)".
+- 2026-11-12 - K-019 - **Risposte dell'arbitro alle domande prima del codice** (D1-D4, scelta A per tutte): **classe e sezione
+  dell'elenco utenti sono dati personali** (D1). Per l'elenco cambia la regola del 12/10 ("la classe non e' un dato personale"):
+  con la scuola e gli orari (dati comuni) classe e sezione fanno riconoscere un bambino in una scuola piccola (una classe con la
+  sua sezione ha 10-20 bambini, e chi usa il trasporto da una zona sono 1-3), e la classe dice l'eta' di un minore; per
+  pianificare non servono. **Lo sblocco ha il suo comando** in questo mandato (D2, `kzero sblocco`): senza, ogni sblocco (ne
+  arrivano spesso, una mail alla volta) chiederebbe esporta, correggi, richiudi, cioe' tutti i dati dei bambini in chiaro sul
+  disco. Un utente attivo, una tratta che il committente non gli da' (percorsi), una tratta che il profilo non ha, uno sblocco
+  che c'e' gia' o un utente fuori elenco: errore K-ERR-049, mai uno sblocco senza senso scritto nei dati (scelta lasciata a me;
+  gli sblocchi diventati inutili dopo una lettura sono avvisi, K-CTR-146). **Un uscito con uno sblocco resta** "fuori elenco"
+  (D3, K-CTR-147), non entra mai nel piano; tolto l'ultimo sblocco se ne va alla lettura completa successiva, mai per effetto di
+  `kzero sblocco` (nessuna cancellazione nascosta). **Forse lo stesso anche con un'altra scuola** (D4): un uscito e un nuovo
+  con lo stesso nome e la stessa casa in scuole diverse (es. dalla primaria alle medie) hanno l'avviso K-CTR-150, mai
+  un'unione automatica.
+- 2026-11-12 - K-019 - **Profilo di lettura in un file nuovo**, `profili_elenchi.json` (uno o piu' profili per committente): e'
+  un dato nuovo che sta meglio da solo (regola del K-008) e non cambia la versione di nessun file. Il programma conosce solo le
+  **forme** (orari "per tratta" e "per giorno", percorsi "sigla, separatore, ditta", stato "parola, separatore, nota"); titoli,
+  parole, sigle e separatori sono del profilo, mai nel programma (una prova cerca le parole dei due profili di prova tra i testi
+  del codice). Scuole e fermate del file si collegano con i **codici esterni** che il formato ha gia' (sistema e tipo nel
+  profilo, codice = il testo del file); le **ditte** con una tabella nel profilo, perche' le aziende non hanno codici esterni e
+  aggiungerli vorrebbe una versione nuova del manifesto e di aziende.json. Titoli e sigle hanno una definizione loro nello
+  schema (`parola`, `separatore`): non sono testi liberi sulle persone e non entrano nell'avviso del K-018.
+- 2026-11-12 - K-019 - **L'elenco in un file nuovo**, `elenco_utenti.json`, uno per committente (non i gruppi dei servizi: il
+  file non dice ne' la fermata ne' il giro). Un elenco si riconosce nella cassaforte dalla chiave dichiarata (il committente,
+  `x-kzero-chiave`), un utente dal codice. **Codici** "U-000001"... dati in ordine dal programma, mai ricavati dal nome, mai
+  riusati (il numero dell'ultimo sta nel file), **unici in tutto il pacchetto**: un codice usato da qualunque altro elemento si
+  salta (correzione 2 dell'arbitro), e il controllo K-CTR-141 lo dice se succede scrivendo a mano. **Fermate dal nome solo nel
+  comune della casa** (correzione 3): con 500 mezzi "Piazza" o "Chiesa" stanno in molti comuni; nell'elenco e nell'uscita
+  "riconosciuta dal nome" e' diverso da "dal codice esterno". **Luoghi sensibili** (correzione 4): se la scuola o la fermata
+  indicata sta in un luogo sensibile, nome e casa stanno tra i legati (la regola dei passeggeri, `LegameSensibile`, che riceve
+  un tipo in piu', "utente"). Il **giorno dell'anno**: date senza anno dal mese d'inizio del profilo a dicembre nel primo anno,
+  le altre nel secondo; "tutto l'anno" dal primo del mese d'inizio al giorno prima dello stesso mese dell'anno dopo.
+- 2026-11-12 - K-019 - **Il comando**: `kzero leggi-elenco <file.xlsx> <pacchetto chiuso> --profilo --anno-scolastico --elenco
+  completo|parziale --utente [--scrivi <pacchetto>]`. Senza `--scrivi` e' un'anteprima (solo la voce del registro); con
+  `--scrivi` la cartella deve essere quella del pacchetto (K-ERR-046, correzione 1): chi scrive nomina la cartella che cambia,
+  come per gli altri comandi della cassaforte, e per passare dall'anteprima alla scrittura si aggiunge solo `--scrivi`.
+  `--elenco` non ha valore di base: un elenco completo fa uscire chi non c'e'. La scrittura e' quella di `kzero richiudi`, ora
+  in un posto solo (`riscrittura.hpp`): pacchetto nuovo in memoria, riaperto con la password, poi cassaforte e file normali.
+  **Permessi**: per ora tutti e due (come richiudi), con il controllo in un punto solo (`permessi_per_l_elenco`): domani la
+  scrittura con i soli personali riscrivera' solo la sezione dei personali e copiera' le altre (docs/cassaforte.md). Nuove
+  forme dei parametri `testo` (es. `--riferimento`) e `anno_scolastico`: descrivi versione 6 (la 5 resta come "non piu'
+  prodotta"). Uscite nuove: schemi `elenco` 1 e `sblocco` 1.
+- 2026-11-12 - K-019 - **Librerie per l'Excel**: **miniz 3.1.2** (archivi ZIP; licenza MIT; versione del 1/7/2026 verificata
+  perche' l'arbitro non la trovava: c'e', con l'etichetta del commit 77d0dce e l'archivio di rilascio, e proprio questa versione
+  aggiunge i bersagli di fuzzing della convalida degli archivi; nel fuzzing continuo OSS-Fuzz) ed **Expat 2.8.5** (XML; licenza
+  MIT; del 22/09/2026 con l'avviso di sicurezza dello stesso giorno; firma GPG dell'autore verificata; nel fuzzing continuo
+  OSS-Fuzz). Criteri: licenza permissiva, mantenute, provate con il fuzzing dai loro autori, piccole (un file C e tre file C),
+  si compilano con i flag di K-Zero (sanitizer e fuzzing). miniz si compila **senza file su disco, orologio, scrittura e
+  compressione** (un archivio si legge solo in memoria, per costruzione); Expat **senza DTD ne' entita'** e il DOCTYPE si
+  rifiuta appena compare. Scartate: libzip e minizip-ng (piu' grandi, con zlib a parte), libarchive (molti formati che non
+  servono), libxml2 (grande, molti avvisi di sicurezza negli anni), pugixml (tiene tutto il documento in memoria; Expat legge a
+  flusso). Le prove costruiscono i file .xlsx da testo con un piccolo scrittore ZIP solo delle prove (tests/xlsx_prove.hpp),
+  che sa anche rovinarli apposta e fare una "bomba" con un blocco deflate scritto a mano (circa 1.000 byte veri per byte
+  compresso): nessun file binario nel deposito, e il programma non contiene codice per scrivere archivi.
+- 2026-11-12 - K-019 - **Limiti della lettura dell'Excel nel programma, mai nei dati** (correzione 7): un file preparato non deve
+  poterli alzare. Valori in docs/sicurezza.md ("File Excel"), con da dove vengono. Si controllano sui byte veri decompressi
+  (correzione 5): i limiti contano i byte che arrivano un pezzo alla volta, e miniz si ferma anche dove finiscono i byte
+  dichiarati e controlla l'impronta CRC. Il rapporto di compressione vale oltre 1 MB vero (sotto, piccole parti ripetitive sono
+  normali). Una cella troppo lunga non ferma il file: rende illeggibile la riga, se la colonna serve.
+- 2026-11-12 - K-019 - **Righe illeggibili, omonimi, uscite**: una riga illeggibile dice riga, colonna e motivo (K-CTR-148, 16
+  varianti), mai il valore di una cella personale; le altre righe si applicano; un utente gia' nell'elenco con la riga
+  illeggibile resta com'e' (si riconosce se nome e scuola si leggono). Righe con lo stesso nome nella stessa scuola si fermano
+  tutte (K-CTR-149), anche se una e' illeggibile per un altro motivo: mai indovinare. Elenco parziale: mai uscite; completo:
+  uscite solo senza righe illeggibili (K-CTR-151). Avvisi sul contenuto scelti (K-CTR-143 ... 147): andata senza ritorno in un
+  giorno in tutto o in parte dell'anno, orari dello stesso giorno e tratta con date sovrapposte e ore diverse, date del file
+  fuori dagli orari della scuola (il pacchetto ha gia' gli orari delle scuole: piu' preciso dell'anno scolastico, che per
+  costruzione contiene tutte le date senza anno), sblocco che forse non serve piu', utente fuori elenco; in piu' la fermata non
+  riconosciuta (K-CTR-152). Nessun dato del file prima della password: un file rovinato si rifiuta prima di aprire la
+  cassaforte (il profilo, dato comune, si legge dai file normali).
+- 2026-11-12 - K-019 - **Lettura dalla memoria di miniz con una funzione nostra** (fuzzing del K-019, primi due minuti): la
+  funzione di miniz per gli archivi in memoria (`mz_zip_reader_init_mem`) calcola l'indirizzo dei byte anche oltre la fine del
+  file, prima di leggerne zero; e' un comportamento non definito che il sanitizer ferma (innocuo in pratica, ma K-Zero non
+  accetta comportamenti non definiti). Si usa l'altra strada prevista dall'API di miniz, una sorgente dell'utente
+  (`mz_zip_reader_init` con una funzione di lettura): la posizione si controlla prima di calcolare l'indirizzo. Nessuna modifica
+  alla libreria (versione e impronta restano quelle dell'autore); una prova costruisce il caso (Excel.ParteOltreLaFineDelFile).
+  Da segnalare all'autore di miniz. Lo stesso giro ha trovato un trabocco nella lettura della classe (una cella con molte cifre),
+  corretto: il caso sta in tests/fuzz/casi/elenco-righe.

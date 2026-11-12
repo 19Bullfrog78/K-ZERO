@@ -156,6 +156,37 @@ una cartella sincronizzata). Mai piu' del massimo di byte, anche quando il siste
 cresce mentre lo si legge: si legge fino al massimo piu' uno e ci si ferma. I messaggi non riportano mai il contenuto
 del file.
 
+**File Excel del committente** (K-019, `kzero leggi-elenco`). L'elenco utenti arriva da fuori in un file .xlsx: e' del
+committente, puo' essere rovinato o preparato apposta, e non si modifica mai. Come si legge (src/api/excel.hpp):
+- **lettura blindata** come per i file del pacchetto (solo un file normale, aperto senza attese, mai oltre il massimo di
+  byte, anche se il sistema non dice la dimensione o il file cresce), senza il vincolo della cartella: il file lo nomina
+  l'utente, non arriva dentro un pacchetto preparato da altri; un collegamento si segue solo se porta a un file normale.
+  Del file si tiene solo l'impronta (BLAKE2b-256), mai il nome;
+- **archivio** (un .xlsx e' un archivio ZIP con dentro file XML; libreria miniz 3.1.2, compilata senza file su disco,
+  senza orologio, senza scrittura ne' compressione): tutto in memoria, mai estratto sul disco; si decomprimono solo le parti
+  che servono; archivi cifrati, su piu' dischi, con due parti con lo stesso nome (senza distinguere maiuscole, come vuole il
+  formato) o con metodi di compressione diversi da "nessuna" e "deflate" rifiutati; i limiti si controllano sui **byte veri
+  decompressi**, un pezzo alla volta, mai sulle dimensioni scritte nell'archivio (che possono mentire; la libreria inoltre
+  si ferma dove finiscono quelle dichiarate e controlla l'impronta CRC di ogni parte);
+- **XML** (libreria Expat 2.8.5, compilata senza DTD ne' entita'): un DOCTYPE si rifiuta appena compare (un foglio Excel
+  non ne ha: niente "bomba delle entita'", niente entita' esterne); profondita' massima; nessun testo tenuto in memoria
+  oltre il massimo di una cella;
+- **formule**: solo il valore salvato nel file, mai calcolate; colori e formattazione si ignorano; le colonne che il
+  profilo non nomina non si leggono e non si salvano mai; un vecchio .xls e' un errore chiaro (K-ERR-043);
+- **limiti** (nel programma, mai nei dati: un file preparato non deve poterli alzare; si cambiano solo nel codice,
+  `excel::Limiti` in src/api/excel.hpp, con un mandato): file 20 MB; decompresso 200 MB in tutto e 100 MB per parte;
+  rapporto di compressione 200 a 1 oltre 1 MB vero (una "bomba" di compressione arriva a circa 1.000 a 1; un foglio vero sta
+  sotto 20 a 1; sotto 1 MB il rapporto non conta: piccole parti molto ripetitive sono normali); 200 parti; 100.000 righe;
+  200 colonne; 2.000 caratteri per cella (una cella piu' lunga rende illeggibile la riga, se la colonna serve); un milione
+  di testi condivisi; 64 livelli di XML. Da dove vengono: un elenco vero ha poche migliaia di righe e una ventina di
+  colonne (la prova di scala con 5.000 utenti fa un file di circa 5 MB decompressi); i limiti stanno larghi di dieci volte
+  sopra, e bassi abbastanza da non esaurire la memoria di un PC d'ufficio;
+- i messaggi degli errori non riportano mai il contenuto delle celle; un problema di una riga dice riga e colonna, mai il
+  valore di una cella personale (il nome della scuola si', e' pubblico);
+- **fuzzing**: tre bersagli nuovi (il file .xlsx intero, l'XML di un foglio, le righe lette con i profili), con semi
+  costruiti a ogni giro dai testi delle prove (nessun file binario nel deposito); le due librerie sono nel fuzzing continuo
+  OSS-Fuzz dei loro autori.
+
 **Prove di sicurezza nel controllo GitHub** (GDPR art. 32 c. 1 lett. d: provare regolarmente l'efficacia delle misure).
 A ogni proposta, oltre alle prove normali:
 - **sanitizer**: il programma e tutte le prove compilati con AddressSanitizer (errori di memoria: letture e scritture
@@ -179,7 +210,8 @@ completo), stack non eseguibile. Rendono piu' difficile sfruttare un errore di m
 programma compilato.
 
 **Componenti esterni fissati ed elencati.** CLI11, nlohmann/json, valijson, libsodium (cifratura), utf8proc
-(normalizzazione Unicode delle password), l'elenco delle password comuni (SecLists) e (solo per le prove) GoogleTest e
+(normalizzazione Unicode delle password), l'elenco delle password comuni (SecLists), dal K-019 miniz (archivi ZIP) ed Expat
+(XML) per i file Excel, e (solo per le prove) GoogleTest e
 check-jsonschema, con versione e impronta fissate. L'elenco completo, leggibile da un programma, e' in
 [componenti.cdx.json](componenti.cdx.json) (formato standard CycloneDX 1.5): nome, versione, provenienza, impronta,
 licenza, se serve al programma o solo alle prove. Una prova controlla che coincida con quello che si scarica davvero.
@@ -345,6 +377,13 @@ non ha una password; non protegge da tutto. Detto onestamente:
   password dal terminale, del blocco dei file, della memoria protetta e dei core dump, e le protezioni del compilatore
   equivalenti (`/GS`, `/guard:cf`, `/DYNAMICBASE`, `/HIGHENTROPYVA`, `/NXCOMPAT`) le fara' quel mandato. Oggi tutto e'
   provato solo su Linux.
+- **L'elenco utenti del committente** (K-019) porta in K-Zero i primi dati veri, di minori. Restano: la **nota del
+  committente** dopo lo stato e' un testo libero e puo' parlare di salute (es. "per terapia"): e' un dato personale, non
+  particolare, quindi la vede chi ha i soli dati personali (decisione del mandato, risposta 9 dell'arbitro); il **file
+  Excel** resta sul PC dove e' arrivato (posta, cartella dei download) in chiaro, fuori dal controllo del programma: va
+  cancellato dopo la lettura; **scuola, orari e ditte** di ogni utente restano dati comuni (servono a pianificare): con
+  classe e sezione personali (D1) un bambino non si riconosce dalla sola classe, ma in una scuola piccola gli orari
+  particolari di un utente possono bastare a chi lo conosce.
 - **Le librerie del sistema** (libreria C e C++ del compilatore) non sono nell'elenco dei componenti: le aggiorna il
   sistema operativo.
 

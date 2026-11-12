@@ -1,0 +1,317 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "kzero - elenco, versione 1",
+  "description": "Uscita di 'kzero leggi-elenco --formato json' (K-019): la lettura dell'elenco utenti del committente da un file Excel, confrontata con l'elenco gia' nel pacchetto chiuso. Del file solo l'impronta, mai il nome. Di base nessun nome ne' casa: gli utenti con il codice e il numero di riga; i nomi solo con --includi-dati-personali (di chi e' legato a un luogo sensibile anche con --includi-dati-particolari). Spiegata in docs/formato-dati.md (elenco_utenti.json).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "schema_versione",
+    "comando",
+    "utente",
+    "pacchetto",
+    "profilo",
+    "committente",
+    "anno_scolastico",
+    "elenco",
+    "impronta",
+    "scritto",
+    "uscite_applicate",
+    "righe",
+    "conteggi",
+    "utenti",
+    "problemi",
+    "avvisi",
+    "cassaforte"
+  ],
+  "properties": {
+    "schema": {
+      "const": "elenco"
+    },
+    "schema_versione": {
+      "const": 1
+    },
+    "comando": {
+      "const": "leggi-elenco"
+    },
+    "utente": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$",
+      "description": "Chi ha aperto la cassaforte."
+    },
+    "pacchetto": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "codice",
+        "nome"
+      ],
+      "properties": {
+        "codice": {
+          "type": "string",
+          "minLength": 1
+        },
+        "nome": {
+          "type": "string"
+        }
+      }
+    },
+    "profilo": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+    },
+    "committente": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+    },
+    "anno_scolastico": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{4}$"
+    },
+    "elenco": {
+      "enum": [
+        "completo",
+        "parziale"
+      ]
+    },
+    "impronta": {
+      "description": "Impronta BLAKE2b-256 del file letto.",
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "scritto": {
+      "description": "true = le novita' sono state scritte (--scrivi); false = anteprima.",
+      "type": "boolean"
+    },
+    "uscite_applicate": {
+      "description": "Elenco completo e nessuna riga illeggibile: chi non e' nel file esce.",
+      "type": "boolean"
+    },
+    "righe": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "dati",
+        "lette",
+        "illeggibili"
+      ],
+      "properties": {
+        "dati": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "lette": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "illeggibili": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "conteggi": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "nuovi",
+        "cambiati",
+        "invariati",
+        "usciti",
+        "tenuti_per_sblocco",
+        "non_nel_file",
+        "righe_illeggibili"
+      ],
+      "properties": {
+        "nuovi": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "cambiati": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "invariati": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "usciti": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "tenuti_per_sblocco": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "non_nel_file": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "righe_illeggibili": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "utenti": {
+      "description": "Ogni utente dell'elenco del committente, prima o dopo la lettura, in ordine di codice.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "codice",
+          "esito",
+          "riga",
+          "campi",
+          "nome"
+        ],
+        "properties": {
+          "codice": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+          },
+          "esito": {
+            "enum": [
+              "nuovo",
+              "cambiato",
+              "invariato",
+              "uscito",
+              "tenuto_per_sblocco",
+              "non_nel_file",
+              "riga_illeggibile"
+            ]
+          },
+          "riga": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1,
+            "description": "La riga del file (null se l'utente non e' nel file)."
+          },
+          "campi": {
+            "description": "Per un utente cambiato: i campi cambiati (mai i valori).",
+            "type": "array",
+            "items": {
+              "enum": [
+                "nome",
+                "casa",
+                "classe",
+                "sezione",
+                "stato",
+                "nota",
+                "fermata",
+                "tratte",
+                "orari",
+                "fuori_elenco"
+              ]
+            }
+          },
+          "nome": {
+            "description": "Il nome, solo con i parametri che lo permettono; altrimenti null.",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        }
+      }
+    },
+    "problemi": {
+      "description": "Righe illeggibili, righe con lo stesso nome, avvisi del confronto e avvisi sull'elenco nuovo di questo committente, con i testi del catalogo (docs/controlli.md).",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "codice",
+          "livello",
+          "messaggio",
+          "riga",
+          "colonna"
+        ],
+        "properties": {
+          "codice": {
+            "type": "string",
+            "pattern": "^K-CTR-[0-9]{3}$"
+          },
+          "livello": {
+            "enum": [
+              "errore",
+              "avviso"
+            ]
+          },
+          "messaggio": {
+            "type": "string",
+            "minLength": 1
+          },
+          "riga": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1,
+            "description": "Riga del file, se il problema e' di una riga."
+          },
+          "colonna": {
+            "type": [
+              "integer",
+              "null"
+            ],
+            "minimum": 1,
+            "description": "Colonna del file (1 = A), se c'e'."
+          }
+        }
+      }
+    },
+    "avvisi": {
+      "description": "Avvisi della cassaforte (K-CTR-097, K-CTR-098) con i testi del catalogo; codice null = un'indicazione del comando.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "codice",
+          "messaggio"
+        ],
+        "properties": {
+          "codice": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^K-CTR-[0-9]{3}$"
+          },
+          "messaggio": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "cassaforte": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "generazione",
+        "voci_registro"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{32}$"
+        },
+        "generazione": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "voci_registro": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    }
+  }
+}

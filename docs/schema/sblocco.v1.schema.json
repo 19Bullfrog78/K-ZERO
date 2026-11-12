@@ -1,0 +1,130 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "kzero - sblocco, versione 1",
+  "description": "Uscita di 'kzero sblocco --formato json' (K-019): uno sblocco aggiunto o tolto a una tratta di un utente dell'elenco del committente. Solo codici e il riferimento scritto dall'utente (dato comune), mai nomi.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "schema_versione",
+    "comando",
+    "utente",
+    "utente_elenco",
+    "committente",
+    "tratta",
+    "azione",
+    "riferimento",
+    "data",
+    "sblocchi_restanti",
+    "fuori_elenco",
+    "fatto",
+    "avvisi",
+    "cassaforte"
+  ],
+  "properties": {
+    "schema": {
+      "const": "sblocco"
+    },
+    "schema_versione": {
+      "const": 1
+    },
+    "comando": {
+      "const": "sblocco"
+    },
+    "utente": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+    },
+    "utente_elenco": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+    },
+    "committente": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+    },
+    "tratta": {
+      "type": "string",
+      "minLength": 1
+    },
+    "azione": {
+      "enum": [
+        "aggiunto",
+        "tolto"
+      ]
+    },
+    "riferimento": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "data": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+    },
+    "sblocchi_restanti": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "fuori_elenco": {
+      "description": "L'utente non e' piu' nell'elenco del committente (resta per gli sblocchi; senza sblocchi se ne andra' alla prossima lettura completa).",
+      "type": "boolean"
+    },
+    "fatto": {
+      "type": "string",
+      "minLength": 1
+    },
+    "avvisi": {
+      "description": "Avvisi della cassaforte (K-CTR-097, K-CTR-098) con i testi del catalogo; codice null = un'indicazione del comando.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "codice",
+          "messaggio"
+        ],
+        "properties": {
+          "codice": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^K-CTR-[0-9]{3}$"
+          },
+          "messaggio": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "cassaforte": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "generazione",
+        "voci_registro"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{32}$"
+        },
+        "generazione": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "voci_registro": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    }
+  }
+}

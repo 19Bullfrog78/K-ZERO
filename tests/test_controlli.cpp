@@ -835,5 +835,10 @@ TEST(Controlli, catalogo_coperto) {
     EXPECT_EQ(api::definizione_controllo(Check::NameInCommonText).codice, "K-CTR-136");
     EXPECT_EQ(api::definizione_controllo(Check::HealthWordInCommonText).codice, "K-CTR-137");
     EXPECT_EQ(api::definizione_controllo(Check::PlaceMaybeSensitive).codice, "K-CTR-138");
-    EXPECT_EQ(api::catalogo_controlli().size(), 138u);
+    // K-019: elenco utenti del committente (le prove stanno in test_elenco).
+    EXPECT_EQ(api::definizione_controllo(Check::ListProfileInvalid).codice, "K-CTR-139");
+    EXPECT_EQ(api::definizione_controllo(Check::ListUserOutOfList).codice, "K-CTR-147");
+    EXPECT_EQ(api::definizione_controllo(Check::ListRowUnreadable).codice, "K-CTR-148");
+    EXPECT_EQ(api::definizione_controllo(Check::ListStopNotRecognized).codice, "K-CTR-152");
+    EXPECT_EQ(api::catalogo_controlli().size(), 152u);
 }

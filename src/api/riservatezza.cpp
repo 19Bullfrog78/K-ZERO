@@ -124,6 +124,15 @@ LegameSensibile::LegameSensibile(const kzero::Index* indice) {
     const auto sensibile = [&](const kzero::Code& c) { return sensibili.count(c) > 0; };
     const auto casa_pap = [&](const kzero::Code& c) { return porta_a_porta.count(c) > 0; };
 
+    // K-019: gli utenti dell'elenco del committente la cui scuola, o la fermata indicata, sta in un luogo sensibile (la stessa
+    // regola dei passeggeri dei gruppi e di chi sale o scende li').
+    for (const kzero::ClientList& l : p.client_lists)
+        for (const kzero::ListUser& u : l.users) {
+            bool legato = u.stop && sensibile(u.stop->code);
+            if (const kzero::School* sc = indice->school(u.school.code)) legato = legato || sensibile(sc->place.code);
+            if (legato) utenti_.insert(u.code);
+        }
+
     // Gruppi legati e loro passeggeri e case.
     for (const kzero::Service& s : p.services)
         for (const kzero::PassengerGroup& g : s.groups) {
@@ -217,6 +226,7 @@ bool LegameSensibile::legato(const std::string& tipo, const kzero::Code& codice)
     if (tipo == "passeggero") return passeggero(codice);
     if (tipo == "casa") return casa(codice);
     if (tipo == "committente") return committente(codice);
+    if (tipo == "utente") return utente(codice);
     return false;
 }
 
