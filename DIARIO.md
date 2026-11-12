@@ -755,6 +755,29 @@
   tutti i testi (9), confronto senza accenti (3), falso allarme con il testo cambiato (1), elenco delle parole nel codice (1,
   dopo aver rinforzato la prova con un testo che non e' di un'azienda: la prima versione non lo prendeva), luogo sensibile
   con l'avviso (5).
+- 2026-11-12 - K-019 (programma e documenti, proposta "K-019: lettore dell'elenco utenti"). Domande prima del codice (D1-D4),
+  risposte dell'arbitro (tutte A) e nove correzioni alle mie scelte: DECISIONI.md. Fatto: lettura blindata di un file esterno
+  (`leggi_file_esterno`); lettore Excel (src/api/excel.cpp: archivio con miniz 3.1.2, XML con Expat 2.8.5, limiti sui byte
+  veri, DOCTYPE rifiutato, formule solo come valore salvato, .xls riconosciuto); formato: `profili_elenchi.json` ed
+  `elenco_utenti.json` (versione 1, classe e sezione personali, utenti legati ai luoghi sensibili); nucleo
+  (src/nucleo/elenco.cpp: celle con le forme del profilo, righe, confronto, codici unici in tutto il pacchetto, controlli
+  K-CTR-139 ... 147); comandi `kzero leggi-elenco` (anteprima o scrittura nella cassaforte) e `kzero sblocco`; K-CTR-148 ... 152
+  sulle righe; K-ERR-041 ... 049; forme dei parametri `testo` e `anno_scolastico` (descrivi 6); uscite `elenco` 1 e `sblocco`
+  1; la scrittura di richiudi in un posto solo (src/api/riscrittura.cpp); i nomi degli utenti nell'avviso sui nomi liberi
+  (K-CTR-136). Prove: test_excel (14: file rotti e preparati, bomba, limiti), test_elenco (casi veri del mandato dai testi di
+  tests/esempi/k019-elenco, due profili diversi, confronto, sblocchi, omonimi, parziale, righe illeggibili, i comandi con i tre
+  utenti della cassaforte, scala, nessuna parola del profilo nel codice), Unione.ElencoUtentiNellaCassaforte, prove sul
+  programma (elenco.*), tre bersagli di fuzzing nuovi (elenco-archivio, elenco-foglio, elenco-righe: 35 in tutto) con semi
+  costruiti dai testi. Prova di scala, 5.000 utenti: file di 5 MB, lettura del foglio 81 ms, righe e confronto 92 ms (prima
+  lettura, tutti nuovi) e 106 ms (seconda, tutti ritrovati) su un processore Xeon a 2,1 GHz (ElencoScala.CinquemilaUtenti
+  scrive i tempi). Elenco dei componenti: miniz ed Expat; il campo "dependsOn" del programma ora elenca tutti i componenti del
+  programma (prima solo CLI11, nlohmann/json e valijson). Il fuzzing dei bersagli nuovi ha trovato tre guasti: un trabocco nella
+  lettura della classe (corretto, caso in tests/fuzz/casi/elenco-righe), un comportamento non definito nella lettura dalla
+  memoria di miniz (aggirato con una funzione di lettura nostra, DECISIONI.md, prova Excel.ParteOltreLaFineDelFile) e una
+  perdita di memoria quando l'archivio si rifiuta dopo averlo aperto (troppe parti, parte cifrata: l'archivio aperto ora si
+  chiude da solo; con il sanitizer la prendono gia' le prove dei limiti). Dopo le correzioni: elenco-archivio 1.237.729 casi in
+  180 s, elenco-foglio 848.437 in 120 s, elenco-righe 72.659 in 120 s, nessun guasto. Sabotaggi sul codice
+  finale, tutti presi da una prova: 18 (elenco in tests/test_elenco.cpp e nel resoconto per l'arbitro).
 ## Bug e limiti noti
 - (K-018) L'avviso sui nomi liberi trova solo il nome scritto come nei dati (senza maiuscole ne' accenti, parole intere):
   non i nomi scritti male, i soprannomi, le iniziali, le sigle ("S-DIS"), un nome dentro una parola piu' lunga, le parole
