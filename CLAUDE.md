@@ -107,9 +107,9 @@ Si parte da ALP (3 minibus + 1 auto) e si deve poter crescere fino a 500 mezzi e
   `CC=clang CXX=clang++ cmake -S . -B build-fuzz -DKZERO_FUZZ=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo &&
   cmake --build build-fuzz --target fuzz_pacchetto fuzz_parametri fuzz_date_e_orari fuzz_cassaforte fuzz_elenco rigioca_fuzz`
   (rigioca_fuzz prepara i semi della cassaforte, con chiavi nuove a ogni giro, e quelli dell'elenco dai testi delle prove), poi
-  `tests/fuzz/fuzz.sh build-fuzz <secondi per bersaglio> [cartella di lavoro] [bersagli]` (35 bersagli: `pacchetto-<file>`,
+  `tests/fuzz/fuzz.sh build-fuzz <secondi per bersaglio> [cartella di lavoro] [bersagli]` (36 bersagli: `pacchetto-<file>`,
   `parametri`, `date-e-orari` e, dal K-010, `cassaforte`, `cassaforte-voci`, `registro`, `registro-voci`, `password`; dal K-019
-  `elenco-archivio`, `elenco-foglio`, `elenco-righe`; nel
+  `elenco-archivio`, `elenco-foglio`, `elenco-righe`; dal K-020 `elenco-campi`; nel
   controllo GitHub 20 secondi; in locale a lungo, es. `KZERO_FUZZ_PARALLELI=4
   tests/fuzz/fuzz.sh build-fuzz 3600 ~/kzero-fuzz`). Un guasto lascia il file che lo provoca in
   `<lavoro>/guasti/<bersaglio>/`: si corregge e il file va in `tests/fuzz/casi/<bersaglio>/` (diventa una prova normale).

@@ -49,6 +49,9 @@ void prova_elenco_foglio(const std::uint8_t* dati, std::size_t n);
 // - le righe del file: testo con le colonne separate da tabulazioni (prima riga i titoli), lette con i due profili di prova
 //   del pacchetto demo con tests/esempi/k019-elenco (orari, percorsi, stato), poi il confronto con l'elenco;
 void prova_elenco_righe(const std::uint8_t* dati, std::size_t n);
+// K-020: i campi di una modifica a mano scritti sull'ingresso (limiti, poi letti con i profili di prova), e la modifica applicata a
+// un elenco (aggiunta e cambio): mai un'eccezione, mai un valore fuori dai limiti, mai un codice ripetuto.
+void prova_elenco_campi(const std::uint8_t* dati, std::size_t n);
 // I semi dell'elenco (file .xlsx e XML costruiti dai testi di tests/esempi/k019-elenco), in <cartella>/<bersaglio>/.
 void scrivi_semi_elenco(const std::string& cartella);
 int prova_semi_elenco();
@@ -57,7 +60,7 @@ int prova_semi_elenco();
 std::vector<std::string> file_del_formato();
 
 // Esegue il bersaglio con quel nome ("pacchetto-corse.json", "parametri", "date-e-orari", "cassaforte",
-// "cassaforte-voci", "registro", "registro-voci", "password", "elenco-archivio", "elenco-foglio", "elenco-righe"); false se
+// "cassaforte-voci", "registro", "registro-voci", "password", "elenco-archivio", "elenco-foglio", "elenco-righe", "elenco-campi"); false se
 // non esiste.
 bool prova(const std::string& bersaglio, const std::uint8_t* dati, std::size_t n);
 
