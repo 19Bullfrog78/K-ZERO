@@ -809,6 +809,19 @@
   classi dei valori di prima e i legati), sei prove sul programma (uscite JSON controllate con lo schema), un bersaglio di
   fuzzing nuovo (`elenco-campi`: 36 in tutto). Il primo giro dei semi del fuzzing ha trovato che l'aggiunta a mano non saltava i
   codici dell'elenco che cambia se non era ancora nel pacchetto (corretto: DECISIONI.md).
+- 2026-11-15 - K-021 (programma, proposta "K-021: schede dei servizi"). Punto 0, le prove mancanti trovate dall'arbitro nel K-020,
+  ognuna con il suo sabotaggio provato: ElencoAManoComandi.NotaETestoDellaFermataRiservati (A: la nota dello stato e G: il testo di
+  una fermata non riconosciuta non si vedono senza --includi-dati-personali, testo e JSON; D: togliere a mano con una data prima
+  dell'aggiunta e' K-ERR-051, niente cambia; sabotaggi: la nota sempre mostrata, il testo della fermata senza il controllo, il
+  controllo della data tolto da manual_remove), Unione.FermataDiPrimaInUnLuogoSensibile (C: la fermata di prima nel centro diurno
+  lega l'utente come la scuola di prima; sabotaggio: la fermata tolta dal legame in riservatezza.cpp), ElencoAMano.LimitiDellIngresso
+  (H: i controlli C1 U+0080 ... U+009F rifiutati, lo spazio indivisibile no; sabotaggio: il controllo C1 tolto da
+  campi_ingresso.cpp) e la prova sistematica nuova UsciteElenco.NessunDatoPersonaleSenzaIParametri (tests/test_uscite_elenco.cpp:
+  203 uscite di leggi-elenco, sblocco e dei cinque comandi a mano, in testo e JSON, con ogni valore personale riconoscibile, anche
+  quelli di prima; senza il parametro nessuno, per gli utenti legati per la scuola o la fermata, di oggi o di prima, nessuno senza
+  tutti e due i parametri; con i parametri si vedono). La prova sistematica da sola prende anche A, C, G e tre sabotaggi in piu':
+  i nomi di leggi-elenco senza il parametro, i legati con i soli dati personali nei comandi a mano, la classe senza il parametro.
+  Domande e proposte per l'arbitro prima del resto (K-021-domande-per-l-arbitro.md, consegnato come file).
 ## Bug e limiti noti
 - (K-018) L'avviso sui nomi liberi trova solo il nome scritto come nei dati (senza maiuscole ne' accenti, parole intere):
   non i nomi scritti male, i soprannomi, le iniziali, le sigle ("S-DIS"), un nome dentro una parola piu' lunga, le parole

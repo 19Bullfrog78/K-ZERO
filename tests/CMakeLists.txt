@@ -78,6 +78,12 @@ target_link_libraries(test_elenco_a_mano_comandi PRIVATE kzero_api GTest::gtest_
 target_compile_options(test_elenco_a_mano_comandi PRIVATE ${KZERO_WARNINGS})
 target_compile_definitions(test_elenco_a_mano_comandi PRIVATE KZERO_CARTELLA_PROVE="${CMAKE_CURRENT_SOURCE_DIR}")
 gtest_discover_tests(test_elenco_a_mano_comandi PROPERTIES LABELS sicurezza)
+# K-021: prova sistematica sulle uscite dei comandi dell'elenco (nessun dato personale senza i parametri).
+add_executable(test_uscite_elenco test_uscite_elenco.cpp)
+target_link_libraries(test_uscite_elenco PRIVATE kzero_api GTest::gtest_main)
+target_compile_options(test_uscite_elenco PRIVATE ${KZERO_WARNINGS})
+target_compile_definitions(test_uscite_elenco PRIVATE KZERO_CARTELLA_PROVE="${CMAKE_CURRENT_SOURCE_DIR}")
+gtest_discover_tests(test_uscite_elenco PROPERTIES LABELS sicurezza)
 add_executable(test_registro test_registro.cpp)
 target_link_libraries(test_registro PRIVATE kzero_api GTest::gtest_main)
 target_compile_options(test_registro PRIVATE ${KZERO_WARNINGS})

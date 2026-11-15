@@ -36,6 +36,11 @@ TEST(ElencoAMano, LimitiDellIngresso) {
     EXPECT_EQ(campi::leggi_testo("nome: \xED\xA0\x80\n").motivo, campi::Motivo::NonUtf8);       // meta' di una coppia
     EXPECT_EQ(campi::leggi_testo(std::string("nome: a\0b\n", 10)).motivo, campi::Motivo::Controllo);
     EXPECT_EQ(campi::leggi_testo("nome: a\x1b[31mb\n").motivo, campi::Motivo::Controllo);
+    // K-021 (punto 0, H): i controlli C1 (U+0080 ... U+009F, es. U+0085 "a capo" e U+009B, l'inizio delle sequenze del terminale);
+    // U+00A0 (spazio indivisibile) e' un carattere normale.
+    for (const char* c1 : {"\xC2\x80", "\xC2\x85", "\xC2\x9B", "\xC2\x9F"})
+        EXPECT_EQ(campi::leggi_testo(std::string("nome: a") + c1 + "b\n").motivo, campi::Motivo::Controllo) << c1;
+    EXPECT_EQ(campi::leggi_testo("nome: a\xC2\xA0" "b\n").motivo, campi::Motivo::Nessuno);
     EXPECT_EQ(campi::leggi_testo("nome: Nicol\xC3\xB2\tD'Angelo").motivo, campi::Motivo::Nessuno);   // senza a capo finale
     // La riga troppo lunga si scarta senza tenerla tutta in memoria, e conta il numero giusto.
     const campi::Righe lunga = campi::leggi_testo("nome: a\nvia: " + std::string(3 * campi::kRigaByte, 'y') + "\n");
@@ -97,12 +102,12 @@ struct Prova {
         return comando(a);
     }
     Risultato a_mano(const std::string& cmd, const std::vector<std::string>& righe, const std::string& utente, const std::string& pw,
-                     std::vector<std::string> altri, bool scrivere = true) {
+                     std::vector<std::string> altri, bool scrivere = true, const std::string& data = "2026-11-12") {
         amb.password = {pw};
         valori.clear();
         for (const std::string& r : righe) valori += r + "\n";
         letti = 0;
-        std::vector<std::string> a = {cmd, chiuso.string(), "--utente", utente, "--riferimento", "mail del committente", "--data", "2026-11-12"};
+        std::vector<std::string> a = {cmd, chiuso.string(), "--utente", utente, "--riferimento", "mail del committente", "--data", data};
         if (scrivere) a.insert(a.end(), {"--scrivi", chiuso.string()});
         a.insert(a.end(), altri.begin(), altri.end());
         return comando(a);
@@ -226,4 +231,31 @@ TEST(ElencoAManoComandi, UsciteDelResoconto) {
     EXPECT_NE(l.uscita.find("K-CTR-156: Riga 5: per l'utente U-000004"), std::string::npos) << l.uscita;   // NERI: nome di prima
     EXPECT_NE(l.uscita.find("U-000005 \"GIALLI PAOLO\": tolto a mano e non nel file: se ne va davvero"), std::string::npos) << l.uscita;
     EXPECT_EQ(l.uscita.find(": nuovo."), std::string::npos) << l.uscita;   // nessun "uscito + nuovo"
+}
+
+// K-021 (punto 0, prove mancanti trovate dall'arbitro nel K-020). A: la nota dello stato non si vede senza --includi-dati-personali.
+// G: il testo di una fermata non riconosciuta non si vede senza il parametro. D: togliere a mano con una data prima dell'aggiunta e'
+// un errore (K-ERR-051). Testo e JSON.
+TEST(ElencoAManoComandi, NotaETestoDellaFermataRiservati) {
+    Prova p;
+    // VERDI LUCA (U-000002) e' sospeso con una nota; la nota nuova e una fermata che non e' un luogo del pacchetto.
+    const std::vector<std::string> righe = {"stato: SOSPESO - nota nuova riservata", "fermata: Bivio del castagno nascosto"};
+    for (const bool json : {false, true}) {
+        std::vector<std::string> altri = {"--utente-elenco", "U-000002"};
+        if (json) altri.insert(altri.end(), {"--formato", "json"});
+        const Risultato r = p.a_mano("cambia-in-elenco", righe, "A", kPw, altri, false);
+        for (const char* x : {"nota nuova riservata", "da attivare solo per ritorno", "castagno"})
+            EXPECT_EQ(r.uscita.find(x), std::string::npos) << x << "\n" << r.uscita;
+        altri.push_back("--includi-dati-personali");
+        const Risultato v = p.a_mano("cambia-in-elenco", righe, "A", kPw, altri, false);
+        for (const char* x : {"nota nuova riservata", "da attivare solo per ritorno", "castagno"})
+            EXPECT_NE(v.uscita.find(x), std::string::npos) << x << "\n" << v.uscita;
+    }
+    // D: aggiunto il 12/11, tolto con la data dell'11/11: errore, niente cambia; il 12/11 va bene.
+    p.a_mano("aggiungi-in-elenco", {"nome: ROSA DEMO", "scuola: " + kPrim, "stato: ATTIVO", "percorsi: AM/ALFA"}, "A", kPw, {"--profilo", "PR-CVA"});
+    const std::string prima = p.normale();
+    EXPECT_EQ(errore_di([&] { p.a_mano("togli-da-elenco", {}, "A", kPw, {"--utente-elenco", "U-000006"}, true, "2026-11-11"); }), "K-ERR-051");
+    EXPECT_EQ(p.normale(), prima);
+    const Risultato t = p.a_mano("togli-da-elenco", {}, "A", kPw, {"--utente-elenco", "U-000006"}, true, "2026-11-12");
+    EXPECT_NE(t.uscita.find("Utente tolto a mano dall'elenco: U-000006"), std::string::npos) << t.uscita;
 }
