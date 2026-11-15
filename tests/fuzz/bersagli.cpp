@@ -2,6 +2,7 @@
 #include "bersagli.hpp"
 
 #include <algorithm>
+#include <cmath>
 #include <cstdlib>
 #include <filesystem>
 #include <fstream>
@@ -27,6 +28,8 @@
 #include "lettore.hpp"
 #include "parametri.hpp"
 #include "riservatezza.hpp"
+#include "schede.hpp"
+#include "schede_scrittura.hpp"
 #include "schemi_dati.hpp"
 #include "tempo.hpp"
 #include "uscita.hpp"
@@ -620,6 +623,142 @@ int prova_semi_elenco() {
     return n;
 }
 
+// --- Schede dei servizi (K-021) --------------------------------------------------------------------------------------------
+
+namespace {
+
+const Lettura& lettura_schede() {
+    static const Lettura l = [] {
+        PacchettoInMemoria m;
+        const PacchettoIncorporato demo("esempi/demo");
+        const std::string k019 = std::string(KZERO_SORGENTI) + "/tests/esempi/k019-elenco/";
+        const std::string k021 = std::string(KZERO_SORGENTI) + "/tests/esempi/k021-schede/";
+        const JsonDati c19 = JsonDati::parse(testo_di(k019 + "codici_esterni.json"));
+        const JsonDati c21 = JsonDati::parse(testo_di(k021 + "codici_esterni.json"));
+        for (const auto& v : demo.voci()) {
+            std::string t = demo.leggi(v.nome, kMassimoByteFile).testo;
+            for (const char* f : {"scuole", "luoghi", "calendari"})
+                if (v.nome == std::string(f) + ".json") {
+                    JsonDati d = JsonDati::parse(t);
+                    for (JsonDati& x : d.at(f)) {
+                        const std::string c = x.at("codice").get<std::string>();
+                        for (const JsonDati* codici : {&c19, &c21}) {
+                            if (!codici->contains(f) || !codici->at(f).contains(c)) continue;
+                            if (!x.contains("codici_esterni")) x["codici_esterni"] = JsonDati::array();
+                            for (const JsonDati& e : codici->at(f).at(c)) x["codici_esterni"].push_back(e);
+                        }
+                    }
+                    t = d.dump();
+                }
+            m.file[v.nome] = t;
+        }
+        m.file["profili_schede.json"] = testo_di(k021 + "profili_schede.json");
+        Lettura x = leggi_pacchetto(m);
+        if (!x.forma_valida()) guasto("pacchetto di prova delle schede con errori di forma");
+        return x;
+    }();
+    return l;
+}
+
+// Le tre tabelle dal testo: i fogli separati da una riga "@@" (schede, fermate, date).
+kzero::CardTables tabelle_da_testo(const std::string& t) {
+    std::vector<std::string> parti(1);
+    std::size_t a = 0;
+    while (a <= t.size()) {
+        const std::size_t b = std::min(t.find('\n', a), t.size());
+        const std::string riga = t.substr(a, b - a);
+        if (riga == "@@" && parti.size() < 3) parti.emplace_back();
+        else parti.back() += riga + "\n";
+        if (b == t.size()) break;
+        a = b + 1;
+    }
+    parti.resize(3);
+    return {tabella_da_testo(parti[0]), tabella_da_testo(parti[1]), tabella_da_testo(parti[2])};
+}
+
+}  // namespace
+
+void prova_schede_righe(const std::uint8_t* dati, std::size_t n) {
+    const Lettura& l = lettura_schede();
+    const kzero::Index idx(l.pacchetto);
+    const kzero::CardTables tab = tabelle_da_testo(std::string(reinterpret_cast<const char*>(dati), n));
+    const kzero::CardProfile& p = l.pacchetto.card_profiles.at(0);
+    for (const bool date1904 : {false, true}) {
+        const kzero::CardsRead r = kzero::read_cards(tab, p, idx, date1904);
+        if (r.fault != kzero::TableFault::None) continue;
+        // Una scheda letta torna sempre con i suoi totali: mai una scheda che non torna accettata.
+        for (const kzero::CardRead& c : r.cards) {
+            if (c.fault) continue;
+            const kzero::Card& k = c.card;
+            int su = 0, giu = 0, a_bordo = 0;
+            double pieni = 0, vuoti = 0;
+            if (k.stops.size() < 2 || k.schools.empty() || k.to < k.from || k.base_calendar.empty()) guasto("scheda incompleta accettata");
+            for (std::size_t i = 0; i < k.stops.size(); ++i) {
+                const kzero::CardStop& s = k.stops[i];
+                if (i && s.time < k.stops[i - 1].time) guasto("orario all'indietro accettato");
+                a_bordo += s.boarding - s.alighting;
+                if (a_bordo < 0) guasto("piu' persone scese di quelle a bordo");
+                su += s.boarding;
+                giu += s.alighting;
+                pieni += s.loaded_km.value_or(0.0);
+                vuoti += s.empty_km.value_or(0.0);
+            }
+            if (su != k.pupils || giu != k.pupils) guasto("totali che non tornano accettati");
+            if (std::llround(pieni * 100) != std::llround(k.total_loaded_km * 100) || std::llround(vuoti * 100) != std::llround(k.total_empty_km * 100))
+                guasto("km che non tornano accettati");
+            if (k.cadence_form == kzero::CadenceForm::ListedDates && k.dates.empty()) guasto("date elencate vuote accettate");
+        }
+        // Il confronto (con le tre scelte) e i documenti fatti dal programma: sempre conformi agli schemi, codici mai ripetuti.
+        for (const kzero::DateChoice::Kind scelta : {kzero::DateChoice::Kind::None, kzero::DateChoice::Kind::Activation,
+                                                    kzero::DateChoice::Kind::TakenInCharge}) {
+            kzero::DateChoices sc;
+            sc.file.kind = scelta;
+            const kzero::CardsMerge m = kzero::merge_cards(l.pacchetto, p, "CT-SCU", kzero::day_from_ymd(2026, 11, 16), "prova", sc, r);
+            if (m.outcomes.size() != r.cards.size()) guasto("schede perse o inventate");
+            if (scelta == kzero::DateChoice::Kind::None)
+                for (const kzero::CardOutcome& o : m.outcomes)
+                    if ((o.kind == kzero::CardOutcome::Kind::New || o.kind == kzero::CardOutcome::Kind::NewVersion) && o.from != kzero::ChoiceFrom::None)
+                        guasto("data scelta dal programma");
+            if (m.added.empty()) continue;
+            try {
+                const Lettura d = schede::con_documenti(l, schede::documenti_dopo(l, m.cards, l.pacchetto.removed_cards, m.added, m.removed,
+                                                                                   m.cuts, m.new_homes));
+                if (!schede::controlla_elementi(d).empty()) guasto("elementi fatti diversi da quelli della scheda");
+            } catch (const std::logic_error&) {
+                guasto("documenti fatti dal programma non conformi agli schemi");
+            }
+        }
+    }
+}
+
+void scrivi_semi_schede(const std::string& cartella) {
+    namespace fs = std::filesystem;
+    const std::string k021 = std::string(KZERO_SORGENTI) + "/tests/esempi/k021-schede/";
+    fs::create_directories(fs::path(cartella) / "schede-righe");
+    std::ofstream(fs::path(cartella) / "schede-righe" / "seme-tre-schede", std::ios::binary)
+        << testo_di(k021 + "schede.tsv") << "@@\n" << testo_di(k021 + "fermate.tsv") << "@@\n" << testo_di(k021 + "date.tsv");
+}
+
+int prova_semi_schede() {
+    namespace fs = std::filesystem;
+    const fs::path cartella = fs::temp_directory_path() / ("kzero-semi-schede-" + std::to_string(::getpid()));
+    scrivi_semi_schede(cartella.string());
+    int n = 0;
+    for (const auto& e : fs::directory_iterator(cartella / "schede-righe")) {
+        const std::string t = testo_di(e.path().string());
+        prova("schede-righe", reinterpret_cast<const std::uint8_t*>(t.data()), t.size());
+        ++n;
+    }
+    std::error_code ec;
+    fs::remove_all(cartella, ec);
+    // Il seme deve essere buono: due schede si leggono, la terza ha un totale sbagliato.
+    const std::string k021 = std::string(KZERO_SORGENTI) + "/tests/esempi/k021-schede/";
+    const kzero::CardsRead r = kzero::read_cards(tabelle_da_testo(testo_di(k021 + "schede.tsv") + "@@\n" + testo_di(k021 + "fermate.tsv")),
+                                                 lettura_schede().pacchetto.card_profiles.at(0), kzero::Index(lettura_schede().pacchetto), false);
+    if (r.cards.size() != 3 || r.cards[0].fault || r.cards[1].fault || !r.cards[2].fault) guasto("il seme delle schede non si legge come atteso");
+    return n;
+}
+
 bool prova(const std::string& bersaglio, const std::uint8_t* dati, std::size_t n) {
     if (bersaglio == "cassaforte") prova_cassaforte(dati, n);
     else if (bersaglio == "cassaforte-voci") prova_cassaforte_voci(dati, n);
@@ -632,6 +771,7 @@ bool prova(const std::string& bersaglio, const std::uint8_t* dati, std::size_t n
     else if (bersaglio == "elenco-foglio") prova_elenco_foglio(dati, n);
     else if (bersaglio == "elenco-righe") prova_elenco_righe(dati, n);
     else if (bersaglio == "elenco-campi") prova_elenco_campi(dati, n);
+    else if (bersaglio == "schede-righe") prova_schede_righe(dati, n);
     else if (bersaglio.rfind("pacchetto-", 0) == 0 && file_dati_per_nome(bersaglio.substr(10)))
         prova_file_del_pacchetto(bersaglio.substr(10), dati, n);
     else return false;

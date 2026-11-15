@@ -258,10 +258,10 @@ void aggiungi_schede(std::vector<DefinizioneControllo>& c) {
                  {"Le schede {scheda} e {altra} sono dello stesso servizio {servizio} e valgono tutte e due dal {dal} al {al}: il "
                   "programma non le unisce (ID diversi). Controllare: forse una delle due va tolta (kzero togli-scheda)."}});
     c.push_back({Check::CardElementChanged, "K-CTR-170", A, N, "Elemento di una scheda diverso dalla scheda",
-                 {"Il {cosa} {codice} della scheda {scheda} (versione {versione}) non e' piu' quello che la scheda da' (cambiato a "
-                  "mano: {campo}): una versione nuova della scheda lo rifara' dalla scheda.",
-                  "Il {cosa} {codice} della scheda {scheda} (versione {versione}) non c'e' nel pacchetto: una versione nuova della scheda "
-                  "lo rifara'."}});
+                 {"Scheda {scheda}, versione {versione}: l'elemento {codice} ({cosa}) non corrisponde piu' alla scheda (cambiato a mano: "
+                  "{campo}). Una versione nuova della scheda lo rifara' dalla scheda.",
+                  "Scheda {scheda}, versione {versione}: l'elemento {codice} ({cosa}) non c'e' nel pacchetto. Una versione nuova della "
+                  "scheda lo rifara'."}});
     c.push_back({Check::CardEscortMissing, "K-CTR-171", A, N, "Accompagnatore che manca su una corsa di una scheda",
                  {"Corsa {corsa} (scheda {scheda}): dal passaggio {da} (alle {orario}) a {a} c'e' qualcuno a bordo senza "
                   "l'accompagnatore, e il regolamento {regolamento} lo chiede ({fonte}). Il servizio va fatto comunque con "

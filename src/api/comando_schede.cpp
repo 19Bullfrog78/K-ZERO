@@ -334,12 +334,17 @@ Risultato uscita_lettura(const DefinizioneComando& comando, const Parametri& par
             s["versioni_tolte"] = o.removed_versions;
             s["giornate_prima_della_presa_in_carico"] =
                 o.kind == kzero::CardOutcome::Kind::NewVersion && o.valid.from < *par.data_sblocco ? Json(o.days_before_taken) : Json(nullptr);
+            // Senza i dati particolari non si dice quale casella cambia (direbbe la casella): una voce sola, "dati_particolari".
             Json cambia = Json::array();
+            bool riservata = false;
             for (const kzero::CardChange& x : o.changes) {
-                const bool vede = !x.particular || v.particolari;
-                cambia.push_back({{"cosa", x.what}, {"prima", vede ? Json(x.before) : Json(nullptr)}, {"dopo", vede ? Json(x.after) : Json(nullptr)},
-                                  {"riservato", !vede}});
+                if (x.particular && !v.particolari) {
+                    riservata = true;
+                    continue;
+                }
+                cambia.push_back({{"cosa", x.what}, {"prima", x.before}, {"dopo", x.after}, {"riservato", false}});
             }
+            if (riservata) cambia.push_back({{"cosa", "dati_particolari"}, {"prima", nullptr}, {"dopo", nullptr}, {"riservato", true}});
             s["cambia"] = cambia;
             const auto pa = scritta && v.particolari ? particolari_di(in, o.service) : std::nullopt;
             s["particolari"] = pa ? Json{{"tipo", pa->tipo}, {"pedana_obbligatoria", pa->pedana}, {"individualizzato", pa->individualizzato},
@@ -398,13 +403,15 @@ Risultato uscita_lettura(const DefinizioneComando& comando, const Parametri& par
                 }
                 if (o.valid.from < *par.data_sblocco)
                     t += "     Giornate prima della presa in carico che cambiano: " + std::to_string(o.days_before_taken) + ".\n";
+                bool riservata = false;
                 for (const kzero::CardChange& x : o.changes) {
                     if (x.particular && !v.particolari) {
-                        t += "     Cambia " + x.what + " (riservato: --includi-dati-particolari).\n";
+                        riservata = true;   // non si dice quale casella: lo direbbe
                         continue;
                     }
                     t += "     Cambia " + x.what + ": prima " + x.before + "; dopo " + x.after + ".\n";
                 }
+                if (riservata) t += "     Cambia anche un dato particolare (riservato: --includi-dati-particolari).\n";
                 break;
             }
             case kzero::CardOutcome::Kind::Same:

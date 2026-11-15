@@ -22,6 +22,7 @@
 #include "cassaforte_prove.hpp"
 #include "elenco_a_mano_prove.hpp"
 #include "errori.hpp"
+#include "schede_prove.hpp"
 #include "xlsx_prove.hpp"
 
 using namespace kzero;
@@ -77,7 +78,7 @@ struct Prova {
     std::size_t uscite = 0, viste_n = 0, viste_l = 0;
 
     Prova() {
-        PacchettoInMemoria m = pacchetto_di_prova();
+        PacchettoInMemoria m = kzero::prove::schede::pacchetto_di_prova();   // K-021: anche il profilo delle schede
         JsonDati luoghi = JsonDati::parse(m.file.at("luoghi.json"));
         for (JsonDati& l : luoghi.at("luoghi"))
             if (l.at("codice") == "L-CENTRO")
@@ -229,6 +230,48 @@ TEST(UsciteElenco, NessunDatoPersonaleSenzaIParametri) {
         p.in_tutti_i_modi(p.a_mano("togli-da-elenco", u(n)), "togliere l'utente " + std::to_string(n), {}, legato);
         p.in_tutti_i_modi(p.a_mano("rimetti-in-elenco", u(n)), "rimettere l'utente " + std::to_string(n), {}, legato);
         p.in_tutti_i_modi(p.a_mano("cancella-da-elenco", u(n)), "cancellare l'utente " + std::to_string(n), {}, legato);
+    }
+    // K-021: le uscite di leggi-schede e togli-scheda. Nessun dato personale (le case porta a porta hanno solo il codice); tipo, pedana,
+    // servizio individualizzato e accompagnatore richiesto (dati particolari) solo con --includi-dati-particolari.
+    {
+        namespace sp = kzero::prove::schede;
+        sp::Fogli f = sp::fogli_di_prova();
+        f.schede[1][14] = "X";   // individualizzato
+        f.schede[1][15] = "X";   // attrezzato
+        f.fermate[1][2] = "";
+        f.fermate[1][3] = "PAP-901";   // una casa (un codice, mai l'indirizzo)
+        std::ofstream(p.lavoro / "schede.xlsx", std::ios::binary) << sp::file_schede(f);
+        const std::vector<std::string> leggi = {"leggi-schede", (p.lavoro / "schede.xlsx").string(), p.chiuso.string(), "--profilo", "PS-CVA",
+                                                "--contratto", "CT-SCU", "--data", "2026-11-16", "--riferimento", "mail del committente",
+                                                "--utente", "A", "--validita", "attivazione"};
+        int viste_particolari = 0;
+        const auto particolari = [&](const Risultato& r, const Modo& m, const std::string& cosa) {
+            p.controlla(r, m, cosa);
+            for (const char* x : {"pedana obbligatoria", "\"pedana_obbligatoria\"", "Tipo scolastico", "\"tipo\": \"scolastico\"",
+                                  "individualizzato si'", "\"individualizzato\"", "\"assistente_richiesto\"", "attrezzato"})
+                if (!m.particolari) {
+                    EXPECT_EQ(r.uscita.find(x), std::string::npos) << cosa << " (" << m.nome() << "): " << x << "\n" << r.uscita;
+                }
+            if (m.particolari && (r.uscita.find("pedana obbligatoria si'") != std::string::npos ||
+                                  r.uscita.find("\"pedana_obbligatoria\": true") != std::string::npos))
+                ++viste_particolari;
+        };
+        for (const Modo& m : kModi) particolari(p.esegui(leggi, m), m, "leggi-schede (anteprima)");
+        std::vector<std::string> scrivi = leggi;
+        scrivi.insert(scrivi.end(), {"--scrivi", p.chiuso.string()});
+        particolari(p.esegui(scrivi, Modo{}), Modo{}, "leggi-schede (scritto)");
+        // La versione nuova senza le due caselle: tra le cose che cambiano, i dati particolari non si dicono.
+        f.schede[1][14] = "";
+        f.schede[1][15] = "";
+        f.schede[1][21] = "Modifica";
+        std::ofstream(p.lavoro / "schede.xlsx", std::ios::binary) << sp::file_schede(f);
+        std::vector<std::string> nuova = leggi;
+        nuova.back() = "presa-in-carico";
+        for (const Modo& m : kModi) particolari(p.esegui(nuova, m), m, "leggi-schede (versione nuova)");
+        const std::vector<std::string> togli = {"togli-scheda", p.chiuso.string(), "--scheda", "SCH-4000123-3", "--riferimento",
+                                                "copiata per errore", "--data", "2026-11-17", "--utente", "A", "--tutte"};
+        for (const Modo& m : kModi) particolari(p.esegui(togli, m), m, "togli-scheda");
+        EXPECT_GE(viste_particolari, 2);
     }
     // La prova vede i valori quando li deve vedere (altrimenti non proverebbe niente).
     EXPECT_GT(p.viste_n, 20u);
