@@ -81,6 +81,8 @@ enum class Errore {
     ElencoSoloNumeri,
     UtenteElencoNonTrovato,
     SbloccoNonAmmesso,
+    CampiScrittiMale,      // K-020: i campi di una modifica a mano (ingresso standard)
+    ModificaNonAmmessa,    // K-020: una modifica a mano che non si puo' fare
 };
 
 struct DefinizioneErrore {

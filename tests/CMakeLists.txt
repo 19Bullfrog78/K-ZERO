@@ -73,6 +73,11 @@ target_link_libraries(test_elenco_a_mano PRIVATE kzero_api GTest::gtest_main)
 target_compile_options(test_elenco_a_mano PRIVATE ${KZERO_WARNINGS})
 target_compile_definitions(test_elenco_a_mano PRIVATE KZERO_CARTELLA_PROVE="${CMAKE_CURRENT_SOURCE_DIR}")
 gtest_discover_tests(test_elenco_a_mano PROPERTIES LABELS sicurezza)
+add_executable(test_elenco_a_mano_comandi test_elenco_a_mano_comandi.cpp)
+target_link_libraries(test_elenco_a_mano_comandi PRIVATE kzero_api GTest::gtest_main)
+target_compile_options(test_elenco_a_mano_comandi PRIVATE ${KZERO_WARNINGS})
+target_compile_definitions(test_elenco_a_mano_comandi PRIVATE KZERO_CARTELLA_PROVE="${CMAKE_CURRENT_SOURCE_DIR}")
+gtest_discover_tests(test_elenco_a_mano_comandi PROPERTIES LABELS sicurezza)
 add_executable(test_registro test_registro.cpp)
 target_link_libraries(test_registro PRIVATE kzero_api GTest::gtest_main)
 target_compile_options(test_registro PRIVATE ${KZERO_WARNINGS})
@@ -1648,6 +1653,45 @@ kzero_elenco(elenco_scrivi_altra_cartella USCITA 2 FORMATO testo ERRORE K-ERR-04
 # Un file che non e' un .xlsx (qui il testo da cui le prove costruiscono il file Excel): niente si apre, nemmeno la password.
 kzero_elenco(elenco_file_non_xlsx USCITA 1 FORMATO json SCHEMA errore ERRORE K-ERR-042
              ARGOMENTI leggi-elenco ${CMAKE_CURRENT_SOURCE_DIR}/esempi/k019-elenco/prima-lettura.tsv @PACCHETTO@ ${K019_LEGGI} --formato json)
+# K-020: modifiche a mano dell'elenco. I campi sull'ingresso standard, dopo la password (RIGHE).
+function(kzero_elenco_a_mano nome)
+  cmake_parse_arguments(E "" "" "ARGOMENTI;RIGHE" ${ARGN})
+  kzero_prova(${nome} BASE ${KZERO_K019}/chiuso INGRESSO "${PW_K019}" ${E_RIGHE} ${E_UNPARSED_ARGUMENTS}
+              ARGOMENTI ${E_ARGOMENTI} --utente TITOLARE --password-da-ingresso)
+  set_tests_properties(programma.${nome} PROPERTIES FIXTURES_REQUIRED k019)
+endfunction()
+set(K020_RIF --riferimento "mail del committente del 12/11" --data 2026-11-12)
+set(K020_LETTO PREPARA leggi-elenco ${KZERO_K019}/prima-lettura.xlsx @PACCHETTO@ ${K019_LEGGI} --scrivi @PACCHETTO@ --utente TITOLARE
+               --password-da-ingresso PREPARA_INGRESSO "${PW_K019}")
+kzero_elenco_a_mano(elenco_aggiungi USCITA 0 FORMATO testo
+                    RIGHE "nome: ORSA PROVA" "scuola: Scuola primaria Valfonda" "stato: ATTIVO" "percorsi: AM/ALFA"
+                    CONTIENE "Anteprima (niente e' stato scritto" "Utente aggiunto a mano all'elenco: U-000001 (committente CVA)"
+                             "nome: (riservato: --includi-dati-personali)." "Avviso K-CTR-154"
+                    NON_CONTIENE "ORSA"
+                    ARGOMENTI aggiungi-in-elenco @PACCHETTO@ --profilo PR-CVA --anno-scolastico 2026-2027 ${K020_RIF})
+kzero_elenco_a_mano(elenco_aggiungi_json USCITA 0 FORMATO json SCHEMA modifica_elenco
+                    RIGHE "nome: ORSA PROVA" "scuola: Scuola primaria Valfonda" "stato: ATTIVO" "percorsi: AM/ALFA"
+                    CONTIENE "\"azione\": \"aggiunto\"" "\"utente_elenco\": \"U-000006\"" "\"scritto\": true" "\"nome\": null"
+                    NON_CONTIENE "ORSA"
+                    ${K020_LETTO}
+                    ARGOMENTI aggiungi-in-elenco @PACCHETTO@ --profilo PR-CVA ${K020_RIF} --scrivi @PACCHETTO@ --formato json)
+kzero_elenco_a_mano(elenco_cambia_casa_json USCITA 0 FORMATO json SCHEMA modifica_elenco
+                    RIGHE "comune: Pradello" "frazione: Croce" "via: via dei Larici" "civico: 23"
+                    CONTIENE "\"azione\": \"cambiato\"" "\"campo\": \"casa\"" "\"valore_di_prima\": \"ricordato\"" "K-CTR-153"
+                    NON_CONTIENE "Larici" "via Roma"
+                    ${K020_LETTO}
+                    ARGOMENTI cambia-in-elenco @PACCHETTO@ --utente-elenco U-000001 ${K020_RIF} --formato json)
+kzero_elenco_a_mano(elenco_togli_json USCITA 0 FORMATO json SCHEMA modifica_elenco
+                    CONTIENE "\"azione\": \"tolto\"" "\"sblocchi\": 0" "K-CTR-155"
+                    ${K020_LETTO}
+                    ARGOMENTI togli-da-elenco @PACCHETTO@ --utente-elenco U-000004 ${K020_RIF} --scrivi @PACCHETTO@ --formato json)
+kzero_elenco_a_mano(elenco_campi_scritti_male USCITA 2 FORMATO json SCHEMA errore ERRORE K-ERR-050
+                    RIGHE "nome: ORSA PROVA" "telefono: 000 0000001"
+                    NON_CONTIENE "ORSA" "0000001"
+                    ARGOMENTI aggiungi-in-elenco @PACCHETTO@ --profilo PR-CVA --anno-scolastico 2026-2027 ${K020_RIF} --formato json)
+kzero_elenco_a_mano(elenco_modifica_senza_riferimento USCITA 2 FORMATO testo ERRORE K-ERR-013
+                    ARGOMENTI togli-da-elenco @PACCHETTO@ --utente-elenco U-000004 --data 2026-11-12)
+
 kzero_prova(elenco_pacchetto_in_chiaro USCITA 2 FORMATO testo ERRORE K-ERR-031
             ARGOMENTI leggi-elenco ${CMAKE_CURRENT_SOURCE_DIR}/esempi/k019-elenco/prima-lettura.tsv ${KZERO_DEMO} ${K019_LEGGI} --utente A)
 

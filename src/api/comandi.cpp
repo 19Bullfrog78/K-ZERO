@@ -385,6 +385,98 @@ std::vector<DefinizioneComando> comandi_elenco() {
                      "kzero leggi-elenco (dati personali e particolari), voce nel registro.",
                      {{"cartella", "Cartella del pacchetto chiuso."}}, p, Schema{"sblocco", 1}, esegui_sblocco});
     }
+    // K-020: modifiche a mano dell'elenco. Stessi parametri di base; i valori dei campi dall'ingresso standard, mai come parametri.
+    const auto base_a_mano = [](const std::string& di_che) {
+        std::vector<DefinizioneParametro> p{parametro_formato(), parametro_password_da_ingresso(), parametro_utente(true),
+                                            parametro_dati_personali(), parametro_dati_particolari()};
+        DefinizioneParametro s = parametro_scrivi("La cartella del pacchetto chiuso, la stessa dell'argomento: con --scrivi la modifica si "
+                                                  "scrive nella cassaforte; senza, si vede soltanto (anteprima).");
+        s.obbligatorio = false;
+        p.push_back(s);
+        DefinizioneParametro r;
+        r.nome = "--riferimento";
+        r.tipo = TipoParametro::Valore;
+        r.forma = FormaValore::Testo;
+        r.obbligatorio = true;
+        r.descrizione = "Il riferimento della modifica " + di_che + " (es. la mail del committente). Dato comune: senza nomi di persone.";
+        r.applica = [](Parametri& par, const std::string& v) { par.riferimento = v; };
+        p.push_back(r);
+        DefinizioneParametro d;
+        d.nome = "--data";
+        d.tipo = TipoParametro::Valore;
+        d.forma = FormaValore::Data;
+        d.obbligatorio = true;
+        d.descrizione = "La data della modifica, scritta dall'utente (il programma non usa l'orologio): non prima dell'ultima modifica a "
+                        "mano dello stesso campo (lo stesso giorno va bene).";
+        d.applica = [](Parametri& par, const std::string& v) { par.data_sblocco = kzero::day_from_text(v); };
+        p.push_back(d);
+        return p;
+    };
+    const auto utente_elenco = [] {
+        return parametro_codice("--utente-elenco", "Il codice dell'utente dell'elenco (es. U-000012).", true,
+                                [](Parametri& par, const std::string& v) { par.utente_elenco = v; });
+    };
+    const std::string campi_da_ingresso =
+        " I campi si scrivono sull'ingresso standard (mai come parametri: finirebbero nella storia dei comandi e nell'elenco dei processi), "
+        "una riga per campo, \"campo: valore\", fino alla fine o a una riga vuota (con --password-da-ingresso la password e' la prima "
+        "riga): nome, scuola, stato, percorsi, fermata, comune, frazione, via, civico, classe, sezione e \"orari <titolo della "
+        "colonna>\", con le notazioni del file del committente lette con il profilo dell'elenco. Serve chi ha i dati personali e "
+        "particolari; senza --scrivi mostra soltanto cosa cambierebbe.";
+    const std::vector<DefinizioneArgomento> cartella = {{"cartella", "Cartella del pacchetto chiuso (livello completo)."}};
+    {
+        auto p = base_a_mano("(aggiunta)");
+        p.push_back(parametro_codice("--profilo", "Il profilo di lettura dell'elenco del committente (codice di profili_elenchi.json).", true,
+                                     [](Parametri& par, const std::string& v) { par.profilo = v; }));
+        DefinizioneParametro a;
+        a.nome = "--anno-scolastico";
+        a.tipo = TipoParametro::Valore;
+        a.forma = FormaValore::AnnoScolastico;
+        a.descrizione = "Solo se il committente non ha ancora un elenco nel pacchetto: il suo anno scolastico (es. 2026-2027).";
+        a.applica = [](Parametri& par, const std::string& v) { par.anno_scolastico = std::stoi(v.substr(0, 4)); };
+        p.push_back(a);
+        c.push_back({"aggiungi-in-elenco",
+                     "Aggiunge a mano un utente all'elenco del committente (es. una mail con un utente nuovo), con un codice nuovo (mai dal "
+                     "nome, unico in tutto il pacchetto). Servono nome, scuola e stato. Resta \"aggiunto a mano\" finche' un file del "
+                     "committente lo porta; una lettura completa senza di lui non lo toglie." + campi_da_ingresso,
+                     cartella, p, Schema{"modifica_elenco", 1}, esegui_aggiungi_in_elenco});
+    }
+    {
+        auto p = base_a_mano("(cambio)");
+        p.push_back(utente_elenco());
+        c.push_back({"cambia-in-elenco",
+                     "Cambia a mano uno o piu' campi di un utente dell'elenco (es. una mail con un cambio di casa, di orari, di stato, di "
+                     "ditta). Un campo si sostituisce intero (la casa con tutte le sue parti, gli orari una colonna alla volta); i campi "
+                     "non scritti restano come sono. Si ricorda il valore di prima: alla lettura del file vince l'informazione piu' nuova, "
+                     "e quando non si puo' sapere resta il valore a mano." + campi_da_ingresso,
+                     cartella, p, Schema{"modifica_elenco", 1}, esegui_cambia_in_elenco});
+    }
+    {
+        auto p = base_a_mano("(utente tolto)");
+        p.push_back(utente_elenco());
+        c.push_back({"togli-da-elenco",
+                     "Toglie a mano un utente dall'elenco (es. una mail: lascia il servizio): esce subito dal piano e se ne va davvero, con i "
+                     "suoi sblocchi, alla prima lettura completa del file senza di lui. Si annulla con kzero rimetti-in-elenco. Serve chi ha i "
+                     "dati personali e particolari; senza --scrivi mostra soltanto cosa cambierebbe.",
+                     cartella, p, Schema{"modifica_elenco", 1}, esegui_togli_da_elenco});
+    }
+    {
+        auto p = base_a_mano("(utente rimesso)");
+        p.push_back(utente_elenco());
+        c.push_back({"rimetti-in-elenco",
+                     "Annulla il togliere a mano di un utente; oppure rimette nell'elenco un utente fuori elenco (uscito, tenuto per uno "
+                     "sblocco: es. una mail dice che torna), che resta finche' un file del committente lo riporta. Serve chi ha i dati "
+                     "personali e particolari; senza --scrivi mostra soltanto cosa cambierebbe.",
+                     cartella, p, Schema{"modifica_elenco", 1}, esegui_rimetti_in_elenco});
+    }
+    {
+        auto p = base_a_mano("(utente cancellato)");
+        p.push_back(utente_elenco());
+        c.push_back({"cancella-da-elenco",
+                     "Cancella subito un utente da tutto il pacchetto, con i suoi sblocchi: non resta niente di lui e il suo codice non si "
+                     "da' mai a nessun altro. Se il file del committente lo ha ancora, la lettura dopo lo aggiunge come utente nuovo. Serve "
+                     "chi ha i dati personali e particolari; senza --scrivi mostra soltanto cosa cambierebbe.",
+                     cartella, p, Schema{"modifica_elenco", 1}, esegui_cancella_da_elenco});
+    }
     return c;
 }
 

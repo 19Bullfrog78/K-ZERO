@@ -86,6 +86,8 @@ const std::vector<DefinizioneErrore>& catalogo_errori() {
             {Errore::ElencoSoloNumeri, "K-ERR-047", CodiceUscita::ErroreDati, "Elenco utenti in un pacchetto \"solo numeri\""},
             {Errore::UtenteElencoNonTrovato, "K-ERR-048", CodiceUscita::ErroreParametri, "Utente non presente nell'elenco"},
             {Errore::SbloccoNonAmmesso, "K-ERR-049", CodiceUscita::ErroreParametri, "Sblocco non ammesso"},
+            {Errore::CampiScrittiMale, "K-ERR-050", CodiceUscita::ErroreParametri, "Campi della modifica a mano scritti male"},
+            {Errore::ModificaNonAmmessa, "K-ERR-051", CodiceUscita::ErroreParametri, "Modifica a mano dell'elenco non ammessa"},
         };
         std::sort(c.begin(), c.end(), [](const DefinizioneErrore& a, const DefinizioneErrore& b) {
             return a.codice < b.codice;
