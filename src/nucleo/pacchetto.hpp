@@ -50,6 +50,9 @@ public:
     const ReadingProfile* reading_profile(const Code& c) const { return find(profiles_, c); }
     const ClientList* client_list(const Code& client) const { return find(client_lists_, client); }
     const ListUser* list_user(const Code& c) const { return find(list_users_, c); }
+    // K-021: profili delle schede e schede del registro.
+    const CardProfile* card_profile(const Code& c) const { return find(card_profiles_, c); }
+    const ServiceCard* service_card(const Code& c) const { return find(service_cards_, c); }
 
     // Regolamento che vale per un servizio (quello del suo contratto), se esiste.
     const Regulation* regulation_of(const Service& s) const;
@@ -100,6 +103,8 @@ private:
     Map<ReadingProfile> profiles_;
     Map<ClientList> client_lists_;
     Map<ListUser> list_users_;
+    Map<CardProfile> card_profiles_;
+    Map<ServiceCard> service_cards_;
 };
 
 // Il calendario vale nel giorno d? (Regola completa accanto a Calendar, in domain_models.hpp.)

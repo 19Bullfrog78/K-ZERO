@@ -924,6 +924,10 @@ TEST(Api, classi_marcate_negli_schemi) {
         "servizi/servizi/*/tipo",
         "servizi/servizi/*/tipo_descrizione",
         "servizi/servizi/*/regole/pedana_obbligatoria",
+        "servizi/servizi/*/individualizzato",   // K-021, versione 4: un servizio per una persona sola
+        // K-021: le caselle della copia della scheda nel registro, come la pedana e "individualizzato" del servizio.
+        "schede_servizi/schede/*/versioni/*/scheda/attrezzato",
+        "schede_servizi/schede/*/versioni/*/scheda/individualizzato",
         "servizi/servizi/*/domanda/gruppi/*/tipo",
         "servizi/servizi/*/domanda/gruppi/*/tipo_descrizione",
         "servizi/servizi/*/domanda/gruppi/*/fermate/*/carrozzine",

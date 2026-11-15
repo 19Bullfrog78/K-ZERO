@@ -27,8 +27,9 @@ const std::vector<FileDati>& file_dati() {
          "Committenti: enti e, dalla versione 2, committenti privati (persone: nome e nota sono dati personali)."},
         {"contratti.json", "contratti", {1}, false, "Contratti, senza importi."},
         {"gruppi_servizi.json", "gruppi_servizi", {1}, false, "Gruppi di servizi (es. lotti)."},
-        {"servizi.json", "servizi", {1, 2, 3}, false,
-         "Servizi con la loro domanda e le competenze richieste; dalla versione 3 il tipo ncc (noleggio con conducente)."},
+        {"servizi.json", "servizi", {1, 2, 3, 4}, false,
+         "Servizi con la loro domanda e le competenze richieste; dalla versione 3 il tipo ncc (noleggio con conducente); dalla "
+         "versione 4 il servizio individualizzato (per una persona sola)."},
         {"corse.json", "corse", {1}, false, "Corse con i passaggi, i trasbordi e le coincidenze."},
         {"mezzi.json", "mezzi", {1, 2, 3}, false,
          "Mezzi delle aziende: posti, attrezzature, costi, uso della carta di circolazione, distrazioni, prestiti."},
@@ -50,6 +51,12 @@ const std::vector<FileDati>& file_dati() {
         {"elenco_utenti.json", "elenco_utenti", {1, 2}, false,
          "Elenco utenti dei committenti come lo mandano (K-019): casa, scuola, stato, fermata indicata, ditta e orari di ogni "
          "tratta, sblocchi. Solo nel livello completo."},
+        {"profili_schede.json", "profili_schede", {1}, false,
+         "Profili di lettura delle schede dei servizi di un committente (K-021): fogli, titoli, parole, cadenze e separatori del "
+         "modello in cui si copiano le schede."},
+        {"schede_servizi.json", "schede_servizi", {1}, false,
+         "Registro delle schede dei servizi lette (K-021): per ogni scheda le versioni, con la copia letta, da quando a quando "
+         "valgono e gli elementi del pacchetto fatti dalla scheda."},
     };
     return elenco;
 }
