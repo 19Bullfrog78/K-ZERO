@@ -32,6 +32,7 @@
 #include "uscita.hpp"
 #include "elenco.hpp"
 #include "excel.hpp"
+#include "campi_ingresso.hpp"
 #include "../xlsx_prove.hpp"
 
 namespace kzero::fuzz {
@@ -510,6 +511,53 @@ void prova_elenco_righe(const std::uint8_t* dati, std::size_t n) {
     }
 }
 
+void prova_elenco_campi(const std::uint8_t* dati, std::size_t n) {
+    const campi::Righe r = campi::leggi_testo(std::string(reinterpret_cast<const char*>(dati), n));
+    if (r.motivo != campi::Motivo::Nessuno) {
+        if (r.riga < 1) guasto("riga fuori dai limiti senza numero");
+        return;
+    }
+    if (r.righe.size() > campi::kRighe) guasto("troppe righe accettate");
+    for (const std::string& x : r.righe)
+        if (x.size() > campi::kRigaByte || x.find('\n') != std::string::npos || x.empty()) guasto("riga fuori dai limiti accettata");
+    const Lettura& l = lettura_elenco();
+    const kzero::Index idx(l.pacchetto);
+    for (const kzero::ReadingProfile& p : l.pacchetto.reading_profiles) {
+        // Un elenco con un utente (casa a Pradello), su cui provare l'aggiunta e il cambio.
+        kzero::ClientList lista;
+        lista.client = kzero::Ref{p.client.code, {}};
+        lista.profile = kzero::Ref{p.code, {}};
+        lista.first_year = 2026;
+        kzero::ListUser u;
+        u.code = "U-000001";
+        u.name = "PROVA UNO";
+        u.school = kzero::Ref{l.pacchetto.schools.front().code, {}};
+        u.home = kzero::ListUserHome{"Pradello", "", "via Roma", "3"};
+        lista.users.push_back(u);
+        for (const bool aggiungere : {true, false}) {
+            const kzero::ManualParse in = kzero::parse_manual(r.righe, p, idx, 2026, aggiungere ? nullptr : &u, aggiungere);
+            if (in.error.fault != kzero::ManualFault::None) {
+                if (!in.fields.empty()) guasto("campi letti a meta' con un errore");
+                continue;
+            }
+            for (const kzero::ListUserTime& t : in.values.times)
+                if (t.dates.to < t.dates.from || t.time < 0 || t.time >= 24 * 60 || t.column.empty()) guasto("orario incoerente");
+            if (in.values.class_number && (*in.values.class_number < 0 || *in.values.class_number > 20)) guasto("classe fuori dai limiti");
+            kzero::ClientList x = lista;
+            const kzero::ManualMark segno{"prova", kzero::day_from_ymd(2026, 11, 12)};
+            const kzero::ManualOutcome o =
+                aggiungere ? kzero::manual_add(l.pacchetto, x, in, segno) : kzero::manual_change(x, "U-000001", in, segno);
+            if (o.refusal != kzero::ManualRefusal::None) {
+                if (x.users.size() != lista.users.size()) guasto("elenco cambiato con un rifiuto");
+                continue;
+            }
+            std::set<std::string> codici;
+            for (const kzero::ListUser& y : x.users)
+                if (!codici.insert(y.code).second) guasto("codice ripetuto dopo una modifica a mano");
+        }
+    }
+}
+
 void scrivi_semi_elenco(const std::string& cartella) {
     namespace fs = std::filesystem;
     const std::string k019 = std::string(KZERO_SORGENTI) + "/tests/esempi/k019-elenco/";
@@ -517,6 +565,15 @@ void scrivi_semi_elenco(const std::string& cartella) {
         fs::create_directories(fs::path(cartella) / bersaglio);
         std::ofstream(fs::path(cartella) / bersaglio / nome, std::ios::binary) << testo;
     };
+    // K-020: campi di una modifica a mano, buoni (gli stessi testi del file) e uno con i limiti.
+    scrivi("elenco-campi", "seme-aggiunta",
+           "nome: ROSA DEMO\nscuola: Scuola primaria Valfonda\nstato: SOSPESO - nota\npercorsi: AM/ALFA RM/DITTA GAMMA RP/LINEA C SCOL.\n"
+           "comune: Pradello\nfrazione:\nvia: via dei Mille\ncivico: 7\nclasse: 3\nsezione: A\nfermata: PRADELLO PIAZZA\n"
+           "orari ORARI MATTINA: AM: 08:00 LU-MA-ME-GI-VE | RM: 12:00 LU-MA-ME-GI-VE\n"
+           "orari ORARI POMERIGGIO: //LU o 15.50 [15/09-09/06] //ME f1 15.50 [17/09-23/01] - f2 15.50 [28/01-05/06] //VE rm 12.00\n");
+    scrivi("elenco-campi", "seme-cambio", "Via: via Nuova\nCOMUNE: Pradello\nfrazione: Croce\ncivico: 21/C\n\nnome: dopo la riga vuota\n");
+    scrivi("elenco-campi", "seme-altro-profilo", "Cognome Nome: x\nnome: TPV PROVA\nscuola: IST. SUPERIORE VALFONDA\nstato: Regolare\n"
+                                                "percorsi: ANDATA/ALFA\ncomune: Valfonda\nvia: via Alta\n");
     for (const char* nome : {"prima-lettura", "seconda-lettura"}) {
         const std::string tsv = testo_di(k019 + nome + ".tsv");
         scrivi("elenco-righe", std::string("seme-") + nome, tsv);
@@ -547,7 +604,7 @@ int prova_semi_elenco() {
     const fs::path cartella = fs::temp_directory_path() / ("kzero-semi-elenco-" + std::to_string(::getpid()));
     scrivi_semi_elenco(cartella.string());
     int n = 0;
-    for (const char* b : {"elenco-archivio", "elenco-foglio", "elenco-righe"})
+    for (const char* b : {"elenco-archivio", "elenco-foglio", "elenco-righe", "elenco-campi"})
         for (const auto& e : fs::directory_iterator(cartella / b)) {
             const std::string t = testo_di(e.path().string());
             prova(b, reinterpret_cast<const std::uint8_t*>(t.data()), t.size());
@@ -574,6 +631,7 @@ bool prova(const std::string& bersaglio, const std::uint8_t* dati, std::size_t n
     else if (bersaglio == "elenco-archivio") prova_elenco_archivio(dati, n);
     else if (bersaglio == "elenco-foglio") prova_elenco_foglio(dati, n);
     else if (bersaglio == "elenco-righe") prova_elenco_righe(dati, n);
+    else if (bersaglio == "elenco-campi") prova_elenco_campi(dati, n);
     else if (bersaglio.rfind("pacchetto-", 0) == 0 && file_dati_per_nome(bersaglio.substr(10)))
         prova_file_del_pacchetto(bersaglio.substr(10), dati, n);
     else return false;

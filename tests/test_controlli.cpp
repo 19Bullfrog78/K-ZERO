@@ -840,5 +840,13 @@ TEST(Controlli, catalogo_coperto) {
     EXPECT_EQ(api::definizione_controllo(Check::ListUserOutOfList).codice, "K-CTR-147");
     EXPECT_EQ(api::definizione_controllo(Check::ListRowUnreadable).codice, "K-CTR-148");
     EXPECT_EQ(api::definizione_controllo(Check::ListStopNotRecognized).codice, "K-CTR-152");
-    EXPECT_EQ(api::catalogo_controlli().size(), 152u);
+    // K-020: modifiche a mano dell'elenco (le prove stanno in test_elenco).
+    EXPECT_EQ(api::definizione_controllo(Check::ListManualPending).codice, "K-CTR-153");
+    EXPECT_EQ(api::definizione_controllo(Check::ListAddedByHand).codice, "K-CTR-154");
+    EXPECT_EQ(api::definizione_controllo(Check::ListRemovedByHand).codice, "K-CTR-155");
+    EXPECT_EQ(api::definizione_controllo(Check::ListFileNotUpdated).codice, "K-CTR-156");
+    EXPECT_EQ(api::definizione_controllo(Check::ListFileNewerValue).codice, "K-CTR-157");
+    EXPECT_EQ(api::definizione_controllo(Check::ListAddedNowInFile).codice, "K-CTR-158");
+    EXPECT_EQ(api::definizione_controllo(Check::ListRemovedStillInFile).codice, "K-CTR-159");
+    EXPECT_EQ(api::catalogo_controlli().size(), 159u);
 }

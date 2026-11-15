@@ -181,17 +181,25 @@ void aggiungi_elenco(std::vector<DefinizioneControllo>& c) {
                  {"L'elenco del committente {committente} dice il profilo {profilo}, che e' di un altro committente.",
                   "L'utente {utente} ha la tratta \"{tratta}\", che il profilo del suo elenco non ha.",
                   "L'utente {utente} ha un orario del periodo \"{periodo}\", che il profilo del suo elenco non ha.",
-                  "L'utente {utente} ha la tratta \"{tratta}\" due volte."}});
+                  "L'utente {utente} ha la tratta \"{tratta}\" due volte.",
+                  "L'utente {utente} ha due modifiche a mano della colonna degli orari \"{colonna}\" (K-020): ce ne puo' essere una "
+                  "sola per colonna."}});
     c.push_back({Check::ListUserCodeClash, "K-CTR-141", E, N, "Codice di un utente dell'elenco usato da un altro elemento",
                  {"Il codice dell'utente {utente} dell'elenco e' anche il codice di un altro elemento del pacchetto: i codici degli "
                   "utenti dell'elenco sono unici in tutto il pacchetto (li da' kzero leggi-elenco). Cambiare il codice dell'altro "
                   "elemento."}});
     c.push_back({Check::ListHomonymsInList, "K-CTR-142", E, PE, "Due utenti con lo stesso nome nella stessa scuola",
                  {"Gli utenti {utente} e {altro} dello stesso elenco hanno lo stesso nome nella stessa scuola ({scuola}): una lettura "
-                  "del file non saprebbe quale dei due e' quello di una riga. Correggere l'elenco (es. il nome com'e' nel file)."},
+                  "del file non saprebbe quale dei due e' quello di una riga. Correggere l'elenco (es. il nome com'e' nel file).",
+                  "Gli utenti {utente} e {altro} dello stesso elenco hanno lo stesso nome nella stessa scuola ({scuola}), contando il "
+                  "nome o la scuola di prima di una correzione a mano (con cui la lettura ritrova l'utente): una lettura del file non "
+                  "saprebbe quale dei due e' quello di una riga. Correggere l'elenco (kzero cambia-in-elenco)."},
                  {},
                  {{0, "Due utenti dello stesso elenco hanno lo stesso nome nella stessa scuola ({scuola}): una lettura del file non "
-                      "saprebbe quale dei due e' quello di una riga (quali: --includi-dati-personali)."}}});
+                      "saprebbe quale dei due e' quello di una riga (quali: --includi-dati-personali)."},
+                  {1, "Due utenti dello stesso elenco hanno lo stesso nome nella stessa scuola ({scuola}), contando il nome o la scuola "
+                      "di prima di una correzione a mano: una lettura del file non saprebbe quale dei due e' quello di una riga (quali: "
+                      "--includi-dati-personali)."}}});
     c.push_back({Check::ListOutboundWithoutReturn, "K-CTR-143", A, N, "Andata senza ritorno in un giorno",
                  {"L'utente {utente} ha l'andata ma nessun ritorno di {giorno} in {giorni} giorni, dal {dal} al {al}: controllare gli "
                   "orari del file (se e' giusto cosi', non serve fare niente)."}});
@@ -212,6 +220,21 @@ void aggiungi_elenco(std::vector<DefinizioneControllo>& c) {
                   "completa.",
                   "L'utente {utente} non e' piu' nell'elenco del committente e non ha piu' sblocchi: se ne andra' alla prossima "
                   "lettura completa."}});
+    // K-020: lo stato delle modifiche a mano che resta nell'elenco (anche in kzero controlla).
+    c.push_back({Check::ListManualPending, "K-CTR-153", A, N, "Modifica a mano non ancora confermata dal file",
+                 {"L'utente {utente} ha il campo \"{campo}\" cambiato a mano il {data} ({riferimento}), non ancora confermato da un "
+                  "file del committente: alla prossima lettura, se il file ha ancora il valore di prima resta il valore a mano; se ha "
+                  "un valore nuovo vince il file.",
+                  "L'utente {utente} e' stato rimesso a mano nell'elenco il {data} ({riferimento}), e nessun file del committente lo ha "
+                  "ancora riportato: resta nell'elenco (con i suoi sblocchi) finche' un file lo porta."}});
+    c.push_back({Check::ListAddedByHand, "K-CTR-154", A, N, "Utente aggiunto a mano, non ancora nel file",
+                 {"L'utente {utente} e' stato aggiunto a mano il {data} ({riferimento}) e non e' ancora in un file del committente: "
+                  "resta (anche se una lettura completa non lo ha) finche' il file lo porta, o finche' lo si toglie a mano."}});
+    c.push_back({Check::ListRemovedByHand, "K-CTR-155", A, N, "Utente tolto a mano",
+                 {"L'utente {utente} e' stato tolto a mano il {data} ({riferimento}): non entra piu' nel piano e se ne andra' alla "
+                  "prima lettura completa del file senza di lui (si annulla con kzero rimetti-in-elenco).",
+                  "L'utente {utente} e' stato tolto a mano il {data} ({riferimento}): non entra piu' nel piano e se ne andra', con i suoi "
+                  "sblocchi ({sblocchi}), alla prima lettura completa del file senza di lui (si annulla con kzero rimetti-in-elenco)."}});
     const std::string riga = "Riga {riga}, colonna \"{colonna}\": ";
     const std::string non_si_legge = ": la riga non si legge (le altre si', e un utente gia' nell'elenco resta com'e').";
     c.push_back({Check::ListRowUnreadable, "K-CTR-148", E, N, "Riga illeggibile del file del committente",
@@ -234,7 +257,10 @@ void aggiungi_elenco(std::vector<DefinizioneControllo>& c) {
                   riga + "nome e scuola sono di due utenti gia' nell'elenco, e non si sa quale sia (K-CTR-142)" + non_si_legge}});
     c.push_back({Check::ListRowHomonyms, "K-CTR-149", E, N, "Righe con lo stesso nome nella stessa scuola",
                  {"Righe {righe}: {quante} utenti con lo stesso nome nella stessa scuola ({scuola}): le righe si fermano, il programma non "
-                  "indovina quale sia chi. Gli utenti gia' nell'elenco restano come sono."}});
+                  "indovina quale sia chi. Gli utenti gia' nell'elenco restano come sono.",
+                  "Righe {righe}: {quante} righe ritrovano lo stesso utente {utente}, una con il nome o la scuola di oggi e una con quelli "
+                  "di prima di una correzione a mano: le righe si fermano (contano come illeggibili), il programma non indovina quale "
+                  "sia quella giusta. L'utente resta com'e'."}});
     c.push_back({Check::ListMaybeSameUser, "K-CTR-150", A, PE, "Forse lo stesso utente, scritto diverso",
                  {"Riga {riga}: il nuovo utente {nuovo} e l'utente {uscito}, che il file non ha piu', hanno la stessa casa e la stessa "
                   "scuola ({scuola}): forse e' lo stesso, scritto diverso. Il programma non li unisce: controllare.",
@@ -253,6 +279,25 @@ void aggiungi_elenco(std::vector<DefinizioneControllo>& c) {
                  {riga + "la fermata indicata non e' un luogo del pacchetto (ne' per il codice esterno del profilo ne' per il nome tra "
                          "i luoghi del comune della casa): resta il testo, dato personale. Per riconoscerla, aggiungere il codice "
                          "esterno o il nome alternativo al luogo (luoghi.json)."}});
+    // K-020: le modifiche a mano alla lettura del file.
+    c.push_back({Check::ListFileNotUpdated, "K-CTR-156", A, N, "Il file ha ancora il valore di prima: resta il valore a mano",
+                 {"Riga {riga}: per l'utente {utente} il file ha ancora il valore di prima del campo \"{campo}\", cambiato a mano il "
+                  "{data} ({riferimento}): il file non e' ancora aggiornato, resta il valore a mano.",
+                  "L'utente {utente}, rimesso a mano nell'elenco il {data} ({riferimento}), non e' nel file completo: il file non e' ancora "
+                  "aggiornato (per lui l'utente e' ancora fuori), l'utente resta nell'elenco."}});
+    c.push_back({Check::ListFileNewerValue, "K-CTR-157", A, N, "Il file ha un valore nuovo: vince sulla modifica a mano",
+                 {"Riga {riga}: per l'utente {utente} il file ha un valore nuovo del campo \"{campo}\", diverso sia da quello cambiato a "
+                  "mano il {data} ({riferimento}) sia da quello di prima: il committente l'ha cambiato dopo, vince il file. Se non e' "
+                  "cosi', cambiarlo di nuovo a mano.",
+                  "Riga {riga}: l'utente {utente} ha la colonna \"{campo}\" cambiata a mano il {data} ({riferimento}), ma il profilo "
+                  "non ha piu' quella colonna: vince il file. Se serve, cambiare a mano gli orari della colonna nuova."}});
+    c.push_back({Check::ListAddedNowInFile, "K-CTR-158", A, N, "Utente aggiunto a mano, ora nel file: vale il file",
+                 {"Riga {riga}: l'utente {utente}, aggiunto a mano il {data} ({riferimento}), ora e' nel file, con il campo \"{campo}\" "
+                  "diverso da quello scritto all'aggiunta: vale il file. Se non e' cosi', cambiarlo a mano."}});
+    c.push_back({Check::ListRemovedStillInFile, "K-CTR-159", A, N, "Utente tolto a mano che il file ha ancora",
+                 {"Riga {riga}: l'utente {utente}, tolto a mano il {data} ({riferimento}), e' ancora nel file: resta fuori (nessun suo "
+                  "campo si aggiorna) e se ne andra' alla prima lettura completa senza di lui. Se deve restare, kzero "
+                  "rimetti-in-elenco."}});
 }
 
 void aggiungi_orari(std::vector<DefinizioneControllo>& c) {

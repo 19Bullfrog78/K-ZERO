@@ -32,11 +32,21 @@ cosa protegge e cosa resta: [sicurezza.md](sicurezza.md). Il formato dei file no
   manifesto per ultimo, come `kzero richiudi` (una regola sola, src/api/riscrittura.hpp). Senza `--scrivi`, `leggi-elenco`
   e' un'anteprima: apre (voce del registro) e mostra cosa cambierebbe. `--scrivi` deve nominare la cartella del pacchetto
   (K-ERR-046). Per ora servono i permessi dei dati personali e particolari (un utente dell'elenco legato a un luogo sensibile
-  sta tra i legati, che si cifrano con le due chiavi); il controllo sta in un punto solo (`permessi_per_l_elenco`,
-  src/api/comando_elenco.cpp). **Domani, la scrittura con i soli dati personali**: riscrivere solo la sezione dei personali,
+  sta tra i legati, che si cifrano con le due chiavi); il controllo sta in un punto solo (`elenco::permessi`,
+  src/api/elenco_scrittura.cpp). **Domani, la scrittura con i soli dati personali**: riscrivere solo la sezione dei personali,
   copiare cosi' come sono quelle dei particolari e dei legati (che chi ha i soli personali non puo' decifrare), e chiedere
   ancora tutti e due i permessi quando una novita' tocca un utente legato; servira' un'operazione della cassaforte che
   sostituisce una sezione sola (oggi `sostituisci_contenuto` le rifa' tutte), con un suo mandato.
+- **Modifiche a mano dell'elenco** (K-020): `kzero aggiungi-in-elenco`, `cambia-in-elenco`, `togli-da-elenco`,
+  `rimetti-in-elenco` e `cancella-da-elenco` (formato-dati.md, "Modifiche a mano dell'elenco") scrivono nella cassaforte con la
+  stessa scrittura e gli stessi permessi di `leggi-elenco` (in un posto solo, src/api/elenco_scrittura.hpp: `elenco::permessi`,
+  `elenco::scrivi`), con l'anteprima senza `--scrivi`. La voce del registro ha solo il codice dell'utente, il committente e i nomi
+  dei campi cambiati, mai i valori. I valori dei campi arrivano dall'ingresso standard, come la password, mai dagli argomenti
+  (docs/sicurezza.md). Il **valore di prima** di un campo cambiato a mano resta nell'elenco fino alla conferma del file, con la
+  classe del suo campo: quello di nome, casa, classe, sezione, nota e fermata scritta come testo e' personale e sta nella
+  cassaforte come il valore di oggi (una prova cerca i valori di prima nel file normale); se la scuola o la fermata di prima e'
+  in un luogo sensibile, i dati personali dell'utente (anche quelli di prima) stanno tra i legati, anche quando quella di oggi
+  non lo e'.
 - **Utenti**: `kzero aggiungi-utente`, `kzero togli-utente`, `kzero password` (la propria, o una nuova per un altro con
   `--per-utente`); **conservazione**: `kzero conservazione`; **cancellazione**: `kzero cancella`; **vedere**:
   `kzero cassaforte` (utenti, permessi, conteggi) e `kzero registro`.

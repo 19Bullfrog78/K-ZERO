@@ -12,6 +12,7 @@
 #include <cstdint>
 #include <optional>
 #include <iterator>
+#include <memory>
 #include <set>
 #include <stdexcept>
 #include <string>
@@ -1709,6 +1710,7 @@ struct ListUserTime {
     std::string period;   // la sigla del periodo, se la voce ne ha una
     DateRange dates;      // date intere (senza date nel file: tutto l'anno scolastico)
     Source src;
+    std::string column;   // K-020: la colonna del profilo da cui viene (profili[].orari[].colonna); vuota nei dati della versione 1
 };
 // Sblocco scritto dall'utente di K-Zero (kzero sblocco): per una tratta, con il riferimento e la data scritta da lui.
 struct ListUserUnlock {
@@ -1718,6 +1720,28 @@ struct ListUserUnlock {
     Source src;
 };
 enum class StopMatch { ExternalCode, Name };
+
+// --- Modifiche a mano dell'elenco (K-020) ---------------------------------------------------------------------------------
+// Le novita' che il committente manda per mail, una alla volta: l'utente di K-Zero le scrive a mano (kzero cambia-in-elenco e gli
+// altri comandi), con un riferimento (es. la mail) e una data scritta da lui. Il programma non sa se il file del committente che
+// arriva dopo e' piu' vecchio o piu' nuovo delle mail: si ricorda il valore di prima (l'ultimo venuto dal file, o quello scritto
+// all'aggiunta di un utente aggiunto a mano) e alla lettura vince l'informazione piu' nuova; quando non si puo' sapere, resta la
+// modifica a mano e un avviso lo dice (docs/formato-dati.md, "Modifiche a mano").
+struct ManualMark {
+    std::string reference;   // dato comune (entra nell'avviso sui nomi liberi)
+    Day date = 0;            // scritta dall'utente (il programma non usa l'orologio)
+};
+enum class ListField { Name, Home, School, Class, Section, Status, Stop, Routes, Times, OutOfList };
+struct ListUser;
+// Un campo cambiato a mano e non ancora confermato dal file. "before" tiene il valore di prima, solo in quel campo (gli altri
+// campi di before non contano); per gli orari, solo gli orari della colonna.
+struct ManualField {
+    ListField field = ListField::Name;
+    std::string column;   // per gli orari: la colonna del profilo
+    ManualMark mark;      // l'ultima modifica a mano del campo
+    std::shared_ptr<ListUser> before;
+    Source src;
+};
 struct ListUser {
     Code code;
     std::string name;                       // personale; vuoto se l'utente non puo' leggerlo
@@ -1734,7 +1758,19 @@ struct ListUser {
     std::vector<ListUserTime> times;
     std::vector<ListUserUnlock> unlocks;
     bool out_of_list = false;               // non piu' nell'elenco del committente: resta per uno sblocco, mai nel piano
+    // K-020: modifiche a mano.
+    std::optional<ManualMark> added;        // aggiunto a mano, non ancora portato da un file
+    std::optional<ManualMark> removed;      // tolto a mano: mai nel piano; se ne va alla prima lettura completa senza di lui
+    std::vector<ManualField> manual;        // campi cambiati a mano, non ancora confermati dal file
     Source src;
+
+    // Nel piano: ne' fuori elenco ne' tolto a mano.
+    bool in_plan() const { return !out_of_list && !removed; }
+    const ManualField* manual_field(ListField f, const std::string& column = std::string()) const {
+        for (const ManualField& m : manual)
+            if (m.field == f && m.column == column) return &m;
+        return nullptr;
+    }
 };
 // L'elenco di un committente, com'era all'ultima lettura.
 struct ClientList {

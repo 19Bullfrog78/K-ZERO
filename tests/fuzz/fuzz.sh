@@ -36,7 +36,7 @@ if [ $# -gt 0 ]; then
 else
   bersagli=()
   for f in "${file_formato[@]}"; do bersagli+=("pacchetto-$f"); done
-  bersagli+=(parametri date-e-orari cassaforte cassaforte-voci registro registro-voci password elenco-archivio elenco-foglio elenco-righe)
+  bersagli+=(parametri date-e-orari cassaforte cassaforte-voci registro registro-voci password elenco-archivio elenco-foglio elenco-righe elenco-campi)
 fi
 # Semi dei bersagli della cassaforte (K-010, chiavi casuali) e dell'elenco (K-019, file .xlsx costruiti dai testi): preparati a
 # ogni giro da rigioca_fuzz.
@@ -91,7 +91,7 @@ prova_bersaglio() {
       ;;
     parametri) programma="$build/tests/fuzz_parametri"; cp "$radice/tests/fuzz/semi/parametri/"* "$corpus/" ;;
     date-e-orari) programma="$build/tests/fuzz_date_e_orari"; cp "$radice/tests/fuzz/semi/date-e-orari/"* "$corpus/" ;;
-    elenco-archivio|elenco-foglio|elenco-righe)
+    elenco-archivio|elenco-foglio|elenco-righe|elenco-campi)
       programma="$build/tests/fuzz_elenco"
       ambiente=(KZERO_BERSAGLIO="$b")
       cp "$semi_cassaforte/$b/"* "$corpus/" ;;

@@ -33,5 +33,11 @@ Risultato esegui_cancella(const DefinizioneComando& comando, const Parametri& pa
 // Elenco utenti del committente (K-019): comando_elenco.cpp
 Risultato esegui_leggi_elenco(const DefinizioneComando& comando, const Parametri& parametri);
 Risultato esegui_sblocco(const DefinizioneComando& comando, const Parametri& parametri);
+// K-020: modifiche a mano dell'elenco (comando_elenco_a_mano.cpp).
+Risultato esegui_aggiungi_in_elenco(const DefinizioneComando& comando, const Parametri& parametri);
+Risultato esegui_cambia_in_elenco(const DefinizioneComando& comando, const Parametri& parametri);
+Risultato esegui_togli_da_elenco(const DefinizioneComando& comando, const Parametri& parametri);
+Risultato esegui_rimetti_in_elenco(const DefinizioneComando& comando, const Parametri& parametri);
+Risultato esegui_cancella_da_elenco(const DefinizioneComando& comando, const Parametri& parametri);
 
 }  // namespace kzero::api

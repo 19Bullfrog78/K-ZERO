@@ -150,8 +150,8 @@ FetchContent_Declare(
 # miniz 3.1.2 (K-019): lettura in memoria degli archivi ZIP (un file .xlsx e' un archivio con dentro file XML). Licenza MIT,
 # nel fuzzing continuo OSS-Fuzz (bersagli dell'autore in tests/ del progetto, quello della convalida degli archivi aggiunto
 # proprio nella 3.1.2). Archivio di rilascio con l'impronta fissata (un file miniz.c e il suo miniz.h). Si compila senza
-# file su disco, senza orologio e senza scrittura ne' compressione (MINIZ_NO_STDIO, MINIZ_NO_TIME,
-# MINIZ_NO_ARCHIVE_WRITING_APIS, MINIZ_NO_DEFLATE_APIS): un archivio si legge solo in memoria e non si estrae mai sul disco.
+# file su disco, senza orologio e senza scrittura ne' compressione (MINIZ_NO_STDIO, MINIZ_NO_TIME, MINIZ_NO_DEFLATE_APIS, che
+# in miniz.h spegne anche la scrittura degli archivi): un archivio si legge solo in memoria e non si estrae mai sul disco.
 FetchContent_Declare(
   miniz
   URL https://github.com/richgel999/miniz/releases/download/3.1.2/miniz-3.1.2.zip
@@ -235,9 +235,14 @@ target_include_directories(kzero_utf8proc SYSTEM PUBLIC ${utf8proc_SOURCE_DIR})
 
 # --- miniz: il solo file miniz.c, libreria statica, solo lettura in memoria (K-019) ------------------------------------
 add_library(kzero_miniz STATIC ${miniz_SOURCE_DIR}/miniz.c)
-target_compile_definitions(kzero_miniz PUBLIC MINIZ_NO_STDIO MINIZ_NO_TIME MINIZ_NO_ARCHIVE_WRITING_APIS MINIZ_NO_DEFLATE_APIS
-                                              MINIZ_NO_ZLIB_COMPATIBLE_NAMES)
+# MINIZ_NO_ARCHIVE_WRITING_APIS non si scrive qui: lo definisce miniz.h stesso quando c'e' MINIZ_NO_DEFLATE_APIS (scritto due volte
+# dava un avviso nella costruzione di miniz; K-020). Che la scrittura degli archivi resti spenta lo controlla excel.cpp quando si
+# compila (#error), e con KZERO_WERROR un avviso nuovo nella costruzione di miniz ferma la costruzione.
+target_compile_definitions(kzero_miniz PUBLIC MINIZ_NO_STDIO MINIZ_NO_TIME MINIZ_NO_DEFLATE_APIS MINIZ_NO_ZLIB_COMPATIBLE_NAMES)
 target_include_directories(kzero_miniz SYSTEM PUBLIC ${miniz_SOURCE_DIR})
+if(KZERO_WERROR AND NOT MSVC)
+  target_compile_options(kzero_miniz PRIVATE -Werror)
+endif()
 
 # --- Elenco delle password comuni: filtrato e incorporato quando si compila -------------------------------------
 # Lo strumento tiene le password di almeno 15 caratteri, normalizzate come quelle degli utenti (NFC e minuscole), senza
@@ -295,6 +300,9 @@ add_library(kzero_api STATIC
   src/api/comando_descrivi.cpp
   src/api/comando_dimostrazione.cpp
   src/api/comando_elenco.cpp
+  src/api/elenco_scrittura.cpp
+  src/api/campi_ingresso.cpp
+  src/api/comando_elenco_a_mano.cpp
   src/api/comando_giornata.cpp
   src/api/comando_ore.cpp
   src/api/comando_versione.cpp

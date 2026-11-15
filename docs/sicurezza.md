@@ -156,6 +156,22 @@ una cartella sincronizzata). Mai piu' del massimo di byte, anche quando il siste
 cresce mentre lo si legge: si legge fino al massimo piu' uno e ci si ferma. I messaggi non riportano mai il contenuto
 del file.
 
+**Dati personali mai come argomenti della riga di comando** (K-020). Quello che si scrive come argomento di un comando resta
+nella storia dei comandi del terminale (su Linux in un file della cartella dell'utente, es. `~/.bash_history`; su Windows nella
+storia di PowerShell) e, mentre il comando gira, si vede nell'elenco dei processi del computer (`ps`, Gestione attivita'), anche
+da altri utenti dello stesso PC. Per questo le password non si scrivono mai come parametri (K-010), e dal K-020 nemmeno i
+valori dei campi di una modifica a mano dell'elenco (nomi, case, note): `kzero aggiungi-in-elenco` e `kzero cambia-in-elenco` li
+leggono dall'ingresso standard, una riga per campo, dopo la password (con `--password-da-ingresso`, la prima riga). Sugli
+argomenti restano solo dati comuni: codici, il riferimento (es. "mail del committente del 12/11", un testo comune che entra
+nell'avviso sui nomi liberi) e la data. La lettura dell'ingresso ha i limiti di buon senso delle altre letture, nel programma e
+mai nei dati: una riga al massimo 8.192 byte (una cella del file ha al massimo 2.000 caratteri, fino a 4 byte l'uno), al massimo
+64 righe (i campi sono meno di 20, piu' le colonne degli orari), solo UTF-8 valido (niente forme troppo lunghe, ne' meta' di
+coppie), nessun carattere di controllo (es. le sequenze che cambiano i colori del terminale); si legge un byte alla volta e non
+oltre la riga vuota che chiude i campi; una riga fuori dai limiti ferma tutto (K-ERR-050) e niente cambia. Il messaggio dice la
+riga e il campo, mai il valore. Un bersaglio di fuzzing (`elenco-campi`) prova la lettura e la modifica con dati casuali. Resta
+che i valori scritti a mano possono finire altrove sul PC se chi li scrive li copia da un file in chiaro o da una mail: e' fuori
+dal controllo del programma (consigli, sotto).
+
 **File Excel del committente** (K-019, `kzero leggi-elenco`). L'elenco utenti arriva da fuori in un file .xlsx: e' del
 committente, puo' essere rovinato o preparato apposta, e non si modifica mai. Come si legge (src/api/excel.hpp):
 - **lettura blindata** come per i file del pacchetto (solo un file normale, aperto senza attese, mai oltre il massimo di
@@ -384,6 +400,12 @@ non ha una password; non protegge da tutto. Detto onestamente:
   cancellato dopo la lettura; **scuola, orari e ditte** di ogni utente restano dati comuni (servono a pianificare): con
   classe e sezione personali (D1) un bambino non si riconosce dalla sola classe, ma in una scuola piccola gli orari
   particolari di un utente possono bastare a chi lo conosce.
+- **Le modifiche a mano dell'elenco** (K-020): il valore di prima di un campo cambiato a mano resta nell'elenco finche' il file
+  del committente non lo conferma o lo cambia (si cancella appena non serve): per quel tempo la cassaforte tiene due case o due
+  nomi dello stesso bambino, protetti allo stesso modo. Se dopo una correzione a mano del nome il file porta un terzo nome
+  ancora diverso, la lettura non puo' ritrovare l'utente: e' "uscito + nuovo" come nel K-019, con l'avviso "forse lo stesso"
+  (K-CTR-150) se la casa e' la stessa. Il riferimento di una modifica e' un testo comune scritto a mano: se contiene un nome,
+  l'avviso sui nomi liberi (K-CTR-136) lo dice, ma un soprannome o un nome scritto male no (come per gli altri testi comuni).
 - **Le librerie del sistema** (libreria C e C++ del compilatore) non sono nell'elenco dei componenti: le aggiorna il
   sistema operativo.
 
@@ -397,6 +419,9 @@ non ha una password; non protegge da tutto. Detto onestamente:
 - **Password**: una frase lunga (es. quattro o cinque parole che non stanno insieme), diversa da ogni altra password,
   mai scritta nei file del PC. Nessun recupero: tenere **almeno due utenti con tutti i permessi** (es. il titolare e un
   sostituto), cosi' una password persa si sostituisce (`kzero password --per-utente`).
+- **Le novita' dell'elenco per mail** (K-020): scrivere i campi direttamente nel terminale (o incollarli), mai in un file di testo
+  da passare al programma, e mai come argomenti; la mail del committente resta nella posta in chiaro: seguire le regole
+  dell'azienda per la posta.
 - **Un utente della cassaforte per persona**, con i soli permessi che servono (es. l'ufficio i soli dati personali).
   Chi lascia l'azienda si toglie subito (`kzero togli-utente`), e poi tutti cambiano la password (il programma lo
   ricorda: K-CTR-098, K-CTR-099). Chi riceve un utente nuovo o una password nuova scritta da un altro la cambia al primo

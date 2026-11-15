@@ -1,10 +1,7 @@
 // K-Zero API - l'elenco utenti del committente (K-019): kzero leggi-elenco e kzero sblocco. Uscite: schemi "elenco" e "sblocco".
 //
-// Tutti e due lavorano solo su un pacchetto chiuso (i dati personali stanno solo nella cassaforte) e chiedono, per ora, i
-// permessi dei dati personali e particolari (come richiudi): il controllo sta in un punto solo, permessi_per_l_elenco, dove
-// arrivera' la scrittura con i soli dati personali (docs/cassaforte.md). Chi scrive nomina la cartella che cambia con
-// --scrivi, che deve essere quella del pacchetto. La scrittura e' quella di richiudi (riscrittura.hpp): il pacchetto nuovo si
-// prepara in memoria, si riapre con la password e deve dare gli stessi dati, poi cassaforte e file normali.
+// Permessi, cartella di --scrivi, documento e scrittura nella cassaforte: elenco_scrittura.hpp (in comune con le modifiche a mano
+// del K-020, comando_elenco_a_mano.cpp).
 #include <algorithm>
 #include <filesystem>
 #include <functional>
@@ -21,7 +18,7 @@
 #include "errori.hpp"
 #include "esecutori.hpp"
 #include "excel.hpp"
-#include "riscrittura.hpp"
+#include "elenco_scrittura.hpp"
 #include "riservatezza.hpp"
 
 namespace kzero::api {
@@ -29,42 +26,7 @@ namespace kzero::api {
 namespace {
 
 namespace fs = std::filesystem;
-constexpr const char* kElenco = "elenco_utenti.json";
-
-// --- Permessi e cartelle ------------------------------------------------------------------------------------------------
-
-// Il controllo dei permessi dell'elenco, in un punto solo. Oggi: tutti e due (la lettura scrive nomi e case nella cassaforte, e
-// un utente legato a un luogo sensibile sta tra i legati, che si cifrano con le due chiavi). Domani la scrittura con i soli dati
-// personali passera' da qui: riscrivere la sola sezione dei personali, copiare cosi' come sono quelle dei particolari e dei
-// legati, e chiedere ancora tutti e due i permessi se una novita' tocca un utente legato.
-void permessi_per_l_elenco(const cassaforte::Permessi& p, const std::string& utente, const std::string& comando) {
-    if (p.tutti()) return;
-    throw ErroreKZero(Errore::PermessoMancante, "kzero " + comando + " scrive nella cassaforte nomi e case degli utenti dell'elenco: "
-                                                "per ora lo puo' fare solo chi ha i dati personali e particolari (l'utente " + utente +
-                                                " ha " + cassaforte::testo_permessi(p) + ").");
-}
-
-// Prima della password, dall'intestazione ancora da autenticare: solo per fermarsi subito (si ricontrolla dopo l'apertura).
-void permessi_prima_della_password(const fs::path& cartella, const std::string& utente, const std::string& comando) {
-    std::vector<cassaforte::UtenteVisibile> utenti;
-    try {
-        utenti = cassaforte::leggi_intestazione(leggi_dal_disco(cartella, cassaforte::kFile, kMassimoByteFile).testo).utenti;
-    } catch (const cassaforte::ErroreCassaforte&) {
-        return;   // lo dira' l'apertura
-    }
-    for (const cassaforte::UtenteVisibile& u : utenti)
-        if (u.codice == utente) permessi_per_l_elenco(u.permessi, utente, comando);
-}
-
-// --scrivi deve nominare la cartella del pacchetto (stessa cartella, anche scritta in un altro modo).
-void stessa_cartella(const std::string& pacchetto, const std::string& scrivi) {
-    std::error_code e1, e2;
-    const fs::path a = fs::weakly_canonical(fs::absolute(pacchetto), e1);
-    const fs::path b = fs::weakly_canonical(fs::absolute(scrivi), e2);
-    if (e1 || e2 || a != b)
-        throw ErroreKZero(Errore::ScriviDiversa, "--scrivi deve nominare la cartella del pacchetto che cambia ('" + pacchetto +
-                                                     "'), invece e' '" + scrivi + "': niente e' stato scritto.");
-}
+using elenco::kFile;
 
 // --- Il file del committente ----------------------------------------------------------------------------------------------
 
@@ -120,118 +82,6 @@ excel::Foglio foglio_da(const FileDelCommittente& f, const std::string& nome_fog
     }
 }
 
-// --- Il documento elenco_utenti.json --------------------------------------------------------------------------------------
-
-std::string nome_giorno(kzero::Weekday g) {
-    static const char* nomi[] = {"lunedi", "martedi", "mercoledi", "giovedi", "venerdi", "sabato", "domenica"};
-    return nomi[static_cast<int>(g)];
-}
-
-JsonDati utente_json(const kzero::ListUser& u) {
-    JsonDati j = JsonDati::object();
-    j["codice"] = u.code;
-    j["nome"] = u.name;
-    if (u.home) {
-        JsonDati c = JsonDati::object();
-        if (!u.home->town.empty()) c["comune"] = u.home->town;
-        if (!u.home->hamlet.empty()) c["frazione"] = u.home->hamlet;
-        if (!u.home->street.empty()) c["via"] = u.home->street;
-        if (!u.home->number.empty()) c["civico"] = u.home->number;
-        j["casa"] = c;
-    }
-    j["scuola"] = u.school.code;
-    if (u.class_number) j["classe"] = *u.class_number;
-    if (!u.section.empty()) j["sezione"] = u.section;
-    JsonDati stato = {{"tipo", u.active ? "attivo" : "sospeso"}};
-    if (!u.status_note.empty()) stato["nota"] = u.status_note;
-    j["stato"] = stato;
-    if (u.stop) j["fermata"] = {{"luogo", u.stop->code}, {"riconosciuta", u.stop_match == kzero::StopMatch::Name ? "nome" : "codice_esterno"}};
-    else if (!u.stop_text.empty()) j["fermata"] = {{"testo", u.stop_text}};
-    if (!u.legs.empty()) {
-        JsonDati v = JsonDati::array();
-        for (const kzero::ListUserLeg& l : u.legs) {
-            JsonDati x = {{"sigla", l.leg}};
-            if (l.company) x["azienda"] = l.company->code;
-            else x["altra_ditta"] = l.other_company;
-            v.push_back(x);
-        }
-        j["tratte"] = v;
-    }
-    if (!u.times.empty()) {
-        JsonDati v = JsonDati::array();
-        for (const kzero::ListUserTime& t : u.times) {
-            JsonDati x = {{"tratta", t.leg}, {"giorno", nome_giorno(t.day)}, {"ora", kzero::text_from_minutes(t.time)}};
-            if (!t.period.empty()) x["periodo"] = t.period;
-            x["dal"] = kzero::text_from_day(t.dates.from);
-            x["al"] = kzero::text_from_day(t.dates.to);
-            v.push_back(x);
-        }
-        j["orari"] = v;
-    }
-    if (!u.unlocks.empty()) {
-        JsonDati v = JsonDati::array();
-        for (const kzero::ListUserUnlock& s : u.unlocks)
-            v.push_back({{"tratta", s.leg}, {"riferimento", s.reference}, {"data", kzero::text_from_day(s.date)}});
-        j["sblocchi"] = v;
-    }
-    if (u.out_of_list) j["fuori_elenco"] = true;
-    return j;
-}
-
-JsonDati elenco_json(const kzero::ClientList& l) {
-    JsonDati j = JsonDati::object();
-    j["committente"] = l.client.code;
-    j["profilo"] = l.profile.code;
-    j["anno_scolastico"] = std::to_string(l.first_year) + "-" + std::to_string(l.first_year + 1);
-    if (l.has_last_reading) j["ultima_lettura"] = {{"impronta", l.last_fingerprint}, {"elenco", l.last_complete ? "completo" : "parziale"}};
-    JsonDati utenti = JsonDati::array();
-    for (const kzero::ListUser& u : l.users) utenti.push_back(utente_json(u));
-    j["utenti"] = utenti;
-    return j;
-}
-
-// Il documento nuovo: quello di prima (se c'e') con l'elenco di quel committente sostituito o aggiunto, in ordine di committente.
-JsonDati documento_con(const Lettura& vecchia, const kzero::ClientList& l, int ultimo_numero) {
-    JsonDati d = vecchia.documenti.count(kElenco)
-                     ? vecchia.documenti.at(kElenco)
-                     : JsonDati{{"schema", "elenco_utenti"}, {"schema_versione", 1}, {"ultimo_numero", 0}, {"elenchi", JsonDati::array()}};
-    d["ultimo_numero"] = ultimo_numero;
-    JsonDati elenchi = JsonDati::array();
-    bool messo = false;
-    for (const JsonDati& e : d.at("elenchi")) {
-        if (e.at("committente").get<std::string>() == l.client.code) {
-            elenchi.push_back(elenco_json(l));
-            messo = true;
-        } else {
-            elenchi.push_back(e);
-        }
-    }
-    if (!messo) elenchi.push_back(elenco_json(l));
-    std::stable_sort(elenchi.begin(), elenchi.end(), [](const JsonDati& a, const JsonDati& b) {
-        return a.at("committente").get<std::string>() < b.at("committente").get<std::string>();
-    });
-    d["elenchi"] = elenchi;
-    return d;
-}
-
-// Il pacchetto in chiaro, in memoria, con un file cambiato. Un documento preparato dal programma che non rispetta lo schema e'
-// un errore del programma (uscita 3), mai un pacchetto scritto a meta'.
-Lettura con_documento(const Lettura& vecchia, const std::string& file, const JsonDati& doc) {
-    PacchettoInMemoria m;
-    for (const auto& [f, d] : vecchia.documenti)
-        m.file[f] = chiusura::testo_file(f == "pacchetto.json" ? chiusura::manifesto_in_chiaro(d) : d);
-    m.file[file] = chiusura::testo_file(doc);
-    Lettura l = leggi_pacchetto(m);
-    if (!l.forma_valida()) throw std::logic_error("il documento preparato non rispetta lo schema");
-    return l;
-}
-
-const kzero::ClientList* elenco_di(const kzero::Package& p, const std::string& committente) {
-    for (const kzero::ClientList& l : p.client_lists)
-        if (l.client.code == committente) return &l;
-    return nullptr;
-}
-
 // --- Calcolo della lettura ------------------------------------------------------------------------------------------------
 
 struct Calcolo {
@@ -248,22 +98,13 @@ const kzero::ReadingProfile& profilo_di(const Lettura& l, const std::string& cod
     throw ErroreKZero(Errore::ProfiloNonTrovato, "Il profilo di lettura '" + codice + "' non c'e' nel pacchetto (profili_elenchi.json).");
 }
 
-void pacchetto_completo(const Lettura& l, const std::string& cartella, const std::string& utente) {
-    if (!l.usato("pacchetto.json") || !l.forma_valida())
-        throw ErroreKZero(Errore::PacchettoConErrori, "Il pacchetto ha errori nella forma dei file: prima vanno corretti (kzero controlla " +
-                                                          cartella + " --utente " + utente + ").");
-    if (l.pacchetto.manifest.level == kzero::Level::NumbersOnly)
-        throw ErroreKZero(Errore::ElencoSoloNumeri, "Il pacchetto e' di livello \"solo numeri\": l'elenco utenti (nomi e case uno per "
-                                                    "uno) sta solo in un pacchetto di livello \"completo\" (docs/formato-dati.md).");
-}
-
 Calcolo calcola(Lettura vecchia, const Parametri& par, const kzero::Table& tabella, const std::string& impronta, const std::string& cartella) {
-    pacchetto_completo(vecchia, cartella, par.utente);
+    elenco::pacchetto_completo(vecchia, cartella, par.utente);
     const kzero::ReadingProfile& profilo = profilo_di(vecchia, par.profilo);
     const kzero::Index idx(vecchia.pacchetto);
     Calcolo c;
     c.committente = profilo.client.code;
-    c.letto = kzero::read_list(tabella, profilo, idx, par.anno_scolastico, elenco_di(vecchia.pacchetto, profilo.client.code));
+    c.letto = kzero::read_list(tabella, profilo, idx, par.anno_scolastico, elenco::elenco_di(vecchia.pacchetto, profilo.client.code));
     if (c.letto.fault != kzero::TableFault::None) {
         const std::string t = c.letto.fault_title;
         throw ErroreKZero(Errore::ColonnaMancante,
@@ -275,7 +116,7 @@ Calcolo calcola(Lettura vecchia, const Parametri& par, const kzero::Table& tabel
                                     " c'e' piu' di una volta: non si sa quale leggere. Niente e' stato letto.");
     }
     c.confronto = kzero::merge_list(vecchia.pacchetto, profilo, par.anno_scolastico, c.letto, par.elenco == "completo", impronta);
-    c.nuova = con_documento(vecchia, kElenco, documento_con(vecchia, c.confronto.list, c.confronto.last_number));
+    c.nuova = elenco::con_documento(vecchia, kFile, elenco::documento_con(vecchia, c.confronto.list, c.confronto.last_number));
     c.vecchia = std::move(vecchia);
     return c;
 }
@@ -291,6 +132,9 @@ const char* nome_esito(kzero::ListChange::Kind k) {
         case kzero::ListChange::Kind::KeptForUnlock: return "tenuto_per_sblocco";
         case kzero::ListChange::Kind::NotInFile: return "non_nel_file";
         case kzero::ListChange::Kind::Unread: return "riga_illeggibile";
+        case kzero::ListChange::Kind::RemovedInFile: return "tolto_a_mano_nel_file";
+        case kzero::ListChange::Kind::RemovedGone: return "tolto_davvero";
+        case kzero::ListChange::Kind::ManualNotInFile: return "a_mano_non_nel_file";
     }
     return "?";
 }
@@ -304,6 +148,9 @@ const char* testo_esito(kzero::ListChange::Kind k) {
         case kzero::ListChange::Kind::KeptForUnlock: return "uscito, ma resta \"fuori elenco\" per uno sblocco (mai nel piano)";
         case kzero::ListChange::Kind::NotInFile: return "non e' nel file: resta com'e' (uscite non applicate)";
         case kzero::ListChange::Kind::Unread: return "la sua riga non si legge: resta com'e'";
+        case kzero::ListChange::Kind::RemovedInFile: return "tolto a mano, ma il file lo ha ancora: resta fuori (mai nel piano)";
+        case kzero::ListChange::Kind::RemovedGone: return "tolto a mano e non nel file: se ne va davvero, con i suoi sblocchi";
+        case kzero::ListChange::Kind::ManualNotInFile: return "aggiunto o rimesso a mano, non e' nel file: resta";
     }
     return "?";
 }
@@ -345,7 +192,7 @@ Risultato uscita_lettura(const DefinizioneComando& comando, const Parametri& par
     std::vector<kzero::Problem> sull_elenco;
     kzero::check_lists(c.nuova.pacchetto, in, sull_elenco);
     for (const kzero::Problem& p : sull_elenco) {
-        if (p.where.file != kElenco) continue;
+        if (p.where.file != kFile) continue;
         bool di_questo = false;
         for (const kzero::Param& x : p.params) di_questo = di_questo || (x.name == "utente" && codici.count(x.text));
         if (di_questo) problemi.push_back(mostra(pr, p));
@@ -370,11 +217,14 @@ Risultato uscita_lettura(const DefinizioneComando& comando, const Parametri& par
         j["righe"] = {{"dati", c.letto.data_rows}, {"lette", c.letto.data_rows - illeggibili}, {"illeggibili", illeggibili}};
         j["conteggi"] = {{"nuovi", conto("nuovo")}, {"cambiati", conto("cambiato")}, {"invariati", conto("invariato")},
                          {"usciti", conto("uscito")}, {"tenuti_per_sblocco", conto("tenuto_per_sblocco")},
-                         {"non_nel_file", conto("non_nel_file")}, {"righe_illeggibili", conto("riga_illeggibile")}};
+                         {"non_nel_file", conto("non_nel_file")}, {"righe_illeggibili", conto("riga_illeggibile")},
+                         {"tolti_a_mano_nel_file", conto("tolto_a_mano_nel_file")}, {"tolti_davvero", conto("tolto_davvero")},
+                         {"a_mano_non_nel_file", conto("a_mano_non_nel_file")}};
         Json utenti = Json::array();
         for (const kzero::ListChange& x : c.confronto.changes) {
             Json u = {{"codice", x.code}, {"esito", nome_esito(x.kind)}, {"riga", numero_o_null(x.row)}};
             u["campi"] = x.fields;
+            u["confermati"] = x.confirmed;
             const auto n = nome(x.code);
             u["nome"] = n ? Json(*n) : Json(nullptr);
             utenti.push_back(u);
@@ -403,17 +253,25 @@ Risultato uscita_lettura(const DefinizioneComando& comando, const Parametri& par
     if (conto("tenuto_per_sblocco")) t += ", " + std::to_string(conto("tenuto_per_sblocco")) + " usciti tenuti per uno sblocco";
     if (conto("non_nel_file")) t += ", " + std::to_string(conto("non_nel_file")) + " non nel file (restano)";
     if (conto("riga_illeggibile")) t += ", " + std::to_string(conto("riga_illeggibile")) + " con la riga illeggibile (restano)";
+    if (conto("tolto_a_mano_nel_file")) t += ", " + std::to_string(conto("tolto_a_mano_nel_file")) + " tolti a mano ancora nel file (restano fuori)";
+    if (conto("tolto_davvero")) t += ", " + std::to_string(conto("tolto_davvero")) + " tolti a mano che se ne vanno davvero";
+    if (conto("a_mano_non_nel_file")) t += ", " + std::to_string(conto("a_mano_non_nel_file")) + " aggiunti o rimessi a mano non nel file (restano)";
     t += ".\n";
     if (par.elenco == "parziale") t += "Elenco parziale: nessuno esce.\n";
     else if (!c.confronto.exits_applied) t += "Elenco completo con righe illeggibili: le uscite non si applicano.\n";
     for (const kzero::ListChange& x : c.confronto.changes) {
-        if (x.kind == kzero::ListChange::Kind::Unchanged) continue;
+        if (x.kind == kzero::ListChange::Kind::Unchanged && x.confirmed.empty()) continue;
         const auto n = nome(x.code);
         t += "  " + x.code + (n ? " \"" + *n + "\"" : "") + (x.row ? " (riga " + std::to_string(x.row) + ")" : "") + ": " + testo_esito(x.kind);
         if (x.kind == kzero::ListChange::Kind::Changed) {
             std::string campi;
             for (const std::string& f : x.fields) campi += (campi.empty() ? "" : ", ") + f;
             t += " (" + campi + ")";
+        }
+        if (!x.confirmed.empty()) {
+            std::string campi;
+            for (const std::string& f : x.confirmed) campi += (campi.empty() ? "" : ", ") + f;
+            t += "; il file conferma le modifiche a mano (" + campi + ")";
         }
         t += ".\n";
     }
@@ -425,38 +283,6 @@ Risultato uscita_lettura(const DefinizioneComando& comando, const Parametri& par
     return {t, 0};
 }
 
-std::vector<accesso::AvvisoMostrato> avvisi_di(const cassaforte::Riepilogo& r, const std::string& utente) {
-    std::vector<accesso::AvvisoMostrato> out;
-    for (const kzero::Problem& p : accesso::avvisi_dell_apertura(r, utente)) out.push_back(accesso::mostra(p));
-    return out;
-}
-
-// Scrive un pacchetto nuovo, preparato in memoria da "prepara" con la cassaforte aperta: lo riapre, poi cassaforte e file
-// normali (riscrittura.hpp). prepara restituisce la lettura in chiaro nuova e la nota del registro.
-cassaforte::Riepilogo scrivi(const fs::path& cartella, const ManifestoLetto& manifesto, const std::string& utente,
-                             const cripto::Segreto& password, const std::string& comando,
-                             const std::function<std::pair<Lettura, std::string>(const Lettura& vecchia)>& prepara) {
-    std::optional<chiusura::Separazione> separazione;
-    std::uint32_t generazione = 0;
-    const cassaforte::Riepilogo r = accesso::cambia(
-        cartella, manifesto, utente, password, comando,
-        [&](cassaforte::Cassaforte& c) {
-            permessi_per_l_elenco(c.permessi(), utente, comando);
-            const ValoriCassaforte v = chiusura::valori_di(c);
-            const Lettura vecchia = leggi_pacchetto(CartellaSuDisco(cartella), &v);
-            auto [nuova, nota] = prepara(vecchia);
-            separazione = chiusura::separa(nuova);
-            c.sostituisci_contenuto(separazione->contenuto);
-            generazione = c.riepilogo().generazione;
-            riscrittura::controlla_riapertura(riscrittura::chiuso_in_memoria(*separazione, manifesto.id, generazione, c.file(), ""), nuova,
-                                              utente, password, false);
-            return nota;
-        },
-        accesso::ambiente());
-    riscrittura::scrivi_normali(cartella, *separazione, manifesto.id, generazione);
-    return r;
-}
-
 }  // namespace
 
 // --- leggi-elenco ---------------------------------------------------------------------------------------------------------
@@ -465,14 +291,14 @@ Risultato esegui_leggi_elenco(const DefinizioneComando& comando, const Parametri
     const std::string& percorso_file = par.argomenti.at(0);
     const fs::path cartella(par.argomenti.at(1));
     const bool scrivere = !par.scrivi.empty();
-    if (scrivere) stessa_cartella(cartella.string(), par.scrivi);
+    if (scrivere) elenco::stessa_cartella(cartella.string(), par.scrivi);
     // Prima il file (e i suoi errori), senza password: un file rovinato non apre niente.
     const FileDelCommittente file = leggi_file(percorso_file);
     const ManifestoLetto manifesto = accesso::manifesto_con_cassaforte(cartella);
-    permessi_prima_della_password(cartella, par.utente, comando.nome);
+    elenco::permessi_prima_della_password(cartella, par.utente, comando.nome);
     // Il profilo e' fatto di dati comuni (file normale): serve gia' per il foglio da leggere.
     const Lettura senza_valori = leggi_pacchetto(CartellaSuDisco(cartella));
-    pacchetto_completo(senza_valori, cartella.string(), par.utente);
+    elenco::pacchetto_completo(senza_valori, cartella.string(), par.utente);
     const kzero::Table tabella = tabella_da(foglio_da(file, profilo_di(senza_valori, par.profilo).sheet));
 
     const auto in = accesso::ingresso(par);
@@ -483,14 +309,14 @@ Risultato esegui_leggi_elenco(const DefinizioneComando& comando, const Parametri
         accesso::Apertura a = accesso::apri(cartella, manifesto, par.utente, password, comando.nome,
                                             Visibilita{par.includi_dati_personali, par.includi_dati_particolari},
                                             "anteprima della lettura dell'" + nota_base, accesso::ambiente());
-        permessi_per_l_elenco(a.cassaforte.permessi(), par.utente, comando.nome);
+        elenco::permessi(a.cassaforte.permessi(), par.utente, comando.nome);
         const ValoriCassaforte v = chiusura::valori_di(a.cassaforte);
         const Calcolo c = calcola(leggi_pacchetto(CartellaSuDisco(cartella), &v), par, tabella, file.impronta, cartella.string());
         const cassaforte::Riepilogo r = a.cassaforte.riepilogo();
-        return uscita_lettura(comando, par, c, file.impronta, false, r, a.registro.voci.size(), avvisi_di(r, par.utente));
+        return uscita_lettura(comando, par, c, file.impronta, false, r, a.registro.voci.size(), elenco::avvisi_di(r, par.utente));
     }
     std::optional<Calcolo> calcolo;
-    const cassaforte::Riepilogo r = scrivi(cartella, manifesto, par.utente, password, comando.nome, [&](const Lettura& vecchia) {
+    const cassaforte::Riepilogo r = elenco::scrivi(cartella, manifesto, par.utente, password, comando.nome, [&](const Lettura& vecchia) {
         calcolo = calcola(vecchia, par, tabella, file.impronta, cartella.string());
         std::map<std::string, int> conti;
         for (const kzero::ListChange& x : calcolo->confronto.changes) ++conti[nome_esito(x.kind)];
@@ -499,27 +325,27 @@ Risultato esegui_leggi_elenco(const DefinizioneComando& comando, const Parametri
         return std::make_pair(calcolo->nuova, "lettura dell'" + nota_base + ": " + numeri + ", righe illeggibili " +
                                                   std::to_string(calcolo->letto.unreadable_rows.size()));
     });
-    return uscita_lettura(comando, par, *calcolo, file.impronta, true, r, r.registro_voci, avvisi_di(r, par.utente));
+    return uscita_lettura(comando, par, *calcolo, file.impronta, true, r, r.registro_voci, elenco::avvisi_di(r, par.utente));
 }
 
 // --- sblocco ------------------------------------------------------------------------------------------------------------------
 
 Risultato esegui_sblocco(const DefinizioneComando& comando, const Parametri& par) {
     const fs::path cartella(par.argomenti.at(0));
-    stessa_cartella(cartella.string(), par.scrivi);
+    elenco::stessa_cartella(cartella.string(), par.scrivi);
     if (!par.togli && (par.riferimento.empty() || !par.data_sblocco))
         throw ErroreKZero(Errore::ParametroObbligatorio, "Per aggiungere uno sblocco servono --riferimento (es. la mail del committente) "
                                                          "e --data; per toglierlo, --togli.");
     const ManifestoLetto manifesto = accesso::manifesto_con_cassaforte(cartella);
-    permessi_prima_della_password(cartella, par.utente, comando.nome);
+    elenco::permessi_prima_della_password(cartella, par.utente, comando.nome);
     const auto in = accesso::ingresso(par);
     const cripto::Segreto password = accesso::chiedi_password(*in, par.utente);
     cripto::niente_core_dump();
     std::size_t restanti = 0;
     bool fuori = false;
     std::string committente;
-    const cassaforte::Riepilogo r = scrivi(cartella, manifesto, par.utente, password, comando.nome, [&](const Lettura& vecchia) {
-        pacchetto_completo(vecchia, cartella.string(), par.utente);
+    const cassaforte::Riepilogo r = elenco::scrivi(cartella, manifesto, par.utente, password, comando.nome, [&](const Lettura& vecchia) {
+        elenco::pacchetto_completo(vecchia, cartella.string(), par.utente);
         const kzero::Index idx(vecchia.pacchetto);
         const kzero::ListUser* u = idx.list_user(par.utente_elenco);
         if (!u) throw ErroreKZero(Errore::UtenteElencoNonTrovato, "L'utente '" + par.utente_elenco + "' non c'e' nell'elenco utenti del pacchetto.");
@@ -558,11 +384,11 @@ Risultato esegui_sblocco(const DefinizioneComando& comando, const Parametri& par
         restanti = w->unlocks.size();
         fuori = w->out_of_list;
         committente = nuova_lista.client.code;
-        Lettura nuova = con_documento(vecchia, kElenco, documento_con(vecchia, nuova_lista, vecchia.pacchetto.list_last_number));
+        Lettura nuova = elenco::con_documento(vecchia, kFile, elenco::documento_con(vecchia, nuova_lista, vecchia.pacchetto.list_last_number));
         return std::make_pair(std::move(nuova), std::string(par.togli ? "sblocco tolto" : "sblocco aggiunto") + ": utente " + w->code +
                                                     ", tratta " + par.tratta);
     });
-    const std::vector<accesso::AvvisoMostrato> avvisi = avvisi_di(r, par.utente);
+    const std::vector<accesso::AvvisoMostrato> avvisi = elenco::avvisi_di(r, par.utente);
     std::string fatto = std::string(par.togli ? "Sblocco tolto" : "Sblocco aggiunto") + ": utente " + par.utente_elenco + " (committente " +
                         committente + "), tratta " + par.tratta + "; sblocchi che restano all'utente: " + std::to_string(restanti) + ".";
     if (fuori && restanti == 0)

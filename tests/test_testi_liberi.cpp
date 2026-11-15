@@ -451,3 +451,59 @@ TEST(TestiLiberi, TabellaDeiCampiNeiDocumenti) {
     }
     EXPECT_EQ(nei_documenti, dal_programma) << "La tabella attesa:\n" << attesa;
 }
+
+// K-020, prova mancante del K-018 (trovata dall'arbitro): una parola (almeno 3 lettere) del nome di un passeggero nel nome del suo
+// servizio. P-A1 "Rossi Giulia" viaggia con S-ASILO; "Giulia" non e' il nome di nessun altro. Sabotaggio: il servizio del gruppo
+// tolto dalle cose del passeggero (testi_liberi.cpp) -> l'avviso sparisce.
+TEST(TestiLiberi, ParolaDelPasseggeroNelSuoServizio) {
+    InMemoria m = demo();
+    imposta(m, "servizi.json", "servizi", "S-ASILO", "nome", "Asilo di Giulia, andata");
+    const std::vector<std::string> g = grezzi(m);
+    EXPECT_TRUE(std::count(g.begin(), g.end(), "K-CTR-136 1 servizi.json /servizi/4/nome") == 1) << ::testing::PrintToString(g);
+    const Visti tutto = visti(m, Visibilita{true, true});
+    EXPECT_TRUE(contiene(tutto.righe, "e' un testo delle cose del passeggero P-A1 e contiene una parola del suo nome (GIULIA)"))
+        << ::testing::PrintToString(tutto.righe);
+    // Lo stesso testo in un servizio che non e' del passeggero: una parola sola non basta.
+    InMemoria altro = demo();
+    imposta(altro, "servizi.json", "servizi", "S-GITA", "nome", "Gita di Giulia");
+    EXPECT_FALSE(contiene(grezzi(altro), "K-CTR-136"));
+}
+
+// K-020, prova mancante del K-019 (trovata dall'arbitro): i nomi degli utenti dell'elenco del committente entrano nell'avviso sui
+// nomi liberi. Il nome intero in un testo comune qualsiasi (il nome di un servizio) e una parola del nome nei testi delle cose
+// dell'utente (il riferimento di un suo sblocco). Sabotaggio: gli utenti dell'elenco tolti dai nomi (testi_liberi.cpp) -> tutti e
+// due gli avvisi spariscono.
+TEST(TestiLiberi, NomiDegliUtentiDellElenco) {
+    InMemoria m = demo();
+    const std::string cartella = std::string(KZERO_CARTELLA_PROVE) + "/esempi/k019-elenco/";
+    const auto leggi = [](const std::string& f) {
+        std::ifstream in(f, std::ios::binary);
+        std::stringstream s;
+        s << in.rdbuf();
+        return s.str();
+    };
+    m.file["profili_elenchi.json"] = leggi(cartella + "profili_elenchi.json");
+    JsonDati e = JsonDati::parse(leggi(cartella + "elenco_utenti.json"));
+    JsonDati& u = e.at("elenchi")[0].at("utenti")[0];
+    ASSERT_EQ(u.at("nome"), "ZETA ORSOLA");
+    u["sblocchi"] = JsonDati::array({{{"tratta", "AM"}, {"riferimento", "Mail del 10/11 per Orsola"}, {"data", "2026-11-10"}}});
+    // K-020: anche il riferimento di una modifica a mano (un testo comune delle cose dell'utente).
+    e["schema_versione"] = 2;
+    u["a_mano"] = {{"campi", {{"sezione", {{"riferimento", "Mail di Orsola del 12/11"}, {"data", "2026-11-12"}, {"prima", "A"}}}}}};
+    m.scrivi("elenco_utenti.json", e);
+    imposta(m, "servizi.json", "servizi", "S-GITA", "nome", "Gita di Orsola Zeta");
+    const std::vector<std::string> g = grezzi(m);
+    EXPECT_TRUE(std::count(g.begin(), g.end(), "K-CTR-136 0 servizi.json /servizi/8/nome") == 1) << ::testing::PrintToString(g);
+    EXPECT_TRUE(std::count(g.begin(), g.end(), "K-CTR-136 1 elenco_utenti.json /elenchi/0/utenti/0/sblocchi/0/riferimento") == 1)
+        << ::testing::PrintToString(g);
+    EXPECT_TRUE(std::count(g.begin(), g.end(), "K-CTR-136 1 elenco_utenti.json /elenchi/0/utenti/0/a_mano/campi/sezione/riferimento") == 1)
+        << ::testing::PrintToString(g);
+    const Visti tutto = visti(m, Visibilita{true, true});
+    EXPECT_TRUE(contiene(tutto.righe, "contiene il nome intero dell'utente dell'elenco U-000001")) << ::testing::PrintToString(tutto.righe);
+    // Di base non si vede di chi e' il nome nel servizio (il riferimento dello sblocco dice dove sta, come ogni testo: nell'elemento
+    // U-000001, un codice comune).
+    const Visti base = visti(m, Visibilita{false, false});
+    EXPECT_TRUE(contiene(base.righe, "Il testo \"Gita di Orsola Zeta\" (servizi[].nome di S-GITA) contiene il nome intero di una persona o "
+                                     "di una casa dei dati")) << ::testing::PrintToString(base.righe);
+    EXPECT_FALSE(contiene(base.righe, "dell'utente dell'elenco U-000001"));
+}

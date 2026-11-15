@@ -12,6 +12,12 @@
 #include <expat.h>
 #include <miniz.h>
 
+// miniz si compila solo per leggere in memoria (CMakeLists.txt): niente file su disco, niente orologio, niente compressione e
+// niente scrittura degli archivi. Se una di queste manca, il programma non si compila.
+#if !defined(MINIZ_NO_STDIO) || !defined(MINIZ_NO_TIME) || !defined(MINIZ_NO_DEFLATE_APIS) || !defined(MINIZ_NO_ARCHIVE_WRITING_APIS)
+#error "miniz va compilato senza file su disco, orologio, compressione e scrittura degli archivi (CMakeLists.txt)"
+#endif
+
 #include "ricerca.hpp"
 
 namespace kzero::api::excel {

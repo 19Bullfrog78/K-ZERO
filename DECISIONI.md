@@ -224,3 +224,65 @@ Formato: data - decisione - perche'.
   alla libreria (versione e impronta restano quelle dell'autore); una prova costruisce il caso (Excel.ParteOltreLaFineDelFile).
   Da segnalare all'autore di miniz. Lo stesso giro ha trovato un trabocco nella lettura della classe (una cella con molte cifre),
   corretto: il caso sta in tests/fuzz/casi/elenco-righe.
+- 2026-11-15 - K-020 - **Risposte dell'arbitro alle domande prima del codice** (D1-D4 e proposte P1-P4): **gli orari una colonna
+  alla volta** (D1, scelta B: un campo solo avrebbe fatto perdere, con un "terzo valore" su tutta la lista, un pomeriggio cambiato
+  a mano quando il file cambia solo la mattina, e una colonna non ricopiata si sarebbe svuotata): ogni orario ricorda la sua
+  colonna del profilo (elenco versione 2), il campo e' "orari <titolo della colonna>", una colonna non scritta resta com'e', i tre
+  casi colonna per colonna; una colonna cambiata a mano che il profilo non ha piu': vince il file, con l'avviso; un utente con
+  orari della versione 1 (senza colonna) non cambia una colonna sola fino alla prossima lettura (errore che lo dice). **Utente
+  aggiunto a mano** (D2, scelta B): il valore scritto all'aggiunta e' il "valore di prima" dei campi cambiati dopo; che il file sia
+  piu' nuovo dell'aggiunta si sa (l'utente c'e'), che sia piu' nuovo del cambio no. **Fuori elenco rimesso a mano** (D3, scelta A):
+  e' un cambio a mano del suo "fuori elenco", con i tre casi; gli sblocchi restano; l'avviso resta anche in kzero controlla finche'
+  un file lo riporta. **Due righe che ritrovano lo stesso utente** (D4, scelta A), una con il nome di oggi e una con quello di prima:
+  si fermano tutte e due e contano come illeggibili (in una lettura completa nessuna uscita). Correzioni dell'arbitro: nessun
+  valore si svuota perche' non e' stato scritto (la casa si scrive con tutte le parti che il profilo ha; una parte mancante e' un
+  errore; vuoto solo scritto apposta); la lettura dei campi con i limiti delle altre letture e un bersaglio di fuzzing; il valore
+  di prima si cancella appena non serve (confermato, vinto dal file, rimesso a mano, utente uscito davvero o cancellato); una
+  modifica con la data prima dell'ultima modifica a mano dello stesso campo (o dell'aggiunta) e' un errore, lo stesso giorno va
+  bene; cancella-da-elenco porta via gli sblocchi e il codice non torna mai.
+- 2026-11-15 - K-020 - **miniz con KZERO_WERROR** (punto 0, indicazione dell'arbitro): con KZERO_WERROR un avviso nella
+  costruzione di miniz ferma la costruzione (prima l'avviso della macro scritta due volte passava inosservato). Se un compilatore
+  nuovo dara' un avviso dentro miniz, la strada e' aggiornare miniz o spegnere **solo quell'avviso**, con il motivo scritto accanto;
+  mai togliere il controllo.
+- 2026-11-15 - K-020 - **I comandi** (P1): `aggiungi-in-elenco`, `cambia-in-elenco`, `togli-da-elenco`, `rimetti-in-elenco`,
+  `cancella-da-elenco`: il verbo per primo come `leggi-elenco`, e mai "utente" da solo, che nei comandi e' l'utente della
+  cassaforte (`--utente`, `aggiungi-utente`, `togli-utente`); l'utente dell'elenco resta `--utente-elenco`, come in `sblocco`.
+  Comandi separati (non un comando con un'azione), perche' ognuno ha i suoi parametri e la sua descrizione in `kzero descrivi`.
+  Stessa scrittura, stessi permessi, stessa `--scrivi` di `leggi-elenco`, ora in un posto solo (src/api/elenco_scrittura.hpp).
+  `--riferimento` e `--data` obbligatori (dalla tabella dei comandi: senza, K-ERR-013). L'aggiunta vuole `--profilo` (dice il
+  committente e le notazioni: deve essere quello dell'elenco) e `--anno-scolastico` solo per il primo utente di un committente
+  che non ha ancora un elenco.
+- 2026-11-15 - K-020 - **I valori dei campi dall'ingresso standard, mai come argomenti** (P2): un argomento resta nella storia dei
+  comandi del terminale (su disco) e si vede nell'elenco dei processi del computer mentre il comando gira, anche da altri utenti
+  dello stesso PC. Come la password: una riga per campo, `campo: valore`, fino alla fine o a una riga vuota; con
+  `--password-da-ingresso` la password e' la prima riga. Letta un byte alla volta (mai oltre la riga vuota), con limiti fissi nel
+  programma (8.192 byte per riga, 64 righe, UTF-8 valido, nessun carattere di controllo: docs/sicurezza.md), un bersaglio di
+  fuzzing (`elenco-campi`). Scartati: un file con i valori (dati in chiaro sul disco, che restano dopo); i valori come parametri
+  (storia e processi); le domande una alla volta in un ordine fisso (una riga in piu' o in meno sposterebbe i valori nei campi
+  sbagliati senza accorgersene: `campo: valore` si controlla da solo). I nomi dei campi sono di K-Zero (nome, via...), tranne gli
+  orari, che hanno il titolo della colonna del profilo dopo la parola "orari" (un titolo puo' coincidere con il nome di un altro
+  campo); i valori sono il testo del file letto con il profilo (parse_routes, parse_times, parse_status; scuola e fermata come
+  nella lettura): nessuna sintassi nuova.
+- 2026-11-15 - K-020 - **Dove si ricorda la modifica a mano** (P3): nell'elenco (`elenco_utenti.json` versione 2, la 1 si legge
+  ancora e i comandi scrivono la 2), per ogni utente `a_mano` con `aggiunto`, `tolto` e `campi` (riferimento e data dell'ultima
+  modifica, valore di prima). Il valore di prima ha la classe del suo campo, ricavata dagli schemi come per tutti gli altri dati:
+  personale (nella cassaforte) per nome, casa, classe, sezione, nota dello stato e testo della fermata. Se la scuola o la fermata
+  di prima e' in un luogo sensibile, i dati personali dell'utente stanno tra i legati anche quando quella di oggi non lo e'
+  (`LegameSensibile`): nome + "scuola di prima: il centro diurno" direbbero la salute a chi ha i soli dati personali.
+- 2026-11-15 - K-020 - **Confronti e chiavi** (P4): valore a mano, valore di prima e valore del file si confrontano come la
+  lettura dice "cambiato" (testo pulito carattere per carattere; la fermata per il luogo, o per il testo se non riconosciuta; gli
+  orari senza badare all'ordine e alla colonna). La lettura ritrova un utente con ogni combinazione del nome e della scuola di oggi
+  e di prima (`list_keys`); una chiave di due utenti ferma le righe con quella chiave (come gli omonimi), e lo stesso vale per il
+  controllo K-CTR-142 (variante 1) e per l'aggiunta o il cambio a mano (K-ERR-051). Un cambio a mano che rimette il valore di prima
+  toglie la modifica; un cambio che non cambia niente e' un errore. Un utente tolto a mano che il file ha ancora resta com'e':
+  nessun campo si aggiorna (si tengono meno dati possibile). La conferma del file non e' un avviso (e' la cosa che si aspetta):
+  l'uscita la dice accanto all'utente (`confermati`).
+- 2026-11-15 - K-020 - **Uscite**: `modifica_elenco` versione 1 (i valori personali null con `riservato`, di base e oltre i
+  permessi; di chi e' legato, prima o dopo, solo con tutti e due i parametri); `elenco` versione 2 (i tre esiti nuovi, i loro
+  conteggi e i campi confermati; la versione 1 resta come "non piu' prodotta"). Le uscite della lettura di oggi cambiano solo per i
+  casi nuovi: un utente senza modifiche a mano ha gli stessi esiti e gli stessi campi (la colonna degli orari non conta come un
+  cambio).
+- 2026-11-15 - K-020 - **Codici delle aggiunte a mano anche contro l'elenco che cambia** (fuzzing del K-020, primo giro dei semi):
+  l'aggiunta saltava i codici usati nel pacchetto, ma non quelli dell'elenco che sta cambiando se quell'elenco non e' ancora nel
+  pacchetto; nei comandi l'elenco viene sempre dal pacchetto (nessun guasto vero), ma la regola deve valere da sola: ora salta
+  anche quelli.

@@ -778,6 +778,37 @@
   chiude da solo; con il sanitizer la prendono gia' le prove dei limiti). Dopo le correzioni: elenco-archivio 1.237.729 casi in
   180 s, elenco-foglio 848.437 in 120 s, elenco-righe 72.659 in 120 s, nessun guasto. Sabotaggi sul codice
   finale, tutti presi da una prova: 18 (elenco in tests/test_elenco.cpp e nel resoconto per l'arbitro).
+- 2026-11-15 - K-020 (programma e documenti, proposta "K-020: modifiche a mano dell'elenco"). Punto 0, le prove mancanti trovate
+  dall'arbitro (sabotaggi che nessuna prova vedeva), ognuna con il suo sabotaggio provato: TestiLiberi.NomiDegliUtentiDellElenco
+  (il nome intero di un utente dell'elenco nel nome di un servizio e una parola del nome nel riferimento di un suo sblocco:
+  K-CTR-136; sabotaggio: gli utenti dell'elenco tolti dai nomi in testi_liberi.cpp), ElencoComandi.LegatoPerLaSolaFermata (un
+  utente con la sola fermata indicata nel centro diurno, riconosciuta dal nome, e la scuola normale: chi ha i soli dati personali
+  non ne legge nome e casa; sabotaggio: la fermata tolta dal legame in riservatezza.cpp), TestiLiberi.ParolaDelPasseggeroNelSuoServizio
+  (una parola del nome di un passeggero nel nome del suo servizio; sabotaggio: il servizio tolto dalle cose del passeggero).
+  Pulizia: MINIZ_NO_ARCHIVE_WRITING_APIS non si scrive piu' in CMakeLists.txt (lo definisce miniz.h stesso da
+  MINIZ_NO_DEFLATE_APIS: due volte dava un avviso); excel.cpp non si compila se miniz ha i file su disco, l'orologio, la
+  compressione o la scrittura degli archivi (#error), e con KZERO_WERROR un avviso nella costruzione di miniz la ferma.
+  Sabotaggi: la macro rimessa due volte (la costruzione di miniz si ferma), MINIZ_NO_DEFLATE_APIS tolta (excel.cpp non si
+  compila).
+  Punti 1-3, dopo le risposte dell'arbitro alle domande prima del codice (D1 B, D2 B, D3 A, D4 A, proposte P1-P4 con le sue
+  correzioni: DECISIONI.md). Fatto: formato `elenco_utenti.json` versione 2 (la colonna di ogni orario; `a_mano` con aggiunto,
+  tolto e i campi cambiati a mano con riferimento, data e valore di prima, con la classe del suo campo; la versione 1 si legge
+  ancora) e un pacchetto di prova della versione 2 (tests/esempi/k020-elenco); nucleo (src/nucleo/elenco.cpp): le chiavi di
+  prima per ritrovare un utente dopo una correzione a mano, i tre casi alla lettura campo per campo e gli orari colonna per
+  colonna, aggiunti, tolti, rimessi (anche un fuori elenco, D3), cancellati, due righe che ritrovano lo stesso utente ferme (D4),
+  i campi scritti a mano letti con il profilo (parse_manual) e le modifiche (manual_add, manual_change, manual_remove,
+  manual_restore, manual_delete) con le date in ordine; controlli K-CTR-153 ... 155 (lo stato, anche in kzero controlla) e
+  K-CTR-156 ... 159 (alla lettura), varianti nuove di K-CTR-140, 142 e 149; i comandi `aggiungi-in-elenco`, `cambia-in-elenco`,
+  `togli-da-elenco`, `rimetti-in-elenco`, `cancella-da-elenco` (src/api/comando_elenco_a_mano.cpp) con i valori dei campi
+  dall'ingresso standard e i loro limiti (src/api/campi_ingresso.cpp); quello che i comandi dell'elenco hanno in comune in un
+  posto solo (src/api/elenco_scrittura.cpp); i valori di prima della scuola o della fermata in un luogo sensibile legano
+  l'utente (`LegameSensibile`); K-ERR-050 e 051; uscite `modifica_elenco` 1 ed `elenco` 2; documenti (formato-dati, controlli,
+  errori, cassaforte, sicurezza: i dati personali mai come argomenti). Prove: test_elenco_a_mano (15: campi, i tre casi, piu'
+  modifiche e date, orari per colonna e della versione 1, nome corretto e D4, aggiunto, tolto, rimesso, cancellato, limiti
+  dell'ingresso, i comandi con i tre utenti della cassaforte, le uscite del resoconto), Unione.ModificheAManoNellaCassaforte (le
+  classi dei valori di prima e i legati), sei prove sul programma (uscite JSON controllate con lo schema), un bersaglio di
+  fuzzing nuovo (`elenco-campi`: 36 in tutto). Il primo giro dei semi del fuzzing ha trovato che l'aggiunta a mano non saltava i
+  codici dell'elenco che cambia se non era ancora nel pacchetto (corretto: DECISIONI.md).
 ## Bug e limiti noti
 - (K-018) L'avviso sui nomi liberi trova solo il nome scritto come nei dati (senza maiuscole ne' accenti, parole intere):
   non i nomi scritti male, i soprannomi, le iniziali, le sigle ("S-DIS"), un nome dentro una parola piu' lunga, le parole

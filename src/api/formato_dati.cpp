@@ -47,7 +47,7 @@ const std::vector<FileDati>& file_dati() {
         {"blocchi.json", "blocchi", {1}, false, "Blocchi: corse legate a un mezzo (mezzo fisso o tutto fisso), per il calcolo."},
         {"profili_elenchi.json", "profili_elenchi", {1}, false,
          "Profili di lettura dell'elenco utenti di un committente (K-019): titoli, parole, sigle e separatori del suo file."},
-        {"elenco_utenti.json", "elenco_utenti", {1}, false,
+        {"elenco_utenti.json", "elenco_utenti", {1, 2}, false,
          "Elenco utenti dei committenti come lo mandano (K-019): casa, scuola, stato, fermata indicata, ditta e orari di ogni "
          "tratta, sblocchi. Solo nel livello completo."},
     };

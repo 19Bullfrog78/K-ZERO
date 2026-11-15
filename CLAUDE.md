@@ -78,6 +78,11 @@ Si parte da ALP (3 minibus + 1 auto) e si deve poter crescere fino a 500 mezzi e
   <pacchetto chiuso> --utente-elenco U-000001 --tratta SIGLA (--riferimento "..." --data AAAA-MM-GG | --togli) --utente CODICE
   --scrivi <pacchetto chiuso>`. Prove con dati inventati: tests/esempi/k019-elenco (profili, testi da cui le prove costruiscono i
   file .xlsx con tests/xlsx_prove.hpp e build/tests/crea_xlsx; nessun .xlsx nel deposito).
+- Modifiche a mano dell'elenco (K-020, docs/formato-dati.md "Modifiche a mano dell'elenco"): `./build/kzero aggiungi-in-elenco
+  <pacchetto chiuso> --profilo CODICE [--anno-scolastico 2026-2027]`, `cambia-in-elenco`, `togli-da-elenco`, `rimetti-in-elenco`,
+  `cancella-da-elenco` (questi con `--utente-elenco U-000001`), sempre con `--riferimento "..." --data AAAA-MM-GG --utente CODICE
+  [--scrivi <pacchetto chiuso>]`; i valori dei campi sull'ingresso standard (`campo: valore`, una riga per campo, dopo la password),
+  mai come argomenti. Prove: tests/test_elenco_a_mano.cpp; elenco della versione 2 di prova: tests/esempi/k020-elenco.
 - Eseguire le prove: `ctest --test-dir build --output-on-failure`
 - Controllo del deposito pubblico (K-015: i quattro nomi in nessun file, nessun file di dati ne' manifesto di un pacchetto
   fuori da tests/ ed esempi/; K-016: solo testi UTF-8 e binari ammessi, cartelle saltate uguali a quelle di .gitignore):
@@ -102,9 +107,9 @@ Si parte da ALP (3 minibus + 1 auto) e si deve poter crescere fino a 500 mezzi e
   `CC=clang CXX=clang++ cmake -S . -B build-fuzz -DKZERO_FUZZ=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo &&
   cmake --build build-fuzz --target fuzz_pacchetto fuzz_parametri fuzz_date_e_orari fuzz_cassaforte fuzz_elenco rigioca_fuzz`
   (rigioca_fuzz prepara i semi della cassaforte, con chiavi nuove a ogni giro, e quelli dell'elenco dai testi delle prove), poi
-  `tests/fuzz/fuzz.sh build-fuzz <secondi per bersaglio> [cartella di lavoro] [bersagli]` (35 bersagli: `pacchetto-<file>`,
+  `tests/fuzz/fuzz.sh build-fuzz <secondi per bersaglio> [cartella di lavoro] [bersagli]` (36 bersagli: `pacchetto-<file>`,
   `parametri`, `date-e-orari` e, dal K-010, `cassaforte`, `cassaforte-voci`, `registro`, `registro-voci`, `password`; dal K-019
-  `elenco-archivio`, `elenco-foglio`, `elenco-righe`; nel
+  `elenco-archivio`, `elenco-foglio`, `elenco-righe`; dal K-020 `elenco-campi`; nel
   controllo GitHub 20 secondi; in locale a lungo, es. `KZERO_FUZZ_PARALLELI=4
   tests/fuzz/fuzz.sh build-fuzz 3600 ~/kzero-fuzz`). Un guasto lascia il file che lo provoca in
   `<lavoro>/guasti/<bersaglio>/`: si corregge e il file va in `tests/fuzz/casi/<bersaglio>/` (diventa una prova normale).

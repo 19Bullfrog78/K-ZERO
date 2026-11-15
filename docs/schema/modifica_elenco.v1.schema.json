@@ -1,0 +1,227 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "kzero - modifica_elenco, versione 1",
+  "description": "Uscita di 'kzero aggiungi-in-elenco', 'cambia-in-elenco', 'togli-da-elenco', 'rimetti-in-elenco' e 'cancella-da-elenco' con --formato json (K-020): una modifica a mano dell'elenco utenti del committente, con il riferimento e la data scritti dall'utente. Di base nessun dato personale: i valori personali (nome, casa, classe, sezione, nota dello stato, fermata non riconosciuta) sono null con riservato = true; si vedono con --includi-dati-personali (di chi e' legato a un luogo sensibile anche con --includi-dati-particolari). Spiegata in docs/formato-dati.md (elenco_utenti.json, Modifiche a mano).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "schema_versione",
+    "comando",
+    "utente",
+    "azione",
+    "utente_elenco",
+    "committente",
+    "riferimento",
+    "data",
+    "scritto",
+    "nome",
+    "campi",
+    "sblocchi",
+    "note",
+    "problemi",
+    "avvisi",
+    "cassaforte"
+  ],
+  "properties": {
+    "schema": {
+      "const": "modifica_elenco"
+    },
+    "schema_versione": {
+      "const": 1
+    },
+    "comando": {
+      "enum": [
+        "aggiungi-in-elenco",
+        "cambia-in-elenco",
+        "togli-da-elenco",
+        "rimetti-in-elenco",
+        "cancella-da-elenco"
+      ]
+    },
+    "utente": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$",
+      "description": "Chi ha aperto la cassaforte."
+    },
+    "azione": {
+      "enum": [
+        "aggiunto",
+        "cambiato",
+        "tolto",
+        "rimesso",
+        "cancellato"
+      ]
+    },
+    "utente_elenco": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$",
+      "description": "L'utente dell'elenco (per un'aggiunta: il codice nuovo)."
+    },
+    "committente": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+    },
+    "riferimento": {
+      "type": "string",
+      "minLength": 1,
+      "description": "Il riferimento della modifica (es. la mail del committente): dato comune."
+    },
+    "data": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$",
+      "description": "La data scritta dall'utente."
+    },
+    "scritto": {
+      "type": "boolean",
+      "description": "true = scritto nella cassaforte (--scrivi); false = anteprima."
+    },
+    "nome": {
+      "type": [
+        "string",
+        "null"
+      ],
+      "description": "Il nome dell'utente, solo con i parametri che lo permettono; altrimenti null."
+    },
+    "campi": {
+      "type": "array",
+      "description": "I campi aggiunti o cambiati, in ordine (gli orari una colonna alla volta, \"orari <colonna>\").",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "campo",
+          "prima",
+          "dopo",
+          "riservato",
+          "valore_di_prima"
+        ],
+        "properties": {
+          "campo": {
+            "type": "string",
+            "minLength": 1
+          },
+          "prima": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Il valore di oggi (prima della modifica); null in un'aggiunta o se riservato."
+          },
+          "dopo": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "description": "Il valore scritto; null se riservato. \"(vuoto)\" = campo vuoto."
+          },
+          "riservato": {
+            "type": "boolean",
+            "description": "true = un valore non si mostra (dato personale senza i parametri)."
+          },
+          "valore_di_prima": {
+            "enum": [
+              "ricordato",
+              "gia_ricordato",
+              "tolto",
+              null
+            ],
+            "description": "Cambio: il valore di prima ora ricordato, gia' ricordato da un cambio a mano precedente (resta quello del file), oppure tolto (il valore scritto e' di nuovo quello di prima). null per le altre azioni."
+          }
+        }
+      }
+    },
+    "sblocchi": {
+      "type": [
+        "integer",
+        "null"
+      ],
+      "minimum": 0,
+      "description": "Togliere e cancellare: quanti sblocchi ha l'utente (se ne vanno con lui). null per le altre azioni."
+    },
+    "note": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "description": "Cosa succede dopo (in italiano)."
+    },
+    "problemi": {
+      "type": "array",
+      "description": "Gli avvisi sull'elenco nuovo per questo utente, con i testi del catalogo (docs/controlli.md).",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "codice",
+          "livello",
+          "messaggio"
+        ],
+        "properties": {
+          "codice": {
+            "type": "string",
+            "pattern": "^K-CTR-[0-9]{3}$"
+          },
+          "livello": {
+            "enum": [
+              "errore",
+              "avviso"
+            ]
+          },
+          "messaggio": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "avvisi": {
+      "description": "Avvisi della cassaforte (K-CTR-097, K-CTR-098) con i testi del catalogo; codice null = un'indicazione del comando.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "codice",
+          "messaggio"
+        ],
+        "properties": {
+          "codice": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^K-CTR-[0-9]{3}$"
+          },
+          "messaggio": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "cassaforte": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "generazione",
+        "voci_registro"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{32}$"
+        },
+        "generazione": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "voci_registro": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    }
+  }
+}

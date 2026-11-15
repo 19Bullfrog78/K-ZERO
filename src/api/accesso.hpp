@@ -30,6 +30,9 @@ struct Ambiente {
     const cripto::PoliticaKdf* politica = &cripto::politica_di_rilascio();
     // Solo prove interne: da dove leggere le password al posto del terminale o dell'ingresso standard.
     std::function<std::unique_ptr<password::Ingresso>()> ingresso;
+    // Solo prove interne (K-020): da dove leggere i campi di una modifica a mano al posto dell'ingresso standard (un byte alla
+    // volta, -1 alla fine).
+    std::function<int()> valori;
 };
 
 // L'ambiente dei comandi: quello del programma (orologio del sistema, politica di rilascio). Solo le prove interne ne
