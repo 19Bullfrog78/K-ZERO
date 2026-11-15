@@ -778,6 +778,18 @@
   chiude da solo; con il sanitizer la prendono gia' le prove dei limiti). Dopo le correzioni: elenco-archivio 1.237.729 casi in
   180 s, elenco-foglio 848.437 in 120 s, elenco-righe 72.659 in 120 s, nessun guasto. Sabotaggi sul codice
   finale, tutti presi da una prova: 18 (elenco in tests/test_elenco.cpp e nel resoconto per l'arbitro).
+- 2026-11-15 - K-020 (programma e documenti, proposta "K-020: modifiche a mano dell'elenco"). Punto 0, le prove mancanti trovate
+  dall'arbitro (sabotaggi che nessuna prova vedeva), ognuna con il suo sabotaggio provato: TestiLiberi.NomiDegliUtentiDellElenco
+  (il nome intero di un utente dell'elenco nel nome di un servizio e una parola del nome nel riferimento di un suo sblocco:
+  K-CTR-136; sabotaggio: gli utenti dell'elenco tolti dai nomi in testi_liberi.cpp), ElencoComandi.LegatoPerLaSolaFermata (un
+  utente con la sola fermata indicata nel centro diurno, riconosciuta dal nome, e la scuola normale: chi ha i soli dati personali
+  non ne legge nome e casa; sabotaggio: la fermata tolta dal legame in riservatezza.cpp), TestiLiberi.ParolaDelPasseggeroNelSuoServizio
+  (una parola del nome di un passeggero nel nome del suo servizio; sabotaggio: il servizio tolto dalle cose del passeggero).
+  Pulizia: MINIZ_NO_ARCHIVE_WRITING_APIS non si scrive piu' in CMakeLists.txt (lo definisce miniz.h stesso da
+  MINIZ_NO_DEFLATE_APIS: due volte dava un avviso); excel.cpp non si compila se miniz ha i file su disco, l'orologio, la
+  compressione o la scrittura degli archivi (#error), e con KZERO_WERROR un avviso nella costruzione di miniz la ferma.
+  Sabotaggi: la macro rimessa due volte (la costruzione di miniz si ferma), MINIZ_NO_DEFLATE_APIS tolta (excel.cpp non si
+  compila).
 ## Bug e limiti noti
 - (K-018) L'avviso sui nomi liberi trova solo il nome scritto come nei dati (senza maiuscole ne' accenti, parole intere):
   non i nomi scritti male, i soprannomi, le iniziali, le sigle ("S-DIS"), un nome dentro una parola piu' lunga, le parole

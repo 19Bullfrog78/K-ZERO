@@ -13,6 +13,7 @@
 #include <string>
 #include <vector>
 
+#include "cassaforte.hpp"
 #include "cassaforte_prove.hpp"
 #include "chiusura.hpp"
 #include "controllo.hpp"
@@ -628,6 +629,15 @@ struct Prova {
         return comando(a);
     }
     std::string elenco_normale() const { return leggi_testo(chiuso / "elenco_utenti.json"); }
+    // Il pacchetto come lo apre un utente della cassaforte: i soli valori che puo' decifrare (senza voce nel registro: solo prove).
+    Lettura come(const std::string& utente, const std::string& pw) const {
+        const std::optional<ManifestoLetto> m = leggi_manifesto(CartellaSuDisco(chiuso));
+        const FileLetto f = leggi_dal_disco(chiuso, cassaforte::kFile, kMassimoByteFile);
+        const cassaforte::Cassaforte c = cassaforte::Cassaforte::apri(
+            f.testo, m->id, utente, cripto::Segreto(reinterpret_cast<const unsigned char*>(pw.data()), pw.size()), politica_leggera());
+        const ValoriCassaforte v = chiusura::valori_di(c);
+        return leggi_pacchetto(CartellaSuDisco(chiuso), &v);
+    }
 };
 
 std::string errore_di(const std::function<void()>& f) {
@@ -684,6 +694,30 @@ TEST(ElencoComandi, LegatiALuogoSensibile) {
     p.amb.password = {kPwB};
     const Risultato b = comando({"controlla", p.chiuso.string(), "--utente", "B", "--includi-dati-personali"});
     EXPECT_EQ(b.uscita.find("ROSA"), std::string::npos);
+}
+
+// K-020, prova mancante del K-019 (trovata dall'arbitro): un utente con la sola fermata indicata in un luogo sensibile (riconosciuta
+// dal nome tra i luoghi del comune della casa) e la scuola normale e' legato: nome e casa stanno tra i legati, e chi ha i soli dati
+// personali non li legge. Si guarda il pacchetto come lo apre B (i valori che puo' decifrare): ha nome e casa degli altri utenti
+// ma non i suoi. Sabotaggio: la fermata tolta dal legame (riservatezza.cpp) -> B legge il nome.
+TEST(ElencoComandi, LegatoPerLaSolaFermata) {
+    Prova p;
+    const std::vector<std::string> centro = {"Scuola primaria Valfonda", "Valfonda, Centro diurno Il Faro", "Valfonda", "", "via del Faro",
+                                             "9", "MORO LINA", "2", "C", "ATTIVO", "AM/ALFA", "", ""};
+    const fs::path f = p.xlsx("fermata.xlsx", {kTitoli, centro, riga("Scuola primaria Valfonda", "SOLE DINO")});
+    p.leggi(f, "A", kPw, true);
+    const JsonDati normale = JsonDati::parse(p.elenco_normale());
+    ASSERT_EQ(normale.at("elenchi")[0].at("utenti")[0].at("fermata").at("luogo"), "L-CENTRO");
+    ASSERT_EQ(normale.at("elenchi")[0].at("utenti")[0].at("fermata").at("riconosciuta"), "nome");
+    const std::string di_b = p.come("B", kPwB).documenti.at("elenco_utenti.json").dump();
+    EXPECT_NE(di_b.find("SOLE DINO"), std::string::npos) << di_b;
+    EXPECT_EQ(di_b.find("MORO LINA"), std::string::npos) << di_b;
+    EXPECT_EQ(di_b.find("via del Faro"), std::string::npos) << di_b;
+    // Il titolare con il solo --includi-dati-personali non vede il nome nell'uscita; con tutti e due i parametri si'.
+    EXPECT_EQ(p.leggi(f, "A", kPw, false, {"--includi-dati-personali", "--formato", "json"}).uscita.find("MORO"), std::string::npos);
+    EXPECT_NE(p.leggi(f, "A", kPw, false, {"--includi-dati-personali", "--includi-dati-particolari", "--formato", "json"})
+                  .uscita.find("\"MORO LINA\""),
+              std::string::npos);
 }
 
 TEST(ElencoComandi, ErroriDelComando) {
