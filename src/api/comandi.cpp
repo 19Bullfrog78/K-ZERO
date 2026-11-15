@@ -345,7 +345,7 @@ std::vector<DefinizioneComando> comandi_elenco() {
                      "ha i dati personali e particolari. Del file si tiene solo l'impronta.",
                      {{"file", "Il file Excel (.xlsx) del committente, che non si modifica mai."},
                       {"cartella", "Cartella del pacchetto chiuso (livello completo)."}},
-                     p, Schema{"elenco", 1}, esegui_leggi_elenco});
+                     p, Schema{"elenco", 2}, esegui_leggi_elenco});
     }
     {
         std::vector<DefinizioneParametro> p{parametro_formato(), parametro_password_da_ingresso(), parametro_utente(true)};
@@ -486,6 +486,7 @@ const std::vector<Schema>& schemi_ritirati() {
         {"controlla", 1},     {"controlla", 2},     {"controlla", 3}, {"controlla", 4}, {"controlla", 5},
         {"descrivi", 1},      {"descrivi", 2},      {"descrivi", 3},  {"descrivi", 4},  {"descrivi", 5},
         {"dimostrazione", 1}, {"dimostrazione", 2},
+        {"elenco", 1},
         {"giornata", 1},      {"giornata", 2},      {"giornata", 3},  {"giornata", 4},
         {"ore", 1},           {"ore", 2}};
     return s;

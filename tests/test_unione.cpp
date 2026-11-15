@@ -684,6 +684,16 @@ InMemoria pacchetto_k019() {
     return m;
 }
 
+// K-020: lo stesso pacchetto con l'elenco della versione 2 (colonne degli orari e modifiche a mano con i valori di prima).
+InMemoria pacchetto_k020() {
+    InMemoria m = pacchetto_k019();
+    std::ifstream in(std::string(KZERO_CARTELLA_PROVE) + "/esempi/k020-elenco/elenco_utenti.json", std::ios::binary);
+    std::stringstream s;
+    s << in.rdbuf();
+    m.file["elenco_utenti.json"] = s.str();
+    return m;
+}
+
 std::vector<PacchettoDiProva> pacchetti_delle_prove() {
     const std::string prove = KZERO_CARTELLA_PROVE;
     std::vector<PacchettoDiProva> out;
@@ -881,6 +891,62 @@ TEST(Unione, ElencoUtentiNellaCassaforte) {
     }
 }
 
+// K-020: i valori di prima delle modifiche a mano hanno la classe del loro campo (nome, casa, classe, sezione, nota dello stato e
+// testo della fermata personali, nella cassaforte; scuola, stato, tratte e orari di prima comuni, nel file normale). Se la scuola di
+// prima e' nel centro diurno, nome e casa (e i valori di prima personali) dell'utente stanno tra i legati, anche se la scuola di
+// oggi non lo e'. Sabotaggi: valore di prima personale nel file normale; scuola di prima tolta dal legame.
+TEST(Unione, ModificheAManoNellaCassaforte) {
+    const InMemoria chiaro = pacchetto_k020();
+    const Lettura l = leggi_pacchetto(chiaro);
+    ASSERT_TRUE(l.forma_valida()) << elenco(l.problemi);
+    const Chiuso c = chiudi(chiaro);
+    std::map<std::string, std::string> trovate;
+    for (const Voce& v : c.voci) {
+        if (v.file != "elenco_utenti.json") continue;
+        const std::string codice = v.percorso[3].at("codice").get<std::string>();
+        if (codice != "U-000004" && codice != "U-000005") continue;
+        std::string chiave = codice + "/" + v.campo;
+        for (std::size_t k = 4; k < v.percorso.size(); ++k) chiave += "@" + v.percorso[k].get<std::string>();
+        trovate[chiave] = std::string(v.classe == Classe::Particolare ? "particolare" : "personale") + (v.legato ? " legato" : "");
+    }
+    const std::map<std::string, std::string> attese = {
+        {"U-000004/nome", "personale"},
+        {"U-000004/casa", "personale"},
+        {"U-000004/classe", "personale"},
+        {"U-000004/sezione", "personale"},
+        {"U-000004/prima@a_mano@campi@nome", "personale"},
+        {"U-000004/prima@a_mano@campi@casa", "personale"},
+        {"U-000004/prima@a_mano@campi@classe", "personale"},
+        {"U-000004/prima@a_mano@campi@sezione", "personale"},
+        {"U-000004/nota@a_mano@campi@stato@prima", "personale"},
+        {"U-000004/testo@a_mano@campi@fermata@prima", "personale"},
+        {"U-000005/nome", "particolare legato"},
+        {"U-000005/casa", "particolare legato"},
+        {"U-000005/classe", "particolare legato"},
+        {"U-000005/sezione", "particolare legato"}};
+    EXPECT_EQ(trovate, attese);
+    const std::string normale = c.normali.file.at("elenco_utenti.json");
+    for (const char* x : {"LAMDA", "LAMBDA", "via dei Tigli", "da attivare dopo", "Bivio del mulino", "MU NORA", "via del Ponte"})
+        EXPECT_EQ(normale.find(x), std::string::npos) << x;
+    // I valori di prima comuni restano nel file normale.
+    for (const char* x : {"\"SC-CENTRO\"", "\"07:50\"", "\"ORARI MATTINA\""}) EXPECT_NE(normale.find(x), std::string::npos) << x;
+    // Chi ha i soli dati personali non legge il nome di U-000005 (legato per la scuola di prima).
+    const ValoriCassaforte x = valori(c, Visibilita{true, false});
+    const Lettura lb = leggi_pacchetto(c.normali, &x);
+    ASSERT_TRUE(lb.forma_valida()) << elenco(lb.problemi);
+    for (const kzero::ClientList& e : lb.pacchetto.client_lists)
+        for (const kzero::ListUser& u : e.users) {
+            if (u.code == "U-000005") {
+                EXPECT_TRUE(u.name.empty());
+            }
+            if (u.code == "U-000004") {
+                EXPECT_EQ(u.name, "LAMBDA NINO");
+                ASSERT_NE(u.manual_field(kzero::ListField::Name), nullptr);
+                EXPECT_EQ(u.manual_field(kzero::ListField::Name)->before->name, "LAMDA NINO");
+            }
+        }
+}
+
 // K-011 aggiunta 2: la dichiarazione del modo delle corse e' un dato particolare; motivo e chi, personali dentro un dato
 // particolare, stanno tra i legati (tutti e due i permessi). La forzatura resta comune: motivo e chi solo personali.
 TEST(Unione, DichiarazioneParticolareConMotivoLegato) {
@@ -1002,6 +1068,7 @@ TEST(Unione, OgniCampoRiservatoDegliSchemiCompareNeiPacchettiDelleProve) {
     std::map<std::string, std::set<std::string>> usati;   // schema -> percorsi usati nei file dell'ultima versione
     std::vector<PacchettoDiProva> pacchetti = pacchetti_delle_prove();
     pacchetti.push_back({"k019-elenco", pacchetto_k019()});   // K-019: profili ed elenco utenti
+    pacchetti.push_back({"k020-elenco", pacchetto_k020()});   // K-020: elenco della versione 2, con le modifiche a mano
     for (const PacchettoDiProva& p : pacchetti)
         for (const auto& [file, testo] : p.chiaro.file) {
             const FileDati* f = file_dati_per_nome(file);

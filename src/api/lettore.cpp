@@ -1983,6 +1983,94 @@ void profili_elenchi(const JsonDati& d, Package& pk) {
     }
 }
 
+// Le parti di un utente dell'elenco che hanno anche un valore di prima (K-020): ognuna da un oggetto JSON con la stessa forma.
+ListUserHome casa_utente(const JsonDati& h) {
+    return ListUserHome{Conversione::testo(h, "comune"), Conversione::testo(h, "frazione"), Conversione::testo(h, "via"),
+                        Conversione::testo(h, "civico")};
+}
+void stato_utente(const JsonDati& st, ListUser& x) {
+    x.active = st.at("tipo").get<std::string>() == "attivo";
+    x.status_note = Conversione::testo(st, "nota");
+}
+void fermata_utente(const Conversione& c, const JsonDati& f, const std::string& pf, ListUser& x) {
+    if (f.contains("luogo")) {
+        x.stop = c.ref(f, "luogo", pf);
+        x.stop_match = f.at("riconosciuta").get<std::string>() == "nome" ? StopMatch::Name : StopMatch::ExternalCode;
+    }
+    x.stop_text = Conversione::testo(f, "testo");
+}
+std::vector<ListUserLeg> tratte_utente(const Conversione& c, const JsonDati& v, const std::string& p) {
+    std::vector<ListUserLeg> out;
+    for (std::size_t j = 0; j < v.size(); ++j) {
+        const auto& t = v[j];
+        const std::string pt = indice(p, j);
+        out.push_back({t.at("sigla").get<std::string>(), c.ref_opz(t, "azienda", pt), Conversione::testo(t, "altra_ditta"), c.src(pt)});
+    }
+    return out;
+}
+std::vector<ListUserTime> orari_utente(const Conversione& c, const JsonDati& v, const std::string& p, const std::string& colonna) {
+    std::vector<ListUserTime> out;
+    for (std::size_t j = 0; j < v.size(); ++j) {
+        const auto& t = v[j];
+        ListUserTime x{t.at("tratta").get<std::string>(), giorno_da(t.at("giorno").get<std::string>()), Conversione::orario(t.at("ora")),
+                       Conversione::testo(t, "periodo"), DateRange{Conversione::data(t.at("dal")), Conversione::data(t.at("al"))},
+                       c.src(indice(p, j)), colonna.empty() ? Conversione::testo(t, "colonna") : colonna};
+        out.push_back(std::move(x));
+    }
+    return out;
+}
+ManualMark segno_a_mano(const JsonDati& o) { return ManualMark{o.at("riferimento").get<std::string>(), Conversione::data(o.at("data"))}; }
+
+// I campi cambiati a mano (K-020), con il valore di prima. Un valore di prima personale manca a chi non puo' leggerlo: per lui il
+// campo resta "cambiato a mano" (dato comune), con il valore di prima vuoto.
+void campi_a_mano(const Conversione& c, const JsonDati& campi, const std::string& p, ListUser& x) {
+    static const std::vector<std::pair<const char*, ListField>> nomi = {
+        {"nome", ListField::Name},       {"casa", ListField::Home},       {"scuola", ListField::School},  {"classe", ListField::Class},
+        {"sezione", ListField::Section}, {"stato", ListField::Status},    {"fermata", ListField::Stop},   {"tratte", ListField::Routes},
+        {"fuori_elenco", ListField::OutOfList}};
+    for (const auto& [nome, campo] : nomi) {
+        if (!campi.contains(nome)) continue;
+        const JsonDati& o = campi.at(nome);
+        const std::string pc = p + "/" + nome;
+        ManualField m;
+        m.field = campo;
+        m.mark = segno_a_mano(o);
+        m.src = c.src(pc);
+        auto prima = std::make_shared<ListUser>();
+        const auto it = o.find("prima");
+        if (it != o.end()) {
+            switch (campo) {
+                case ListField::Name: prima->name = it->get<std::string>(); break;
+                case ListField::Home: prima->home = casa_utente(*it); break;
+                case ListField::School: prima->school = Ref{it->get<std::string>(), c.src(pc + "/prima")}; break;
+                case ListField::Class: prima->class_number = it->get<int>(); break;
+                case ListField::Section: prima->section = it->get<std::string>(); break;
+                case ListField::Status: stato_utente(*it, *prima); break;
+                case ListField::Stop: fermata_utente(c, *it, pc + "/prima", *prima); break;
+                case ListField::Routes: prima->legs = tratte_utente(c, *it, pc + "/prima"); break;
+                case ListField::OutOfList: prima->out_of_list = it->get<bool>(); break;
+                case ListField::Times: break;
+            }
+        }
+        m.before = std::move(prima);
+        x.manual.push_back(std::move(m));
+    }
+    const auto& orari = Conversione::elenco(campi, "orari");
+    for (std::size_t j = 0; j < orari.size(); ++j) {
+        const auto& o = orari[j];
+        const std::string pc = indice(p + "/orari", j);
+        ManualField m;
+        m.field = ListField::Times;
+        m.column = o.at("colonna").get<std::string>();
+        m.mark = segno_a_mano(o);
+        m.src = c.src(pc);
+        auto prima = std::make_shared<ListUser>();
+        prima->times = orari_utente(c, o.at("prima"), pc + "/prima", m.column);
+        m.before = std::move(prima);
+        x.manual.push_back(std::move(m));
+    }
+}
+
 void elenco_utenti(const JsonDati& d, Package& pk) {
     const Conversione c("elenco_utenti.json");
     pk.list_last_number = d.at("ultimo_numero").get<int>();
@@ -2006,35 +2094,14 @@ void elenco_utenti(const JsonDati& d, Package& pk) {
             ListUser x;
             x.code = u.at("codice").get<std::string>();
             x.name = c.testo(u, "nome");   // personale: manca a chi non puo' leggerlo
-            if (u.contains("casa")) {
-                const auto& h = u.at("casa");
-                x.home = ListUserHome{c.testo(h, "comune"), c.testo(h, "frazione"), c.testo(h, "via"), c.testo(h, "civico")};
-            }
+            if (u.contains("casa")) x.home = casa_utente(u.at("casa"));
             x.school = c.ref(u, "scuola", pu);
             x.class_number = c.intero(u, "classe");
             x.section = c.testo(u, "sezione");
-            x.active = u.at("stato").at("tipo").get<std::string>() == "attivo";
-            x.status_note = c.testo(u.at("stato"), "nota");
-            if (u.contains("fermata")) {
-                const auto& f = u.at("fermata");
-                if (f.contains("luogo")) {
-                    x.stop = c.ref(f, "luogo", pu + "/fermata");
-                    x.stop_match = f.at("riconosciuta").get<std::string>() == "nome" ? StopMatch::Name : StopMatch::ExternalCode;
-                }
-                x.stop_text = c.testo(f, "testo");
-            }
-            const auto& tratte = c.elenco(u, "tratte");
-            for (std::size_t j = 0; j < tratte.size(); ++j) {
-                const auto& t = tratte[j];
-                const std::string pt = indice(pu + "/tratte", j);
-                x.legs.push_back({t.at("sigla").get<std::string>(), c.ref_opz(t, "azienda", pt), c.testo(t, "altra_ditta"), c.src(pt)});
-            }
-            const auto& orari = c.elenco(u, "orari");
-            for (std::size_t j = 0; j < orari.size(); ++j) {
-                const auto& t = orari[j];
-                x.times.push_back({t.at("tratta").get<std::string>(), giorno_da(t.at("giorno").get<std::string>()), c.orario(t.at("ora")),
-                                   c.testo(t, "periodo"), DateRange{c.data(t.at("dal")), c.data(t.at("al"))}, c.src(indice(pu + "/orari", j))});
-            }
+            stato_utente(u.at("stato"), x);
+            if (u.contains("fermata")) fermata_utente(c, u.at("fermata"), pu + "/fermata", x);
+            x.legs = tratte_utente(c, c.elenco(u, "tratte"), pu + "/tratte");
+            x.times = orari_utente(c, c.elenco(u, "orari"), pu + "/orari", std::string());
             const auto& sblocchi = c.elenco(u, "sblocchi");
             for (std::size_t j = 0; j < sblocchi.size(); ++j) {
                 const auto& s = sblocchi[j];
@@ -2042,6 +2109,12 @@ void elenco_utenti(const JsonDati& d, Package& pk) {
                                      c.src(indice(pu + "/sblocchi", j))});
             }
             x.out_of_list = c.vero(u, "fuori_elenco");
+            if (u.contains("a_mano")) {
+                const JsonDati& m = u.at("a_mano");
+                if (m.contains("aggiunto")) x.added = segno_a_mano(m.at("aggiunto"));
+                if (m.contains("tolto")) x.removed = segno_a_mano(m.at("tolto"));
+                if (m.contains("campi")) campi_a_mano(c, m.at("campi"), pu + "/a_mano/campi", x);
+            }
             x.src = c.src(pu);
             l.users.push_back(std::move(x));
         }

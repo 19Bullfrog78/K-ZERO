@@ -55,7 +55,7 @@ Solo il manifesto e' obbligatorio; un file che manca vuol dire "nessun elemento 
 | `assegnazioni.json` | no | Assegnazioni del singolo giorno: sostituzioni, scambi, un mezzo al posto di un altro, lavori occasionali |
 | `blocchi.json` | no | Blocchi: corse fissate su un mezzo, per il calcolo futuro |
 | `profili_elenchi.json` | no | (K-019) Profili di lettura dell'elenco utenti di un committente: come e' fatto il suo file |
-| `elenco_utenti.json` | no | (K-019) Elenco utenti dei committenti come lo mandano: casa, scuola, stato, fermata indicata, ditta e orari di ogni tratta, sblocchi. Solo nel livello completo |
+| `elenco_utenti.json` | no | (K-019) Elenco utenti dei committenti come lo mandano: casa, scuola, stato, fermata indicata, ditta e orari di ogni tratta, sblocchi; dal K-020 le modifiche a mano non ancora confermate dal file. Solo nel livello completo |
 
 Un file con un nome diverso da questi non viene letto (avviso K-CTR-008): di solito e' un nome scritto male.
 
@@ -1439,9 +1439,11 @@ del primo anno al giorno prima dello stesso mese del secondo.
 (K-019) L'elenco degli utenti come lo manda il committente, uno per committente: chi ha diritto al servizio, dove abita, quale
 scuola, lo stato, la fermata indicata e, per ogni tratta, la ditta e gli orari. **Non sono i gruppi dei servizi**: il file del
 committente quasi mai dice la fermata e mai il servizio o il giro (le schede dei servizi arrivano a parte, con un altro
-mandato). Lo scrive `kzero leggi-elenco`, gli sblocchi `kzero sblocco`; solo in un pacchetto chiuso (i nomi e le case stanno
-solo nella cassaforte) e solo nel livello **completo** (nel livello "solo numeri" e' un errore, K-CTR-019). Schema:
-[docs/schema/elenco_utenti.v1.schema.json](schema/elenco_utenti.v1.schema.json).
+mandato). Lo scrive `kzero leggi-elenco`, gli sblocchi `kzero sblocco`, le modifiche a mano (K-020) i comandi sotto "Modifiche a
+mano dell'elenco"; solo in un pacchetto chiuso (i nomi e le case stanno solo nella cassaforte) e solo nel livello **completo** (nel
+livello "solo numeri" e' un errore, K-CTR-019). Schema: [docs/schema/elenco_utenti.v2.schema.json](schema/elenco_utenti.v2.schema.json)
+(versione 2, K-020: la colonna di ogni orario e le modifiche a mano); la versione 1
+([docs/schema/elenco_utenti.v1.schema.json](schema/elenco_utenti.v1.schema.json)) si legge ancora, e i comandi scrivono la 2.
 
 | Campo | Obbl. | Classe | Significato |
 |---|---|---|---|
@@ -1460,9 +1462,13 @@ solo nella cassaforte) e solo nel livello **completo** (nel livello "solo numeri
 | `elenchi[].utenti[].stato.nota` | no | personale | Nota del committente dopo lo stato (es. "da attivare solo per ritorno su fermata via Roma") |
 | `elenchi[].utenti[].fermata` | no | comune | La fermata indicata: `luogo` e come e' stata `riconosciuta` (`codice_esterno` oppure `nome`), oppure `testo` (personale) se non e' un luogo del pacchetto |
 | `elenchi[].utenti[].tratte[]` | no | comune | Per ogni tratta del file (`sigla` del profilo) la ditta: `azienda` del pacchetto oppure `altra_ditta` con il nome com'e' |
-| `elenchi[].utenti[].orari[]` | no | comune | `tratta`, `giorno`, `ora`, `periodo` (la sigla, se c'e'), `dal` e `al` (date intere) |
+| `elenchi[].utenti[].orari[]` | no | comune | `tratta`, `giorno`, `ora`, `periodo` (la sigla, se c'e'), `dal` e `al` (date intere); dalla versione 2 `colonna`, la colonna del profilo da cui viene (manca solo negli orari letti con la versione 1, fino alla lettura dopo) |
 | `elenchi[].utenti[].sblocchi[]` | no | comune | `tratta`, `riferimento` (es. la mail del committente), `data` scritta dall'utente di K-Zero |
 | `elenchi[].utenti[].fuori_elenco` | no | comune | `true` = non e' piu' nell'elenco del committente, resta solo per uno sblocco |
+| `elenchi[].utenti[].a_mano.aggiunto` | no | comune | (versione 2) Aggiunto a mano: `riferimento` e `data`, finche' un file lo porta |
+| `elenchi[].utenti[].a_mano.tolto` | no | comune | (versione 2) Tolto a mano: `riferimento` e `data`; mai nel piano, se ne va alla prima lettura completa senza di lui |
+| `elenchi[].utenti[].a_mano.campi` | no | comune | (versione 2) I campi cambiati a mano non ancora confermati dal file: `nome`, `casa`, `scuola`, `classe`, `sezione`, `stato`, `fermata`, `tratte`, `fuori_elenco` (rimesso nell'elenco) e `orari[]` (una voce per `colonna`), ognuno con `riferimento` e `data` dell'ultima modifica e `prima`, il valore di prima |
+| `...a_mano.campi.*.prima` | si'/no | come il campo | Il valore di prima ha la classe del suo campo: personale per nome, casa, classe, sezione, nota dello stato e testo della fermata (nella cassaforte); comune per scuola, tipo dello stato, luogo della fermata, tratte e orari. Manca solo se prima il campo era vuoto (casa, classe, sezione, fermata) |
 
 **Classi** (decisione dell'arbitro, D1): **classe e sezione sono dati personali**, a differenza della regola del 12/10 ("la
 classe non e' un dato personale"): con la scuola e gli orari (comuni) fanno riconoscere un bambino in una scuola piccola, e la
@@ -1498,6 +1504,64 @@ completo|parziale --utente U [--scrivi <pacchetto>]`):
 il riferimento e la data scritta da lui, come lo "sbloccato" dei passeggeri. Si aggiunge solo a un utente sospeso, per una
 tratta che il committente gli da' (i percorsi); errore K-ERR-049 altrimenti. Una lettura non lo cancella mai; uno sblocco di un
 utente diventato attivo o di una tratta che non ha piu' ha un avviso (K-CTR-146).
+
+**Modifiche a mano dell'elenco** (K-020). Le novita' che il committente manda per mail, una alla volta, senza tirare fuori i dati in
+chiaro (stessa scrittura, stessi permessi e stessa `--scrivi` di `kzero leggi-elenco`; senza `--scrivi` un'anteprima):
+- `kzero aggiungi-in-elenco <pacchetto> --profilo P [--anno-scolastico 2026-2027] --riferimento "..." --data AAAA-MM-GG --utente U
+  [--scrivi <pacchetto>]`: un utente nuovo, con un codice nuovo come nella lettura (mai dal nome, unico in tutto il pacchetto, mai
+  riusato); servono nome, scuola e stato; stesso nome nella stessa scuola di un altro utente: errore K-ERR-051. `--anno-scolastico`
+  solo per il primo utente di un committente che non ha ancora un elenco;
+- `kzero cambia-in-elenco <pacchetto> --utente-elenco U-000003 --riferimento "..." --data ... --utente U [--scrivi ...]`: uno o piu'
+  campi; un campo si sostituisce intero, quelli non scritti restano come sono;
+- `kzero togli-da-elenco` (esce subito dal piano; se ne va davvero, con i suoi sblocchi, alla prima lettura completa senza di lui),
+  `kzero rimetti-in-elenco` (annulla il togliere, oppure rimette nell'elenco un utente fuori elenco) e `kzero cancella-da-elenco`
+  (subito, da tutto il pacchetto, con gli sblocchi; il codice non torna mai), con `--utente-elenco`, `--riferimento` e `--data`.
+
+Il riferimento (es. "mail del committente del 12/11") e' un dato comune: entra nell'avviso sui nomi liberi (K-CTR-136). La data la
+scrive l'utente (niente orologio): una modifica con una data prima di quella dell'ultima modifica a mano dello stesso campo (o
+dell'aggiunta) e' un errore (K-ERR-051), lo stesso giorno va bene.
+
+I **valori dei campi** non si scrivono mai come argomenti (resterebbero nella storia dei comandi e nell'elenco dei processi del
+computer): si scrivono sull'ingresso standard, come la password, una riga per campo `campo: valore`, fino alla fine o a una riga
+vuota (con `--password-da-ingresso` la password e' la prima riga). Campi: `nome`, `scuola`, `stato`, `percorsi`, `fermata`,
+`comune`, `frazione`, `via`, `civico`, `classe`, `sezione` e, per gli orari, `orari <titolo della colonna del profilo>` (es. `orari
+ORARI MATTINA: AM: 08:00 LU-MA-ME-GI-VE`): i nomi senza maiuscole, solo quelli che il profilo ha. Il valore e' il testo del file
+del committente, letto con il profilo dell'elenco come nella lettura (scuola e fermata dai codici esterni, la fermata anche dal
+nome tra i luoghi del comune della casa; stato, percorsi e orari con le loro notazioni): nessuna sintassi nuova. La **casa** e' un
+campo solo: chi la cambia scrive tutte le sue parti che il profilo ha (una parte mancante e' un errore; vuota solo se scritta
+vuota). Gli **orari** si cambiano una colonna alla volta: una colonna non scritta resta com'e'. Un campo non obbligatorio scritto
+vuoto si svuota. Limiti: una riga al massimo 8.192 byte, al massimo 64 righe, solo UTF-8 valido, nessun carattere di controllo
+(K-ERR-050).
+
+**Mai disfare in silenzio una modifica a mano.** Il programma non sa se il file del committente che arriva dopo e' piu' vecchio o
+piu' nuovo delle mail: vince l'informazione piu' nuova, e quando non si puo' sapere resta la modifica a mano, con un avviso.
+- Campo cambiato a mano: si ricorda il valore di prima (l'ultimo venuto dal file, anche dopo piu' modifiche a mano). Alla
+  lettura: file uguale al valore a mano = confermato (la modifica diventa normale, il valore di prima si cancella); file uguale al
+  valore di prima = il file non e' ancora aggiornato, resta il valore a mano (K-CTR-156); un terzo valore = il committente l'ha
+  cambiato dopo, vince il file (K-CTR-157). Gli orari colonna per colonna; una colonna cambiata a mano che il profilo non ha piu':
+  vince il file. Una modifica a mano che rimette il valore di prima toglie la modifica. Si confronta come la lettura dice
+  "cambiato": testo pulito carattere per carattere, la fermata per il luogo (o per il testo, se non riconosciuta).
+- Nome e scuola sono anche la chiave con cui la lettura ritrova l'utente: dopo una correzione a mano la lettura lo ritrova anche
+  con il nome e la scuola di prima (mai "uscito + nuovo" per una correzione). Due righe che ritrovano lo stesso utente, una con il
+  nome di oggi e una con quello di prima, si fermano tutte e due (K-CTR-149 variante 1: contano come illeggibili).
+- Utente aggiunto a mano: resta anche se una lettura completa non lo ha (K-CTR-154), finche' il file lo porta: da li' vale il file
+  (K-CTR-158 per ogni campo diverso), tranne i campi cambiati a mano dopo l'aggiunta, che seguono i tre casi sopra con il valore
+  scritto all'aggiunta come valore di prima (si sa che il file e' piu' nuovo dell'aggiunta, non che sia piu' nuovo del cambio).
+- Utente tolto a mano: esce subito dal piano; se il file lo ha ancora, resta fuori e nessun campo si aggiorna (K-CTR-159); alla
+  prima lettura completa senza di lui e senza righe illeggibili se ne va davvero, con i suoi sblocchi (una scelta dell'utente, non
+  della lettura).
+- Utente fuori elenco rimesso a mano nell'elenco: e' un cambio a mano del suo "fuori elenco" (valore di prima: fuori); una
+  lettura completa senza di lui vuol dire che il file non e' ancora aggiornato: resta nell'elenco, con i suoi sblocchi (K-CTR-156
+  variante 1), finche' un file lo riporta.
+- Elenco parziale: come nel K-019, nessuna uscita; le regole valgono per gli utenti che il file porta.
+- Il valore di prima si cancella appena non serve (confermato, vinto dal file, rimesso a mano, utente uscito davvero o cancellato).
+- Limite: se dopo una correzione a mano del nome il file porta un terzo nome ancora diverso, la lettura non lo puo' ritrovare: e'
+  "uscito + nuovo" come nel K-019, con l'avviso "forse lo stesso" (K-CTR-150) se la casa e' la stessa.
+
+Uscita: schema [modifica_elenco versione 1](schema/modifica_elenco.v1.schema.json); i valori personali solo con
+`--includi-dati-personali` (di chi e' legato a un luogo sensibile anche con `--includi-dati-particolari`), ed entro i permessi.
+L'uscita di `kzero leggi-elenco` e' dalla versione 2 ([elenco.v2](schema/elenco.v2.schema.json)): i casi nuovi (tolti a mano ancora
+nel file o che se ne vanno davvero, aggiunti o rimessi a mano non nel file) e le modifiche confermate.
 
 ## Ricerca dei luoghi per nome o codice esterno
 

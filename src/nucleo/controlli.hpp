@@ -52,12 +52,21 @@ enum class Check {
     ListDateOutsideSchoolYear, // date di un orario fuori dall'anno della scuola (i suoi orari)
     ListUnlockNotNeeded,       // sblocco di un utente attivo, o di una tratta che l'utente non ha
     ListUserOutOfList,         // utente non piu' nell'elenco del committente, tenuto per uno sblocco
+    // K-020: lo stato delle modifiche a mano che resta nell'elenco (anche in kzero controlla).
+    ListManualPending,         // campo cambiato a mano, non ancora confermato dal file (variante 1: rimesso nell'elenco a mano)
+    ListAddedByHand,           // utente aggiunto a mano, non ancora portato da un file
+    ListRemovedByHand,         // utente tolto a mano: mai nel piano, se ne va alla prima lettura completa senza di lui
     // ... e sulle righe del file letto (kzero leggi-elenco).
     ListRowUnreadable,         // riga illeggibile (RowFault): non si applica
     ListRowHomonyms,           // righe con lo stesso nome nella stessa scuola: ferme
     ListMaybeSameUser,         // un uscito e un nuovo con la stessa casa: forse e' lo stesso, scritto diverso
     ListExitsNotApplied,       // elenco completo con righe illeggibili: le uscite non si applicano
     ListStopNotRecognized,     // fermata indicata che non e' un luogo del pacchetto: resta il testo
+    // K-020: le modifiche a mano alla lettura del file (solo kzero leggi-elenco).
+    ListFileNotUpdated,        // il file ha il valore di prima: non e' ancora aggiornato, resta il valore a mano
+    ListFileNewerValue,        // il file ha un terzo valore: vince il file (variante 1: colonna che il profilo non ha piu')
+    ListAddedNowInFile,        // utente aggiunto a mano, ora nel file: vale il file, un campo diverso
+    ListRemovedStillInFile,    // utente tolto a mano che il file ha ancora: resta fuori
     // Turni (K-008): errori.
     ShiftPartInvalid,
     ShiftItemsOrder,

@@ -487,11 +487,16 @@ TEST(TestiLiberi, NomiDegliUtentiDellElenco) {
     JsonDati& u = e.at("elenchi")[0].at("utenti")[0];
     ASSERT_EQ(u.at("nome"), "ZETA ORSOLA");
     u["sblocchi"] = JsonDati::array({{{"tratta", "AM"}, {"riferimento", "Mail del 10/11 per Orsola"}, {"data", "2026-11-10"}}});
+    // K-020: anche il riferimento di una modifica a mano (un testo comune delle cose dell'utente).
+    e["schema_versione"] = 2;
+    u["a_mano"] = {{"campi", {{"sezione", {{"riferimento", "Mail di Orsola del 12/11"}, {"data", "2026-11-12"}, {"prima", "A"}}}}}};
     m.scrivi("elenco_utenti.json", e);
     imposta(m, "servizi.json", "servizi", "S-GITA", "nome", "Gita di Orsola Zeta");
     const std::vector<std::string> g = grezzi(m);
     EXPECT_TRUE(std::count(g.begin(), g.end(), "K-CTR-136 0 servizi.json /servizi/8/nome") == 1) << ::testing::PrintToString(g);
     EXPECT_TRUE(std::count(g.begin(), g.end(), "K-CTR-136 1 elenco_utenti.json /elenchi/0/utenti/0/sblocchi/0/riferimento") == 1)
+        << ::testing::PrintToString(g);
+    EXPECT_TRUE(std::count(g.begin(), g.end(), "K-CTR-136 1 elenco_utenti.json /elenchi/0/utenti/0/a_mano/campi/sezione/riferimento") == 1)
         << ::testing::PrintToString(g);
     const Visti tutto = visti(m, Visibilita{true, true});
     EXPECT_TRUE(contiene(tutto.righe, "contiene il nome intero dell'utente dell'elenco U-000001")) << ::testing::PrintToString(tutto.righe);

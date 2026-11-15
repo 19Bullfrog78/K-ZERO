@@ -125,11 +125,18 @@ LegameSensibile::LegameSensibile(const kzero::Index* indice) {
     const auto casa_pap = [&](const kzero::Code& c) { return porta_a_porta.count(c) > 0; };
 
     // K-019: gli utenti dell'elenco del committente la cui scuola, o la fermata indicata, sta in un luogo sensibile (la stessa
-    // regola dei passeggeri dei gruppi e di chi sale o scende li').
+    // regola dei passeggeri dei gruppi e di chi sale o scende li'). K-020: anche la scuola o la fermata di prima di una modifica a
+    // mano (il valore di prima resta nell'elenco: con il nome direbbe la salute a chi ha i soli dati personali).
     for (const kzero::ClientList& l : p.client_lists)
         for (const kzero::ListUser& u : l.users) {
-            bool legato = u.stop && sensibile(u.stop->code);
-            if (const kzero::School* sc = indice->school(u.school.code)) legato = legato || sensibile(sc->place.code);
+            const auto tocca = [&](const kzero::ListUser& x) {
+                bool legato = x.stop && sensibile(x.stop->code);
+                if (const kzero::School* sc = indice->school(x.school.code)) legato = legato || sensibile(sc->place.code);
+                return legato;
+            };
+            bool legato = tocca(u);
+            for (const kzero::ManualField& m : u.manual)
+                if (m.field == kzero::ListField::School || m.field == kzero::ListField::Stop) legato = legato || tocca(*m.before);
             if (legato) utenti_.insert(u.code);
         }
 

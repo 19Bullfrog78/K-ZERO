@@ -237,7 +237,7 @@ void voce_per_tratta(const std::string& voce, const ProfileTimes& c, const Readi
         }
         const Weekday w = p.days[static_cast<std::size_t>(trovato)].day;
         if (visti.insert(static_cast<int>(w)).second)
-            out.times.push_back(ListUserTime{p.legs[static_cast<std::size_t>(k)].code, w, *ora, std::string(), anno, {}});
+            out.times.push_back(ListUserTime{p.legs[static_cast<std::size_t>(k)].code, w, *ora, std::string(), anno, {}, c.column});
         a = b + sg.size();
         if (b == giorni.size()) break;
     }
@@ -327,7 +327,7 @@ void blocco_per_giorno(const std::string& blocco, const ProfileTimes& c, const R
             date = DateRange{*dal, *al};
             i = j;
         }
-        out.times.push_back(ListUserTime{periodo.leg, giorno, *ora, periodo.code, date, {}});
+        out.times.push_back(ListUserTime{periodo.leg, giorno, *ora, periodo.code, date, {}, c.column});
         almeno_una = true;
     }
     if (!almeno_una) out.fault = RowFault::TimesForm;
@@ -409,6 +409,122 @@ StatusParse parse_status(const std::string& text, const ReadingProfile& p) {
 }
 
 std::string list_key(const std::string& name, const Code& school) { return normalize_name(name) + '\x1f' + school; }
+
+std::set<std::string> list_keys(const ListUser& u) {
+    std::set<std::string> nomi{u.name}, scuole{u.school.code};
+    if (const ManualField* m = u.manual_field(ListField::Name)) nomi.insert(m->before->name);
+    if (const ManualField* m = u.manual_field(ListField::School)) scuole.insert(m->before->school.code);
+    std::set<std::string> out;
+    for (const std::string& n : nomi)
+        for (const std::string& sc : scuole)
+            if (!n.empty() && !sc.empty()) out.insert(list_key(n, sc));
+    return out;
+}
+
+namespace {
+
+// Gli orari senza badare all'ordine e alla colonna (che dice solo da dove vengono).
+bool stessi_orari(const std::vector<ListUserTime>& a, const std::vector<ListUserTime>& b) {
+    const auto chiave = [](const ListUserTime& t) {
+        return std::make_tuple(t.leg, static_cast<int>(t.day), t.time, t.period, t.dates.from, t.dates.to);
+    };
+    using Chiave = decltype(chiave(std::declval<ListUserTime>()));
+    std::vector<Chiave> x, y;
+    for (const auto& t : a) x.push_back(chiave(t));
+    for (const auto& t : b) y.push_back(chiave(t));
+    std::sort(x.begin(), x.end());
+    std::sort(y.begin(), y.end());
+    return x == y;
+}
+
+bool stesse_tratte(const std::vector<ListUserLeg>& a, const std::vector<ListUserLeg>& b) {
+    const auto chiave = [](const ListUserLeg& l) { return std::make_tuple(l.leg, l.company ? l.company->code : std::string(), l.other_company); };
+    std::vector<std::tuple<std::string, std::string, std::string>> x, y;
+    for (const auto& l : a) x.push_back(chiave(l));
+    for (const auto& l : b) y.push_back(chiave(l));
+    std::sort(x.begin(), x.end());
+    std::sort(y.begin(), y.end());
+    return x == y;
+}
+
+std::vector<ListUserTime> della_colonna(const std::vector<ListUserTime>& v, const std::string& colonna) {
+    std::vector<ListUserTime> out;
+    for (const ListUserTime& t : v)
+        if (t.column == colonna) out.push_back(t);
+    return out;
+}
+
+// Una casa senza nessuna parte vale come nessuna casa.
+std::optional<ListUserHome> casa_vera(const std::optional<ListUserHome>& h) {
+    if (!h || (h->town.empty() && h->hamlet.empty() && h->street.empty() && h->number.empty())) return std::nullopt;
+    return h;
+}
+
+}  // namespace
+
+std::string field_name(ListField f, const std::string& column) {
+    switch (f) {
+        case ListField::Name: return "nome";
+        case ListField::Home: return "casa";
+        case ListField::School: return "scuola";
+        case ListField::Class: return "classe";
+        case ListField::Section: return "sezione";
+        case ListField::Status: return "stato";
+        case ListField::Stop: return "fermata";
+        case ListField::Routes: return "tratte";
+        case ListField::Times: return "orari " + column;
+        case ListField::OutOfList: return "fuori_elenco";
+    }
+    return "?";
+}
+
+bool same_field(ListField f, const std::string& column, const ListUser& a, const ListUser& b) {
+    switch (f) {
+        case ListField::Name: return a.name == b.name;
+        case ListField::Home: return casa_vera(a.home) == casa_vera(b.home);
+        case ListField::School: return a.school.code == b.school.code;
+        case ListField::Class: return a.class_number == b.class_number;
+        case ListField::Section: return a.section == b.section;
+        case ListField::Status: return a.active == b.active && a.status_note == b.status_note;
+        case ListField::Stop:
+            if (a.stop || b.stop) return a.stop && b.stop && a.stop->code == b.stop->code;
+            return a.stop_text == b.stop_text;
+        case ListField::Routes: return stesse_tratte(a.legs, b.legs);
+        case ListField::Times: return stessi_orari(della_colonna(a.times, column), della_colonna(b.times, column));
+        case ListField::OutOfList: return a.out_of_list == b.out_of_list;
+    }
+    return false;
+}
+
+void copy_field(ListField f, const std::string& column, const ListUser& from, ListUser& to) {
+    switch (f) {
+        case ListField::Name: to.name = from.name; break;
+        case ListField::Home: to.home = casa_vera(from.home); break;
+        case ListField::School: to.school = from.school; break;
+        case ListField::Class: to.class_number = from.class_number; break;
+        case ListField::Section: to.section = from.section; break;
+        case ListField::Status:
+            to.active = from.active;
+            to.status_note = from.status_note;
+            break;
+        case ListField::Stop:
+            to.stop = from.stop;
+            to.stop_match = from.stop_match;
+            to.stop_text = from.stop_text;
+            break;
+        case ListField::Routes: to.legs = from.legs; break;
+        case ListField::Times: {
+            std::vector<ListUserTime> v;
+            for (const ListUserTime& t : to.times)
+                if (t.column != column) v.push_back(t);
+            for (const ListUserTime& t : from.times)
+                if (t.column == column) v.push_back(t);
+            to.times = std::move(v);
+            break;
+        }
+        case ListField::OutOfList: to.out_of_list = from.out_of_list; break;
+    }
+}
 
 std::string list_user_code(int number) {
     std::string n = std::to_string(number);
@@ -542,9 +658,16 @@ ListRead read_list(const Table& table, const ReadingProfile& profile, const Inde
 
     Scuole scuole(pk, profile);
     Fermate fermate(pk, profile);
-    std::map<std::string, int> esistenti;   // chiave -> quanti utenti dell'elenco del pacchetto
+    // Chiave -> quanti utenti dell'elenco del pacchetto la hanno, e quale (se uno solo). K-020: anche le chiavi di prima di una
+    // correzione a mano del nome o della scuola (list_keys).
+    std::map<std::string, int> esistenti;
+    std::map<std::string, Code> di_chi;
     if (existing)
-        for (const ListUser& u : existing->users) ++esistenti[list_key(u.name, u.school.code)];
+        for (const ListUser& u : existing->users)
+            for (const std::string& k : list_keys(u)) {
+                ++esistenti[k];
+                di_chi[k] = u.code;
+            }
 
     struct Letta {
         int riga;
@@ -695,6 +818,25 @@ ListRead read_list(const Table& table, const ReadingProfile& profile, const Inde
             out.unreadable_keys.insert(chiave);
             for (int r : righe) out.unreadable_rows.insert(r);
         }
+    // K-020 (D4): righe diverse che ritrovano lo stesso utente (una con il nome o la scuola di oggi, una con quelli di prima di una
+    // correzione a mano): si fermano tutte, come gli omonimi. Mai indovinare quale sia la riga giusta.
+    std::map<Code, std::vector<const Letta*>> per_utente;
+    for (const Letta& l : lette)
+        if (!l.chiave.empty() && !omonime.count(l.chiave) && esistenti.count(l.chiave) && esistenti.at(l.chiave) == 1)
+            per_utente[di_chi.at(l.chiave)].push_back(&l);
+    for (const auto& [codice, righe] : per_utente) {
+        if (righe.size() < 2) continue;
+        std::string elenco;
+        for (const Letta* l : righe) elenco += (elenco.empty() ? "" : ", ") + std::to_string(l->riga);
+        out.problems.push_back(Problem{Check::ListRowHomonyms, 1, Source{"", "", righe.front()->riga, 0},
+                                       {text_param("righe", elenco), ref_param("utente", Element::ListUser, codice),
+                                        number_param("quante", static_cast<long long>(righe.size()))}});
+        for (const Letta* l : righe) {
+            omonime.insert(l->chiave);
+            out.unreadable_keys.insert(l->chiave);
+            out.unreadable_rows.insert(l->riga);
+        }
+    }
     for (Letta& l : lette) {
         if (omonime.count(l.chiave)) continue;
         for (Problem& a : l.avvisi) out.problems.push_back(std::move(a));
@@ -702,6 +844,390 @@ ListRead read_list(const Table& table, const ReadingProfile& profile, const Inde
     }
     std::stable_sort(out.problems.begin(), out.problems.end(),
                      [](const Problem& a, const Problem& b) { return a.where.line < b.where.line; });
+    return out;
+}
+
+// --- Modifiche a mano (K-020) -------------------------------------------------------------------------------------------------
+
+namespace {
+
+enum class Parte { Nome, Scuola, Stato, Percorsi, Fermata, Comune, Frazione, Via, Civico, Classe, Sezione, Orari };
+struct Chiave {
+    std::string testo;    // come si scrive prima dei due punti
+    Parte parte;
+    std::string colonna;  // per gli orari
+    bool nel_profilo;
+};
+
+std::vector<Chiave> chiavi_dei_campi(const ReadingProfile& p) {
+    const ReadingProfile::Columns& c = p.columns;
+    std::vector<Chiave> v = {{"nome", Parte::Nome, "", true},
+                             {"scuola", Parte::Scuola, "", true},
+                             {"stato", Parte::Stato, "", true},
+                             {"percorsi", Parte::Percorsi, "", true},
+                             {"fermata", Parte::Fermata, "", !c.stop.empty()},
+                             {"comune", Parte::Comune, "", !c.town.empty()},
+                             {"frazione", Parte::Frazione, "", !c.hamlet.empty()},
+                             {"via", Parte::Via, "", !c.street.empty()},
+                             {"civico", Parte::Civico, "", !c.number.empty()},
+                             {"classe", Parte::Classe, "", !c.class_number.empty()},
+                             {"sezione", Parte::Sezione, "", !c.section.empty()}};
+    for (const ProfileTimes& t : p.times) v.push_back({"orari " + clean_cell(t.column), Parte::Orari, t.column, true});
+    return v;
+}
+
+const char* nome_parte(Parte x) {
+    static const char* nomi[] = {"nome", "scuola", "stato", "percorsi", "fermata", "comune", "frazione", "via", "civico", "classe", "sezione", "orari"};
+    return nomi[static_cast<int>(x)];
+}
+
+// La chiave della riga: la piu' lunga tra quelle note che comincia la riga (senza maiuscole), seguita da spazi e ":".
+// Restituisce la chiave e dove comincia il valore; nullptr se nessuna.
+const Chiave* chiave_della_riga(const std::string& riga, const std::vector<Chiave>& chiavi, std::size_t& valore) {
+    const Chiave* scelta = nullptr;
+    for (const Chiave& k : chiavi) {
+        if (!inizia_con_ci(riga, 0, k.testo) || (scelta && scelta->testo.size() >= k.testo.size())) continue;
+        std::size_t i = k.testo.size();
+        salta_spazi(riga, i);
+        if (i >= riga.size() || riga[i] != ':') continue;
+        scelta = &k;
+        valore = i + 1;
+    }
+    return scelta;
+}
+
+}  // namespace
+
+ManualParse parse_manual(const std::vector<std::string>& lines, const ReadingProfile& profile, const Index& idx, int first_year,
+                         const ListUser* current, bool adding) {
+    ManualParse out;
+    const std::vector<Chiave> chiavi = chiavi_dei_campi(profile);
+    // Anche le chiavi che il profilo non ha (per dire "il profilo non ha questo campo" e non "campo sconosciuto"); "orari <altro>".
+    std::vector<Chiave> tutte = chiavi;
+    tutte.push_back({"orari", Parte::Orari, "", false});
+    const auto sbaglio = [&](ManualFault f, int riga, const std::string& campo, std::optional<RowFault> r = std::nullopt) {
+        if (out.error.fault == ManualFault::None) out.error = ManualError{f, riga, campo, r};
+    };
+    std::map<std::string, std::pair<int, std::string>> scritti;   // testo della chiave -> riga e valore
+    std::map<std::string, const Chiave*> chiave_di;
+    for (std::size_t i = 0; i < lines.size() && out.error.fault == ManualFault::None; ++i) {
+        const int n = static_cast<int>(i + 1);
+        const std::string riga = clean_cell(lines[i]);
+        if (riga.empty()) continue;
+        std::size_t inizio = 0;
+        const Chiave* k = chiave_della_riga(riga, tutte, inizio);
+        if (!k && inizia_con_ci(riga, 0, "orari ") && riga.find(':') != std::string::npos) {
+            sbaglio(ManualFault::NotInProfile, n, "orari");   // "orari <titolo>" con un titolo che il profilo non ha
+            break;
+        }
+        if (!k) {
+            sbaglio(ManualFault::UnknownField, n, "");
+            break;
+        }
+        if (!k->nel_profilo) {
+            sbaglio(ManualFault::NotInProfile, n, k->parte == Parte::Orari ? std::string("orari") : nome_parte(k->parte));
+            break;
+        }
+        if (scritti.count(k->testo)) {
+            sbaglio(ManualFault::RepeatedField, n, k->testo);
+            break;
+        }
+        scritti[k->testo] = {n, clean_cell(riga.substr(inizio))};
+        chiave_di[k->testo] = k;
+    }
+    if (out.error.fault != ManualFault::None) return out;
+    if (scritti.empty()) {
+        sbaglio(ManualFault::NoFields, 0, "");
+        return out;
+    }
+    const auto valore = [&](Parte x) -> const std::pair<int, std::string>* {
+        for (const auto& [testo, k] : chiave_di)
+            if (k->parte == x) return &scritti.at(testo);
+        return nullptr;
+    };
+    if (adding)
+        for (Parte x : {Parte::Nome, Parte::Scuola, Parte::Stato})
+            if (!valore(x)) {
+                sbaglio(ManualFault::RequiredMissing, 0, nome_parte(x));
+                return out;
+            }
+    ListUser& u = out.values;
+    std::set<std::pair<int, std::string>> campi;
+    const auto segna = [&](ListField f, const std::string& colonna) { campi.insert({static_cast<int>(f), colonna}); };
+    if (const auto* v = valore(Parte::Nome)) {
+        if (v->second.empty()) return sbaglio(ManualFault::RequiredEmpty, v->first, "nome"), out;
+        u.name = v->second;
+        segna(ListField::Name, "");
+    }
+    if (const auto* v = valore(Parte::Scuola)) {
+        if (v->second.empty()) return sbaglio(ManualFault::RequiredEmpty, v->first, "scuola"), out;
+        const Scuole scuole(idx.package(), profile);
+        const std::set<Code>* trovate = scuole.trova(v->second);
+        if (!trovate) return sbaglio(ManualFault::Value, v->first, "scuola", RowFault::SchoolUnknown), out;
+        if (trovate->size() > 1) return sbaglio(ManualFault::Value, v->first, "scuola", RowFault::SchoolAmbiguous), out;
+        u.school = Ref{*trovate->begin(), {}};
+        segna(ListField::School, "");
+    }
+    if (const auto* v = valore(Parte::Stato)) {
+        if (v->second.empty()) return sbaglio(ManualFault::RequiredEmpty, v->first, "stato"), out;
+        const StatusParse st = parse_status(v->second, profile);
+        if (!st.ok) return sbaglio(ManualFault::Value, v->first, "stato", RowFault::StatusUnknown), out;
+        u.active = st.active;
+        u.status_note = st.note;
+        segna(ListField::Status, "");
+    }
+    if (const auto* v = valore(Parte::Percorsi)) {
+        RoutesParse rp = parse_routes(v->second, profile);
+        if (rp.fault) return sbaglio(ManualFault::Value, v->first, "percorsi", rp.fault), out;
+        u.legs = std::move(rp.legs);
+        segna(ListField::Routes, "");
+    }
+    // La casa: tutte le parti che il profilo ha, o nessuna (una parte mancante non si svuota: e' un errore).
+    bool casa = false;
+    for (Parte x : {Parte::Comune, Parte::Frazione, Parte::Via, Parte::Civico}) casa = casa || valore(x) != nullptr;
+    if (casa) {
+        ListUserHome h;
+        for (const auto& [x, dove] : std::vector<std::pair<Parte, std::string*>>{
+                 {Parte::Comune, &h.town}, {Parte::Frazione, &h.hamlet}, {Parte::Via, &h.street}, {Parte::Civico, &h.number}}) {
+            bool nel_profilo = false;
+            for (const Chiave& k : chiavi) nel_profilo = nel_profilo || (k.parte == x && k.nel_profilo);
+            if (!nel_profilo) continue;
+            const auto* v = valore(x);
+            if (!v) return sbaglio(ManualFault::HomePartMissing, 0, nome_parte(x)), out;
+            *dove = v->second;
+        }
+        if (!h.town.empty() || !h.hamlet.empty() || !h.street.empty() || !h.number.empty()) u.home = h;
+        segna(ListField::Home, "");
+    }
+    if (const auto* v = valore(Parte::Classe)) {
+        if (!v->second.empty()) {
+            std::string n = v->second;
+            if (n.size() > 2 && n.compare(n.size() - 2, 2, ".0") == 0) n.resize(n.size() - 2);
+            const bool buono = !n.empty() && n.size() <= 2 && std::all_of(n.begin(), n.end(), cifra);
+            int x = 0;
+            if (buono)
+                for (char ch : n) x = x * 10 + (ch - '0');
+            if (!buono || x > 20) return sbaglio(ManualFault::Value, v->first, "classe", RowFault::ClassNotNumber), out;
+            u.class_number = x;
+        }
+        segna(ListField::Class, "");
+    }
+    if (const auto* v = valore(Parte::Sezione)) {
+        u.section = v->second;
+        segna(ListField::Section, "");
+    }
+    if (const auto* v = valore(Parte::Fermata)) {
+        if (!v->second.empty()) {
+            std::string comune;
+            if (casa) comune = u.home ? u.home->town : std::string();
+            else if (current && current->home) comune = current->home->town;
+            Fermate fermate(idx.package(), profile);
+            const auto trovata = fermate.trova(v->second, comune);
+            if (trovata) {
+                u.stop = Ref{trovata->first, {}};
+                u.stop_match = trovata->second;
+            } else {
+                u.stop_text = v->second;
+            }
+        }
+        segna(ListField::Stop, "");
+    }
+    for (const auto& [testo, k] : chiave_di) {
+        if (k->parte != Parte::Orari) continue;
+        const auto& v = scritti.at(testo);
+        const ProfileTimes* colonna = nullptr;
+        for (const ProfileTimes& t : profile.times)
+            if (t.column == k->colonna) colonna = &t;
+        TimesParse tp = parse_times(v.second, *colonna, profile, first_year);
+        if (tp.fault) return sbaglio(ManualFault::Value, v.first, testo, tp.fault), out;
+        for (ListUserTime& t : tp.times) u.times.push_back(std::move(t));
+        segna(ListField::Times, k->colonna);
+    }
+    for (const auto& [f, c] : campi) out.fields.push_back({static_cast<ListField>(f), c});
+    return out;
+}
+
+namespace {
+
+ListUser* utente_di(ClientList& l, const Code& code) {
+    for (ListUser& u : l.users)
+        if (u.code == code) return &u;
+    return nullptr;
+}
+
+// Un altro utente dell'elenco con una chiave in comune (nome e scuola, anche di prima): il codice, o vuoto.
+Code omonimo(const ClientList& l, const ListUser& u) {
+    const std::set<std::string> mie = list_keys(u);
+    for (const ListUser& x : l.users) {
+        if (x.code == u.code) continue;
+        for (const std::string& k : list_keys(x))
+            if (mie.count(k)) return x.code;
+    }
+    return Code();
+}
+
+std::shared_ptr<ListUser> solo_il_campo(ListField f, const std::string& colonna, const ListUser& da) {
+    auto b = std::make_shared<ListUser>();
+    copy_field(f, colonna, da, *b);
+    return b;
+}
+
+}  // namespace
+
+ManualOutcome manual_change(ClientList& list, const Code& code, const ManualParse& in, const ManualMark& mark) {
+    ManualOutcome out;
+    out.code = code;
+    ListUser* u = utente_di(list, code);
+    if (!u) throw std::logic_error("utente dell'elenco che non c'e'");
+    if (u->removed) {
+        out.refusal = ManualRefusal::UserRemoved;
+        return out;
+    }
+    ListUser nuovo = *u;
+    for (const auto& [campo, colonna] : in.fields) {
+        if (same_field(campo, colonna, *u, in.values)) continue;
+        const std::string nome = field_name(campo, colonna);
+        if (campo == ListField::Times)
+            for (const ListUserTime& t : u->times)
+                if (t.column.empty()) {
+                    out.refusal = ManualRefusal::TimesWithoutColumn;
+                    out.field = nome;
+                    return out;
+                }
+        const ManualField* m = u->manual_field(campo, colonna);
+        const std::optional<Day> ultima = m ? std::optional<Day>(m->mark.date) : u->added ? std::optional<Day>(u->added->date) : std::nullopt;
+        if (ultima && mark.date < *ultima) {
+            out.refusal = ManualRefusal::DateBeforeLast;
+            out.last_date = *ultima;
+            out.field = nome;
+            return out;
+        }
+        ManualFieldChange c;
+        c.field = campo;
+        c.column = colonna;
+        copy_field(campo, colonna, *u, c.before);
+        copy_field(campo, colonna, in.values, c.after);
+        const ListField f = campo;
+        const std::string col = colonna;
+        const auto it = std::find_if(nuovo.manual.begin(), nuovo.manual.end(), [&](const ManualField& x) { return x.field == f && x.column == col; });
+        if (m && same_field(campo, colonna, *m->before, in.values)) {
+            nuovo.manual.erase(it);   // rimesso il valore di prima: non resta niente da confermare
+            c.memory = ManualFieldChange::Memory::Dropped;
+        } else if (m) {
+            it->mark = mark;
+            c.memory = ManualFieldChange::Memory::Updated;
+        } else {
+            nuovo.manual.push_back(ManualField{campo, colonna, mark, solo_il_campo(campo, colonna, *u), {}});
+            c.memory = ManualFieldChange::Memory::New;
+        }
+        copy_field(campo, colonna, in.values, nuovo);
+        out.changes.push_back(std::move(c));
+    }
+    if (out.changes.empty()) {
+        out.refusal = ManualRefusal::NothingChanges;
+        return out;
+    }
+    if (const Code altro = omonimo(list, nuovo); !altro.empty()) {
+        out.refusal = ManualRefusal::Homonym;
+        out.other = altro;
+        out.changes.clear();
+        return out;
+    }
+    *u = std::move(nuovo);
+    out.out_of_list = u->out_of_list;
+    return out;
+}
+
+ManualOutcome manual_add(const Package& p, ClientList& list, const ManualParse& in, const ManualMark& mark) {
+    ManualOutcome out;
+    ListUser u = in.values;
+    u.added = mark;
+    // I codici usati da qualunque elemento del pacchetto e dall'elenco che cambia (anche se non e' ancora nel pacchetto).
+    std::set<Code> usati = all_codes(p, true);
+    for (const ListUser& x : list.users) usati.insert(x.code);
+    int numero = p.list_last_number;
+    do {
+        ++numero;
+    } while (usati.count(list_user_code(numero)));
+    u.code = list_user_code(numero);
+    if (const Code altro = omonimo(list, u); !altro.empty()) {
+        out.refusal = ManualRefusal::Homonym;
+        out.other = altro;
+        return out;
+    }
+    for (const auto& [campo, colonna] : in.fields) {
+        ManualFieldChange c;
+        c.field = campo;
+        c.column = colonna;
+        copy_field(campo, colonna, in.values, c.after);
+        out.changes.push_back(std::move(c));
+    }
+    out.code = u.code;
+    out.last_number = numero;
+    list.users.push_back(std::move(u));
+    std::sort(list.users.begin(), list.users.end(), [](const ListUser& a, const ListUser& b) { return a.code < b.code; });
+    return out;
+}
+
+ManualOutcome manual_remove(ClientList& list, const Code& code, const ManualMark& mark) {
+    ManualOutcome out;
+    out.code = code;
+    ListUser* u = utente_di(list, code);
+    if (!u) throw std::logic_error("utente dell'elenco che non c'e'");
+    if (u->removed) {
+        out.refusal = ManualRefusal::AlreadyRemoved;
+        return out;
+    }
+    if (u->added && mark.date < u->added->date) {
+        out.refusal = ManualRefusal::DateBeforeLast;
+        out.last_date = u->added->date;
+        return out;
+    }
+    u->removed = mark;
+    out.unlocks = u->unlocks.size();
+    out.out_of_list = u->out_of_list;
+    return out;
+}
+
+ManualOutcome manual_restore(ClientList& list, const Code& code, const ManualMark& mark) {
+    ManualOutcome out;
+    out.code = code;
+    ListUser* u = utente_di(list, code);
+    if (!u) throw std::logic_error("utente dell'elenco che non c'e'");
+    if (u->removed) {
+        if (mark.date < u->removed->date) {
+            out.refusal = ManualRefusal::DateBeforeLast;
+            out.last_date = u->removed->date;
+            return out;
+        }
+        u->removed.reset();
+        out.removed = true;
+        out.out_of_list = u->out_of_list;
+        return out;
+    }
+    if (!u->out_of_list) {
+        out.refusal = ManualRefusal::NotRemovedNorOut;
+        return out;
+    }
+    // Fuori elenco (uscito, tenuto per uno sblocco) rimesso nell'elenco (D3): una modifica a mano del campo "fuori elenco".
+    ManualFieldChange c;
+    c.field = ListField::OutOfList;
+    c.before.out_of_list = true;
+    c.after.out_of_list = false;
+    out.changes.push_back(c);
+    u->manual.push_back(ManualField{ListField::OutOfList, "", mark, solo_il_campo(ListField::OutOfList, "", *u), {}});
+    u->out_of_list = false;
+    return out;
+}
+
+ManualOutcome manual_delete(ClientList& list, const Code& code) {
+    ManualOutcome out;
+    out.code = code;
+    const auto it = std::find_if(list.users.begin(), list.users.end(), [&](const ListUser& u) { return u.code == code; });
+    if (it == list.users.end()) throw std::logic_error("utente dell'elenco che non c'e'");
+    out.unlocks = it->unlocks.size();
+    out.out_of_list = it->out_of_list;
+    list.users.erase(it);
     return out;
 }
 
@@ -747,28 +1273,6 @@ std::set<Code> all_codes(const Package& p, bool with_list_users) {
 
 namespace {
 
-bool stessi_orari(const std::vector<ListUserTime>& a, const std::vector<ListUserTime>& b) {
-    const auto chiave = [](const ListUserTime& t) {
-        return std::make_tuple(t.leg, static_cast<int>(t.day), t.time, t.period, t.dates.from, t.dates.to);
-    };
-    std::vector<decltype(chiave(a.front()))> x, y;
-    for (const auto& t : a) x.push_back(chiave(t));
-    for (const auto& t : b) y.push_back(chiave(t));
-    std::sort(x.begin(), x.end());
-    std::sort(y.begin(), y.end());
-    return x == y;
-}
-
-bool stesse_tratte(const std::vector<ListUserLeg>& a, const std::vector<ListUserLeg>& b) {
-    const auto chiave = [](const ListUserLeg& l) { return std::make_tuple(l.leg, l.company ? l.company->code : std::string(), l.other_company); };
-    std::vector<std::tuple<std::string, std::string, std::string>> x, y;
-    for (const auto& l : a) x.push_back(chiave(l));
-    for (const auto& l : b) y.push_back(chiave(l));
-    std::sort(x.begin(), x.end());
-    std::sort(y.begin(), y.end());
-    return x == y;
-}
-
 std::vector<std::string> campi_cambiati(const ListUser& vecchio, const ListUser& nuovo) {
     std::vector<std::string> c;
     if (vecchio.name != nuovo.name) c.push_back("nome");
@@ -796,6 +1300,41 @@ bool stessa_casa(const ListUser& a, const ListUser& b) {
 
 }  // namespace
 
+namespace {
+
+// Tutti i campi di un utente, gli orari colonna per colonna: le colonne del profilo e quelle che l'utente ha (anche cambiate a mano).
+std::vector<std::pair<ListField, std::string>> tutti_i_campi(const ReadingProfile& profile, const ListUser& a, const ListUser& b) {
+    std::vector<std::pair<ListField, std::string>> v = {{ListField::Name, ""},    {ListField::Home, ""},    {ListField::School, ""},
+                                                        {ListField::Class, ""},   {ListField::Section, ""}, {ListField::Status, ""},
+                                                        {ListField::Stop, ""},    {ListField::Routes, ""}};
+    std::set<std::string> colonne;
+    for (const ProfileTimes& t : profile.times) colonne.insert(t.column);
+    for (const ListUser* u : {&a, &b}) {
+        for (const ListUserTime& t : u->times) colonne.insert(t.column);
+        for (const ManualField& m : u->manual)
+            if (m.field == ListField::Times) colonne.insert(m.column);
+    }
+    for (const std::string& c : colonne) v.push_back({ListField::Times, c});
+    return v;
+}
+
+bool colonna_del_profilo(const ReadingProfile& profile, const std::string& colonna) {
+    for (const ProfileTimes& t : profile.times)
+        if (t.column == colonna) return true;
+    return false;
+}
+
+Problem avviso_a_mano(Check c, int variante, int riga, const Code& utente, const std::string& campo, const ManualMark* m) {
+    std::vector<Param> par{number_param("riga", riga), ref_param("utente", Element::ListUser, utente), text_param("campo", campo)};
+    if (m) {
+        par.push_back(text_param("riferimento", m->reference));
+        par.push_back(date_param("data", m->date));
+    }
+    return Problem{c, variante, Source{"", "", riga, 0}, std::move(par)};
+}
+
+}  // namespace
+
 ListMerge merge_list(const Package& p, const ReadingProfile& profile, int first_year, const ListRead& read, bool complete,
                      const std::string& fingerprint) {
     ListMerge out;
@@ -811,13 +1350,17 @@ ListMerge merge_list(const Package& p, const ReadingProfile& profile, int first_
     out.list.last_fingerprint = fingerprint;
     out.list.last_complete = complete;
 
-    std::map<std::string, const ListUser*> esistenti;   // chiave -> utente (solo le chiavi di un utente solo)
+    // Chiave -> utente, solo le chiavi di un utente solo (K-020: anche quelle di prima di una correzione a mano).
+    std::map<std::string, const ListUser*> esistenti;
     std::map<std::string, int> quanti;
     if (prima)
-        for (const ListUser& u : prima->users) ++quanti[list_key(u.name, u.school.code)];
-    if (prima)
         for (const ListUser& u : prima->users)
-            if (quanti[list_key(u.name, u.school.code)] == 1) esistenti[list_key(u.name, u.school.code)] = &u;
+            for (const std::string& k : list_keys(u)) {
+                ++quanti[k];
+                esistenti[k] = &u;
+            }
+    for (const auto& [k, n] : quanti)
+        if (n > 1) esistenti.erase(k);
 
     std::set<Code> usati = all_codes(p, true);
     int numero = p.list_last_number;
@@ -827,24 +1370,61 @@ ListMerge merge_list(const Package& p, const ReadingProfile& profile, int first_
     for (const ParsedUser& r : read.users) {
         ListUser u = r.user;
         const auto it = esistenti.find(list_key(u.name, u.school.code));
-        if (it != esistenti.end()) {
-            const ListUser& v = *it->second;
-            u.code = v.code;
-            u.unlocks = v.unlocks;   // una lettura non cancella mai uno sblocco
-            u.out_of_list = false;
-            trovati.insert(v.code);
-            std::vector<std::string> campi = campi_cambiati(v, u);
-            out.changes.push_back({campi.empty() ? ListChange::Kind::Unchanged : ListChange::Kind::Changed, u.code, r.row, std::move(campi)});
-        } else {
+        if (it == esistenti.end()) {
             // Un codice nuovo: il numero dopo l'ultimo dato, saltando quelli usati da qualunque elemento del pacchetto.
             do {
                 ++numero;
             } while (usati.count(list_user_code(numero)));
             u.code = list_user_code(numero);
             usati.insert(u.code);
-            out.changes.push_back({ListChange::Kind::New, u.code, r.row, {}});
+            out.changes.push_back({ListChange::Kind::New, u.code, r.row, {}, {}});
             indici_nuovi.push_back(risultato.size());
+            risultato.push_back(std::move(u));
+            continue;
         }
+        const ListUser& v = *it->second;
+        trovati.insert(v.code);
+        if (v.removed) {
+            // Tolto a mano: resta fuori, com'e' (nessun campo si aggiorna: si tengono meno dati possibile).
+            out.changes.push_back({ListChange::Kind::RemovedInFile, v.code, r.row, {}, {}});
+            out.warnings.push_back(avviso_a_mano(Check::ListRemovedStillInFile, 0, r.row, v.code, "", &*v.removed));
+            risultato.push_back(v);
+            continue;
+        }
+        u.code = v.code;
+        u.unlocks = v.unlocks;   // una lettura non cancella mai uno sblocco
+        u.out_of_list = false;
+        std::vector<std::string> confermati;
+        for (const auto& [campo, colonna] : tutti_i_campi(profile, v, u)) {
+            const ManualField* m = v.manual_field(campo, colonna);
+            const std::string nome = field_name(campo, colonna);
+            if (m) {
+                if (campo == ListField::Times && !colonna_del_profilo(profile, colonna)) {
+                    // Colonna cambiata a mano che il profilo non ha piu': vince il file (che non la porta).
+                    out.warnings.push_back(avviso_a_mano(Check::ListFileNewerValue, 1, r.row, v.code, nome, &m->mark));
+                } else if (same_field(campo, colonna, u, v)) {
+                    confermati.push_back(nome);   // file uguale al valore a mano: la modifica diventa normale
+                } else if (same_field(campo, colonna, u, *m->before)) {
+                    // File uguale al valore di prima: non e' ancora aggiornato. Resta il valore a mano, e la modifica.
+                    copy_field(campo, colonna, v, u);
+                    u.manual.push_back(*m);
+                    out.warnings.push_back(avviso_a_mano(Check::ListFileNotUpdated, 0, r.row, v.code, nome, &m->mark));
+                } else {
+                    // Un terzo valore: il committente l'ha cambiato dopo. Vince il file.
+                    out.warnings.push_back(avviso_a_mano(Check::ListFileNewerValue, 0, r.row, v.code, nome, &m->mark));
+                }
+            } else if (v.added && !same_field(campo, colonna, u, v)) {
+                // Aggiunto a mano, ora nel file: nei campi non cambiati dopo l'aggiunta vale il file (D2).
+                out.warnings.push_back(avviso_a_mano(Check::ListAddedNowInFile, 0, r.row, v.code, nome, &*v.added));
+            }
+        }
+        if (const ManualField* m = v.manual_field(ListField::OutOfList)) {
+            (void)m;   // rimesso a mano nell'elenco (D3): il file lo porta, confermato
+            confermati.push_back(field_name(ListField::OutOfList, ""));
+        }
+        std::vector<std::string> campi = campi_cambiati(v, u);
+        const ListChange::Kind k = campi.empty() ? ListChange::Kind::Unchanged : ListChange::Kind::Changed;
+        out.changes.push_back({k, u.code, r.row, std::move(campi), std::move(confermati)});
         risultato.push_back(std::move(u));
     }
     // Gli utenti dell'elenco del pacchetto che il file non ha.
@@ -853,24 +1433,45 @@ ListMerge merge_list(const Package& p, const ReadingProfile& profile, int first_
         for (const ListUser& v : prima->users) {
             if (trovati.count(v.code)) continue;
             non_trovati.push_back(&v);
-            if (read.unreadable_keys.count(list_key(v.name, v.school.code))) {
+            bool illeggibile = false;
+            for (const std::string& k : list_keys(v)) illeggibile = illeggibile || read.unreadable_keys.count(k) > 0;
+            if (illeggibile) {
                 risultato.push_back(v);   // la sua riga e' illeggibile: resta com'e'
-                out.changes.push_back({ListChange::Kind::Unread, v.code, 0, {}});
+                out.changes.push_back({ListChange::Kind::Unread, v.code, 0, {}, {}});
                 continue;
             }
             if (!out.exits_applied) {
                 risultato.push_back(v);
-                out.changes.push_back({ListChange::Kind::NotInFile, v.code, 0, {}});
+                out.changes.push_back({ListChange::Kind::NotInFile, v.code, 0, {}, {}});
+                continue;
+            }
+            if (v.removed) {
+                // Tolto a mano e non nel file completo: se ne va davvero, con i suoi sblocchi (una scelta dell'utente).
+                out.changes.push_back({ListChange::Kind::RemovedGone, v.code, 0, {}, {}});
+                continue;
+            }
+            if (v.added) {
+                // Aggiunto a mano e non nel file: resta (l'avviso K-CTR-154 lo dice), finche' il file lo porta o si toglie.
+                risultato.push_back(v);
+                out.changes.push_back({ListChange::Kind::ManualNotInFile, v.code, 0, {}, {}});
+                continue;
+            }
+            if (const ManualField* m = v.manual_field(ListField::OutOfList)) {
+                // Rimesso a mano nell'elenco (D3) e non nel file: il file ha il valore di prima (fuori), non e' aggiornato.
+                risultato.push_back(v);
+                out.changes.push_back({ListChange::Kind::ManualNotInFile, v.code, 0, {}, {}});
+                out.warnings.push_back(avviso_a_mano(Check::ListFileNotUpdated, 1, 0, v.code, field_name(ListField::OutOfList, ""), &m->mark));
                 continue;
             }
             if (!v.unlocks.empty()) {
                 ListUser w = v;
                 w.out_of_list = true;
-                out.changes.push_back({ListChange::Kind::KeptForUnlock, v.code, 0, v.out_of_list ? std::vector<std::string>{} : std::vector<std::string>{"fuori_elenco"}});
+                out.changes.push_back({ListChange::Kind::KeptForUnlock, v.code, 0,
+                                       v.out_of_list ? std::vector<std::string>{} : std::vector<std::string>{"fuori_elenco"}, {}});
                 risultato.push_back(std::move(w));
                 continue;
             }
-            out.changes.push_back({ListChange::Kind::Exited, v.code, 0, {}});
+            out.changes.push_back({ListChange::Kind::Exited, v.code, 0, {}, {}});
         }
     // Forse lo stesso, scritto diverso: un utente che il file non ha e un nuovo con la stessa casa, nella stessa scuola (0) o con
     // lo stesso nome in un'altra scuola (1). Mai un'unione: lo dice e basta.
@@ -980,6 +1581,7 @@ private:
         if (pr && pr->client.code != l.client.code)
             add(Check::ListInvalid, l.profile.src, {ref_param("profilo", Element::ReadingProfile, pr->code), ref_param("committente", Element::Client, l.client.code)}, 0);
         const DateRange anno = school_year(l.first_year, pr ? pr->start_month : 9);
+        // Chiave -> utenti (K-020: anche le chiavi di prima di una correzione a mano del nome o della scuola).
         std::map<std::string, std::vector<const ListUser*>> per_chiave;
         for (const ListUser& u : l.users) {
             const auto [it, nuovo] = codici.emplace(u.code, &u.src);
@@ -987,15 +1589,23 @@ private:
                 add(Check::DuplicateCode, u.src, {text_param("codice", u.code), elements_param("elementi", Element::ListUser),
                                                   text_param("prima", it->second->file + " " + it->second->pointer)});
             if (altri.count(u.code)) add(Check::ListUserCodeClash, u.src, {ref_param("utente", Element::ListUser, u.code)});
-            if (!u.name.empty()) per_chiave[list_key(u.name, u.school.code)].push_back(&u);
+            if (!u.name.empty())
+                for (const std::string& k : list_keys(u)) per_chiave[k].push_back(&u);
             utente(u, pr, anno);
         }
+        std::set<std::pair<Code, Code>> visti;
         for (const auto& [chiave, utenti] : per_chiave)
             if (utenti.size() > 1)
-                for (std::size_t i = 1; i < utenti.size(); ++i)
+                for (std::size_t i = 1; i < utenti.size(); ++i) {
+                    if (!visti.insert({utenti[0]->code, utenti[i]->code}).second) continue;
+                    const bool oggi = chiave == list_key(utenti[0]->name, utenti[0]->school.code) &&
+                                      chiave == list_key(utenti[i]->name, utenti[i]->school.code);
+                    const Code scuola = chiave.substr(chiave.find('\x1f') + 1);
                     add(Check::ListHomonymsInList, utenti[i]->src,
                         {ref_param("utente", Element::ListUser, utenti[i]->code), ref_param("altro", Element::ListUser, utenti[0]->code),
-                         ref_param("scuola", Element::School, utenti[i]->school.code)});
+                         ref_param("scuola", Element::School, scuola)},
+                        oggi ? 0 : 1);
+                }
     }
 
     void utente(const ListUser& u, const ReadingProfile* pr, const DateRange& anno) {
@@ -1028,10 +1638,42 @@ private:
         }
         if (u.out_of_list)
             add(Check::ListUserOutOfList, u.src, {chi, number_param("sblocchi", static_cast<long long>(u.unlocks.size()))}, u.unlocks.empty() ? 1 : 0);
+        a_mano(u, chi);
         if (!pr) return;
         andata_senza_ritorno(u, *pr, chi);
         sovrapposizioni(u, chi);
         fuori_anno(u, anno, chi);
+    }
+
+    // K-020: lo stato delle modifiche a mano che resta nell'elenco finche' un file non lo risolve.
+    void a_mano(const ListUser& u, const Param& chi) {
+        const auto segno = [](const ManualMark& m) {
+            return std::vector<Param>{text_param("riferimento", m.reference), date_param("data", m.date)};
+        };
+        if (u.added) {
+            std::vector<Param> par{chi};
+            for (Param& x : segno(*u.added)) par.push_back(std::move(x));
+            add(Check::ListAddedByHand, u.src, std::move(par));
+        }
+        if (u.removed) {
+            std::vector<Param> par{chi, number_param("sblocchi", static_cast<long long>(u.unlocks.size()))};
+            for (Param& x : segno(*u.removed)) par.push_back(std::move(x));
+            add(Check::ListRemovedByHand, u.src, std::move(par), u.unlocks.empty() ? 0 : 1);
+        }
+        std::set<std::string> colonne;
+        for (const ManualField& m : u.manual) {
+            if (m.field == ListField::Times && !colonne.insert(m.column).second)
+                add(Check::ListInvalid, m.src, {chi, text_param("colonna", m.column)}, 4);
+            if (m.field == ListField::School && !m.before->school.code.empty())
+                ref(m.before->school, Element::School, idx_.school(m.before->school.code) != nullptr);
+            if (m.field == ListField::Stop && m.before->stop) {
+                const Place* l = idx_.place(m.before->stop->code);
+                ref(*m.before->stop, Element::Place, l != nullptr && !l->is_private);
+            }
+            std::vector<Param> par{chi, text_param("campo", field_name(m.field, m.column))};
+            for (Param& x : segno(m.mark)) par.push_back(std::move(x));
+            add(Check::ListManualPending, m.src, std::move(par), m.field == ListField::OutOfList ? 1 : 0);
+        }
     }
 
     // Per ogni giorno della settimana: i giorni con l'andata e senza nessun ritorno (in tutto o in parte dell'anno).
