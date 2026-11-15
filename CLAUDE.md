@@ -72,6 +72,12 @@ Si parte da ALP (3 minibus + 1 auto) e si deve poter crescere fino a 500 mezzi e
   una variabile d'ambiente). Altri comandi: `cassaforte`, `registro`, `esporta` e `richiudi` (correggere i dati),
   `aggiungi-utente`, `togli-utente`, `password`, `conservazione`, `cancella`; quelli che cambiano la cassaforte vogliono
   `--scrivi <cartella del pacchetto>`. Copia congelata della versione 1 con le password di prova: tests/esempi/k010-cassaforte.
+- Elenco utenti del committente (K-019, docs/formato-dati.md `profili_elenchi.json` ed `elenco_utenti.json`): `./build/kzero
+  leggi-elenco <file.xlsx> <pacchetto chiuso> --profilo CODICE --anno-scolastico 2026-2027 --elenco completo|parziale --utente
+  CODICE [--scrivi <pacchetto chiuso>]` (senza `--scrivi` anteprima; `--scrivi` = la stessa cartella); `./build/kzero sblocco
+  <pacchetto chiuso> --utente-elenco U-000001 --tratta SIGLA (--riferimento "..." --data AAAA-MM-GG | --togli) --utente CODICE
+  --scrivi <pacchetto chiuso>`. Prove con dati inventati: tests/esempi/k019-elenco (profili, testi da cui le prove costruiscono i
+  file .xlsx con tests/xlsx_prove.hpp e build/tests/crea_xlsx; nessun .xlsx nel deposito).
 - Eseguire le prove: `ctest --test-dir build --output-on-failure`
 - Controllo del deposito pubblico (K-015: i quattro nomi in nessun file, nessun file di dati ne' manifesto di un pacchetto
   fuori da tests/ ed esempi/; K-016: solo testi UTF-8 e binari ammessi, cartelle saltate uguali a quelle di .gitignore):
@@ -94,10 +100,11 @@ Si parte da ALP (3 minibus + 1 auto) e si deve poter crescere fino a 500 mezzi e
   variabile d'ambiente, e scrive quali varianti ha fatto. Nella costruzione normale tutte le varianti.
 - Fuzzing (prove con dati casuali e deformati, libFuzzer, solo clang; su Ubuntu serve il pacchetto libclang-rt-18-dev):
   `CC=clang CXX=clang++ cmake -S . -B build-fuzz -DKZERO_FUZZ=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo &&
-  cmake --build build-fuzz --target fuzz_pacchetto fuzz_parametri fuzz_date_e_orari fuzz_cassaforte rigioca_fuzz`
-  (rigioca_fuzz prepara i semi della cassaforte, con chiavi nuove a ogni giro), poi
-  `tests/fuzz/fuzz.sh build-fuzz <secondi per bersaglio> [cartella di lavoro] [bersagli]` (32 bersagli: `pacchetto-<file>`,
-  `parametri`, `date-e-orari` e, dal K-010, `cassaforte`, `cassaforte-voci`, `registro`, `registro-voci`, `password`; nel
+  cmake --build build-fuzz --target fuzz_pacchetto fuzz_parametri fuzz_date_e_orari fuzz_cassaforte fuzz_elenco rigioca_fuzz`
+  (rigioca_fuzz prepara i semi della cassaforte, con chiavi nuove a ogni giro, e quelli dell'elenco dai testi delle prove), poi
+  `tests/fuzz/fuzz.sh build-fuzz <secondi per bersaglio> [cartella di lavoro] [bersagli]` (35 bersagli: `pacchetto-<file>`,
+  `parametri`, `date-e-orari` e, dal K-010, `cassaforte`, `cassaforte-voci`, `registro`, `registro-voci`, `password`; dal K-019
+  `elenco-archivio`, `elenco-foglio`, `elenco-righe`; nel
   controllo GitHub 20 secondi; in locale a lungo, es. `KZERO_FUZZ_PARALLELI=4
   tests/fuzz/fuzz.sh build-fuzz 3600 ~/kzero-fuzz`). Un guasto lascia il file che lo provoca in
   `<lavoro>/guasti/<bersaglio>/`: si corregge e il file va in `tests/fuzz/casi/<bersaglio>/` (diventa una prova normale).
@@ -143,6 +150,7 @@ Si parte da ALP (3 minibus + 1 auto) e si deve poter crescere fino a 500 mezzi e
   riga di comando); API in src/api (il contratto: riga di comando con uscita testo/JSON); adattatori sopra l'API.
 - Librerie con versione e impronta fissate: CLI11 2.7.2 (parametri), nlohmann/json 3.12.0 (JSON),
   GoogleTest 1.15.2 (prove), valijson 1.1.3 (controllo dei dati con gli schemi; fissata con l'impronta del commit);
+  dal K-019 miniz 3.1.2 (archivi ZIP dei file .xlsx, solo lettura in memoria) ed Expat 2.8.5 (XML, senza DTD ne' entita');
   dal K-010 libsodium 1.0.22 (cifratura, solo le sue primitive come le documenta), utf8proc 2.11.3 (normalizzazione delle
   password) e l'elenco delle password comuni di SecLists (fissato con il commit e l'impronta del file).
 - Dati: pacchetto = cartella con manifesto e un file JSON per tipo di dato (docs/formato-dati.md); schemi in

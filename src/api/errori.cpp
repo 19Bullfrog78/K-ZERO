@@ -76,6 +76,16 @@ const std::vector<DefinizioneErrore>& catalogo_errori() {
             {Errore::PeriodoRovesciato, "K-ERR-039", CodiceUscita::ErroreParametri, "Periodo che finisce prima di cominciare"},
             {Errore::PeriodoIncompleto, "K-ERR-040", CodiceUscita::ErroreParametri,
              "Periodo non scritto o scritto a meta' (--data, oppure --dal e --al)"},
+            {Errore::FileDaLeggereIlleggibile, "K-ERR-041", CodiceUscita::ErroreDati, "File da leggere non trovato o illeggibile"},
+            {Errore::FileExcelNonValido, "K-ERR-042", CodiceUscita::ErroreDati, "File Excel rovinato, cifrato o fuori dai limiti"},
+            {Errore::FormatoXls, "K-ERR-043", CodiceUscita::ErroreDati, "File nel vecchio formato .xls"},
+            {Errore::ColonnaMancante, "K-ERR-044", CodiceUscita::ErroreDati, "Colonna del profilo mancante o ripetuta nel file"},
+            {Errore::ProfiloNonTrovato, "K-ERR-045", CodiceUscita::ErroreParametri, "Profilo di lettura non presente nel pacchetto"},
+            {Errore::ScriviDiversa, "K-ERR-046", CodiceUscita::ErroreParametri,
+             "La cartella di --scrivi non e' quella del pacchetto"},
+            {Errore::ElencoSoloNumeri, "K-ERR-047", CodiceUscita::ErroreDati, "Elenco utenti in un pacchetto \"solo numeri\""},
+            {Errore::UtenteElencoNonTrovato, "K-ERR-048", CodiceUscita::ErroreParametri, "Utente non presente nell'elenco"},
+            {Errore::SbloccoNonAmmesso, "K-ERR-049", CodiceUscita::ErroreParametri, "Sblocco non ammesso"},
         };
         std::sort(c.begin(), c.end(), [](const DefinizioneErrore& a, const DefinizioneErrore& b) {
             return a.codice < b.codice;

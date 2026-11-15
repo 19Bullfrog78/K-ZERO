@@ -10,6 +10,7 @@
 #include <regex>
 #include <sstream>
 #include <stdexcept>
+#include <unistd.h>
 
 #include "api.hpp"
 #include "cassaforte.hpp"
@@ -29,6 +30,9 @@
 #include "schemi_dati.hpp"
 #include "tempo.hpp"
 #include "uscita.hpp"
+#include "elenco.hpp"
+#include "excel.hpp"
+#include "../xlsx_prove.hpp"
 
 namespace kzero::fuzz {
 
@@ -368,6 +372,197 @@ int prova_semi_cassaforte() {
     return 8;
 }
 
+// --- Elenco utenti del committente (K-019) ----------------------------------------------------------------------------
+
+namespace {
+
+std::string testo_di(const std::string& file) {
+    std::ifstream in(file, std::ios::binary);
+    std::stringstream s;
+    s << in.rdbuf();
+    return s.str();
+}
+
+// Il pacchetto di prova dell'elenco: il demo con i profili e i codici esterni di tests/esempi/k019-elenco, letto una volta.
+const Lettura& lettura_elenco() {
+    static const Lettura l = [] {
+        PacchettoInMemoria m;
+        const PacchettoIncorporato demo("esempi/demo");
+        const std::string k019 = std::string(KZERO_SORGENTI) + "/tests/esempi/k019-elenco/";
+        const JsonDati codici = JsonDati::parse(testo_di(k019 + "codici_esterni.json"));
+        for (const auto& v : demo.voci()) {
+            std::string t = demo.leggi(v.nome, kMassimoByteFile).testo;
+            for (const char* f : {"scuole", "luoghi"})
+                if (v.nome == std::string(f) + ".json") {
+                    JsonDati d = JsonDati::parse(t);
+                    for (JsonDati& x : d.at(f)) {
+                        const std::string c = x.at("codice").get<std::string>();
+                        if (!codici.at(f).contains(c)) continue;
+                        if (!x.contains("codici_esterni")) x["codici_esterni"] = JsonDati::array();
+                        for (const JsonDati& e : codici.at(f).at(c)) x["codici_esterni"].push_back(e);
+                    }
+                    t = d.dump();
+                }
+            m.file[v.nome] = t;
+        }
+        m.file["profili_elenchi.json"] = testo_di(k019 + "profili_elenchi.json");
+        Lettura x = leggi_pacchetto(m);
+        if (!x.forma_valida()) guasto("pacchetto di prova dell'elenco con errori di forma");
+        return x;
+    }();
+    return l;
+}
+
+kzero::Table tabella_da_testo(const std::string& t) {
+    kzero::Table out;
+    std::size_t a = 0;
+    int numero = 0;
+    while (a <= t.size() && numero < 2000) {
+        std::size_t b = t.find('\n', a);
+        if (b == std::string::npos) b = t.size();
+        const std::string riga = t.substr(a, b - a);
+        kzero::TableRow r;
+        r.number = ++numero;
+        std::size_t c = 0;
+        int colonna = 0;
+        for (;;) {
+            const std::size_t d = std::min(riga.find('\t', c), riga.size());
+            std::string cella = riga.substr(c, d - c);
+            if (!cella.empty() && cella[0] == '#') cella.erase(0, 1);   // come nei testi delle prove: "#3" e' il numero 3
+            ++colonna;
+            if (!cella.empty()) r.cells.push_back({colonna, cella, cella == "!"});
+            if (d >= riga.size()) break;
+            c = d + 1;
+        }
+        if (!r.cells.empty()) out.rows.push_back(std::move(r));
+        if (b == t.size()) break;
+        a = b + 1;
+    }
+    return out;
+}
+
+}  // namespace
+
+void prova_elenco_archivio(const std::uint8_t* dati, std::size_t n) {
+    const std::string_view f(reinterpret_cast<const char*>(dati), n);
+    try {
+        const excel::Foglio s = excel::leggi_foglio(f, "");
+        for (const excel::Riga& r : s.righe) {
+            if (r.numero == 0 || r.numero > excel::limiti().righe) guasto("riga fuori dai limiti");
+            for (const excel::Cella& c : r.celle)
+                if (c.colonna == 0 || c.colonna > excel::limiti().colonne || c.testo.size() > excel::limiti().cella)
+                    guasto("cella fuori dai limiti");
+        }
+    } catch (const excel::ErroreExcel&) {
+    }
+    try {
+        (void)excel::nomi_delle_parti(f);
+    } catch (const excel::ErroreExcel&) {
+    }
+}
+
+void prova_elenco_foglio(const std::uint8_t* dati, std::size_t n) {
+    const std::string_view x(reinterpret_cast<const char*>(dati), n);
+    try {
+        (void)excel::testi_condivisi_da_xml(x);
+    } catch (const excel::ErroreExcel&) {
+    }
+    try {
+        const excel::Foglio s = excel::foglio_da_xml(x, {"uno", "due", "tre"});
+        for (std::size_t i = 1; i < s.righe.size(); ++i)
+            if (s.righe[i].numero <= s.righe[i - 1].numero) guasto("righe fuori ordine");
+    } catch (const excel::ErroreExcel&) {
+    }
+}
+
+void prova_elenco_righe(const std::uint8_t* dati, std::size_t n) {
+    const Lettura& l = lettura_elenco();
+    const kzero::Index idx(l.pacchetto);
+    const std::string t(reinterpret_cast<const char*>(dati), n);
+    const kzero::Table tabella = tabella_da_testo(t);
+    for (const kzero::ReadingProfile& p : l.pacchetto.reading_profiles) {
+        // Le celle una per una, con ogni forma del profilo.
+        for (const kzero::TableRow& r : tabella.rows)
+            for (const kzero::TableCell& c : r.cells) {
+                (void)kzero::parse_routes(c.text, p);
+                (void)kzero::parse_status(c.text, p);
+                for (const kzero::ProfileTimes& o : p.times) {
+                    const kzero::TimesParse x = kzero::parse_times(c.text, o, p, 2026);
+                    if (x.fault && !x.times.empty()) guasto("orari letti a meta'");
+                    for (const kzero::ListUserTime& v : x.times)
+                        if (v.dates.to < v.dates.from || v.time < 0 || v.time >= 24 * 60) guasto("orario incoerente");
+                }
+            }
+        // Le righe e il confronto: righe lette + illeggibili = righe dei dati; codici nuovi in ordine e unici.
+        const kzero::ListRead letto = kzero::read_list(tabella, p, idx, 2026, nullptr);
+        if (letto.fault != kzero::TableFault::None) continue;
+        std::set<int> righe;
+        for (const kzero::ParsedUser& u : letto.users) righe.insert(u.row);
+        for (int r : letto.unreadable_rows)
+            if (righe.count(r)) guasto("riga sia letta sia illeggibile");
+        for (const bool completo : {true, false}) {
+            const kzero::ListMerge m = kzero::merge_list(l.pacchetto, p, 2026, letto, completo, std::string(64, '0'));
+            std::set<std::string> codici;
+            for (const kzero::ListUser& u : m.list.users)
+                if (!codici.insert(u.code).second) guasto("codice ripetuto nell'elenco");
+            if (m.list.users.size() != letto.users.size()) guasto("utenti persi o inventati");
+        }
+    }
+}
+
+void scrivi_semi_elenco(const std::string& cartella) {
+    namespace fs = std::filesystem;
+    const std::string k019 = std::string(KZERO_SORGENTI) + "/tests/esempi/k019-elenco/";
+    const auto scrivi = [&](const std::string& bersaglio, const std::string& nome, const std::string& testo) {
+        fs::create_directories(fs::path(cartella) / bersaglio);
+        std::ofstream(fs::path(cartella) / bersaglio / nome, std::ios::binary) << testo;
+    };
+    for (const char* nome : {"prima-lettura", "seconda-lettura"}) {
+        const std::string tsv = testo_di(k019 + nome + ".tsv");
+        scrivi("elenco-righe", std::string("seme-") + nome, tsv);
+        std::vector<std::vector<std::string>> righe;
+        const kzero::Table t = tabella_da_testo(tsv);
+        for (const kzero::TableRow& r : t.rows) {
+            std::vector<std::string> x;
+            for (const kzero::TableCell& c : r.cells) {
+                if (x.size() < static_cast<std::size_t>(c.column - 1)) x.resize(static_cast<std::size_t>(c.column - 1));
+                const bool numero = !c.text.empty() && std::all_of(c.text.begin(), c.text.end(), [](char ch) { return ch >= '0' && ch <= '9'; });
+                x.push_back(numero ? "#" + c.text : c.text);
+            }
+            righe.push_back(x);
+        }
+        for (int metodo : {0, 8}) {
+            const std::vector<kzero::prove::xlsx::Parte> parti = kzero::prove::xlsx::parti_xlsx({kzero::prove::xlsx::Foglio{"Foglio1", righe, false}}, metodo);
+            scrivi("elenco-archivio", std::string("seme-") + nome + "-" + std::to_string(metodo),
+                   kzero::prove::xlsx::Archivio{parti, 0}.scrivi());
+            for (const kzero::prove::xlsx::Parte& p : parti)
+                if (p.nome == "xl/worksheets/sheet1.xml" && metodo == 0) scrivi("elenco-foglio", std::string("seme-") + nome + "-foglio", p.dati);
+                else if (p.nome == "xl/sharedStrings.xml" && metodo == 0) scrivi("elenco-foglio", std::string("seme-") + nome + "-testi", p.dati);
+        }
+    }
+}
+
+int prova_semi_elenco() {
+    namespace fs = std::filesystem;
+    const fs::path cartella = fs::temp_directory_path() / ("kzero-semi-elenco-" + std::to_string(::getpid()));
+    scrivi_semi_elenco(cartella.string());
+    int n = 0;
+    for (const char* b : {"elenco-archivio", "elenco-foglio", "elenco-righe"})
+        for (const auto& e : fs::directory_iterator(cartella / b)) {
+            const std::string t = testo_di(e.path().string());
+            prova(b, reinterpret_cast<const std::uint8_t*>(t.data()), t.size());
+            ++n;
+        }
+    std::error_code ec;
+    fs::remove_all(cartella, ec);
+    // I semi devono essere buoni: i file si leggono e le righe sono tutte lette.
+    const std::string tsv = testo_di(std::string(KZERO_SORGENTI) + "/tests/esempi/k019-elenco/prima-lettura.tsv");
+    const kzero::ListRead l = kzero::read_list(tabella_da_testo(tsv), lettura_elenco().pacchetto.reading_profiles.at(0),
+                                               kzero::Index(lettura_elenco().pacchetto), 2026, nullptr);
+    if (l.users.size() != 5) guasto("il seme delle righe non si legge tutto");
+    return n;
+}
+
 bool prova(const std::string& bersaglio, const std::uint8_t* dati, std::size_t n) {
     if (bersaglio == "cassaforte") prova_cassaforte(dati, n);
     else if (bersaglio == "cassaforte-voci") prova_cassaforte_voci(dati, n);
@@ -376,6 +571,9 @@ bool prova(const std::string& bersaglio, const std::uint8_t* dati, std::size_t n
     else if (bersaglio == "password") prova_password(dati, n);
     else if (bersaglio == "parametri") prova_parametri(dati, n);
     else if (bersaglio == "date-e-orari") prova_date_e_orari(dati, n);
+    else if (bersaglio == "elenco-archivio") prova_elenco_archivio(dati, n);
+    else if (bersaglio == "elenco-foglio") prova_elenco_foglio(dati, n);
+    else if (bersaglio == "elenco-righe") prova_elenco_righe(dati, n);
     else if (bersaglio.rfind("pacchetto-", 0) == 0 && file_dati_per_nome(bersaglio.substr(10)))
         prova_file_del_pacchetto(bersaglio.substr(10), dati, n);
     else return false;

@@ -30,5 +30,8 @@ Risultato esegui_togli_utente(const DefinizioneComando& comando, const Parametri
 Risultato esegui_password(const DefinizioneComando& comando, const Parametri& parametri);
 Risultato esegui_conservazione(const DefinizioneComando& comando, const Parametri& parametri);
 Risultato esegui_cancella(const DefinizioneComando& comando, const Parametri& parametri);
+// Elenco utenti del committente (K-019): comando_elenco.cpp
+Risultato esegui_leggi_elenco(const DefinizioneComando& comando, const Parametri& parametri);
+Risultato esegui_sblocco(const DefinizioneComando& comando, const Parametri& parametri);
 
 }  // namespace kzero::api

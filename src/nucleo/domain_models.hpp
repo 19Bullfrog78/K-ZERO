@@ -1626,6 +1626,128 @@ struct Manifest {
     Source src;
 };
 
+// --- Elenco utenti del committente (K-019) -------------------------------------------------------------------------
+// Il committente manda l'elenco degli utenti trasportati in un suo file (oggi Excel), una riga per utente. Come e' fatto quel
+// file sta in un profilo di lettura (profili_elenchi.json), un dato: titoli delle colonne, parole dello stato, sigle e
+// separatori. Il programma conosce solo le forme (es. orari "per tratta" o "per giorno"), mai le parole di un committente.
+
+// Una tratta del file (es. "AM" = andata mattina) e il verso che ha in K-Zero.
+struct ProfileLeg {
+    std::string code;
+    Direction direction = Direction::Outbound;
+    std::string name;
+};
+struct ProfileDay {
+    std::string code;   // es. "LU"
+    Weekday day = Weekday::Monday;
+};
+// Un periodo delle voci per giorno (es. "o", "f1", "rm") e la tratta che vuol dire.
+struct ProfilePeriod {
+    std::string code;
+    std::string leg;
+    std::string name;
+};
+struct ProfileCompany {
+    std::string text;   // la ditta come la scrive il file
+    Ref company;        // l'azienda del pacchetto
+};
+enum class TimesForm { ByLeg, ByDay };   // per_tratta, per_giorno (docs/formato-dati.md, profili_elenchi.json)
+struct ProfileTimes {
+    std::string column;
+    TimesForm form = TimesForm::ByLeg;
+    std::string item_sep, time_sep;
+    std::string leg_sep, days_sep;                                        // per_tratta
+    std::string day_start, date_open, date_close, date_sep, day_month_sep;   // per_giorno
+    Source src;
+};
+struct ReadingProfile {
+    Code code;
+    std::string name;
+    Ref client;
+    std::string sheet;          // vuoto = il primo foglio
+    int start_month = 9;        // mese d'inizio dell'anno scolastico
+    std::string ext_system, ext_school_type, ext_stop_type;
+    struct Columns {
+        std::string name, school, status, routes, stop, town, hamlet, street, number, class_number, section;
+    } columns;
+    std::vector<std::string> active_words, suspended_words;
+    std::string note_sep;
+    std::vector<ProfileLeg> legs;
+    std::vector<ProfileDay> days;
+    std::vector<ProfilePeriod> periods;
+    std::string company_sep;
+    std::vector<ProfileTimes> times;
+    std::vector<ProfileCompany> companies;
+    Source src;
+
+    const ProfileLeg* leg(const std::string& code) const {
+        for (const ProfileLeg& l : legs)
+            if (l.code == code) return &l;
+        return nullptr;
+    }
+};
+
+// Casa di un utente dell'elenco (dati personali), come nel file: comune, frazione, via, civico.
+struct ListUserHome {
+    std::string town, hamlet, street, number;
+    bool operator==(const ListUserHome& o) const {
+        return town == o.town && hamlet == o.hamlet && street == o.street && number == o.number;
+    }
+    bool operator!=(const ListUserHome& o) const { return !(*this == o); }
+};
+// La ditta che fa una tratta per l'utente: un'azienda del pacchetto, oppure un'altra ditta con il nome com'e'.
+struct ListUserLeg {
+    std::string leg;
+    std::optional<Ref> company;
+    std::string other_company;
+    Source src;
+};
+struct ListUserTime {
+    std::string leg;
+    Weekday day = Weekday::Monday;
+    Minutes time = 0;
+    std::string period;   // la sigla del periodo, se la voce ne ha una
+    DateRange dates;      // date intere (senza date nel file: tutto l'anno scolastico)
+    Source src;
+};
+// Sblocco scritto dall'utente di K-Zero (kzero sblocco): per una tratta, con il riferimento e la data scritta da lui.
+struct ListUserUnlock {
+    std::string leg;
+    std::string reference;
+    Day date = 0;
+    Source src;
+};
+enum class StopMatch { ExternalCode, Name };
+struct ListUser {
+    Code code;
+    std::string name;                       // personale; vuoto se l'utente non puo' leggerlo
+    std::optional<ListUserHome> home;       // personale
+    Ref school;
+    std::optional<int> class_number;        // personale (K-019, D1)
+    std::string section;                    // personale
+    bool active = true;                     // attivo o sospeso
+    std::string status_note;                // personale
+    std::optional<Ref> stop;                // fermata riconosciuta
+    StopMatch stop_match = StopMatch::ExternalCode;
+    std::string stop_text;                  // fermata non riconosciuta, il testo (personale)
+    std::vector<ListUserLeg> legs;
+    std::vector<ListUserTime> times;
+    std::vector<ListUserUnlock> unlocks;
+    bool out_of_list = false;               // non piu' nell'elenco del committente: resta per uno sblocco, mai nel piano
+    Source src;
+};
+// L'elenco di un committente, com'era all'ultima lettura.
+struct ClientList {
+    Ref client;
+    Ref profile;
+    int first_year = 0;          // anno scolastico first_year-(first_year+1)
+    bool has_last_reading = false;
+    std::string last_fingerprint;
+    bool last_complete = false;
+    std::vector<ListUser> users;
+    Source src;
+};
+
 // Tutti i dati di un pacchetto. I luoghi privati (case) stanno insieme ai pubblici, segnati da is_private.
 struct Package {
     Manifest manifest;
@@ -1653,6 +1775,10 @@ struct Package {
     std::vector<FixedAssignment> fixed;
     std::vector<DayAssignment> day_assignments;
     std::vector<Block> blocks;
+    // K-019: profili di lettura ed elenchi utenti dei committenti.
+    std::vector<ReadingProfile> reading_profiles;
+    std::vector<ClientList> client_lists;
+    int list_last_number = 0;    // ultimo numero dei codici degli utenti dell'elenco dato dal programma
 };
 
 // --- Regole del mestiere sulle corse --------------------------------------------------------

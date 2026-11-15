@@ -34,6 +34,8 @@ const char* nome_forma(FormaValore f) {
         case FormaValore::Data: return "data";
         case FormaValore::Codice: return "codice";
         case FormaValore::Percorso: return "percorso";
+        case FormaValore::Testo: return "testo";
+        case FormaValore::AnnoScolastico: return "anno_scolastico";
     }
     return "?";
 }
@@ -49,7 +51,14 @@ std::string forma(const DefinizioneParametro& p) {
     switch (p.tipo) {
         case TipoParametro::Scelta: return p.nome + " <" + unisci(p.valori, "|") + ">";
         case TipoParametro::Valore:
-            return p.nome + (p.forma == FormaValore::Data ? " <AAAA-MM-GG>" : p.forma == FormaValore::Codice ? " <codice>" : " <cartella>");
+            switch (p.forma) {
+                case FormaValore::Data: return p.nome + " <AAAA-MM-GG>";
+                case FormaValore::Codice: return p.nome + " <codice>";
+                case FormaValore::Percorso: return p.nome + " <cartella>";
+                case FormaValore::Testo: return p.nome + " <testo>";
+                case FormaValore::AnnoScolastico: return p.nome + " <AAAA-AAAA>";
+            }
+            break;
         case TipoParametro::Interruttore: break;
     }
     return p.nome;

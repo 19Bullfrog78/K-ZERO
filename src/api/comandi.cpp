@@ -306,6 +306,88 @@ std::vector<DefinizioneComando> comandi_cassaforte() {
     return c;
 }
 
+// --- Elenco utenti del committente (K-019) ---------------------------------------------------------------------------
+
+std::vector<DefinizioneComando> comandi_elenco() {
+    std::vector<DefinizioneComando> c;
+    {
+        std::vector<DefinizioneParametro> p{parametro_formato(), parametro_password_da_ingresso(), parametro_utente(true),
+                                            parametro_dati_personali(), parametro_dati_particolari()};
+        DefinizioneParametro s = parametro_scrivi("La cartella del pacchetto chiuso, la stessa del secondo argomento: con --scrivi le "
+                                                  "novita' si scrivono nella cassaforte; senza, si vedono soltanto (anteprima).");
+        s.obbligatorio = false;
+        p.push_back(s);
+        p.push_back(parametro_codice("--profilo", "Il profilo di lettura del file (codice di profili_elenchi.json).", true,
+                                     [](Parametri& par, const std::string& v) { par.profilo = v; }));
+        DefinizioneParametro a;
+        a.nome = "--anno-scolastico";
+        a.tipo = TipoParametro::Valore;
+        a.forma = FormaValore::AnnoScolastico;
+        a.obbligatorio = true;
+        a.descrizione = "L'anno scolastico del file (es. 2026-2027): le date senza anno dal mese d'inizio del profilo a dicembre "
+                        "sono del primo anno, le altre del secondo.";
+        a.applica = [](Parametri& par, const std::string& v) { par.anno_scolastico = std::stoi(v.substr(0, 4)); };
+        p.push_back(a);
+        DefinizioneParametro e;
+        e.nome = "--elenco";
+        e.tipo = TipoParametro::Scelta;
+        e.valori = {"completo", "parziale"};
+        e.obbligatorio = true;   // nessun valore predefinito: un elenco completo fa uscire chi non c'e'
+        e.descrizione = "completo = il file ha tutti gli utenti del committente: chi non c'e' esce (solo se tutte le righe si "
+                        "leggono); parziale = solo alcuni (es. una zona): nessuno esce.";
+        e.applica = [](Parametri& par, const std::string& v) { par.elenco = v; };
+        p.push_back(e);
+        c.push_back({"leggi-elenco",
+                     "Legge l'elenco utenti che il committente manda in un file Excel (.xlsx), con il profilo di lettura dei dati, "
+                     "e lo confronta con quello gia' nel pacchetto chiuso: nuovi, cambiati (quali campi), invariati, usciti, righe "
+                     "illeggibili e avvisi. Senza --scrivi mostra soltanto cosa cambierebbe (scrive solo la voce del registro); "
+                     "con --scrivi mette le novita' nella cassaforte, dopo aver riaperto in memoria il pacchetto nuovo. Serve chi "
+                     "ha i dati personali e particolari. Del file si tiene solo l'impronta.",
+                     {{"file", "Il file Excel (.xlsx) del committente, che non si modifica mai."},
+                      {"cartella", "Cartella del pacchetto chiuso (livello completo)."}},
+                     p, Schema{"elenco", 1}, esegui_leggi_elenco});
+    }
+    {
+        std::vector<DefinizioneParametro> p{parametro_formato(), parametro_password_da_ingresso(), parametro_utente(true)};
+        p.push_back(parametro_scrivi("La cartella del pacchetto chiuso, la stessa dell'argomento."));
+        p.push_back(parametro_codice("--utente-elenco", "Il codice dell'utente dell'elenco (es. U-000012).", true,
+                                     [](Parametri& par, const std::string& v) { par.utente_elenco = v; }));
+        p.push_back(parametro_codice("--tratta", "La sigla della tratta del profilo (es. RP).", true,
+                                     [](Parametri& par, const std::string& v) { par.tratta = v; }));
+        DefinizioneParametro r;
+        r.nome = "--riferimento";
+        r.tipo = TipoParametro::Valore;
+        r.forma = FormaValore::Testo;
+        r.incompatibili = {"--togli"};
+        r.descrizione = "Il riferimento dello sblocco (es. la mail del committente), obbligatorio per aggiungerlo. Dato comune: "
+                        "senza nomi di persone.";
+        r.applica = [](Parametri& par, const std::string& v) { par.riferimento = v; };
+        p.push_back(r);
+        DefinizioneParametro d;
+        d.nome = "--data";
+        d.tipo = TipoParametro::Valore;
+        d.forma = FormaValore::Data;
+        d.incompatibili = {"--togli"};
+        d.descrizione = "La data dello sblocco, scritta dall'utente (il programma non usa l'orologio), obbligatoria per aggiungerlo.";
+        d.applica = [](Parametri& par, const std::string& v) { par.data_sblocco = kzero::day_from_text(v); };
+        p.push_back(d);
+        DefinizioneParametro g;
+        g.nome = "--togli";
+        g.tipo = TipoParametro::Interruttore;
+        g.incompatibili = {"--data", "--riferimento"};
+        g.descrizione = "Toglie lo sblocco della tratta invece di aggiungerlo.";
+        g.applica = [](Parametri& par, const std::string&) { par.togli = true; };
+        p.push_back(g);
+        c.push_back({"sblocco",
+                     "Aggiunge (con --riferimento e --data) o toglie (con --togli) lo sblocco di una tratta di un utente "
+                     "dell'elenco del committente: un utente sospeso viaggia su quella tratta. Lo scrive l'utente di K-Zero (nel file "
+                     "del committente non c'e'); una lettura dell'elenco non lo cancella mai. Stessa scrittura e stessi permessi di "
+                     "kzero leggi-elenco (dati personali e particolari), voce nel registro.",
+                     {{"cartella", "Cartella del pacchetto chiuso."}}, p, Schema{"sblocco", 1}, esegui_sblocco});
+    }
+    return c;
+}
+
 std::vector<DefinizioneComando> crea_comandi() {
     std::vector<DefinizioneComando> c = {
         {"controlla",
@@ -322,7 +404,7 @@ std::vector<DefinizioneComando> crea_comandi() {
          "di errore e dei controlli.",
          {},
          {parametro_formato()},
-         {"descrivi", 5},
+         {"descrivi", 6},
          esegui_descrivi},
         {"dimostrazione",
          "Stampa di prova con il pacchetto dimostrativo esempi/demo (dati inventati, incorporato nel programma): "
@@ -364,6 +446,7 @@ std::vector<DefinizioneComando> crea_comandi() {
          esegui_versione},
     };
     for (DefinizioneComando& x : comandi_cassaforte()) c.push_back(std::move(x));
+    for (DefinizioneComando& x : comandi_elenco()) c.push_back(std::move(x));
     for (auto& comando : c)
         std::sort(comando.parametri.begin(), comando.parametri.end(),
                   [](const DefinizioneParametro& a, const DefinizioneParametro& b) { return a.nome < b.nome; });
@@ -401,7 +484,7 @@ const std::vector<Schema>& schemi_ritirati() {
     // Versioni non piu' prodotte: i file restano in docs/schema per controllare le uscite salvate prima.
     static const std::vector<Schema> s = {
         {"controlla", 1},     {"controlla", 2},     {"controlla", 3}, {"controlla", 4}, {"controlla", 5},
-        {"descrivi", 1},      {"descrivi", 2},      {"descrivi", 3},  {"descrivi", 4},
+        {"descrivi", 1},      {"descrivi", 2},      {"descrivi", 3},  {"descrivi", 4},  {"descrivi", 5},
         {"dimostrazione", 1}, {"dimostrazione", 2},
         {"giornata", 1},      {"giornata", 2},      {"giornata", 3},  {"giornata", 4},
         {"ore", 1},           {"ore", 2}};

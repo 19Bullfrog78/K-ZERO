@@ -1,0 +1,13 @@
+{
+  "descrizione": "K-019, prove: codici esterni da aggiungere al demo (scuole e una fermata), cosi' le scuole e le fermate dei file di prova si riconoscono. Dati inventati.",
+  "scuole": {
+    "SC-PRIM": [{ "sistema": "Consorzio Valle Alta", "tipo": "scuola", "codice": "Scuola primaria Valfonda" }],
+    "SC-MEDIE": [{ "sistema": "Consorzio Valle Alta", "tipo": "scuola", "codice": "Scuola media Valfonda" }],
+    "SC-INFANZIA": [{ "sistema": "Consorzio Valle Alta", "tipo": "scuola", "codice": "Scuola infanzia Lagobello" }],
+    "SC-CENTRO": [{ "sistema": "Consorzio Valle Alta", "tipo": "scuola", "codice": "Centro diurno Il Faro" }],
+    "SC-SUP": [{ "sistema": "TPV iscrizioni", "tipo": "istituto", "codice": "IST. SUPERIORE VALFONDA" }]
+  },
+  "luoghi": {
+    "F-PRADELLO": [{ "sistema": "Consorzio Valle Alta", "tipo": "fermata", "codice": "PRADELLO PIAZZA" }]
+  }
+}

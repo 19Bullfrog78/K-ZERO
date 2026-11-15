@@ -15,12 +15,16 @@
 #include "errori.hpp"
 #include "esecutori.hpp"
 #include "formato_dati.hpp"
+#include "riscrittura.hpp"
 
 namespace kzero::api {
 
 namespace {
 
 namespace fs = std::filesystem;
+using riscrittura::chiuso_in_memoria;
+using riscrittura::controlla_riapertura;
+using riscrittura::scrivi_o_errore;
 
 // --- Uscite ------------------------------------------------------------------------------------------------------------
 
@@ -127,14 +131,6 @@ void cartella_nuova(const std::string& cartella) {
         throw ErroreKZero(Errore::ScritturaNonRiuscita, "La cartella che deve contenere '" + cartella + "' non c'e'.");
 }
 
-void scrivi_o_errore(const fs::path& cartella, const std::string& nome, const std::string& contenuto) {
-    try {
-        disco::scrivi_atomico(cartella, nome, contenuto);
-    } catch (const disco::ErroreDisco& e) {
-        throw ErroreKZero(Errore::ScritturaNonRiuscita, std::string("Scrittura non riuscita: ") + e.what() + ".");
-    }
-}
-
 // Una cartella temporanea accanto a quella da creare: si scrive tutto li', si controlla, poi la si rinomina con una sola
 // operazione. Un'interruzione lascia al piu' la cartella temporanea (nome che comincia con "."), mai una cartella a meta'.
 class CartellaTemporanea {
@@ -182,46 +178,6 @@ Lettura in_chiaro(const std::string& cartella) {
         throw ErroreKZero(Errore::PacchettoDiverso, "Il pacchetto in chiaro dichiara gia' una cassaforte (o ne ha il file): si "
                                                     "chiude o si richiude solo un pacchetto in chiaro.");
     return l;
-}
-
-// I file di un pacchetto chiuso, in memoria: file normali, manifesto con la cassaforte, cassaforte e registro.
-PacchettoInMemoria chiuso_in_memoria(const chiusura::Separazione& s, const std::string& id, std::uint32_t generazione,
-                                     const std::string& cassaforte_file, const std::string& registro_file) {
-    PacchettoInMemoria m;
-    for (const auto& [file, doc] : s.normali)
-        m.file[file] = chiusura::testo_file(file == "pacchetto.json" ? chiusura::manifesto_chiuso(doc, id, generazione) : doc);
-    m.file[cassaforte::kFile] = cassaforte_file;
-    m.file[registro::kFile] = registro_file;
-    return m;
-}
-
-// Riapre il pacchetto chiuso (con la password, come un'apertura vera) e controlla che i dati uniti siano quelli di
-// "originale". Errore K-ERR-035 se no.
-// con_registro: controlla anche il registro (nella richiusura la voce nuova si scrive dopo il controllo).
-void controlla_riapertura(const Sorgente& chiuso, const Lettura& originale, const std::string& utente, const cripto::Segreto& password,
-                          bool con_registro) {
-    const std::optional<ManifestoLetto> m = leggi_manifesto(chiuso);
-    const FileLetto f = chiuso.leggi(cassaforte::kFile, kMassimoByteFile);
-    const FileLetto g = chiuso.leggi(registro::kFile, kMassimoByteFile);
-    if (!m || f.esito != FileLetto::Esito::Letto || (con_registro && g.esito != FileLetto::Esito::Letto))
-        throw ErroreKZero(Errore::ChiusuraNonVerificata, "Il pacchetto chiuso non si riesce a rileggere: niente e' stato scritto.");
-    try {
-        const cassaforte::Cassaforte c = cassaforte::Cassaforte::apri(f.testo, m->id, utente, password, *accesso::ambiente().politica);
-        if (con_registro) registro::leggi(g.testo, c);
-        const ValoriCassaforte v = chiusura::valori_di(c);
-        const Lettura l = leggi_pacchetto(chiuso, &v);
-        std::string differenza;
-        if (!l.forma_valida() || !chiusura::stessi_dati(originale, l, differenza))
-            throw ErroreKZero(Errore::ChiusuraNonVerificata,
-                              "Riaperto, il pacchetto non da' gli stessi dati dell'originale" +
-                                  (differenza.empty() ? std::string(" (problemi nella forma dei file)") : " (file " + differenza + ")") +
-                                  ": di solito due elementi con lo stesso codice, che la cassaforte non saprebbe distinguere. "
-                                  "Niente e' stato scritto; correggere i dati (kzero controlla) e riprovare.");
-    } catch (const cassaforte::ErroreCassaforte& e) {
-        throw ErroreKZero(Errore::ChiusuraNonVerificata, std::string("Il pacchetto chiuso non si riapre (") + e.what() + ").");
-    } catch (const registro::ErroreRegistro& e) {
-        throw ErroreKZero(Errore::ChiusuraNonVerificata, std::string("Il registro nuovo non si rilegge (") + e.what() + ").");
-    }
 }
 
 std::vector<std::string> contesto_password(const std::string& utente, const std::string& pacchetto) {
@@ -320,20 +276,7 @@ Risultato esegui_richiudi(const DefinizioneComando& comando, const Parametri& pa
         accesso::ambiente());
     // Poi i file normali (il manifesto per ultimo, con il numero della chiusura): un'interruzione a meta' si vede (K-CTR-093)
     // e si ripara rifacendo la richiusura.
-    for (const auto& [file, doc] : s.normali)
-        if (file != "pacchetto.json") scrivi_o_errore(chiusa, file, chiusura::testo_file(doc));
-    for (const FileDati& f : file_dati()) {
-        std::error_code ec;
-        if (!s.normali.count(f.file) && fs::is_regular_file(chiusa / f.file, ec)) {
-            try {
-                disco::togli(chiusa, f.file);
-            } catch (const disco::ErroreDisco& e) {
-                throw ErroreKZero(Errore::ScritturaNonRiuscita, e.what());
-            }
-        }
-    }
-    scrivi_o_errore(chiusa, "pacchetto.json",
-                    chiusura::testo_file(chiusura::manifesto_chiuso(s.normali.at("pacchetto.json"), manifesto.id, generazione)));
+    riscrittura::scrivi_normali(chiusa, s, manifesto.id, generazione);
 
     Esito e;
     e.comando = comando.nome;

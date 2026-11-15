@@ -42,6 +42,22 @@ enum class Check {
     NameInCommonText,          // il nome di una persona o di una casa dei dati in un testo comune
     HealthWordInCommonText,    // una parola sulla salute (elenchi delle norme e delle aziende) in un testo comune
     PlaceMaybeSensitive,       // un luogo pubblico non segnato sensibile con una parola sulla salute nel nome
+    // Elenco utenti del committente (K-019, elenco.hpp): sui dati (kzero controlla) ...
+    ListProfileInvalid,        // profilo di lettura scritto in modo ambiguo o incoerente
+    ListInvalid,               // elenco incoerente con il suo profilo (tratte, periodi, committente, anno)
+    ListUserCodeClash,         // codice di un utente dell'elenco usato anche da un altro elemento del pacchetto
+    ListHomonymsInList,        // due utenti con lo stesso nome nella stessa scuola nello stesso elenco
+    ListOutboundWithoutReturn, // un giorno con l'andata e senza ritorno, in tutto o in parte dell'anno
+    ListTimesOverlap,          // due voci dello stesso giorno e della stessa tratta con date che si sovrappongono e ore diverse
+    ListDateOutsideSchoolYear, // date di un orario fuori dall'anno della scuola (i suoi orari)
+    ListUnlockNotNeeded,       // sblocco di un utente attivo, o di una tratta che l'utente non ha
+    ListUserOutOfList,         // utente non piu' nell'elenco del committente, tenuto per uno sblocco
+    // ... e sulle righe del file letto (kzero leggi-elenco).
+    ListRowUnreadable,         // riga illeggibile (RowFault): non si applica
+    ListRowHomonyms,           // righe con lo stesso nome nella stessa scuola: ferme
+    ListMaybeSameUser,         // un uscito e un nuovo con la stessa casa: forse e' lo stesso, scritto diverso
+    ListExitsNotApplied,       // elenco completo con righe illeggibili: le uscite non si applicano
+    ListStopNotRecognized,     // fermata indicata che non e' un luogo del pacchetto: resta il testo
     // Turni (K-008): errori.
     ShiftPartInvalid,
     ShiftItemsOrder,
@@ -173,6 +189,8 @@ enum class Element {
     Shift, Rotation, FixedAssignment, Block,
     // K-011
     Regime, WorkRule,
+    // K-019
+    ReadingProfile, ClientList, ListUser,
 };
 
 // Un valore da mettere nel messaggio, al posto di {nome}.

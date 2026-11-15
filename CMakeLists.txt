@@ -147,11 +147,38 @@ FetchContent_Declare(
   URL_HASH SHA256=424a3e03a17df0a2bc2b3ca749d81b04e79d59cb7aeec8876a5a3f308d0caf51
   DOWNLOAD_NO_EXTRACT TRUE
 )
+# miniz 3.1.2 (K-019): lettura in memoria degli archivi ZIP (un file .xlsx e' un archivio con dentro file XML). Licenza MIT,
+# nel fuzzing continuo OSS-Fuzz (bersagli dell'autore in tests/ del progetto, quello della convalida degli archivi aggiunto
+# proprio nella 3.1.2). Archivio di rilascio con l'impronta fissata (un file miniz.c e il suo miniz.h). Si compila senza
+# file su disco, senza orologio e senza scrittura ne' compressione (MINIZ_NO_STDIO, MINIZ_NO_TIME,
+# MINIZ_NO_ARCHIVE_WRITING_APIS, MINIZ_NO_DEFLATE_APIS): un archivio si legge solo in memoria e non si estrae mai sul disco.
+FetchContent_Declare(
+  miniz
+  URL https://github.com/richgel999/miniz/releases/download/3.1.2/miniz-3.1.2.zip
+  URL_HASH SHA256=f0446d863f9c19926ad9483c523fdc42e42b8d4a6a431d27e09d49c79a140d9a
+  DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+  SOURCE_SUBDIR non-usare-il-cmake-di-miniz
+)
+# Expat 2.8.5 (K-019): lettura dell'XML dei fogli Excel, a flusso. Licenza MIT, nel fuzzing continuo OSS-Fuzz (bersagli
+# dell'autore in fuzz/). Archivio di rilascio con l'impronta fissata; firma GPG dell'autore verificata (DECISIONI.md).
+# Costruita con il suo CMake, senza DTD ne' entita' (EXPAT_DTD e EXPAT_GE spenti: un foglio Excel non ne ha), senza spazi
+# dei nomi, solo la libreria statica.
+FetchContent_Declare(
+  expat
+  URL https://github.com/libexpat/libexpat/releases/download/R_2_8_5/expat-2.8.5.tar.xz
+  URL_HASH SHA256=1e727b8933ec51a77a9a9d9afcf8e688bce45d907c13e36ab7393fe36e703182
+  DOWNLOAD_EXTRACT_TIMESTAMP TRUE
+  SYSTEM
+)
+foreach(opzione EXPAT_BUILD_TOOLS EXPAT_BUILD_EXAMPLES EXPAT_BUILD_TESTS EXPAT_SHARED_LIBS EXPAT_BUILD_DOCS EXPAT_BUILD_FUZZERS
+                EXPAT_BUILD_PKGCONFIG EXPAT_ENABLE_INSTALL EXPAT_DTD EXPAT_GE EXPAT_NS)
+  set(${opzione} OFF CACHE BOOL "" FORCE)
+endforeach()
 set(JSON_ImplicitConversions OFF CACHE BOOL "" FORCE)   # conversioni dal JSON solo esplicite
 set(gtest_force_shared_crt ON CACHE BOOL "" FORCE)      # Windows: stessa libreria di sistema del programma
 set(INSTALL_GTEST OFF CACHE BOOL "" FORCE)
 set(BUILD_GMOCK OFF CACHE BOOL "" FORCE)
-FetchContent_MakeAvailable(cli11 nlohmann_json googletest valijson libsodium utf8proc password_comuni)
+FetchContent_MakeAvailable(cli11 nlohmann_json googletest valijson libsodium utf8proc password_comuni miniz expat)
 
 add_library(kzero_cli11 INTERFACE)
 target_include_directories(kzero_cli11 SYSTEM INTERFACE ${cli11_SOURCE_DIR})
@@ -206,6 +233,12 @@ add_library(kzero_utf8proc STATIC ${utf8proc_SOURCE_DIR}/utf8proc.c)
 target_compile_definitions(kzero_utf8proc PUBLIC UTF8PROC_STATIC)
 target_include_directories(kzero_utf8proc SYSTEM PUBLIC ${utf8proc_SOURCE_DIR})
 
+# --- miniz: il solo file miniz.c, libreria statica, solo lettura in memoria (K-019) ------------------------------------
+add_library(kzero_miniz STATIC ${miniz_SOURCE_DIR}/miniz.c)
+target_compile_definitions(kzero_miniz PUBLIC MINIZ_NO_STDIO MINIZ_NO_TIME MINIZ_NO_ARCHIVE_WRITING_APIS MINIZ_NO_DEFLATE_APIS
+                                              MINIZ_NO_ZLIB_COMPATIBLE_NAMES)
+target_include_directories(kzero_miniz SYSTEM PUBLIC ${miniz_SOURCE_DIR})
+
 # --- Elenco delle password comuni: filtrato e incorporato quando si compila -------------------------------------
 # Lo strumento tiene le password di almeno 15 caratteri, normalizzate come quelle degli utenti (NFC e minuscole), senza
 # doppioni e in ordine: il programma le cerca per intero (NIST SP 800-63B-4).
@@ -229,6 +262,7 @@ add_library(kzero_nucleo STATIC
   src/nucleo/controlli_orari.cpp
   src/nucleo/controlli_turni.cpp
   src/nucleo/dimostrazione.cpp
+  src/nucleo/elenco.cpp
   src/nucleo/orari.cpp
   src/nucleo/orari_regole.cpp
   src/nucleo/pacchetto.cpp
@@ -260,6 +294,7 @@ add_library(kzero_api STATIC
   src/api/comando_controlla.cpp
   src/api/comando_descrivi.cpp
   src/api/comando_dimostrazione.cpp
+  src/api/comando_elenco.cpp
   src/api/comando_giornata.cpp
   src/api/comando_ore.cpp
   src/api/comando_versione.cpp
@@ -275,11 +310,13 @@ add_library(kzero_api STATIC
   src/api/cripto.cpp
   src/api/errori.cpp
   src/api/esegui.cpp
+  src/api/excel.cpp
   src/api/formato_dati.cpp
   src/api/lettore.cpp
   src/api/parametri.cpp
   src/api/password.cpp
   src/api/registro.cpp
+  src/api/riscrittura.cpp
   src/api/riservatezza.cpp
   src/api/schemi_dati.cpp
   src/api/testi_liberi.cpp
@@ -296,7 +333,7 @@ target_include_directories(kzero_api
 )
 target_link_libraries(kzero_api
   PUBLIC kzero_nucleo nlohmann_json::nlohmann_json
-  PRIVATE kzero_cli11 kzero_valijson kzero_sodium kzero_utf8proc)
+  PRIVATE kzero_cli11 kzero_valijson kzero_sodium kzero_utf8proc kzero_miniz expat::expat)
 target_compile_options(kzero_api PRIVATE ${KZERO_WARNINGS})
 
 # --- Il programma: un solo eseguibile, kzero <comando> [parametri] -----------------

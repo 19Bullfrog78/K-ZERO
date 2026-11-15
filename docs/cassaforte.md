@@ -22,8 +22,21 @@ cosa protegge e cosa resta: [sicurezza.md](sicurezza.md). Il formato dei file no
 - **Correggere** i dati dopo la chiusura: `kzero esporta <cartella-chiusa> --scrivi <cartella-nuova>` (uscita in chiaro,
   scritta nel registro), si correggono i file, poi `kzero richiudi <cartella-in-chiaro> --scrivi <cartella-chiusa>`
   rimette i dati nella stessa cassaforte (stessi utenti, stesso registro) e la cartella in chiaro si cancella. Servono i
-  permessi di tutte e due le classi. Domani lo faranno senza file in chiaro l'interfaccia del programma per Windows e il
-  lettore del file del consorzio, che scriveranno direttamente nella cassaforte.
+  permessi di tutte e due le classi. Domani lo fara' senza file in chiaro anche l'interfaccia del programma per Windows; dal
+  K-019 l'elenco utenti del committente si scrive direttamente nella cassaforte (sotto).
+- **Elenco utenti del committente** (K-019): `kzero leggi-elenco <file.xlsx> <cartella-chiusa> ... [--scrivi <cartella-chiusa>]`
+  e `kzero sblocco <cartella-chiusa> ... --scrivi <cartella-chiusa>` scrivono nella cassaforte senza nessun file in chiaro:
+  il pacchetto nuovo si prepara in memoria (i documenti uniti piu' l'elenco nuovo), si separa con la regola di sempre, si
+  riapre in memoria con la password e deve dare gli stessi dati (altrimenti K-ERR-035 e niente si scrive); poi la cassaforte
+  (stessi utenti, stesso registro, chiusura +1, voce del registro con i numeri e senza dati personali) e i file normali, il
+  manifesto per ultimo, come `kzero richiudi` (una regola sola, src/api/riscrittura.hpp). Senza `--scrivi`, `leggi-elenco`
+  e' un'anteprima: apre (voce del registro) e mostra cosa cambierebbe. `--scrivi` deve nominare la cartella del pacchetto
+  (K-ERR-046). Per ora servono i permessi dei dati personali e particolari (un utente dell'elenco legato a un luogo sensibile
+  sta tra i legati, che si cifrano con le due chiavi); il controllo sta in un punto solo (`permessi_per_l_elenco`,
+  src/api/comando_elenco.cpp). **Domani, la scrittura con i soli dati personali**: riscrivere solo la sezione dei personali,
+  copiare cosi' come sono quelle dei particolari e dei legati (che chi ha i soli personali non puo' decifrare), e chiedere
+  ancora tutti e due i permessi quando una novita' tocca un utente legato; servira' un'operazione della cassaforte che
+  sostituisce una sezione sola (oggi `sostituisci_contenuto` le rifa' tutte), con un suo mandato.
 - **Utenti**: `kzero aggiungi-utente`, `kzero togli-utente`, `kzero password` (la propria, o una nuova per un altro con
   `--per-utente`); **conservazione**: `kzero conservazione`; **cancellazione**: `kzero cancella`; **vedere**:
   `kzero cassaforte` (utenti, permessi, conteggi) e `kzero registro`.

@@ -1,0 +1,431 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "K-Zero - file di dati profili_elenchi.json, versione 1",
+  "description": "Profili di lettura dell'elenco utenti di un committente (K-019): come e' fatto il suo file (titoli delle colonne, parole dello stato, sigle delle tratte, dei giorni e dei periodi, separatori, mese d'inizio dell'anno scolastico) e come si collegano scuole, fermate e ditte del file agli elementi del pacchetto. Un altro committente con un altro file = un altro profilo: il programma non conosce nessuna di queste parole. Tutti dati comuni.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "schema_versione",
+    "profili"
+  ],
+  "properties": {
+    "schema": {
+      "const": "profili_elenchi",
+      "x-kzero-classe": "comune"
+    },
+    "schema_versione": {
+      "const": 1,
+      "x-kzero-classe": "comune"
+    },
+    "profili": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "codice",
+          "committente",
+          "mese_inizio_anno",
+          "codici_esterni",
+          "colonne",
+          "stato",
+          "tratte",
+          "giorni",
+          "percorsi"
+        ],
+        "properties": {
+          "codice": {
+            "$ref": "#/definitions/codice",
+            "x-kzero-classe": "comune"
+          },
+          "nome": {
+            "$ref": "#/definitions/testo",
+            "x-kzero-classe": "comune"
+          },
+          "committente": {
+            "$ref": "#/definitions/codice",
+            "description": "Il committente che manda l'elenco (committenti.json).",
+            "x-kzero-classe": "comune"
+          },
+          "foglio": {
+            "$ref": "#/definitions/parola",
+            "description": "Nome del foglio da leggere; senza, il primo foglio della cartella di lavoro.",
+            "x-kzero-classe": "comune"
+          },
+          "mese_inizio_anno": {
+            "description": "Mese in cui comincia l'anno scolastico (es. 9 = settembre): le date senza anno dal mese d'inizio a dicembre sono del primo anno, le altre del secondo.",
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 12,
+            "x-kzero-classe": "comune"
+          },
+          "codici_esterni": {
+            "description": "Come si trovano scuole e fermate del file tra quelle del pacchetto: con i codici esterni (sistema, tipo) il cui codice e' il testo del file.",
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "sistema",
+              "tipo_scuola",
+              "tipo_fermata"
+            ],
+            "properties": {
+              "sistema": {
+                "$ref": "#/definitions/testo"
+              },
+              "tipo_scuola": {
+                "$ref": "#/definitions/testo"
+              },
+              "tipo_fermata": {
+                "$ref": "#/definitions/testo"
+              }
+            },
+            "x-kzero-classe": "comune"
+          },
+          "colonne": {
+            "description": "Titoli delle colonne del file (prima riga). Le colonne che il profilo non nomina si ignorano e non si salvano mai.",
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "nome",
+              "scuola",
+              "stato",
+              "percorsi"
+            ],
+            "properties": {
+              "nome": {
+                "$ref": "#/definitions/parola"
+              },
+              "scuola": {
+                "$ref": "#/definitions/parola"
+              },
+              "stato": {
+                "$ref": "#/definitions/parola"
+              },
+              "percorsi": {
+                "$ref": "#/definitions/parola"
+              },
+              "fermata": {
+                "$ref": "#/definitions/parola"
+              },
+              "comune": {
+                "$ref": "#/definitions/parola"
+              },
+              "frazione": {
+                "$ref": "#/definitions/parola"
+              },
+              "via": {
+                "$ref": "#/definitions/parola"
+              },
+              "civico": {
+                "$ref": "#/definitions/parola"
+              },
+              "classe": {
+                "$ref": "#/definitions/parola"
+              },
+              "sezione": {
+                "$ref": "#/definitions/parola"
+              }
+            },
+            "x-kzero-classe": "comune"
+          },
+          "stato": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "attivo",
+              "sospeso",
+              "separatore_nota"
+            ],
+            "properties": {
+              "attivo": {
+                "description": "Parole che vogliono dire attivo (ha diritto al servizio).",
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "$ref": "#/definitions/parola"
+                }
+              },
+              "sospeso": {
+                "description": "Parole che vogliono dire sospeso (passivo: viaggia solo se sbloccato).",
+                "type": "array",
+                "minItems": 1,
+                "items": {
+                  "$ref": "#/definitions/parola"
+                }
+              },
+              "separatore_nota": {
+                "$ref": "#/definitions/separatore",
+                "description": "Dopo questo separatore c'e' la nota del committente (es. \"SOSPESO - da attivare...\")."
+              }
+            },
+            "x-kzero-classe": "comune"
+          },
+          "tratte": {
+            "description": "Le tratte del file (es. AM, RM, RP), con il verso che hanno in K-Zero.",
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "sigla",
+                "verso"
+              ],
+              "properties": {
+                "sigla": {
+                  "$ref": "#/definitions/parola"
+                },
+                "verso": {
+                  "enum": [
+                    "andata",
+                    "ritorno"
+                  ]
+                },
+                "nome": {
+                  "$ref": "#/definitions/testo"
+                }
+              }
+            },
+            "x-kzero-classe": "comune"
+          },
+          "giorni": {
+            "description": "Le sigle dei giorni del file (es. LU, MA...).",
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "sigla",
+                "giorno"
+              ],
+              "properties": {
+                "sigla": {
+                  "$ref": "#/definitions/parola"
+                },
+                "giorno": {
+                  "enum": [
+                    "lunedi",
+                    "martedi",
+                    "mercoledi",
+                    "giovedi",
+                    "venerdi",
+                    "sabato",
+                    "domenica"
+                  ]
+                }
+              }
+            },
+            "x-kzero-classe": "comune"
+          },
+          "periodi": {
+            "description": "Le sigle dei periodi delle voci per giorno (es. o, f1, rm) e la tratta che vogliono dire.",
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "sigla",
+                "tratta"
+              ],
+              "properties": {
+                "sigla": {
+                  "$ref": "#/definitions/parola"
+                },
+                "tratta": {
+                  "$ref": "#/definitions/parola"
+                },
+                "nome": {
+                  "$ref": "#/definitions/testo"
+                }
+              }
+            },
+            "x-kzero-classe": "comune"
+          },
+          "percorsi": {
+            "description": "La colonna dei percorsi: per ogni tratta la sigla, il separatore e la ditta (es. \"AM/ALP RM/DITTA B\").",
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "separatore_ditta"
+            ],
+            "properties": {
+              "separatore_ditta": {
+                "$ref": "#/definitions/separatore"
+              }
+            },
+            "x-kzero-classe": "comune"
+          },
+          "orari": {
+            "description": "Le colonne degli orari, ognuna con la sua forma.",
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "colonna",
+                "forma",
+                "separatore_voci",
+                "separatore_ora"
+              ],
+              "properties": {
+                "colonna": {
+                  "$ref": "#/definitions/parola"
+                },
+                "forma": {
+                  "description": "per_tratta: voci per tratta, valgono tutto l'anno scolastico (es. \"AM: 08:00 LU-MA-ME | RM: 12:00 LU-MA-ME\"). per_giorno: un blocco per giorno con le voci per periodo e le date (es. \"//LU o 15.50 [15/09-09/06] //ME f1 15.50 [17/09-23/01] - f2 15.50 [28/01-05/06]\").",
+                  "enum": [
+                    "per_tratta",
+                    "per_giorno"
+                  ]
+                },
+                "separatore_voci": {
+                  "$ref": "#/definitions/separatore"
+                },
+                "separatore_ora": {
+                  "$ref": "#/definitions/separatore"
+                },
+                "separatore_tratta": {
+                  "$ref": "#/definitions/separatore"
+                },
+                "separatore_giorni": {
+                  "$ref": "#/definitions/separatore"
+                },
+                "inizio_giorno": {
+                  "$ref": "#/definitions/separatore"
+                },
+                "date": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "apertura",
+                    "chiusura",
+                    "separatore",
+                    "separatore_giorno_mese"
+                  ],
+                  "properties": {
+                    "apertura": {
+                      "$ref": "#/definitions/separatore"
+                    },
+                    "chiusura": {
+                      "$ref": "#/definitions/separatore"
+                    },
+                    "separatore": {
+                      "$ref": "#/definitions/separatore"
+                    },
+                    "separatore_giorno_mese": {
+                      "$ref": "#/definitions/separatore"
+                    }
+                  }
+                }
+              },
+              "allOf": [
+                {
+                  "if": {
+                    "properties": {
+                      "forma": {
+                        "const": "per_tratta"
+                      }
+                    }
+                  },
+                  "then": {
+                    "required": [
+                      "separatore_tratta",
+                      "separatore_giorni"
+                    ],
+                    "properties": {
+                      "inizio_giorno": false,
+                      "date": false
+                    }
+                  }
+                },
+                {
+                  "if": {
+                    "properties": {
+                      "forma": {
+                        "const": "per_giorno"
+                      }
+                    }
+                  },
+                  "then": {
+                    "required": [
+                      "inizio_giorno",
+                      "date"
+                    ],
+                    "properties": {
+                      "separatore_tratta": false,
+                      "separatore_giorni": false
+                    }
+                  }
+                }
+              ],
+              "description": "Una colonna degli orari. per_tratta: voci separate da separatore_voci; ogni voce: sigla della tratta, separatore_tratta, ora (ore, separatore_ora, minuti), giorni (sigle separate da separatore_giorni). per_giorno: un blocco per giorno che comincia con inizio_giorno e la sigla del giorno; poi le voci, separate da separatore_voci (o attaccate: l'ora seguita subito dalla sigla del periodo dopo): sigla del periodo, ora e, se c'e', il periodo tra le parentesi di date (giorno, separatore_giorno_mese, mese, separatore, giorno, separatore_giorno_mese, mese; senza anno). Senza date una voce vale tutto l'anno scolastico."
+            },
+            "x-kzero-classe": "comune"
+          },
+          "ditte": {
+            "description": "Le ditte del file che sono aziende del pacchetto (le altre restano \"altra ditta\" con il nome com'e').",
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "testo",
+                "azienda"
+              ],
+              "properties": {
+                "testo": {
+                  "$ref": "#/definitions/parola"
+                },
+                "azienda": {
+                  "$ref": "#/definitions/codice"
+                }
+              }
+            },
+            "x-kzero-classe": "comune"
+          },
+          "nota": {
+            "$ref": "#/definitions/nota",
+            "x-kzero-classe": "comune"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "codice": {
+      "description": "Codice K-Zero: scelto da chi scrive i dati, unico per tipo di elemento. Lettere senza accenti, cifre, '-', '_' e '.'; inizia con una lettera o una cifra; al massimo 64 caratteri.",
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+    },
+    "testo": {
+      "description": "Testo di una riga, non vuoto (al massimo 300 caratteri).",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 300,
+      "pattern": "\\S"
+    },
+    "nota": {
+      "description": "Testo libero, non vuoto (al massimo 2000 caratteri).",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2000,
+      "pattern": "\\S"
+    },
+    "parola": {
+      "description": "Una parola o un titolo del file del committente, come lo scrive lui (titolo di colonna, sigla, parola dello stato): si confronta senza maiuscole, accenti, punteggiatura e spazi doppi. Non e' un testo libero sulle persone: non entra nell'avviso sui nomi liberi (K-018).",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100,
+      "pattern": "\\S"
+    },
+    "separatore": {
+      "description": "Un separatore del file del committente (es. \"/\", \"|\", \"-\", \"//\"): da 1 a 5 caratteri, almeno uno diverso da uno spazio; gli spazi intorno non contano.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 5,
+      "pattern": "\\S"
+    }
+  }
+}

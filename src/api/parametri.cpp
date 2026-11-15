@@ -36,8 +36,45 @@ std::string forma_valore(const DefinizioneParametro& p) {
         case FormaValore::Codice:
             return "Va scritto come un codice: lettere senza accenti, cifre, '-', '_' e '.', al massimo 64 caratteri (es. P-A).";
         case FormaValore::Percorso: return "Va scritto come il percorso di una cartella (al massimo 4096 caratteri, senza a capo).";
+        case FormaValore::Testo:
+            return "Va scritto come una riga di testo, tra virgolette se ha spazi (da 1 a 300 caratteri, senza a capo), es. \"mail del "
+                   "12/11\".";
+        case FormaValore::AnnoScolastico: return "Va scritto come due anni di fila, AAAA-AAAA (es. 2026-2027).";
     }
     return "";
+}
+
+// Una riga di testo: UTF-8 valido, da 1 a 300 byte, nessun carattere di controllo, almeno un carattere diverso da uno spazio.
+bool testo_valido(const std::string& s) {
+    if (s.empty() || s.size() > 300 || s.find_first_not_of(' ') == std::string::npos) return false;
+    for (std::size_t i = 0; i < s.size();) {
+        const unsigned char c = static_cast<unsigned char>(s[i]);
+        if (c < 0x20 || c == 0x7F) return false;
+        std::size_t n = c < 0x80 ? 1 : (c >> 5) == 0x6 ? 2 : (c >> 4) == 0xE ? 3 : (c >> 3) == 0x1E ? 4 : 0;
+        if (n == 0 || i + n > s.size()) return false;
+        for (std::size_t k = 1; k < n; ++k)
+            if ((static_cast<unsigned char>(s[i + k]) & 0xC0) != 0x80) return false;
+        if (n == 2 && c < 0xC2) return false;   // forma troppo lunga
+        if (n == 3) {
+            const unsigned char d = static_cast<unsigned char>(s[i + 1]);
+            if ((c == 0xE0 && d < 0xA0) || (c == 0xED && d >= 0xA0)) return false;   // troppo lunga, o meta' di una coppia
+        }
+        if (n == 4) {
+            const unsigned char d = static_cast<unsigned char>(s[i + 1]);
+            if ((c == 0xF0 && d < 0x90) || c > 0xF4 || (c == 0xF4 && d >= 0x90)) return false;
+        }
+        if (n == 2 && c == 0xC2 && static_cast<unsigned char>(s[i + 1]) < 0xA0) return false;   // controlli C1
+        i += n;
+    }
+    return true;
+}
+
+bool anno_scolastico_valido(const std::string& s) {
+    if (s.size() != 9 || s[4] != '-') return false;
+    for (std::size_t i : {0u, 1u, 2u, 3u, 5u, 6u, 7u, 8u})
+        if (s[i] < '0' || s[i] > '9') return false;
+    const int a = std::stoi(s.substr(0, 4)), b = std::stoi(s.substr(5, 4));
+    return a >= 1900 && b == a + 1;
 }
 
 bool percorso_valido(const std::string& s) {
@@ -64,6 +101,8 @@ bool valore_valido(const DefinizioneParametro& p, const std::string& valore) {
         case FormaValore::Data: return kzero::day_from_text(valore).has_value();
         case FormaValore::Codice: return codice_valido(valore);
         case FormaValore::Percorso: return percorso_valido(valore);
+        case FormaValore::Testo: return testo_valido(valore);
+        case FormaValore::AnnoScolastico: return anno_scolastico_valido(valore);
     }
     return false;
 }

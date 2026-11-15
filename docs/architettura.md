@@ -50,6 +50,7 @@ Il programma e' diviso in tre piani, uno sopra l'altro:
 | `controlli_turni.cpp` | Controlli sui turni giorno per giorno, anche a cavallo della mezzanotte (K-CTR-054 ... 087); i problemi uguali di molti giorni si raggruppano in periodi. |
 | `orari.cpp`, `orari_regole.cpp`, `controlli_orari.cpp` | (K-011) Orari di lavoro: i tempi di ogni persona giorno per giorno per categoria (guida, altre mansioni, disponibilita', reperibilita', interruzione, riposo), quali regimi delle norme valgono e perche' (corsa per corsa, estensione alla settimana, esclusioni tra regimi), il lavoro contato da ogni regime, i tipi di regola (elenco chiuso: ogni tipo sa come si conta, i numeri vengono dai dati) valutati in un mondo certo (errori) e in uno prudente (avvisi con i motivi), il contratto della persona, le scelte dell'azienda e della persona, la chiave del rientro; i controlli sulle regole scritte nelle norme (K-CTR-101 ... 126). Con una richiesta (`HoursRequest`) anche il resoconto per `kzero ore` (`HoursReport`). Dal K-013 quali regimi dipendono dal tipo di servizio delle corse (`kind_dependence`, dai dati: senza i dati particolari tutto quello che ne viene e' riservato, e i problemi lo dicono con `Problem::by_service_kind`) e una funzione sola per la corsa a cui serve un trasferimento a vuoto (`served_trip`). |
 | `dimostrazione.cpp` | Alcune regole applicate ai dati di un pacchetto: nessun dato scritto nel codice. |
+| `elenco.cpp` | (K-019) L'elenco utenti del committente: le righe di una tabella lette con il profilo di lettura (dati: titoli, parole, sigle, separatori; il programma conosce solo le forme), il confronto con l'elenco del pacchetto (nuovi, cambiati, usciti, omonimi, sblocchi), i controlli sull'elenco. |
 
 ## Piano 2 - API (`src/api`): il contratto ufficiale
 
@@ -81,12 +82,16 @@ Il programma e' diviso in tre piani, uno sopra l'altro:
 | `registro.cpp`, `disco.cpp` | (K-010) Il registro degli accessi (voci concatenate, cifrato, legato alla cassaforte); scritture atomiche e blocco della cartella. |
 | `accesso.cpp`, `chiusura.cpp` | (K-010) Aprire un pacchetto chiuso per un comando (utente, password, voce nel registro prima dei dati, visibilita' dai permessi); chiudere un pacchetto e riaprirlo per controllare che i dati siano identici. |
 | `comando_cassaforte.cpp` | (K-010) I comandi della cassaforte: chiudi, richiudi, esporta, cassaforte, registro, aggiungi-utente, togli-utente, password, conservazione, cancella. |
+| `riscrittura.cpp` | (K-019) Riscrivere i dati di un pacchetto chiuso, una regola sola per richiudi, leggi-elenco e sblocco: pacchetto nuovo in memoria, riapertura con la password, poi cassaforte e file normali (il manifesto per ultimo). |
+| `excel.cpp` | (K-019) Il primo lettore di file esterni: un foglio di un file Excel (.xlsx) in una tabella di testi, tutto in memoria (archivio con miniz, XML a flusso con Expat), con i limiti sui byte veri (docs/sicurezza.md, "File Excel"). Non sa cosa vogliono dire le colonne: lo dice un profilo nei dati, letto dal nucleo (elenco.cpp). Domani un lettore CSV dara' la stessa tabella. |
+| `comando_elenco.cpp` | (K-019) kzero leggi-elenco e kzero sblocco: l'elenco utenti del committente nella cassaforte. |
 
 - **I file incorporati**: gli schemi di `docs/schema` e il pacchetto dimostrativo `esempi/demo` entrano
   nel programma quando si compila (`cmake/incorpora.cmake`). Cosi' `kzero` controlla i dati sempre con
   gli schemi con cui e' stato compilato e `kzero dimostrazione` funziona da qualunque cartella.
-- I futuri **lettori di file esterni** (es. il file alunni del consorzio, i dati aperti GTFS) staranno in questo
-  piano: trasformeranno quei file nel formato K-Zero.
+- I **lettori di file esterni** stanno in questo piano: trasformano quei file nel formato K-Zero. Il primo (K-019) e' il
+  lettore dei file Excel (`excel.cpp`) per l'elenco utenti del committente: da' una tabella di testi; cosa vogliono dire lo
+  dice il profilo di lettura (un dato), letto dal nucleo. Domani i dati aperti GTFS, le schede dei servizi, un CSV.
 
 ## Piano 3 - Adattatori
 

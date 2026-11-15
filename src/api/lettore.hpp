@@ -59,6 +59,11 @@ public:
 //   si legge fino al massimo piu' uno e ci si ferma.
 FileLetto leggi_dal_disco(const std::filesystem::path& cartella, const std::string& nome, std::uintmax_t massimo);
 
+// Lettura blindata di un file che arriva da fuori del pacchetto (K-019, es. l'elenco utenti del committente in Excel): le
+// stesse regole di leggi_dal_disco (solo un file normale, aperto senza attese, mai oltre "massimo" byte anche se il sistema non
+// dice la dimensione o il file cresce), senza il vincolo della cartella: un collegamento si segue se porta a un file normale.
+FileLetto leggi_file_esterno(const std::filesystem::path& file, std::uintmax_t massimo);
+
 // Una cartella sul disco.
 class CartellaSuDisco : public Sorgente {
 public:

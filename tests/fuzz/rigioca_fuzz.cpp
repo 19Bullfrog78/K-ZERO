@@ -34,11 +34,14 @@ int main(int argc, char** argv) {
             ++provati;
         }
         provati += kzero::fuzz::prova_semi_cassaforte();
-        std::printf("%d semi provati nei loro bersagli (file del demo e cassaforte del pacchetto di prova dei servizi)\n", provati);
+        provati += kzero::fuzz::prova_semi_elenco();
+        std::printf("%d semi provati nei loro bersagli (file del demo, cassaforte del pacchetto di prova dei servizi, elenco utenti)\n",
+                    provati);
         return 0;
     }
     if (argc == 3 && std::string(argv[1]) == "--scrivi-semi") {
         kzero::fuzz::scrivi_semi_cassaforte(argv[2]);
+        kzero::fuzz::scrivi_semi_elenco(argv[2]);
         return 0;
     }
     if (argc < 3) {

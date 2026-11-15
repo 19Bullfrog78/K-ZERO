@@ -173,6 +173,8 @@ comunque la regola qui sopra):
 | K-CTR-135 | particolare | tutti i casi | che la dichiarazione ci sia, come K-CTR-131 (K-011 aggiunta 2) |
 | K-CTR-136 | personale | alcuni casi | che un testo comune contenga il nome (o una parola del nome) di una persona o di una casa, e quale (il codice); che un falso allarme sui nomi non spenga piu' niente (K-018) |
 | K-CTR-136 | particolare | alcuni casi | lo stesso per una persona o una casa legata a un luogo sensibile (varianti 2 e 3): dice anche il legame con il luogo sensibile (K-018) |
+| K-CTR-142 | personale | tutti i casi | che due utenti dell'elenco abbiano lo stesso nome nella stessa scuola, e quali (i codici, di base nascosti) (K-019) |
+| K-CTR-150 | personale | tutti i casi | che un utente nuovo e uno uscito abbiano la stessa casa (e lo stesso nome o la stessa scuola), e quale sia l'uscito (K-019) |
 
 Nei problemi degli orari (K-CTR-107 ... K-CTR-125) quale legge vale per la persona e' un dato personale quando la legge
 dipende dal suo rapporto o dal suo contratto collettivo (es. la L. 138 vale per i dipendenti): allora la regola, la fonte
@@ -387,6 +389,8 @@ campi controllati, ultima versione di ogni file (una prova li confronta con il p
 | `rotazioni.json` | `rotazioni[].codice`, `rotazioni[].nome` |
 | `servizi_fissi.json` | `servizi_fissi[].codice` |
 | `blocchi.json` | `blocchi[].codice`, `blocchi[].nota` |
+| `profili_elenchi.json` | `profili[].codice`, `profili[].codici_esterni.sistema`, `profili[].codici_esterni.tipo_fermata`, `profili[].codici_esterni.tipo_scuola`, `profili[].nome`, `profili[].nota`, `profili[].periodi[].nome`, `profili[].tratte[].nome` |
+| `elenco_utenti.json` | `elenchi[].utenti[].codice`, `elenchi[].utenti[].sblocchi[].riferimento`, `elenchi[].utenti[].tratte[].altra_ditta` |
 <!-- campi dei testi comuni: fine -->
 
 Le parole si confrontano senza maiuscole ne' accenti, con la normalizzazione della ricerca dei luoghi (formato-dati.md, "Ricerca
@@ -441,6 +445,31 @@ Avviso K-CTR-136 (servizi.json, /servizi/9/nome): Il testo "Matrimonio Rossi" (s
 
 Di base: "...e' un testo delle cose di una persona o di una casa dei dati (quale: dati personali, riservati) e contiene una parola
 del suo nome (riservata)...". Cosa non copre (nomi scritti male, soprannomi, sigle, numeri dei codici esterni): docs/sicurezza.md.
+
+## Elenco utenti del committente (K-019)
+
+L'elenco degli utenti che il committente manda nel suo file (oggi Excel) si legge con `kzero leggi-elenco` e un profilo di
+lettura (formato-dati.md, `profili_elenchi.json` ed `elenco_utenti.json`). Due gruppi di controlli:
+
+- **sui dati** (`kzero controlla`, e anche nell'uscita di `kzero leggi-elenco` per l'elenco nuovo del committente letto):
+  K-CTR-139 ... K-CTR-147, piu' i controlli di sempre sui codici doppi (K-CTR-009: profili, elenchi per committente, utenti),
+  sui riferimenti (K-CTR-010: committente, profilo, scuola, fermata, aziende delle ditte), sui periodi (K-CTR-012) e sul livello
+  (K-CTR-019, variante 10: l'elenco sta solo nel livello "completo");
+- **sulle righe del file letto** (solo nell'uscita di `kzero leggi-elenco`, con la riga e la colonna del file, mai il valore di
+  una cella personale): K-CTR-148 ... K-CTR-152.
+
+Varianti di K-CTR-148 (riga illeggibile): 0 cella con un errore di Excel o troppo lunga (oltre 2.000 caratteri) in una colonna
+che serve; 1 nome, scuola o stato vuoti; 2 scuola che non e' una scuola del pacchetto (codici esterni del profilo); 3 scuola che
+vale per piu' scuole del pacchetto; 4 stato che non e' una delle parole del profilo; 5 percorsi in una forma che il profilo non
+conosce (testo prima della prima tratta, ditta vuota); 6 percorsi con la stessa tratta due volte; 7 orari in una forma che il
+profilo non conosce; 8 sigla di tratta sconosciuta; 9 sigla di giorno sconosciuta; 10 sigla di periodo sconosciuta; 11 ora
+scritta male o che non esiste (oltre 23:59); 12 data che non esiste (es. 31/04, o 29/02 in un anno non bisestile); 13 periodo
+che finisce prima di cominciare; 14 classe che non e' un numero da 0 a 20; 15 nome e scuola di due utenti gia' nell'elenco
+(K-CTR-142). Una riga si ferma al primo motivo trovato, nell'ordine dei campi: nome, scuola, stato, casa, classe, sezione,
+percorsi, orari, fermata.
+
+**Le colonne che il profilo non nomina** non si leggono e non si salvano mai (es. telefoni, codice fiscale, note dell'ufficio):
+il formato non ha posto per loro. Colori e formattazione delle celle (righe gialle, note in rosso) non sono dati e si ignorano.
 
 ## Elenco completo
 
@@ -588,3 +617,17 @@ Un nuovo controllo prende il codice successivo all'ultimo.
 | K-CTR-136 | avviso | Nome di una persona o di una casa in un testo comune | Un testo comune (sopra, "Testi comuni") contiene il nome intero di una persona dei dati (personale, passeggero, committente privato) o di una casa, oppure, in un testo delle cose di una persona, una parola del suo nome di almeno 3 lettere. Varianti 2 e 3 per chi e' legato a un luogo sensibile; variante 4: un falso allarme di questo controllo che non spegne piu' niente. Richiede tutti e due i permessi. | Scrivere il testo senza il nome; se e' un caso, scrivere un falso allarme con il motivo (pacchetto.json, falsi_allarmi); togliere un falso allarme che non serve piu'. |
 | K-CTR-137 | avviso | Parola sulla salute in un testo comune | Un testo comune contiene una parola o un'espressione degli elenchi delle parole sulla salute (norme del paese e azienda, versione 4). Non per norme e regolamenti, ne' per i testi di un luogo sensibile e della sua scuola o centro. Variante 1: un falso allarme che non spegne piu' niente. | Scrivere il testo senza quelle parole (il tipo di servizio e di gruppo va nel suo campo, riservato); se non parla di salute, un falso allarme con il motivo. |
 | K-CTR-138 | avviso | Luogo con una parola sulla salute nel nome, non segnato sensibile | Un luogo pubblico non segnato sensibile ha una parola degli elenchi nel nome o in un nome alternativo: forse e' un luogo sensibile. Variante 1: luoghi.json della versione 1, che non puo' segnarlo. Variante 2: un falso allarme che non spegne piu' niente. | Segnare il luogo sensibile (luoghi.json versione 2); se non lo e', un falso allarme con il motivo. |
+| K-CTR-139 | errore | Profilo di lettura ambiguo o incoerente | Nel profilo di lettura di un elenco utenti (`profili_elenchi.json`, K-019): una sigla di tratta, di giorno o di periodo, un titolo di colonna o una ditta ripetuti (anche scritti con maiuscole o accenti diversi), un giorno con due sigle, un periodo che rimanda a una tratta che il profilo non ha, una parola che vuol dire sia attivo sia sospeso, una sigla che e' sia di un periodo sia di un giorno. Il file del committente non si saprebbe leggere senza indovinare. | Correggere il profilo. |
+| K-CTR-140 | errore | Elenco utenti incoerente con il suo profilo | L'elenco di un committente (`elenco_utenti.json`) dice un profilo di un altro committente, oppure un utente ha una tratta (nelle tratte, negli orari o negli sblocchi) o un periodo che il profilo non ha, o la stessa tratta due volte. Di solito l'elenco e' stato scritto a mano, o il profilo e' cambiato dopo la lettura. | Rileggere il file con il profilo giusto (`kzero leggi-elenco`), o correggere il profilo. |
+| K-CTR-141 | errore | Codice di un utente dell'elenco usato da un altro elemento | Il codice di un utente dell'elenco (U-000001...) e' anche il codice di un altro elemento del pacchetto: i codici dell'elenco sono unici in tutto il pacchetto (il programma li da' saltando quelli usati). | Cambiare il codice dell'altro elemento. |
+| K-CTR-142 | errore | Due utenti con lo stesso nome nella stessa scuola | Due utenti dello stesso elenco hanno lo stesso nome (normalizzato come i nomi dei luoghi) nella stessa scuola: una lettura del file non saprebbe quale dei due e' quello di una riga, e quelle righe si fermerebbero (K-CTR-148). Richiede tutti e due i permessi. | Correggere l'elenco (es. il nome com'e' nel file del committente). |
+| K-CTR-143 | avviso | Andata senza ritorno in un giorno | Un utente dell'elenco ha l'andata (una tratta con il verso andata nel profilo) ma nessun ritorno in un giorno della settimana, in tutto o in una parte dell'anno (es. il ritorno del pomeriggio solo in due periodi, e niente in mezzo). | Controllare gli orari del file con il committente; se e' giusto cosi', non serve fare niente. |
+| K-CTR-144 | avviso | Due orari dello stesso giorno con date che si sovrappongono | Un utente ha nello stesso giorno della settimana due orari della stessa tratta con date che si sovrappongono e ore diverse (es. il ritorno di mezzogiorno alle 13:00 tutti i giorni e alle 12:00 il mercoledi'). | Controllare gli orari del file con il committente. |
+| K-CTR-145 | avviso | Date di un orario fuori dall'anno della scuola | Le date scritte nel file per un orario (non "tutto l'anno") escono dai periodi degli orari della scuola dell'utente (scuole.json): forse una data scritta male, o un anno scolastico sbagliato nel comando. | Controllare il file, o rileggerlo con l'anno scolastico giusto (`--anno-scolastico`). |
+| K-CTR-146 | avviso | Sblocco che forse non serve piu' | Uno sblocco di un utente ora attivo (ha gia' diritto al servizio), oppure di una tratta che il committente non gli da' piu' (non e' nei percorsi). | Togliere lo sblocco (`kzero sblocco --togli`) se non serve. |
+| K-CTR-147 | avviso | Utente non piu' nell'elenco del committente | Un utente che il committente non manda piu' (lettura completa) resta nell'elenco "fuori elenco" perche' ha uno sblocco (una lettura non cancella mai uno sblocco); non entra mai nel piano. Variante 1: non ha piu' sblocchi e se ne andra' alla prossima lettura completa. | Togliere gli sblocchi che non servono piu' (`kzero sblocco --togli`). |
+| K-CTR-148 | errore | Riga illeggibile del file del committente | Solo in `kzero leggi-elenco`: una riga del file non si legge (varianti in "Elenco utenti del committente"). Riga e colonna, mai il valore (tranne il nome della scuola, che e' pubblico). La riga non si applica, le altre si'; un utente gia' nell'elenco resta com'e'; con un elenco completo le uscite non si applicano (K-CTR-151). | Correggere il file (o chiedere al committente), oppure il profilo o i codici esterni delle scuole. |
+| K-CTR-149 | errore | Righe con lo stesso nome nella stessa scuola | Solo in `kzero leggi-elenco`: due o piu' righe hanno lo stesso nome nella stessa scuola. Il programma non indovina: quelle righe si fermano (contano come illeggibili) e gli utenti gia' nell'elenco restano come sono. | Distinguere gli utenti a mano nell'elenco (per ora: `kzero esporta`, correggere, `kzero richiudi`), poi rileggere. |
+| K-CTR-150 | avviso | Forse lo stesso utente, scritto diverso | Solo in `kzero leggi-elenco`: un utente nuovo e un utente che il file non ha piu' hanno la stessa casa (comune, frazione, via e civico) e la stessa scuola (variante 0), oppure lo stesso nome e la stessa casa in scuole diverse (variante 1, es. il passaggio dalla primaria alle medie). Nessuna unione automatica. | Controllare: se e' lo stesso, correggere a mano. |
+| K-CTR-151 | avviso | Elenco completo con righe illeggibili: uscite non applicate | Solo in `kzero leggi-elenco`: l'elenco e' completo ma alcune righe non si leggono, quindi chi non e' nel file non esce (potrebbe essere in una riga illeggibile). | Correggere le righe e rileggere il file. |
+| K-CTR-152 | avviso | Fermata indicata non riconosciuta | Solo in `kzero leggi-elenco`: la fermata scritta nel file non e' un luogo del pacchetto, ne' per il codice esterno del profilo ne' per il nome (o un nome alternativo) tra i luoghi del comune della casa dell'utente, oppure ce n'e' piu' d'uno: resta il testo, dato personale. | Aggiungere il codice esterno o il nome alternativo al luogo (`luoghi.json`). |

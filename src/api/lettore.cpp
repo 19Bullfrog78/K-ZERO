@@ -83,32 +83,12 @@ FileLetto leggi_al_massimo(std::uintmax_t massimo, Leggi leggi_pezzo) {
     return out;
 }
 
-}  // namespace
-
-FileLetto leggi_dal_disco(const std::filesystem::path& cartella, const std::string& nome, std::uintmax_t massimo) {
+// Legge un file che deve essere un file normale (percorso gia' risolto o da seguire), al massimo "massimo" byte: la parte
+// comune della lettura blindata dei file del pacchetto e di quella dei file che arrivano da fuori (K-019).
+FileLetto leggi_file_normale(const std::filesystem::path& vero, std::uintmax_t massimo) {
     namespace fs = std::filesystem;
     FileLetto out;
-    const fs::path percorso = cartella / nome;
     std::error_code ec;
-    const fs::file_status proprio = fs::symlink_status(percorso, ec);
-    if (ec) return out;
-    fs::path vero = percorso;
-    if (fs::is_symlink(proprio)) {
-        // Un collegamento si segue fino in fondo; il file vero deve stare dentro la cartella del pacchetto, risolta
-        // anche lei (puo' essere a sua volta un collegamento, es. una cartella sincronizzata).
-        if (!fs::exists(percorso, ec)) {
-            out.esito = ec ? FileLetto::Esito::Illeggibile : FileLetto::Esito::CollegamentoRotto;
-            return out;
-        }
-        vero = fs::canonical(percorso, ec);
-        if (ec) return out;
-        const fs::path base = fs::canonical(cartella, ec);
-        if (ec) return out;
-        if (!dentro(vero, base)) {
-            out.esito = FileLetto::Esito::FuoriCartella;
-            return out;
-        }
-    }
     const fs::file_status tipo = fs::status(vero, ec);
     if (ec) return out;
     if (!fs::is_regular_file(tipo)) {
@@ -157,6 +137,55 @@ FileLetto leggi_dal_disco(const std::filesystem::path& cartella, const std::stri
         return static_cast<long long>(f.gcount());
     });
 #endif
+}
+
+}  // namespace
+
+FileLetto leggi_dal_disco(const std::filesystem::path& cartella, const std::string& nome, std::uintmax_t massimo) {
+    namespace fs = std::filesystem;
+    FileLetto out;
+    const fs::path percorso = cartella / nome;
+    std::error_code ec;
+    const fs::file_status proprio = fs::symlink_status(percorso, ec);
+    if (ec) return out;
+    fs::path vero = percorso;
+    if (fs::is_symlink(proprio)) {
+        // Un collegamento si segue fino in fondo; il file vero deve stare dentro la cartella del pacchetto, risolta
+        // anche lei (puo' essere a sua volta un collegamento, es. una cartella sincronizzata).
+        if (!fs::exists(percorso, ec)) {
+            out.esito = ec ? FileLetto::Esito::Illeggibile : FileLetto::Esito::CollegamentoRotto;
+            return out;
+        }
+        vero = fs::canonical(percorso, ec);
+        if (ec) return out;
+        const fs::path base = fs::canonical(cartella, ec);
+        if (ec) return out;
+        if (!dentro(vero, base)) {
+            out.esito = FileLetto::Esito::FuoriCartella;
+            return out;
+        }
+    }
+    return leggi_file_normale(vero, massimo);
+}
+
+FileLetto leggi_file_esterno(const std::filesystem::path& file, std::uintmax_t massimo) {
+    namespace fs = std::filesystem;
+    FileLetto out;
+    std::error_code ec;
+    const fs::file_status proprio = fs::symlink_status(file, ec);
+    if (ec) return out;
+    fs::path vero = file;
+    if (fs::is_symlink(proprio)) {
+        // Un collegamento si segue fino in fondo: deve portare a un file normale (qui senza il vincolo della cartella, perche'
+        // il file lo nomina l'utente e non arriva dentro un pacchetto preparato da altri).
+        if (!fs::exists(file, ec)) {
+            out.esito = ec ? FileLetto::Esito::Illeggibile : FileLetto::Esito::CollegamentoRotto;
+            return out;
+        }
+        vero = fs::canonical(file, ec);
+        if (ec) return out;
+    }
+    return leggi_file_normale(vero, massimo);
 }
 
 FileLetto CartellaSuDisco::leggi(const std::string& nome, std::uintmax_t massimo) const {
@@ -1882,6 +1911,145 @@ void blocchi(const JsonDati& d, Package& pk) {
     }
 }
 
+// --- Elenco utenti del committente (K-019) -----------------------------------------------------------------------------
+
+Weekday giorno_da(const std::string& g) {
+    static const char* nomi[] = {"lunedi", "martedi", "mercoledi", "giovedi", "venerdi", "sabato", "domenica"};
+    for (int i = 0; i < 7; ++i)
+        if (g == nomi[i]) return static_cast<Weekday>(i);
+    throw std::logic_error("giorno non valido dopo il controllo dello schema");
+}
+
+void profili_elenchi(const JsonDati& d, Package& pk) {
+    const Conversione c("profili_elenchi.json");
+    const auto& v = d.at("profili");
+    for (std::size_t i = 0; i < v.size(); ++i) {
+        const auto& o = v[i];
+        const std::string p = indice("/profili", i);
+        ReadingProfile x;
+        x.code = o.at("codice").get<std::string>();
+        x.name = c.testo(o, "nome");
+        x.client = c.ref(o, "committente", p);
+        x.sheet = c.testo(o, "foglio");
+        x.start_month = o.at("mese_inizio_anno").get<int>();
+        const auto& e = o.at("codici_esterni");
+        x.ext_system = e.at("sistema").get<std::string>();
+        x.ext_school_type = e.at("tipo_scuola").get<std::string>();
+        x.ext_stop_type = e.at("tipo_fermata").get<std::string>();
+        const auto& k = o.at("colonne");
+        ReadingProfile::Columns& col = x.columns;
+        for (const auto& [campo, dove] : std::vector<std::pair<const char*, std::string*>>{
+                 {"nome", &col.name}, {"scuola", &col.school}, {"stato", &col.status}, {"percorsi", &col.routes},
+                 {"fermata", &col.stop}, {"comune", &col.town}, {"frazione", &col.hamlet}, {"via", &col.street},
+                 {"civico", &col.number}, {"classe", &col.class_number}, {"sezione", &col.section}})
+            *dove = c.testo(k, campo);
+        const auto& s = o.at("stato");
+        x.active_words = c.testi(s, "attivo");
+        x.suspended_words = c.testi(s, "sospeso");
+        x.note_sep = s.at("separatore_nota").get<std::string>();
+        for (const auto& l : o.at("tratte"))
+            x.legs.push_back({l.at("sigla").get<std::string>(), l.at("verso").get<std::string>() == "ritorno" ? Direction::Return : Direction::Outbound,
+                              c.testo(l, "nome")});
+        for (const auto& g : o.at("giorni")) x.days.push_back({g.at("sigla").get<std::string>(), giorno_da(g.at("giorno").get<std::string>())});
+        for (const auto& q : c.elenco(o, "periodi"))
+            x.periods.push_back({q.at("sigla").get<std::string>(), q.at("tratta").get<std::string>(), c.testo(q, "nome")});
+        x.company_sep = o.at("percorsi").at("separatore_ditta").get<std::string>();
+        const auto& orari = c.elenco(o, "orari");
+        for (std::size_t j = 0; j < orari.size(); ++j) {
+            const auto& t = orari[j];
+            ProfileTimes y;
+            y.column = t.at("colonna").get<std::string>();
+            y.form = t.at("forma").get<std::string>() == "per_giorno" ? TimesForm::ByDay : TimesForm::ByLeg;
+            y.item_sep = t.at("separatore_voci").get<std::string>();
+            y.time_sep = t.at("separatore_ora").get<std::string>();
+            y.leg_sep = c.testo(t, "separatore_tratta");
+            y.days_sep = c.testo(t, "separatore_giorni");
+            y.day_start = c.testo(t, "inizio_giorno");
+            if (t.contains("date")) {
+                const auto& dt = t.at("date");
+                y.date_open = dt.at("apertura").get<std::string>();
+                y.date_close = dt.at("chiusura").get<std::string>();
+                y.date_sep = dt.at("separatore").get<std::string>();
+                y.day_month_sep = dt.at("separatore_giorno_mese").get<std::string>();
+            }
+            y.src = c.src(indice(p + "/orari", j));
+            x.times.push_back(std::move(y));
+        }
+        const auto& ditte = c.elenco(o, "ditte");
+        for (std::size_t j = 0; j < ditte.size(); ++j)
+            x.companies.push_back({ditte[j].at("testo").get<std::string>(), c.ref(ditte[j], "azienda", indice(p + "/ditte", j))});
+        x.src = c.src(p);
+        pk.reading_profiles.push_back(std::move(x));
+    }
+}
+
+void elenco_utenti(const JsonDati& d, Package& pk) {
+    const Conversione c("elenco_utenti.json");
+    pk.list_last_number = d.at("ultimo_numero").get<int>();
+    const auto& v = d.at("elenchi");
+    for (std::size_t i = 0; i < v.size(); ++i) {
+        const auto& o = v[i];
+        const std::string p = indice("/elenchi", i);
+        ClientList l;
+        l.client = c.ref(o, "committente", p);
+        l.profile = c.ref(o, "profilo", p);
+        l.first_year = std::stoi(o.at("anno_scolastico").get<std::string>().substr(0, 4));
+        if (o.contains("ultima_lettura")) {
+            l.has_last_reading = true;
+            l.last_fingerprint = o.at("ultima_lettura").at("impronta").get<std::string>();
+            l.last_complete = o.at("ultima_lettura").at("elenco").get<std::string>() == "completo";
+        }
+        const auto& utenti = o.at("utenti");
+        for (std::size_t k = 0; k < utenti.size(); ++k) {
+            const auto& u = utenti[k];
+            const std::string pu = indice(p + "/utenti", k);
+            ListUser x;
+            x.code = u.at("codice").get<std::string>();
+            x.name = c.testo(u, "nome");   // personale: manca a chi non puo' leggerlo
+            if (u.contains("casa")) {
+                const auto& h = u.at("casa");
+                x.home = ListUserHome{c.testo(h, "comune"), c.testo(h, "frazione"), c.testo(h, "via"), c.testo(h, "civico")};
+            }
+            x.school = c.ref(u, "scuola", pu);
+            x.class_number = c.intero(u, "classe");
+            x.section = c.testo(u, "sezione");
+            x.active = u.at("stato").at("tipo").get<std::string>() == "attivo";
+            x.status_note = c.testo(u.at("stato"), "nota");
+            if (u.contains("fermata")) {
+                const auto& f = u.at("fermata");
+                if (f.contains("luogo")) {
+                    x.stop = c.ref(f, "luogo", pu + "/fermata");
+                    x.stop_match = f.at("riconosciuta").get<std::string>() == "nome" ? StopMatch::Name : StopMatch::ExternalCode;
+                }
+                x.stop_text = c.testo(f, "testo");
+            }
+            const auto& tratte = c.elenco(u, "tratte");
+            for (std::size_t j = 0; j < tratte.size(); ++j) {
+                const auto& t = tratte[j];
+                const std::string pt = indice(pu + "/tratte", j);
+                x.legs.push_back({t.at("sigla").get<std::string>(), c.ref_opz(t, "azienda", pt), c.testo(t, "altra_ditta"), c.src(pt)});
+            }
+            const auto& orari = c.elenco(u, "orari");
+            for (std::size_t j = 0; j < orari.size(); ++j) {
+                const auto& t = orari[j];
+                x.times.push_back({t.at("tratta").get<std::string>(), giorno_da(t.at("giorno").get<std::string>()), c.orario(t.at("ora")),
+                                   c.testo(t, "periodo"), DateRange{c.data(t.at("dal")), c.data(t.at("al"))}, c.src(indice(pu + "/orari", j))});
+            }
+            const auto& sblocchi = c.elenco(u, "sblocchi");
+            for (std::size_t j = 0; j < sblocchi.size(); ++j) {
+                const auto& s = sblocchi[j];
+                x.unlocks.push_back({s.at("tratta").get<std::string>(), s.at("riferimento").get<std::string>(), c.data(s.at("data")),
+                                     c.src(indice(pu + "/sblocchi", j))});
+            }
+            x.out_of_list = c.vero(u, "fuori_elenco");
+            x.src = c.src(pu);
+            l.users.push_back(std::move(x));
+        }
+        l.src = c.src(p);
+        pk.client_lists.push_back(std::move(l));
+    }
+}
+
 void converti(const std::string& file, const JsonDati& d, Package& pk) {
     using Funzione = void (*)(const JsonDati&, Package&);
     static const std::vector<std::pair<const char*, Funzione>> conversioni = {
@@ -1891,7 +2059,8 @@ void converti(const std::string& file, const JsonDati& d, Package& pk) {
         {"servizi.json", servizi}, {"corse.json", corse}, {"mezzi.json", mezzi}, {"rimesse.json", rimesse},
         {"tempi_sosta.json", tempi_sosta}, {"persone.json", persone}, {"assenze.json", assenze}, {"fermi.json", fermi},
         {"turni.json", turni}, {"rotazioni.json", rotazioni}, {"servizi_fissi.json", servizi_fissi},
-        {"assegnazioni.json", assegnazioni}, {"blocchi.json", blocchi}};
+        {"assegnazioni.json", assegnazioni}, {"blocchi.json", blocchi}, {"profili_elenchi.json", profili_elenchi},
+        {"elenco_utenti.json", elenco_utenti}};
     for (const auto& [nome, f] : conversioni)
         if (file == nome) return f(d, pk);
     throw std::logic_error("file del formato senza conversione: " + file);
