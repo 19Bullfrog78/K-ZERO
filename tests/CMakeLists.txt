@@ -78,6 +78,17 @@ target_link_libraries(test_elenco_a_mano_comandi PRIVATE kzero_api GTest::gtest_
 target_compile_options(test_elenco_a_mano_comandi PRIVATE ${KZERO_WARNINGS})
 target_compile_definitions(test_elenco_a_mano_comandi PRIVATE KZERO_CARTELLA_PROVE="${CMAKE_CURRENT_SOURCE_DIR}")
 gtest_discover_tests(test_elenco_a_mano_comandi PROPERTIES LABELS sicurezza)
+# K-021: schede dei servizi (nucleo e scrittura; i comandi a parte).
+add_executable(test_schede test_schede.cpp)
+target_link_libraries(test_schede PRIVATE kzero_api GTest::gtest_main)
+target_compile_options(test_schede PRIVATE ${KZERO_WARNINGS})
+target_compile_definitions(test_schede PRIVATE KZERO_CARTELLA_PROVE="${CMAKE_CURRENT_SOURCE_DIR}")
+gtest_discover_tests(test_schede PROPERTIES LABELS sicurezza)
+add_executable(test_schede_comandi test_schede_comandi.cpp)
+target_link_libraries(test_schede_comandi PRIVATE kzero_api GTest::gtest_main)
+target_compile_options(test_schede_comandi PRIVATE ${KZERO_WARNINGS})
+target_compile_definitions(test_schede_comandi PRIVATE KZERO_CARTELLA_PROVE="${CMAKE_CURRENT_SOURCE_DIR}")
+gtest_discover_tests(test_schede_comandi PROPERTIES LABELS sicurezza)
 # K-021: prova sistematica sulle uscite dei comandi dell'elenco (nessun dato personale senza i parametri).
 add_executable(test_uscite_elenco test_uscite_elenco.cpp)
 target_link_libraries(test_uscite_elenco PRIVATE kzero_api GTest::gtest_main)

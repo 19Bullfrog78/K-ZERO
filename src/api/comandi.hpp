@@ -43,6 +43,12 @@ struct Parametri {
     std::string riferimento;              // --riferimento: riferimento dello sblocco (es. la mail del committente)
     std::optional<kzero::Day> data_sblocco;   // --data dello sblocco, scritta dall'utente
     bool togli = false;                   // --togli: toglie lo sblocco
+    // Schede dei servizi (K-021)
+    std::string contratto;                // --contratto: il contratto dei servizi fatti dalle schede
+    std::string validita;                 // --validita: attivazione, presa-in-carico o una data (per tutto il file)
+    std::string validita_schede;          // --validita-scheda: "NR=valore" per una o piu' schede (separate da ";")
+    std::string scheda;                   // --scheda: codice o ID della scheda (kzero togli-scheda)
+    bool tutte = false;                   // --tutte: toglie tutte le versioni della scheda
     std::vector<std::string> argomenti;   // argomenti del comando (es. la cartella), nell'ordine della definizione
 };
 

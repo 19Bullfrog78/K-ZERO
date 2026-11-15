@@ -480,6 +480,96 @@ std::vector<DefinizioneComando> comandi_elenco() {
     return c;
 }
 
+// --- Schede dei servizi (K-021) ---------------------------------------------------------------------------------------
+
+std::vector<DefinizioneComando> comandi_schede() {
+    std::vector<DefinizioneComando> c;
+    const auto testo = [](const char* nome, bool obbligatorio, std::string descrizione, void (*applica)(Parametri&, const std::string&)) {
+        DefinizioneParametro x;
+        x.nome = nome;
+        x.tipo = TipoParametro::Valore;
+        x.forma = FormaValore::Testo;
+        x.obbligatorio = obbligatorio;
+        x.descrizione = std::move(descrizione);
+        x.applica = applica;
+        return x;
+    };
+    const auto data = [](std::string descrizione) {
+        DefinizioneParametro d;
+        d.nome = "--data";
+        d.tipo = TipoParametro::Valore;
+        d.forma = FormaValore::Data;
+        d.obbligatorio = true;
+        d.descrizione = std::move(descrizione);
+        d.applica = [](Parametri& par, const std::string& v) { par.data_sblocco = kzero::day_from_text(v); };
+        return d;
+    };
+    {
+        std::vector<DefinizioneParametro> p{parametro_formato(), parametro_password_da_ingresso(), parametro_utente(true),
+                                            parametro_dati_personali(), parametro_dati_particolari()};
+        DefinizioneParametro s = parametro_scrivi("La cartella del pacchetto chiuso, la stessa del secondo argomento: con --scrivi le "
+                                                  "schede si scrivono nel pacchetto e nella cassaforte; senza, si vedono soltanto "
+                                                  "(anteprima).");
+        s.obbligatorio = false;
+        p.push_back(s);
+        p.push_back(parametro_codice("--profilo", "Il profilo delle schede (codice di profili_schede.json).", true,
+                                     [](Parametri& par, const std::string& v) { par.profilo = v; }));
+        p.push_back(parametro_codice("--contratto", "Il contratto dei servizi fatti dalle schede (contratti.json), del committente del "
+                                                    "profilo.",
+                                     true, [](Parametri& par, const std::string& v) { par.contratto = v; }));
+        p.push_back(data("La presa in carico, scritta dall'utente (il programma non usa l'orologio): una scheda con l'attivazione da "
+                         "questo giorno in poi vale dall'attivazione; prima, serve una scelta (--validita)."));
+        p.push_back(testo("--riferimento", true,
+                          "Il riferimento delle schede (es. la mail del committente). Dato comune: senza nomi di persone.",
+                          [](Parametri& par, const std::string& v) { par.riferimento = v; }));
+        p.push_back(testo("--validita", false,
+                          "Da quando valgono le schede del file con l'attivazione prima della presa in carico: attivazione, "
+                          "presa-in-carico oppure una data AAAA-MM-GG. Senza, quelle schede si fermano: il programma non sceglie.",
+                          [](Parametri& par, const std::string& v) { par.validita = v; }));
+        p.push_back(testo("--validita-scheda", false,
+                          "La scelta per una o piu' schede, che vince su --validita: Nr=valore, separate da \";\" (es. \"4000123/3=2026-11-20\"); "
+                          "una data vale anche per una scheda con l'attivazione dopo la presa in carico.",
+                          [](Parametri& par, const std::string& v) { par.validita_schede = v; }));
+        c.push_back({"leggi-schede",
+                     "Legge le schede dei servizi del committente copiate nel modello Excel (.xlsx) di K-Zero, con il profilo delle schede "
+                     "dei dati: ogni scheda diventa un servizio, un gruppo, una corsa e un calendario, controllati con i totali della "
+                     "scheda (una scheda che non torna si ferma, le altre vanno avanti). Lo stesso ID gia' nel pacchetto = versione nuova "
+                     "della stessa scheda, dalla data scelta: i giorni prima non cambiano mai. Senza --scrivi mostra soltanto cosa "
+                     "cambierebbe (scrive solo la voce del registro); con --scrivi scrive nel pacchetto e nella cassaforte, dopo aver "
+                     "riaperto in memoria il pacchetto nuovo. Serve chi ha i dati personali e particolari. Del file si tiene solo "
+                     "l'impronta.",
+                     {{"file", "Il file Excel (.xlsx) con le schede copiate, che non si modifica mai."},
+                      {"cartella", "Cartella del pacchetto chiuso."}},
+                     p, Schema{"schede", 1}, esegui_leggi_schede});
+    }
+    {
+        std::vector<DefinizioneParametro> p{parametro_formato(), parametro_password_da_ingresso(), parametro_utente(true),
+                                            parametro_dati_personali(), parametro_dati_particolari()};
+        DefinizioneParametro s = parametro_scrivi("La cartella del pacchetto chiuso, la stessa dell'argomento: con --scrivi la scheda si "
+                                                  "toglie; senza, si vede soltanto (anteprima).");
+        s.obbligatorio = false;
+        p.push_back(s);
+        p.push_back(testo("--scheda", true, "La scheda da togliere: il suo codice nel registro (es. SCH-4000123-3) o il suo ID.",
+                          [](Parametri& par, const std::string& v) { par.scheda = v; }));
+        p.push_back(testo("--riferimento", true, "Perche' si toglie (es. \"scheda copiata per errore\"). Dato comune: senza nomi di persone.",
+                          [](Parametri& par, const std::string& v) { par.riferimento = v; }));
+        p.push_back(data("La data, scritta dall'utente (il programma non usa l'orologio)."));
+        DefinizioneParametro t;
+        t.nome = "--tutte";
+        t.tipo = TipoParametro::Interruttore;
+        t.descrizione = "Toglie tutte le versioni della scheda (senza: solo l'ultima, e la versione di prima riprende la sua fine).";
+        t.applica = [](Parametri& par, const std::string&) { par.tutte = true; };
+        p.push_back(t);
+        c.push_back({"togli-scheda",
+                     "Toglie una scheda scritta per errore: l'ultima versione (servizio, gruppo, corsa, calendario), e la versione di "
+                     "prima riprende la fine che aveva; con --tutte tutte le versioni. Restano scritti nel registro delle schede il "
+                     "riferimento e la data. Non toglie una corsa usata da un turno o da un blocco. Stessa scrittura e stessi permessi "
+                     "di kzero leggi-schede; senza --scrivi mostra soltanto cosa cambierebbe.",
+                     {{"cartella", "Cartella del pacchetto chiuso."}}, p, Schema{"togli_scheda", 1}, esegui_togli_scheda});
+    }
+    return c;
+}
+
 std::vector<DefinizioneComando> crea_comandi() {
     std::vector<DefinizioneComando> c = {
         {"controlla",
@@ -539,6 +629,7 @@ std::vector<DefinizioneComando> crea_comandi() {
     };
     for (DefinizioneComando& x : comandi_cassaforte()) c.push_back(std::move(x));
     for (DefinizioneComando& x : comandi_elenco()) c.push_back(std::move(x));
+    for (DefinizioneComando& x : comandi_schede()) c.push_back(std::move(x));
     for (auto& comando : c)
         std::sort(comando.parametri.begin(), comando.parametri.end(),
                   [](const DefinizioneParametro& a, const DefinizioneParametro& b) { return a.nome < b.nome; });

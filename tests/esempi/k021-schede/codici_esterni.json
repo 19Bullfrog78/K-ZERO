@@ -1,0 +1,10 @@
+{
+  "descrizione": "K-021, prove: codici esterni da aggiungere al demo (oltre a quelli di tests/esempi/k019-elenco), cosi' calendari e fermate delle schede di prova si riconoscono. Dati inventati.",
+  "calendari": {
+    "CAL-SCUOLA": [{ "sistema": "Consorzio Valle Alta", "tipo": "calendario", "codice": "SCOLASTICO" }],
+    "CAL-INFANZIA": [{ "sistema": "Consorzio Valle Alta", "tipo": "calendario", "codice": "MATERNA" }]
+  },
+  "luoghi": {
+    "F-MONTEBRINO": [{ "sistema": "Consorzio Valle Alta", "tipo": "fermata", "codice": "MONTEBRINO CENTRO" }]
+  }
+}

@@ -39,5 +39,8 @@ Risultato esegui_cambia_in_elenco(const DefinizioneComando& comando, const Param
 Risultato esegui_togli_da_elenco(const DefinizioneComando& comando, const Parametri& parametri);
 Risultato esegui_rimetti_in_elenco(const DefinizioneComando& comando, const Parametri& parametri);
 Risultato esegui_cancella_da_elenco(const DefinizioneComando& comando, const Parametri& parametri);
+// K-021: schede dei servizi (comando_schede.cpp).
+Risultato esegui_leggi_schede(const DefinizioneComando& c, const Parametri& p);
+Risultato esegui_togli_scheda(const DefinizioneComando& c, const Parametri& p);
 
 }  // namespace kzero::api

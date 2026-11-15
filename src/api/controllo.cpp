@@ -7,6 +7,7 @@
 
 #include "formato_dati.hpp"
 #include "riservatezza.hpp"
+#include "schede_scrittura.hpp"
 #include "testi_liberi.hpp"
 #include "validazione.hpp"
 
@@ -64,6 +65,9 @@ Resoconto controlla_lettura(Lettura lettura, const Visibilita& visibilita, const
         // K-018: nomi e parole sulla salute nei testi comuni (servono le classi degli schemi: si controllano qui, nell'API).
         std::vector<kzero::Problem> testi = controlla_testi_liberi(r.lettura);
         problemi.insert(problemi.end(), testi.begin(), testi.end());
+        // K-021: gli elementi delle schede confrontati con quello che la scheda da' (servono gli elementi come documenti: nell'API).
+        std::vector<kzero::Problem> schede = schede::controlla_elementi(r.lettura);
+        problemi.insert(problemi.end(), schede.begin(), schede.end());
         // K-014: senza i dati particolari, il perche' dei turni scoperti o senza mezzo non si dice (riservatezza.hpp).
         if (motivo_dei_turni_riservato(r.lettura.pacchetto, visibilita))
             problemi = turni_senza_motivo(std::move(problemi), r.lettura.pacchetto, !r.lettura.leggibili.particolari);

@@ -163,6 +163,136 @@ void aggiungi_testi_liberi(std::vector<DefinizioneControllo>& c) {
                             "(o non c'e' piu' un nome uguale in quel campo)." + togli}});
 }
 
+// K-021: le schede dei servizi. Sulle schede lette (kzero leggi-schede) e sul registro (anche kzero controlla). Nessun messaggio
+// riporta il valore di una cella: foglio, riga, colonna e il Nr della scheda (dato comune).
+void aggiungi_schede(std::vector<DefinizioneControllo>& c) {
+    const Livello E = Livello::Errore, A = Livello::Avviso;
+    const Classe N = Classe::Comune, PA = Classe::Particolare;
+    const std::string dove = "Scheda {scheda} (foglio \"{foglio}\", riga {riga}, colonna \"{colonna}\"): ";
+    const std::string ferma = ": la scheda si ferma (le altre del file vanno avanti). Correggere la copia e rileggere il file.";
+    c.push_back({Check::CardUnreadable, "K-CTR-160", E, N, "Scheda dei servizi che non si legge",
+                 {dove + "la cella ha un errore di Excel o e' troppo lunga" + ferma,
+                  dove + "la cella e' vuota, e serve" + ferma,
+                  dove + "lo stesso Nr e' su piu' righe del foglio delle schede: non si sa quale sia" + ferma,
+                  dove + "lo stesso ID e' su piu' schede del file: due schede con lo stesso ID non si leggono insieme" + ferma,
+                  dove + "verso e momento non sono uno dei testi del profilo" + ferma,
+                  dove + "una scuola non e' una scuola del pacchetto (nessuna ha questo codice esterno del profilo)" + ferma +
+                      " Se la scuola c'e', aggiungerle il codice esterno (scuole.json).",
+                  dove + "una scuola vale per piu' scuole del pacchetto (stesso codice esterno)" + ferma,
+                  dove + "la data e' scritta male o non esiste" + ferma,
+                  dove + "la disattivazione e' prima dell'attivazione" + ferma,
+                  dove + "la casella ha una parola che non e' un segno del profilo (vuota = non segnata)" + ferma,
+                  dove + "la cadenza segna i giorni, ma nessun giorno ha la X" + ferma,
+                  dove + "il numero e' scritto male" + ferma,
+                  dove + "l'orario e' scritto male o non esiste" + ferma,
+                  dove + "il calendario non e' un calendario del pacchetto (nessuno ha questo codice esterno del profilo)" + ferma +
+                      " Se c'e', aggiungergli il codice esterno (calendari.json).",
+                  dove + "il calendario vale per piu' calendari del pacchetto (stesso codice esterno)" + ferma,
+                  dove + "la cadenza non e' una delle cadenze del profilo (il programma non la tratta come un'altra)" + ferma,
+                  dove + "la parola di scheda nuova o modifica non e' una di quelle del profilo" + ferma,
+                  dove + "il punto di raccolta non e' un luogo del pacchetto (ne' una scuola, ne' un codice esterno, ne' un nome)" + ferma +
+                      " Aggiungere il codice esterno o il nome alternativo al luogo (luoghi.json).",
+                  dove + "il punto di raccolta vale per piu' luoghi del pacchetto" + ferma + " Scrivere il codice esterno del luogo.",
+                  dove + "nella riga ci sono sia il punto di raccolta sia la casa, o nessuno dei due: uno solo" + ferma,
+                  dove + "il codice della casa non e' una casa porta a porta (e' un luogo pubblico, un ricovero, o non e' un codice)" +
+                      ferma + " Una casa si scrive con un codice di luogo privato porta a porta, mai con l'indirizzo.",
+                  dove + "il punto di raccolta contiene la parola dell'accompagnatore: va nella sua colonna (sale o scende), e il punto "
+                         "si scrive senza" + ferma,
+                  dove + "la parola dell'accompagnatore non e' una di quelle del profilo per \"sale\" o \"scende\"" + ferma,
+                  dove + "l'accompagnatore sale (o scende) in una riga che non ha nessuno che sale (o scende): i numeri lo comprendono" +
+                      ferma,
+                  dove + "l'accompagnatore scende prima di essere salito, o sale quando e' gia' a bordo" + ferma,
+                  dove + "alla fine l'accompagnatore e' ancora a bordo: manca la riga dove scende" + ferma,
+                  dove + "l'orario e' prima di quello della riga prima" + ferma,
+                  dove + "scendono piu' persone di quelle a bordo" + ferma,
+                  dove + "la somma di St. Car. non e' uguale a Totali alunni" + ferma,
+                  dove + "la somma di St. Scar. non e' uguale a Totali alunni" + ferma,
+                  dove + "la somma dei km pieni non e' uguale a Tot Km Carico" + ferma,
+                  dove + "la somma dei km vuoti non e' uguale a Tot Km Vuoto" + ferma,
+                  dove + "una scuola della scheda non ha la sua riga tra le fermate" + ferma,
+                  dove + "il punto di raccolta e' una scuola che non e' tra le scuole della scheda" + ferma,
+                  dove + "la data e' fuori dal periodo della scheda (attivazione, disattivazione)" + ferma,
+                  dove + "la cadenza vuole le date una per una, e il foglio delle date non ne ha" + ferma,
+                  dove + "la scheda ha meno di due righe tra le fermate" + ferma,
+                  dove + "due righe di fila nello stesso luogo alla stessa ora sono un passaggio solo: la seconda non puo' avere km" + ferma,
+                  dove + "la data scelta (validita') e' prima dell'attivazione" + ferma,
+                  dove + "la data scelta (validita') e' dopo la disattivazione: la scheda non varrebbe nessun giorno" + ferma,
+                  dove + "lo stesso ID e' gia' nel registro con un altro contratto o un altro committente: mai unito" + ferma,
+                  dove + "l'accompagnatore sale e scende nello stesso passaggio (due righe di fila nello stesso luogo alla stessa ora)" +
+                      ferma,
+                  dove + "la riga ha una casa, ma il pacchetto e' di livello \"solo numeri\": le case stanno solo nel livello completo" +
+                      ferma}});
+    c.push_back({Check::CardRowWithoutCard, "K-CTR-161", E, N, "Riga senza la sua scheda",
+                 {"Foglio \"{foglio}\", riga {riga}: il Nr e' vuoto o non e' il Nr di una scheda del foglio delle schede: la riga non "
+                  "si legge."}});
+    c.push_back({Check::CardChoiceMissing, "K-CTR-162", E, N, "Scheda con l'attivazione prima della presa in carico, senza una scelta",
+                 {"Scheda {scheda}: l'attivazione ({attivazione}) e' prima della presa in carico ({presa_in_carico}) e il programma non "
+                  "sceglie da quando vale: la scheda si ferma. Scelte: --validita attivazione (vale dal {attivazione}), --validita "
+                  "presa-in-carico (dal {presa_in_carico}), oppure una data (--validita AAAA-MM-GG); per questa scheda sola "
+                  "--validita-scheda con il Nr, un uguale e la scelta."}});
+    c.push_back({Check::CardTotalDaysDiffer, "K-CTR-163", A, N, "Tot Giorni diverso dai giorni del calendario",
+                 {"Scheda {scheda}: Tot Giorni e' {tot_giorni}, ma il calendario {calendario} con i giorni segnati nel periodo della "
+                  "scheda da' {giorni} giorni: il calendario del committente o quello del pacchetto e' diverso. La scheda va avanti; "
+                  "controllare il calendario."}});
+    c.push_back({Check::CardListedDateOutside, "K-CTR-164", A, N, "Date della scheda fuori dai giorni segnati o dal calendario",
+                 {"Scheda {scheda}: {quante} date elencate (la prima: {prima}) non cadono in un giorno con la X o non sono giorni del "
+                  "calendario {calendario}: il programma non sceglie quale sia giusto. Valgono le date; controllare la copia."}});
+    c.push_back({Check::CardNewOrChangeOdd, "K-CTR-165", A, N, "Scheda nuova o modifica che non torna con il registro",
+                 {"Scheda {scheda}: e' segnata \"scheda nuova\", ma il suo ID c'e' gia' nel registro ({codice}): si legge come versione "
+                  "nuova di quella scheda.",
+                  "Scheda {scheda}: e' segnata \"modifica\", ma il suo ID non c'e' nel registro: si legge come scheda nuova (forse manca "
+                  "la prima versione)."}});
+    c.push_back({Check::CardEndedBeforeTaken, "K-CTR-166", A, N, "Scheda gia' finita prima della presa in carico",
+                 {"Scheda {scheda}: la disattivazione ({disattivazione}) e' prima della presa in carico: la scheda ha solo giorni "
+                  "passati."}});
+    c.push_back({Check::CardNrChanged, "K-CTR-167", A, N, "Stesso ID con un Nr diverso",
+                 {"Scheda {scheda}: ha l'ID della scheda {codice}, che aveva il Nr {prima}: si legge come versione nuova (i codici della "
+                  "versione nuova seguono il Nr nuovo)."}});
+    c.push_back({Check::CardChosenBeforeTaken, "K-CTR-168", A, N, "Versione nuova da una data prima della presa in carico",
+                 {"Scheda {scheda}: la versione nuova vale dal {dal}, prima della presa in carico ({presa_in_carico}): cambiano "
+                  "{giornate} giornate prima della presa in carico (scelta dell'utente, scritta nel registro).",
+                  "Scheda {scheda}: la versione nuova vale dal {dal}, prima della presa in carico ({presa_in_carico}): cambiano "
+                  "{giornate} giornate prima della presa in carico e si tolgono le versioni {versioni}, che cominciavano da quel "
+                  "giorno in poi (scelta dell'utente, scritta nel registro)."}});
+    c.push_back({Check::CardServiceOverlap, "K-CTR-169", A, N, "Schede dello stesso servizio con periodi che si sovrappongono",
+                 {"Le schede {scheda} e {altra} sono dello stesso servizio {servizio} e valgono tutte e due dal {dal} al {al}: il "
+                  "programma non le unisce (ID diversi). Controllare: forse una delle due va tolta (kzero togli-scheda)."}});
+    c.push_back({Check::CardElementChanged, "K-CTR-170", A, N, "Elemento di una scheda diverso dalla scheda",
+                 {"Il {cosa} {codice} della scheda {scheda} (versione {versione}) non e' piu' quello che la scheda da' (cambiato a "
+                  "mano: {campo}): una versione nuova della scheda lo rifara' dalla scheda.",
+                  "Il {cosa} {codice} della scheda {scheda} (versione {versione}) non c'e' nel pacchetto: una versione nuova della scheda "
+                  "lo rifara'."}});
+    c.push_back({Check::CardEscortMissing, "K-CTR-171", A, N, "Accompagnatore che manca su una corsa di una scheda",
+                 {"Corsa {corsa} (scheda {scheda}): dal passaggio {da} (alle {orario}) a {a} c'e' qualcuno a bordo senza "
+                  "l'accompagnatore, e il regolamento {regolamento} lo chiede ({fonte}). Il servizio va fatto comunque con "
+                  "l'accompagnatore: controllare la scheda.",
+                  "Corsa {corsa} (scheda {scheda}): dal passaggio {da} (alle {orario}) a {a} c'e' qualcuno a bordo senza "
+                  "l'accompagnatore; il regolamento {regolamento} lo chiede se il mezzo ha piu' di {posti} posti per i passeggeri "
+                  "({fonte}): dipende dal mezzo, che la scheda non dice.",
+                  "Corsa {corsa} (scheda {scheda}): dal passaggio {da} (alle {orario}) a {a} c'e' qualcuno a bordo senza "
+                  "l'accompagnatore, e il regolamento {regolamento} lo chiede ({fonte}). Il servizio va fatto comunque con "
+                  "l'accompagnatore: controllare la scheda.",
+                  "Corsa {corsa} (scheda {scheda}): dal passaggio {da} (alle {orario}) a {a} c'e' qualcuno a bordo senza "
+                  "l'accompagnatore; il regolamento {regolamento} lo chiede se il mezzo ha piu' di {posti} posti per i passeggeri "
+                  "({fonte}): dipende dal mezzo, che la scheda non dice."},
+                 {{2, PA}, {3, PA}}});
+    c.push_back({Check::CardTripPartKmUnknown, "K-CTR-172", A, N, "Pezzo di una corsa di una scheda con i km non noti",
+                 {"Nel turno {turno} c'e' un pezzo della corsa {corsa}, fatta da una scheda: sulla scheda i km di una riga coprono il "
+                  "tratto dalla riga prima che ha dei km, e i capi del pezzo non ne hanno: i km del pezzo non si sanno (contati 0)."}});
+    c.push_back({Check::CardProfileInvalid, "K-CTR-173", E, N, "Profilo delle schede ambiguo",
+                 {"Nel profilo {profilo} la parola \"{parola}\" vuol dire sia \"sale\" sia \"scende\" (accompagnatore), o c'e' due "
+                  "volte.",
+                  "Nel profilo {profilo} la parola \"{parola}\" vuol dire sia scheda nuova sia modifica, o c'e' due volte.",
+                  "Nel profilo {profilo} il testo di verso e momento \"{parola}\" c'e' due volte.",
+                  "Nel profilo {profilo} la cadenza \"{parola}\" c'e' due volte.",
+                  "Nel profilo {profilo} la colonna del giorno \"{parola}\" c'e' due volte.",
+                  "Nel profilo {profilo} il giorno della colonna \"{parola}\" ha gia' un'altra colonna."}});
+    c.push_back({Check::CardRegisterInvalid, "K-CTR-174", E, N, "Registro delle schede incoerente",
+                 {"Le schede {scheda} e {altra} del registro hanno lo stesso ID: due schede con lo stesso ID non possono esserci.",
+                  "Nella scheda {scheda} la versione {versione} finisce prima di cominciare, o non viene dopo quella di prima (numero e "
+                  "periodo)."}});
+}
+
 // K-019: l'elenco utenti del committente. Sui dati (kzero controlla) e sulle righe del file letto (kzero leggi-elenco).
 void aggiungi_elenco(std::vector<DefinizioneControllo>& c) {
     const Livello E = Livello::Errore, A = Livello::Avviso;
@@ -1162,6 +1292,7 @@ const std::vector<DefinizioneControllo>& catalogo_controlli() {
         aggiungi_orari(c);
         aggiungi_testi_liberi(c);
         aggiungi_elenco(c);
+        aggiungi_schede(c);
         // Controlli che usano dati personali o particolari per giudicare altro (K-010, "non verificato" per chi non li puo'
         // aprire). P = personali, Q = particolari.
         struct Richiede {
@@ -1180,6 +1311,8 @@ const std::vector<DefinizioneControllo>& catalogo_controlli() {
             {Check::NameInCommonText, PQ},
             // K-019: i nomi degli utenti dell'elenco (dati personali; legati a un luogo sensibile: tutti e due i permessi).
             {Check::ListHomonymsInList, PQ},
+            // K-021: la regola dell'assistente a bordo puo' dipendere dal tipo del servizio e del gruppo (dati particolari).
+            {Check::CardEscortMissing, Q},
             {Check::PlaceWithoutCoordinates, PQ},     // le coordinate dei luoghi privati (le case legate: tutti e due i permessi)
             {Check::DwellTimesUndefined, Q},          // chi viaggia (tipi dei gruppi)
             {Check::MaxRideUndefined, Q},             // regole dei regolamenti per tipo di servizio e di gruppo
@@ -1334,6 +1467,8 @@ const char* nome_elementi(kzero::Element e) {
         case kzero::Element::ReadingProfile: return "i profili di lettura degli elenchi utenti";
         case kzero::Element::ClientList: return "gli elenchi utenti dei committenti";
         case kzero::Element::ListUser: return "gli utenti degli elenchi";
+        case kzero::Element::CardProfile: return "i profili delle schede dei servizi";
+        case kzero::Element::ServiceCard: return "le schede dei servizi";
     }
     return "gli elementi";
 }
@@ -1558,6 +1693,8 @@ std::string Presentatore::riferimento(kzero::Element e, const std::string& codic
         case kzero::Element::WorkRule:
         case kzero::Element::ReadingProfile:
         case kzero::Element::ClientList:
+        case kzero::Element::CardProfile:
+        case kzero::Element::ServiceCard:
         case kzero::Element::ListUser: break;   // K-019: solo il codice (il nome di un utente dell'elenco non serve nei messaggi)
     }
     if (!src || nome.empty() || !dati_->versioni) return codice;

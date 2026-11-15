@@ -28,6 +28,7 @@
 #include "controlli.hpp"
 #include "lettore.hpp"
 #include "riservatezza.hpp"
+#include "schede_prove.hpp"
 #include "orari.hpp"
 #include "schemi_dati.hpp"
 #include "tempo.hpp"
@@ -1102,6 +1103,19 @@ TEST(Unione, OgniCampoRiservatoDegliSchemiCompareNeiPacchettiDelleProve) {
     std::vector<PacchettoDiProva> pacchetti = pacchetti_delle_prove();
     pacchetti.push_back({"k019-elenco", pacchetto_k019()});   // K-019: profili ed elenco utenti
     pacchetti.push_back({"k020-elenco", pacchetto_k020()});   // K-020: elenco della versione 2, con le modifiche a mano
+    {
+        InMemoria k021;   // K-021: servizi della versione 4 (individualizzato) e il registro delle schede (le due caselle)
+        k021.file = kzero::prove::schede::pacchetto_con_schede().file;
+        // Un servizio "altro" della versione 4, con la sua descrizione (dato particolare).
+        JsonDati sv = JsonDati::parse(k021.file.at("servizi.json"));
+        for (JsonDati& x : sv.at("servizi"))
+            if (x.at("codice") == "S-4000124-1") {
+                x["tipo"] = "altro";
+                x["tipo_descrizione"] = "navetta di prova";
+            }
+        k021.file["servizi.json"] = sv.dump(2);
+        pacchetti.push_back({"k021-schede", k021});
+    }
     for (const PacchettoDiProva& p : pacchetti)
         for (const auto& [file, testo] : p.chiaro.file) {
             const FileDati* f = file_dati_per_nome(file);

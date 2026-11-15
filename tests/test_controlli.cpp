@@ -848,5 +848,5 @@ TEST(Controlli, catalogo_coperto) {
     EXPECT_EQ(api::definizione_controllo(Check::ListFileNewerValue).codice, "K-CTR-157");
     EXPECT_EQ(api::definizione_controllo(Check::ListAddedNowInFile).codice, "K-CTR-158");
     EXPECT_EQ(api::definizione_controllo(Check::ListRemovedStillInFile).codice, "K-CTR-159");
-    EXPECT_EQ(api::catalogo_controlli().size(), 159u);
+    EXPECT_EQ(api::catalogo_controlli().size(), 174u);
 }

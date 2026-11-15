@@ -175,6 +175,7 @@ comunque la regola qui sopra):
 | K-CTR-136 | particolare | alcuni casi | lo stesso per una persona o una casa legata a un luogo sensibile (varianti 2 e 3): dice anche il legame con il luogo sensibile (K-018) |
 | K-CTR-142 | personale | tutti i casi | che due utenti dell'elenco abbiano lo stesso nome nella stessa scuola, e quali (i codici, di base nascosti) (K-019) |
 | K-CTR-150 | personale | tutti i casi | che un utente nuovo e uno uscito abbiano la stessa casa (e lo stesso nome o la stessa scuola), e quale sia l'uscito (K-019) |
+| K-CTR-171 | particolare | alcuni casi | che su una corsa di una scheda manchi l'accompagnatore che il regolamento chiede per un tipo di servizio, di gruppo, di centro o un'esigenza (K-021; per un grado di scuola o per i posti resta comune) |
 
 Nei problemi degli orari (K-CTR-107 ... K-CTR-125) quale legge vale per la persona e' un dato personale quando la legge
 dipende dal suo rapporto o dal suo contratto collettivo (es. la L. 138 vale per i dipendenti): allora la regola, la fonte
@@ -391,6 +392,8 @@ campi controllati, ultima versione di ogni file (una prova li confronta con il p
 | `blocchi.json` | `blocchi[].codice`, `blocchi[].nota` |
 | `profili_elenchi.json` | `profili[].codice`, `profili[].codici_esterni.sistema`, `profili[].codici_esterni.tipo_fermata`, `profili[].codici_esterni.tipo_scuola`, `profili[].nome`, `profili[].nota`, `profili[].periodi[].nome`, `profili[].tratte[].nome` |
 | `elenco_utenti.json` | `elenchi[].utenti[].a_mano.aggiunto.riferimento`, `elenchi[].utenti[].a_mano.campi.casa.riferimento`, `elenchi[].utenti[].a_mano.campi.classe.riferimento`, `elenchi[].utenti[].a_mano.campi.fermata.riferimento`, `elenchi[].utenti[].a_mano.campi.fuori_elenco.riferimento`, `elenchi[].utenti[].a_mano.campi.nome.riferimento`, `elenchi[].utenti[].a_mano.campi.orari[].riferimento`, `elenchi[].utenti[].a_mano.campi.scuola.riferimento`, `elenchi[].utenti[].a_mano.campi.sezione.riferimento`, `elenchi[].utenti[].a_mano.campi.stato.riferimento`, `elenchi[].utenti[].a_mano.campi.tratte.prima[].altra_ditta`, `elenchi[].utenti[].a_mano.campi.tratte.riferimento`, `elenchi[].utenti[].a_mano.tolto.riferimento`, `elenchi[].utenti[].codice`, `elenchi[].utenti[].sblocchi[].riferimento`, `elenchi[].utenti[].tratte[].altra_ditta` |
+| `profili_schede.json` | `profili[].codice`, `profili[].codici_esterni.sistema`, `profili[].codici_esterni.tipo_calendario`, `profili[].codici_esterni.tipo_fermata`, `profili[].codici_esterni.tipo_nr`, `profili[].codici_esterni.tipo_scheda`, `profili[].codici_esterni.tipo_scuola`, `profili[].codici_esterni.tipo_servizio`, `profili[].nome`, `profili[].nota`, `profili[].servizio.tipo_descrizione`, `profili[].servizio.tipo_gruppo_descrizione` |
+| `schede_servizi.json` | `schede[].codice`, `schede[].id`, `schede[].versioni[].riferimento`, `schede[].versioni[].scheda.nr`, `tolte[].id`, `tolte[].riferimento` |
 <!-- campi dei testi comuni: fine -->
 
 Le parole si confrontano senza maiuscole ne' accenti, con la normalizzazione della ricerca dei luoghi (formato-dati.md, "Ricerca
@@ -478,6 +481,46 @@ comuni: il campo, il riferimento, la data, il codice dell'utente; mai il valore.
 
 **Le colonne che il profilo non nomina** non si leggono e non si salvano mai (es. telefoni, codice fiscale, note dell'ufficio):
 il formato non ha posto per loro. Colori e formattazione delle celle (righe gialle, note in rosso) non sono dati e si ignorano.
+
+## Schede dei servizi (K-021)
+
+Le schede dei servizi del committente, copiate nel modello di K-Zero, si leggono con `kzero leggi-schede` e un profilo
+(formato-dati.md, `profili_schede.json` e `schede_servizi.json`). Due gruppi di controlli:
+
+- **sulle schede lette** (solo nell'uscita di `kzero leggi-schede`, con il Nr della scheda, il foglio, la riga e la colonna, mai il
+  valore di una cella): K-CTR-160 (la scheda non si legge e si ferma; le altre vanno avanti), K-CTR-161 (riga senza la sua
+  scheda), K-CTR-162 (attivazione prima della presa in carico senza una scelta: ferma), e gli avvisi K-CTR-163 (Tot Giorni diverso
+  dai giorni del calendario: la scheda va avanti), K-CTR-164 (date elencate fuori dai giorni segnati o dal calendario), K-CTR-165
+  (scheda nuova con un ID gia' visto, modifica con un ID mai visto), K-CTR-166 (scheda finita prima della presa in carico),
+  K-CTR-167 (stesso ID con un Nr diverso), K-CTR-168 (versione nuova da una data prima della presa in carico: quante giornate
+  cambiano e quali versioni si tolgono);
+- **sul registro** (anche in `kzero controlla`): K-CTR-169 (schede dello stesso servizio con periodi che si sovrappongono),
+  K-CTR-170 (servizio, gruppo, corsa o calendario di una scheda non piu' quelli che la scheda da', o mancanti), K-CTR-171
+  (accompagnatore che manca su una corsa di una scheda), K-CTR-172 (pezzo di una corsa di una scheda con i km non noti), K-CTR-173
+  (profilo ambiguo), K-CTR-174 (registro incoerente), piu' i controlli di sempre sui codici doppi (K-CTR-009) e sui riferimenti
+  (K-CTR-010).
+
+Varianti di K-CTR-160 (la scheda si ferma), nell'ordine in cui si controllano: 0 cella con un errore di Excel o troppo lunga; 1 cella
+vuota che serve; 2 Nr ripetuto nel foglio delle schede; 3 ID ripetuto nel file; 4 verso e momento sconosciuti; 5 scuola sconosciuta;
+6 scuola ambigua; 7 data scritta male; 8 disattivazione prima dell'attivazione; 9 casella con una parola che non e' un segno; 10
+cadenza a giorni segnati senza X; 11 numero scritto male; 12 orario scritto male; 13 calendario sconosciuto; 14 calendario ambiguo;
+15 cadenza che il profilo non conosce (mai trattata come "Sempre"); 16 parola nuova/modifica sconosciuta; 17 punto di raccolta
+sconosciuto; 18 punto di raccolta ambiguo; 19 punto e casa insieme, o nessuno dei due; 20 casa che non e' una casa porta a porta;
+21 la parola dell'accompagnatore dentro il punto di raccolta; 22 parola dell'accompagnatore sconosciuta; 23 accompagnatore che sale
+(o scende) dove St. Car. (o St. Scar.) e' 0; 24 accompagnatore che scende prima di salire, o sale due volte; 25 accompagnatore
+ancora a bordo alla fine; 26 orario che torna indietro; 27 scendono piu' persone di quelle a bordo; 28 salgono diverso da Totali
+alunni; 29 scendono diverso da Totali alunni; 30 km pieni diversi da Tot Km Carico; 31 km vuoti diversi da Tot Km Vuoto; 32 scuola
+della scheda senza la sua riga; 33 riga in una scuola che non e' della scheda; 34 data elencata fuori dal periodo; 35 cadenza a date
+elencate senza date; 36 meno di due righe; 37 due righe di fila nello stesso luogo alla stessa ora con km sulla seconda; 38 data
+scelta prima dell'attivazione; 39 data scelta dopo la disattivazione; 40 stesso ID gia' nel registro con un altro contratto o
+committente; 41 accompagnatore che sale e scende nello stesso passaggio; 42 una casa in un pacchetto "solo numeri".
+
+**K-CTR-171** usa la regola che il regolamento del contratto ha gia' nei dati (`assistente_a_bordo`, con le sue condizioni e la sua
+fonte; nel demo R-TN: infanzia sui mezzi con piu' di 8 posti per i passeggeri, testo unico 1.C1.9): se in un tratto con qualcuno a
+bordo vale una condizione e l'assistente non e' a bordo, un avviso con la corsa, la scheda, il primo tratto e la fonte. Con piu'
+scuole valgono i gradi di tutte (prudente). Una condizione con i posti non si decide senza il mezzo: l'avviso lo dice. Senza il
+parametro nel regolamento nessun avviso (nessun valore nel programma). Solo per le corse fatte da una scheda: il servizio va fatto
+comunque con l'accompagnatore, e la scheda non si ferma. Richiede i dati particolari (le condizioni possono dipendere dal tipo).
 
 ## Elenco completo
 
@@ -646,3 +689,18 @@ Un nuovo controllo prende il codice successivo all'ultimo.
 | K-CTR-157 | avviso | Il file ha un valore nuovo: vince sulla modifica a mano | Solo in `kzero leggi-elenco`: per un campo cambiato a mano il file ha un terzo valore, diverso sia da quello a mano sia da quello di prima: il committente l'ha cambiato dopo, vince il file (la modifica a mano e il valore di prima si cancellano). Variante 1: una colonna degli orari cambiata a mano che il profilo non ha piu'. | Controllare il valore; se non e' giusto, cambiarlo di nuovo a mano. |
 | K-CTR-158 | avviso | Utente aggiunto a mano, ora nel file: vale il file | Solo in `kzero leggi-elenco`: un utente aggiunto a mano ora e' nel file, con un campo diverso da quello scritto all'aggiunta (e non cambiato a mano dopo): vale il file. | Controllare il campo; se non e' giusto, cambiarlo a mano. |
 | K-CTR-159 | avviso | Utente tolto a mano che il file ha ancora | Solo in `kzero leggi-elenco`: un utente tolto a mano e' ancora nel file: resta fuori (nessun suo campo si aggiorna) e se ne andra' alla prima lettura completa senza di lui. | Niente; se deve restare, `kzero rimetti-in-elenco`. |
+| K-CTR-160 | errore | Scheda dei servizi che non si legge | Solo in `kzero leggi-schede`: una scheda del file non si legge (varianti sopra, "Schede dei servizi"): si ferma, con il Nr, il foglio, la riga e la colonna, mai il valore. Le altre schede vanno avanti. | Correggere la copia nel modello (o il pacchetto: codici esterni, profilo) e rileggere il file. |
+| K-CTR-161 | errore | Riga senza la sua scheda | Solo in `kzero leggi-schede`: una riga del foglio delle fermate o delle date ha il Nr vuoto o di una scheda che non c'e'. | Scrivere il Nr giusto. |
+| K-CTR-162 | errore | Scheda con l'attivazione prima della presa in carico, senza una scelta | Solo in `kzero leggi-schede`: l'attivazione e' prima di `--data` e il programma non sceglie da quando vale la scheda: si ferma, e il messaggio elenca le scelte. | `--validita attivazione`, `presa-in-carico` o una data (per tutto il file), oppure `--validita-scheda` per una scheda. |
+| K-CTR-163 | avviso | Tot Giorni diverso dai giorni del calendario | Solo in `kzero leggi-schede`: Tot Giorni della scheda e' diverso dai giorni del calendario della scheda (base, periodo, giorni segnati) nel periodo: uno dei due calendari e' diverso. La scheda va avanti. | Controllare il calendario del pacchetto (o la copia). |
+| K-CTR-164 | avviso | Date della scheda fuori dai giorni segnati o dal calendario | Solo in `kzero leggi-schede`: con la cadenza a date elencate, una o piu' date non cadono in un giorno con la X o non sono giorni del calendario di base. Valgono le date. | Controllare la copia. |
+| K-CTR-165 | avviso | Scheda nuova o modifica che non torna con il registro | Solo in `kzero leggi-schede`: "scheda nuova" con un ID gia' nel registro (si legge come versione nuova), o "modifica" con un ID mai visto (si legge come scheda nuova). | Controllare che non manchi una scheda. |
+| K-CTR-166 | avviso | Scheda gia' finita prima della presa in carico | Solo in `kzero leggi-schede`: la disattivazione e' prima di `--data`: la scheda ha solo giorni passati. | Niente, se e' voluto. |
+| K-CTR-167 | avviso | Stesso ID con un Nr diverso | Solo in `kzero leggi-schede`: una scheda ha l'ID di una scheda del registro ma un altro Nr: si legge come versione nuova. | Controllare l'ID. |
+| K-CTR-168 | avviso | Versione nuova da una data prima della presa in carico | Solo in `kzero leggi-schede`: la data scelta per una versione nuova e' prima di `--data`: quante giornate prima della presa in carico cambiano e (variante 1) quali versioni si tolgono. | Niente, se la scelta e' giusta. |
+| K-CTR-169 | avviso | Schede dello stesso servizio con periodi che si sovrappongono | Due schede del registro (ID diversi) dello stesso servizio (il numero prima della barra) valgono negli stessi giorni. Mai unite. | Controllare: forse una va tolta (`kzero togli-scheda`). |
+| K-CTR-170 | avviso | Elemento di una scheda diverso dalla scheda | Il servizio, il gruppo, la corsa o il calendario di una versione di una scheda non sono piu' quelli che la scheda da' (i dati comuni che vengono dalla scheda: cambiati a mano), oppure (variante 1) non ci sono. | Niente, se la modifica e' voluta: la versione dopo della scheda li rifara' dalla scheda. |
+| K-CTR-171 | avviso | Accompagnatore che manca su una corsa di una scheda | Su una corsa fatta da una scheda, in un tratto con qualcuno a bordo, vale una condizione della regola `assistente_a_bordo` del regolamento del contratto e l'accompagnatore non e' a bordo (variante 1: la condizione dipende dai posti del mezzo, che la scheda non dice; 2 e 3 come 0 e 1, con una condizione sul tipo). | Controllare la scheda: il servizio va fatto con l'accompagnatore. |
+| K-CTR-172 | avviso | Pezzo di una corsa di una scheda con i km non noti | Un turno ha un pezzo di una corsa fatta da una scheda e i capi del pezzo non hanno km (i km di una riga coprono il tratto dalla riga prima che ha dei km): i km del pezzo non si sanno e si contano 0. | Usare la corsa intera, o spezzarla in un punto con i km. |
+| K-CTR-173 | errore | Profilo delle schede ambiguo | Nel profilo delle schede una parola vuol dire due cose (es. "sale" e "scende") o c'e' due volte, o un giorno ha due colonne. | Correggere il profilo (profili_schede.json). |
+| K-CTR-174 | errore | Registro delle schede incoerente | Due schede del registro con lo stesso ID, o una versione che finisce prima di cominciare o non viene dopo quella di prima. | Il registro lo scrivono i comandi: rifare la lettura; se e' stato cambiato a mano, rimetterlo com'era. |
