@@ -216,6 +216,7 @@ void check_cards(const Package& p, const Index& idx, std::vector<Problem>& out);
 struct PartKm {
     double loaded = 0, empty = 0;
     bool known = true;
+    int ends_without_km = 0;   // K-022: quanti capi del pezzo (1 o 2) non hanno km, quando i km non si sanno
 };
 PartKm part_km(const Trip& t, std::size_t from, std::size_t to, bool from_card);
 // Le corse fatte da una scheda (del registro).

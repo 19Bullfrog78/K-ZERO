@@ -41,6 +41,12 @@ double empty_km(const ShiftDay& sd) {
     return t;
 }
 
+int unknown_km_parts(const ShiftDay& sd) {
+    int n = 0;
+    for (const PlannedItem& it : sd.items) n += it.km_known ? 0 : 1;
+    return n;
+}
+
 Minutes idle_minutes(const ShiftDay& sd) {
     Minutes t = 0;
     for (std::size_t i = 1; i < sd.items.size(); ++i) t += std::max(0, sd.items[i].start - sd.items[i - 1].end);
@@ -660,6 +666,7 @@ std::vector<ShiftDay> Planner::day(Day d) const {
                     const PartKm k = part_km(*t, pr.from, pr.to, card_trips_.count(t->code) > 0);
                     pi.loaded_km = k.loaded;
                     pi.empty_km = k.empty;
+                    pi.km_known = k.known;
                 }
             } else {
                 const ShiftActivity& a = item.activity;

@@ -333,3 +333,27 @@ Formato: data - decisione - perche'.
   testo grezzo della cella. Il caso del fuzzing non puo' stare in tests/fuzz/casi (il deposito ammette solo testi UTF-8, K-016): e'
   una prova normale (Schede.CelleNonUtf8OTroppoLunghe) con il byte scritto nel codice.
 - 2026-11-16 - **Controllo del modello**: decisione del supervisore, in questo progetto vale la regola "Controllo del modello" (REGOLE.md, Parte 3). Parole del supervisore, verbatim: «Se il modello dichiarato nel mandato non è quello in esecuzioni avvertimi prima di partire. Così posso modificare.» (dette il 12/11/2026 per l'altro progetto, estese a questo il 16/11/2026) - un mandato pensato per un modello e fatto da un altro costa crediti e qualita' senza che nessuno se ne accorga.
+- 2026-11-16 - K-022 - **Un luogo una volta sola nella domanda di un gruppo**: una scheda con due giri passa due volte dallo stesso
+  luogo con delle persone (l'infanzia: la scuola a meta' con le discese del primo giro e alla fine). Nella domanda del gruppo fatto da una
+  scheda il luogo e' una volta sola, con salgono e scendono sommati, nell'ordine del primo passaggio; la corsa tiene i passaggi uno per
+  uno. Perche': K-CTR-042 somma le corse per luogo e confronta la somma con ogni voce, e con due voci dava avvisi falsi. K-CTR-042 non
+  cambia; il formato non vieta due voci con lo stesso luogo (un pacchetto scritto a mano potrebbe averle): avviso nuovo K-CTR-175, sulla
+  seconda voce, una volta per luogo. Gli elementi gia' scritti dal K-021 non si rifanno da soli (le versioni che restano non si rifanno
+  mai): K-CTR-170 li indica.
+- 2026-11-16 - K-022 - **Numeri al singolare nei messaggi**: un messaggio del catalogo puo' scrivere un numero con la forma
+  `{numero:uno|altri}` (il testo per 1, quello per gli altri numeri, 0 compreso; "#" al posto del numero). Con piu' di uno i testi del
+  K-021 restano quelli di prima.
+- 2026-11-16 - K-022 - **Confronti della domanda per luogo** (risposta B dell'arbitro, sostituisce "K-CTR-042 non cambia"): K-CTR-031
+  (conteggi del gruppo contro i passeggeri uno per uno) e K-CTR-042 (domanda contro le corse) sommano le voci della domanda con lo stesso
+  luogo e confrontano le somme; il problema sta sulla prima voce del luogo. Perche': una domanda con lo stesso luogo due volte non deve
+  mai dare errori o avvisi falsi. K-CTR-175 resta come avviso di pulizia ("unire le voci").
+- 2026-11-16 - K-022 - **Km non noti dei pezzi di corsa da scheda** (risposta A dell'arbitro, sostituisce "contano 0 con l'avviso" del
+  K-021): in `kzero giornata` i km di un pezzo i cui capi non hanno km sono "non noti" (null nel JSON), anche nei passaggi del pezzo
+  (sulla scheda i km di una riga possono venire da prima del pezzo); i totali del turno e della giornata sono la somma dei km noti,
+  "almeno" nel testo, con `pezzi_km_non_noti`. Perche': i km che si fatturano vengono dal piede della scheda, sempre noto; i totali del
+  turno servono a contare i km fatti, e "almeno N" e' meglio di niente, mentre 0 sembra un valore vero. Giornata versione 6 per tutte le
+  uscite (forma nuova = versione nuova): i valori di oggi restano uguali, cambiano la versione e il campo nuovo a 0.
+- 2026-11-16 - K-022 - **Pacchetti scritti con la lettura del K-021** (risposta C dell'arbitro, nessun codice: nessun pacchetto vero ha
+  schede): una scheda a due giri letta con il K-021 ha il gruppo con lo stesso luogo due volte; dopo il K-022 ha gli avvisi K-CTR-175 e
+  K-CTR-170 e nessun problema falso. Rimedio: `kzero togli-scheda` e una nuova lettura della scheda, oppure la versione dopo della
+  scheda, che rifa' gli elementi.

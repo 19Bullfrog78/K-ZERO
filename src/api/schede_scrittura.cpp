@@ -82,9 +82,22 @@ Elementi elementi(const kzero::ServiceCard& s, const kzero::CardVersion& v, cons
     g["verso"] = k.direction == kzero::Direction::Return ? "ritorno" : "andata";
     if (k.schools.size() == 1) g["scuola"] = k.schools.front();
     g["conteggi"] = "esatti";
-    JsonDati fermate = JsonDati::array();
+    // Nella domanda un luogo una volta sola (K-022): una scheda con due giri passa due volte dallo stesso luogo (es. la scuola a meta'
+    // e alla fine); le persone di tutti i passaggi in quel luogo si sommano, nell'ordine del primo passaggio. La corsa tiene i
+    // passaggi uno per uno: il confronto con le corse (K-CTR-042) somma le corse per luogo.
+    std::vector<Passaggio> per_luogo;
     for (const Passaggio& p : pp) {
         if (!p.salgono && !p.scendono) continue;
+        const auto it = std::find_if(per_luogo.begin(), per_luogo.end(), [&](const Passaggio& x) { return x.luogo == p.luogo; });
+        if (it == per_luogo.end()) {
+            per_luogo.push_back(p);
+            continue;
+        }
+        it->salgono += p.salgono;
+        it->scendono += p.scendono;
+    }
+    JsonDati fermate = JsonDati::array();
+    for (const Passaggio& p : per_luogo) {
         JsonDati f = {{"luogo", p.luogo}};
         if (p.salgono) f["salgono"] = p.salgono;
         if (p.scendono) f["scendono"] = p.scendono;

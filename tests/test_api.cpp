@@ -193,8 +193,9 @@ TEST(Api, catalogo_controlli) {
         EXPECT_FALSE(c.messaggi.empty()) << c.codice;
         for (const auto& m : c.messaggi) {
             EXPECT_FALSE(m.empty()) << c.codice;
-            // {nome} oppure {nome:forma} (K-011: i giorni come inizi di settimane, mesi o periodi).
-            EXPECT_TRUE(std::regex_match(m, std::regex(R"(([^{}]|\{[a-z_]+(:[a-z_]+)?\})*)"))) << c.codice << ": " << m;
+            // {nome} oppure {nome:forma} (K-011: i giorni come inizi di settimane, mesi o periodi; K-022: {numero:uno|altri}, il testo
+            // per 1 e per gli altri numeri, con "#" al posto del numero).
+            EXPECT_TRUE(std::regex_match(m, std::regex(R"(([^{}]|\{[a-z_]+(:[a-z_]+|:[^{}|]*\|[^{}|]*)?\})*)"))) << c.codice << ": " << m;
             EXPECT_EQ(m.back(), '.') << c.codice << ": " << m;
         }
         EXPECT_NO_THROW(definizione_controllo(c.controllo));

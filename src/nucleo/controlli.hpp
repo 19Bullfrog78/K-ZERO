@@ -84,6 +84,8 @@ enum class Check {
     CardTripPartKmUnknown,     // pezzo di una corsa di una scheda in un turno: i km del pezzo non si sanno
     CardProfileInvalid,        // profilo delle schede ambiguo (una parola per due cose)
     CardRegisterInvalid,       // registro incoerente (ID doppio, versioni fuori ordine)
+    // K-022: la domanda di un gruppo.
+    DemandSamePlaceTwice,      // lo stesso luogo due volte nella domanda di un gruppo: il confronto con le corse non e' affidabile
     // Turni (K-008): errori.
     ShiftPartInvalid,
     ShiftItemsOrder,

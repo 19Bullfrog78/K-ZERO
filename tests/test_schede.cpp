@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <iostream>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -575,4 +576,242 @@ TEST(Schede, CelleNonUtf8OTroppoLunghe) {
     const Letto y = leggi(l, f, attivazione());
     ASSERT_EQ(y.m.outcomes.at(0).kind, CardOutcome::Kind::New);
     EXPECT_EQ(y.m.cards.at(0).versions[0].card.service_text, "Andata Mattino");
+}
+
+// --- K-022 ------------------------------------------------------------------------------------------------------------------------
+
+namespace {
+
+// I problemi di kzero controlla (nucleo) su uno dei gruppi dati.
+std::vector<Problem> sui_gruppi(const std::vector<Problem>& v, const std::set<std::string>& gruppi, Check c) {
+    std::vector<Problem> out;
+    for (const Problem& p : v)
+        if (p.check == c)
+            for (const Param& x : p.params)
+                if (x.name == "gruppo" && gruppi.count(x.text)) out.push_back(p);
+    return out;
+}
+
+}  // namespace
+
+// K-022: una scheda con due giri passa due volte dallo stesso luogo con delle persone (l'infanzia: la scuola a meta' con le discese
+// del primo giro e alla fine; un'andata con la stessa scuola due volte). Nella domanda del gruppo il luogo e' una volta sola, con le
+// persone sommate; la corsa tiene i due passaggi. kzero controlla non da' K-CTR-042 (domanda contro corse) ne' K-CTR-175 su quei
+// gruppi, e il confronto con il pacchetto (K-CTR-170) torna. Sabotaggio: una voce per passaggio (K-CTR-042 falso, due volte).
+TEST(Schede, DueGiriUnLuogoUnaVoltaSolaNellaDomanda) {
+    const Lettura l = lettura_di_prova();
+    const Letto x = leggi(l, due_giri(), attivazione());
+    for (const std::string& m : messaggi(x.dopo, x.m.problems)) std::cout << m << "\n";
+    ASSERT_EQ(x.m.outcomes.size(), 2u);
+    ASSERT_EQ(x.m.outcomes[0].kind, CardOutcome::Kind::New) << (x.m.outcomes[0].fault ? static_cast<int>(*x.m.outcomes[0].fault) : -1);
+    ASSERT_EQ(x.m.outcomes[1].kind, CardOutcome::Kind::New) << (x.m.outcomes[1].fault ? static_cast<int>(*x.m.outcomes[1].fault) : -1);
+    const JsonDati g = elemento(x.dopo, "servizi.json", "servizi", "S-4000300-1").at("domanda").at("gruppi").at(0);
+    EXPECT_EQ(g.at("fermate"), JsonDati::parse(R"([{"luogo":"F-LAGOBELLO","salgono":6},{"luogo":"F-PRADELLO","salgono":5},
+                                                  {"luogo":"L-INFANZIA","scendono":22},{"luogo":"F-CASTELROVO","salgono":7},
+                                                  {"luogo":"F-MONTEBRINO","salgono":4}])"));
+    EXPECT_TRUE(g.at("assistente_richiesto").get<bool>());
+    const JsonDati c = elemento(x.dopo, "corse.json", "corse", "C-4000300-1");
+    ASSERT_EQ(c.at("passaggi").size(), 7u);
+    EXPECT_EQ(c.at("passaggi").at(3).at("persone"), JsonDati::parse(R"([{"gruppo":"G-4000300-1","scendono":11}])"));
+    EXPECT_EQ(c.at("passaggi").at(6).at("persone"), JsonDati::parse(R"([{"gruppo":"G-4000300-1","scendono":11}])"));
+    EXPECT_EQ(c.at("passaggi").at(6).at("assistente"), "scende");
+    EXPECT_EQ(c.at("passaggi").at(6).at("km"), JsonDati::parse(R"({"pieni":25.0})"));
+    EXPECT_EQ(elemento(x.dopo, "servizi.json", "servizi", "S-4000301-1").at("domanda").at("gruppi").at(0).at("fermate"),
+              JsonDati::parse(R"([{"luogo":"F-PRADELLO","salgono":5},{"luogo":"L-PRIM","scendono":9},{"luogo":"F-CASTELROVO","salgono":4}])"));
+    // kzero controlla: niente K-CTR-042 ne' K-CTR-175 sui due gruppi; gli elementi corrispondono alla scheda.
+    const std::vector<Problem> v = check_package(x.dopo.pacchetto);
+    const std::set<std::string> gruppi = {"G-4000300-1", "G-4000301-1"};
+    EXPECT_TRUE(sui_gruppi(v, gruppi, Check::DemandDiffersFromTrips).empty()) << messaggi(x.dopo, sui_gruppi(v, gruppi, Check::DemandDiffersFromTrips)).front();
+    EXPECT_TRUE(sui_gruppi(v, gruppi, Check::DemandSamePlaceTwice).empty());
+    EXPECT_TRUE(schede::controlla_elementi(x.dopo).empty());
+}
+
+// K-022: un gruppo scritto con lo stesso luogo due volte nella domanda (qui come lo scriveva la lettura del K-021: una voce per
+// passaggio). Il confronto con le corse (K-CTR-042) somma le voci dello stesso luogo: nessun avviso falso; l'avviso di pulizia
+// K-CTR-175 lo dice, sulla seconda voce, una volta per luogo; il confronto con la scheda (K-CTR-170) vede che il gruppo non e' quello
+// che la scheda da'. Sabotaggi: l'avviso che manca; K-CTR-042 sulle voci una per una.
+TEST(Schede, StessoLuogoDueVolteAvvisoNuovo) {
+    const Lettura l = lettura_di_prova();
+    const Letto x = leggi(l, due_giri(), attivazione());
+    std::map<std::string, JsonDati> d = {{"servizi.json", x.dopo.documenti.at("servizi.json")}};
+    for (JsonDati& s : d.at("servizi.json").at("servizi"))
+        if (s.at("codice") == "S-4000300-1")
+            s["domanda"]["gruppi"][0]["fermate"] = JsonDati::parse(R"([{"luogo":"F-LAGOBELLO","salgono":6},{"luogo":"F-PRADELLO","salgono":5},
+                {"luogo":"L-INFANZIA","scendono":11},{"luogo":"F-CASTELROVO","salgono":7},{"luogo":"F-MONTEBRINO","salgono":4},
+                {"luogo":"L-INFANZIA","scendono":11}])");
+    const Lettura vecchia = schede::con_documenti(x.dopo, d);
+    const std::vector<Problem> v = check_package(vecchia.pacchetto);
+    const std::vector<Problem> due = sui_gruppi(v, {"G-4000300-1"}, Check::DemandSamePlaceTwice);
+    ASSERT_EQ(due.size(), 1u);
+    EXPECT_EQ(due[0].where.file, "servizi.json");
+    EXPECT_EQ(due[0].where.pointer.substr(due[0].where.pointer.size() - 10), "/fermate/5") << due[0].where.pointer;
+    EXPECT_EQ(messaggi(vecchia, due)[0],
+              "K-CTR-175 v0: Gruppo G-4000300-1: il luogo L-INFANZIA (Lagobello, Scuola dell'infanzia) e' due volte nella domanda. Unire "
+              "le voci in una sola (salgono e scendono sommati): i controlli contano gia' il luogo una volta sola, con le voci sommate.");
+    EXPECT_TRUE(sui_gruppi(v, {"G-4000300-1"}, Check::DemandDiffersFromTrips).empty());   // K-CTR-042 somma le voci: niente di falso
+    const std::vector<Problem> e = schede::controlla_elementi(vecchia);
+    ASSERT_EQ(e.size(), 1u);
+    EXPECT_NE(messaggi(vecchia, e)[0].find("S-4000300-1"), std::string::npos) << messaggi(vecchia, e)[0];
+}
+
+// S3: un orario della scheda che torna indietro ferma la scheda (variante 26), con la riga e la colonna. Sabotaggio: accettato.
+TEST(Schede, OrarioCheTornaIndietro) {
+    const Lettura l = lettura_di_prova();
+    Fogli f = una(1);
+    f.fermate[2][1] = "07:19";   // Castelrovo prima di Pradello (07:20)
+    const Letto x = leggi(l, f, attivazione());
+    EXPECT_EQ(x.m.outcomes.at(0).fault, CardFault::TimeBackwards);
+    ASSERT_EQ(x.m.problems.size(), 1u);
+    EXPECT_EQ(messaggi(x.dopo, x.m.problems)[0],
+              "K-CTR-160 v26: Scheda 4000123/3 (foglio \"Fermate\", riga 3, colonna \"Orario\"): l'orario e' prima di quello della riga "
+              "prima: la scheda si ferma (le altre del file vanno avanti). Correggere la copia e rileggere il file.");
+    f.fermate[2][1] = "07:20";   // alla stessa ora: va bene
+    EXPECT_EQ(leggi(l, f, attivazione()).m.outcomes.at(0).kind, CardOutcome::Kind::New);
+}
+
+// S5: l'attivazione il giorno prima della presa in carico vuole una scelta (K-CTR-162); lo stesso giorno no: vale dall'attivazione.
+// Sabotaggi: la scelta che serve solo da due giorni prima; la scelta chiesta anche lo stesso giorno.
+TEST(Schede, AttivazioneIlGiornoPrimaOLoStessoGiorno) {
+    const Lettura l = lettura_di_prova();
+    Fogli f = una(1);
+    f.schede[1][4] = "15/11/2026";
+    const Letto prima = leggi(l, f, {}, kPresa);
+    EXPECT_EQ(prima.m.outcomes.at(0).kind, CardOutcome::Kind::ChoiceMissing);
+    ASSERT_EQ(prima.m.problems.size(), 1u);
+    EXPECT_EQ(prima.m.problems[0].check, Check::CardChoiceMissing);
+    f.schede[1][4] = "16/11/2026";
+    const Letto stesso = leggi(l, f, {}, kPresa);
+    ASSERT_EQ(stesso.m.outcomes.at(0).kind, CardOutcome::Kind::New);
+    EXPECT_EQ(stesso.m.outcomes.at(0).from, ChoiceFrom::None);
+    EXPECT_EQ(stesso.m.outcomes.at(0).mode, ChoiceMode::Activation);
+    EXPECT_EQ(stesso.m.outcomes.at(0).valid.from, kPresa);
+}
+
+// S8: una versione nuova scelta dallo stesso giorno in cui comincia una versione di prima toglie quella versione (non la accorcia a
+// un periodo che finisce prima di cominciare); quella prima ancora finisce il giorno prima. Sabotaggio: ">" al posto di ">=".
+TEST(Schede, VersioneNuovaDalloStessoGiornoDiUnaDiPrima) {
+    const Lettura l0 = lettura_di_prova();
+    const Letto v1 = leggi(l0, una(1), attivazione());
+    Fogli mod = una(1);
+    mod.schede[1][21] = "Modifica";
+    mod.fermate[1][1] = "07:25";
+    DateChoices s;
+    s.by_nr["4000123/3"] = DateChoice{DateChoice::Kind::Date, day_from_ymd(2026, 12, 1)};
+    const Letto v2 = leggi(v1.dopo, mod, s);
+    ASSERT_EQ(v2.m.outcomes.at(0).version, 2);
+    mod.fermate[1][1] = "07:15";
+    const Letto v3 = leggi(v2.dopo, mod, s);   // ancora dal 2026-12-01
+    ASSERT_EQ(v3.m.outcomes.at(0).kind, CardOutcome::Kind::NewVersion);
+    EXPECT_EQ(v3.m.outcomes.at(0).removed_versions, std::vector<int>{2});
+    EXPECT_FALSE(v3.m.outcomes.at(0).cut_version);   // la versione 1 finiva gia' il 2026-11-30
+    const ServiceCard sc = nel_registro(v3.dopo, "SCH-4000123-3");
+    ASSERT_EQ(sc.versions.size(), 2u);
+    EXPECT_EQ(sc.versions[0].number, 1);
+    EXPECT_EQ(sc.versions[0].valid.to, day_from_ymd(2026, 11, 30));
+    EXPECT_EQ(sc.versions[1].number, 3);
+    EXPECT_EQ(sc.versions[1].valid.from, day_from_ymd(2026, 12, 1));
+    for (const ServiceCard& x : v3.dopo.pacchetto.service_cards)
+        for (const CardVersion& v : x.versions) EXPECT_LE(v.valid.from, v.valid.to) << x.code << " " << v.number;
+    EXPECT_EQ(Index(v3.dopo.pacchetto).service("S-4000123-3-V2"), nullptr);
+    std::vector<Problem> p;
+    check_cards(v3.dopo.pacchetto, Index(v3.dopo.pacchetto), p);
+    for (const Problem& x : p) EXPECT_NE(x.check, Check::CardRegisterInvalid) << messaggi(v3.dopo, {x})[0];
+}
+
+// S9: un solo bambino a bordo senza l'accompagnatore basta per l'avviso K-CTR-171 (regola R-TN dell'infanzia). Sabotaggio: la soglia
+// "piu' di uno a bordo".
+TEST(Schede, UnSoloBambinoSenzaAccompagnatore) {
+    const Lettura l = lettura_di_prova();
+    Fogli f = infanzia("07:30", false);
+    f.fermate[1][4] = "#1";   // Lagobello: sale un bambino solo, l'accompagnatore sale dopo a Pradello (con quattro bambini)
+    f.fermate[2][4] = "#5";
+    const Letto x = leggi(l, f, attivazione());
+    ASSERT_EQ(x.m.outcomes.at(0).kind, CardOutcome::Kind::New) << (x.m.outcomes.at(0).fault ? static_cast<int>(*x.m.outcomes.at(0).fault) : -1);
+    std::vector<Problem> v;
+    check_cards(x.dopo.pacchetto, Index(x.dopo.pacchetto), v);
+    std::vector<Problem> avvisi;
+    for (const Problem& p : v)
+        if (p.check == Check::CardEscortMissing) avvisi.push_back(p);
+    ASSERT_EQ(avvisi.size(), 1u);
+    EXPECT_NE(messaggi(x.dopo, avvisi)[0].find("dal passaggio F-LAGOBELLO (Lagobello, Lago) (alle 07:40) a F-PRADELLO"), std::string::npos)
+        << messaggi(x.dopo, avvisi)[0];
+}
+
+// S16: un pezzo di una corsa da scheda che finisce in un passaggio senza km (Castelrovo Alto): i km del pezzo non si sanno (anche se
+// comincia dal primo passaggio), e il turno con quel pezzo ha l'avviso K-CTR-172; un pezzo che finisce dove ci sono dei km no.
+// Sabotaggio: il capo finale non guardato (i km diventano "noti", con una somma sbagliata).
+TEST(Schede, PezzoConIlCapoFinaleSenzaKm) {
+    PacchettoInMemoria m = pacchetto_con_schede();
+    const Lettura l0 = leggi_pacchetto(m);
+    const Index i0(l0.pacchetto);
+    const Trip* t = i0.trip("C-4000124-1");
+    ASSERT_NE(t, nullptr);
+    EXPECT_FALSE(t->passages[1].loaded_km || t->passages[1].empty_km);
+    EXPECT_FALSE(part_km(*t, 0, 1, true).known);
+    EXPECT_EQ(part_km(*t, 0, 1, true).loaded, 0.0);
+    EXPECT_TRUE(part_km(*t, 0, 2, true).known);
+    const auto avvisi = [&](const std::string& a) {
+        PacchettoInMemoria q = m;
+        JsonDati turni = JsonDati::parse(q.file.at("turni.json"));
+        turni.at("turni").at(0).at("elementi").push_back({{"corsa", "C-4000124-1"}, {"a", {{"luogo", a}}}});
+        q.file["turni.json"] = turni.dump(2);
+        const Lettura l = leggi_pacchetto(q);
+        EXPECT_TRUE(l.forma_valida());
+        std::vector<Problem> v, out;
+        check_cards(l.pacchetto, Index(l.pacchetto), v);
+        for (const Problem& p : v)
+            if (p.check == Check::CardTripPartKmUnknown) out.push_back(p);
+        return out;
+    };
+    ASSERT_EQ(avvisi("F-CASTELROVO-ALTO").size(), 1u);
+    EXPECT_TRUE(avvisi("L-MEDIE").empty());
+}
+
+// S17: le giornate prima della presa in carico che cambiano sono solo quelle in cui una delle versioni o quella nuova ha servizio
+// (qui dal lunedi' 2/11 al giovedi' 19/11: 13 giorni di scuola dal lunedi' al venerdi', patrono dell'11/11 escluso, non 18).
+// Sabotaggio: contarle tutte.
+TEST(Schede, GiornatePrimaDellaPresaInCaricoSoloConServizio) {
+    const Lettura l0 = lettura_di_prova();
+    const Letto v1 = leggi(l0, una(1), attivazione());
+    Fogli mod = una(1);
+    mod.schede[1][21] = "Modifica";
+    mod.fermate[1][1] = "07:25";
+    DateChoices s;
+    s.by_nr["4000123/3"] = DateChoice{DateChoice::Kind::Date, day_from_ymd(2026, 11, 2)};
+    const Letto v2 = leggi(v1.dopo, mod, s, day_from_ymd(2026, 11, 20));
+    ASSERT_EQ(v2.m.outcomes.at(0).kind, CardOutcome::Kind::NewVersion);
+    EXPECT_EQ(v2.m.outcomes.at(0).days_before_taken, 13);
+}
+
+// Punto 3 (K-022): i testi con un numero al singolare con 1. K-CTR-168: "cambia 1 giornata" (non "cambiano 1 giornate") e "si toglie la
+// versione 2, che cominciava"; con piu' giornate il testo resta quello di prima. Sabotaggio: la forma del numero ignorata.
+TEST(Schede, TestiAlSingolareConUno) {
+    const Lettura l0 = lettura_di_prova();
+    const Letto v1 = leggi(l0, una(1), attivazione());
+    Fogli mod = una(1);
+    mod.schede[1][21] = "Modifica";
+    mod.fermate[1][1] = "07:25";
+    DateChoices s;
+    s.by_nr["4000123/3"] = DateChoice{DateChoice::Kind::Date, day_from_ymd(2026, 11, 19)};
+    const Letto v2 = leggi(v1.dopo, mod, s, day_from_ymd(2026, 11, 20));
+    std::vector<std::string> m = messaggi(v2.dopo, v2.m.problems);
+    ASSERT_EQ(m.size(), 1u);
+    EXPECT_EQ(m[0], "K-CTR-168 v0: Scheda 4000123/3: la versione nuova vale dal 2026-11-19, prima della presa in carico (2026-11-20): cambia 1 "
+                    "giornata prima della presa in carico (scelta dell'utente, scritta nel registro).");
+    mod.fermate[1][1] = "07:15";
+    s.by_nr["4000123/3"] = DateChoice{DateChoice::Kind::Date, day_from_ymd(2026, 11, 18)};
+    const Letto v3 = leggi(v2.dopo, mod, s, day_from_ymd(2026, 11, 20));
+    m = messaggi(v3.dopo, v3.m.problems);
+    ASSERT_EQ(m.size(), 1u);
+    EXPECT_EQ(m[0], "K-CTR-168 v1: Scheda 4000123/3: la versione nuova vale dal 2026-11-18, prima della presa in carico (2026-11-20): cambiano "
+                    "2 giornate prima della presa in carico e si toglie la versione 2, che cominciava da quel giorno in poi (scelta "
+                    "dell'utente, scritta nel registro).");
+    // K-CTR-163 con 1 giorno: una scheda di un giorno solo (lunedi' 21/09/2026) con Tot Giorni 2.
+    Fogli f = una(1);
+    f.schede[1][4] = "21/09/2026";
+    f.schede[1][5] = "21/09/2026";
+    f.schede[1][16] = "#2";
+    m = messaggi(leggi(l0, f, attivazione()).dopo, leggi(l0, f, attivazione()).m.problems);
+    ASSERT_FALSE(m.empty());
+    EXPECT_NE(m[0].find("nel periodo della scheda da' 1 giorno: "), std::string::npos) << m[0];
 }

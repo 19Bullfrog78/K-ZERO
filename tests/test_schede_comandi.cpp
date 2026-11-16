@@ -36,7 +36,9 @@ struct Prova {
         amb.password = {kPw, kPwB};
         comando({"aggiungi-utente", "--scrivi", chiuso.string(), "--utente", "A", "--nuovo-utente", "B", "--permessi", "personali"});
     }
-    void file(const std::string& nome, const Fogli& f) { std::ofstream(lavoro / nome, std::ios::binary) << file_schede(f); }
+    void file(const std::string& nome, const Fogli& f, bool date1904 = false) {
+        std::ofstream(lavoro / nome, std::ios::binary) << file_schede(f, date1904);
+    }
     Risultato leggi(const std::string& nome, std::vector<std::string> altri, bool scrivere = true, const std::string& utente = "A",
                     const std::string& pw = kPw, const std::string& data = "2026-11-16") {
         amb.password = {pw};
@@ -210,7 +212,7 @@ TEST(SchedeComandi, TogliScheda) {
     // Il registro degli accessi: codici e conteggi, nient'altro.
     p.amb.password = {kPw};
     const Risultato r = comando({"registro", p.chiuso.string(), "--utente", "A"});
-    EXPECT_NE(r.uscita.find("scheda dei servizi tolta: SCH-4000123-3, versioni 2"), std::string::npos) << r.uscita;
+    EXPECT_NE(r.uscita.find("scheda dei servizi tolta: SCH-4000123-3, versione 2"), std::string::npos) << r.uscita;
     EXPECT_NE(r.uscita.find("lettura delle schede dei servizi, profilo PS-CVA, contratto CT-SCU"), std::string::npos) << r.uscita;
     // Una corsa usata da un turno non si toglie.
     PacchettoInMemoria m = pacchetto_con_schede();
@@ -219,4 +221,110 @@ TEST(SchedeComandi, TogliScheda) {
     m.file["turni.json"] = turni.dump(2);
     Prova q(m);
     EXPECT_EQ(errore_di([&] { q.togli("SCH-4000124-1", {}); }), "K-ERR-055");
+}
+
+// S11 (K-022): il segno "date dal 1904" della cartella di lavoro si legge dal file, fino alle date lette: le stesse date scritte come
+// numeri di Excel nel sistema del 1904 danno gli stessi giorni; senza il segno, gli stessi numeri sono altri giorni (sistema 1900).
+// Sabotaggi: il segno del file ignorato (dal lettore Excel o dal comando).
+TEST(SchedeComandi, DateDal1904LetteDalFile) {
+    Prova p;
+    const Fogli tutte = fogli_di_prova();
+    Fogli f;
+    f.schede = {tutte.schede[0], tutte.schede[2]};   // 4000124/1: attivazione e disattivazione come numeri di Excel
+    f.fermate = {tutte.fermate[0], tutte.fermate[4], tutte.fermate[5], tutte.fermate[6], tutte.fermate[7]};
+    f.schede[1][4] = "#44817";   // 2026-09-14 nel sistema del 1904 (1462 giorni in meno)
+    f.schede[1][5] = "#45088";   // 2027-06-12
+    p.file("1904.xlsx", f, true);
+    p.file("1900.xlsx", f, false);
+    const auto periodo = [&](const std::string& nome) {
+        const JsonDati j = JsonDati::parse(p.leggi(nome, {"--validita", "attivazione", "--formato", "json"}, false).uscita);
+        const JsonDati& s = j.at("schede").at(0);
+        EXPECT_EQ(s.at("esito"), "nuova") << j.dump(2);
+        return s.at("dal").get<std::string>() + " " + s.at("al").get<std::string>();
+    };
+    EXPECT_EQ(periodo("1904.xlsx"), "2026-09-14 2027-06-12");
+    EXPECT_EQ(periodo("1900.xlsx"), "2022-09-13 2023-06-11");
+}
+
+namespace {
+
+// Il pacchetto di prova (in chiaro) con la scheda d'infanzia a due giri (km solo sull'ultima riga) e dei turni con i pezzi dati della
+// sua corsa C-4000300-1: ogni pezzo e' (da, a) con il luogo e l'orario del passaggio; vuoto = l'inizio o la fine della corsa.
+struct Pezzo {
+    std::string da_luogo, da_ora, a_luogo, a_ora;
+};
+fs::path giornata_con_pezzi(CartellaDiLavoro& lavoro, const std::string& nome, const std::vector<Pezzo>& pezzi) {
+    PacchettoInMemoria m = con_schede(pacchetto_di_prova(), due_giri());
+    JsonDati turni = JsonDati::parse(m.file.at("turni.json"));
+    for (std::size_t i = 0; i < pezzi.size(); ++i) {
+        JsonDati e = {{"corsa", "C-4000300-1"}};
+        if (!pezzi[i].da_luogo.empty()) e["da"] = {{"luogo", pezzi[i].da_luogo}, {"orario", pezzi[i].da_ora}};
+        if (!pezzi[i].a_luogo.empty()) e["a"] = {{"luogo", pezzi[i].a_luogo}, {"orario", pezzi[i].a_ora}};
+        turni.at("turni").push_back({{"codice", "T-PEZZO-" + std::to_string(i + 1)}, {"azienda", "ALFA"}, {"ruolo", "autista"},
+                                     {"calendario", "CAL-4000300-1"}, {"mezzo", {{"modo", "da_assegnare"}}}, {"inizio", "L-RIMESSA-ALFA"},
+                                     {"fine", "L-RIMESSA-ALFA"}, {"elementi", JsonDati::array({e})}});
+    }
+    m.file["turni.json"] = turni.dump(2);
+    const fs::path c = lavoro / nome;
+    fs::create_directories(c);
+    for (const auto& [f, t] : m.file) std::ofstream(c / f, std::ios::binary) << t;
+    return c;
+}
+const JsonDati& turno(const JsonDati& g, const std::string& codice) {
+    for (const JsonDati& t : g.at("turni"))
+        if (t.at("codice") == codice) return t;
+    throw std::logic_error("turno che non c'e': " + codice);
+}
+
+}  // namespace
+
+// Punto 3 (K-022): i km di un pezzo di corsa da scheda i cui capi non hanno km non si sanno. La corsa d'infanzia a due giri (km solo
+// sull'ultima riga: 25) divisa in tre turni: fino a Pradello (manca il capo finale), da Pradello a Castelrovo (mancano tutti e due),
+// da Castelrovo alla fine (manca il capo iniziale; l'ultima riga ha i 25 km di tutta la corsa). In giornata (versione 6): km del pezzo
+// e dei suoi passaggi null ("km non noti" nel testo, mai 0 e mai i 25 km della corsa su un passaggio del pezzo), totali del turno e
+// della giornata con la somma dei km noti, "almeno", e quanti pezzi non sono noti; K-CTR-172 al singolare o al plurale. La corsa intera
+// in un turno solo: km come prima. Sabotaggi: 0 scritto come prima; i km di tutta la corsa scritti su un passaggio del pezzo.
+TEST(SchedeComandi, GiornataConIPezziConIKmNonNoti) {
+    CartellaDiLavoro lavoro;
+    const fs::path c = giornata_con_pezzi(lavoro, "tre-pezzi", {{"", "", "F-PRADELLO", "07:20"}, {"F-PRADELLO", "07:20", "F-CASTELROVO", "07:40"},
+                                                                {"F-CASTELROVO", "07:40", "", ""}});
+    const Risultato rj = comando({"giornata", c.string(), "--data", "2026-11-24", "--formato", "json"});
+    const JsonDati g = JsonDati::parse(rj.uscita);
+    EXPECT_EQ(g.at("schema_versione"), 6);
+    for (const char* t : {"T-PEZZO-1", "T-PEZZO-2", "T-PEZZO-3"}) {
+        const JsonDati x = turno(g, t);
+        const JsonDati& e = x.at("elementi").at(0);
+        EXPECT_TRUE(e.at("km_pieni").is_null()) << t;
+        EXPECT_TRUE(e.at("km_vuoti").is_null()) << t;
+        for (const JsonDati& p : e.at("passaggi")) {
+            EXPECT_TRUE(p.at("km_pieni").is_null()) << t;
+            EXPECT_TRUE(p.at("km_vuoti").is_null()) << t;
+        }
+        EXPECT_EQ(x.at("totali").at("km_pieni"), 0.0) << t;
+        EXPECT_EQ(x.at("totali").at("pezzi_km_non_noti"), 1) << t;
+    }
+    EXPECT_EQ(g.at("totali").at("pezzi_km_non_noti"), 3);
+    const Risultato rt = comando({"giornata", c.string(), "--data", "2026-11-24"});
+    std::cout << "--- giornata con tre pezzi della corsa C-4000300-1 ---\n" << rt.uscita;
+    EXPECT_EQ(rt.uscita.find("km a pieno 25"), std::string::npos) << rt.uscita;
+    EXPECT_NE(rt.uscita.find("km non noti (corsa da scheda: i capi del pezzo non hanno tutti dei km, K-CTR-172)"), std::string::npos);
+    EXPECT_NE(rt.uscita.find("Totale del turno: km a pieno almeno 0, a vuoto almeno 0 (1 pezzo con i km non noti)"), std::string::npos)
+        << rt.uscita;
+    EXPECT_NE(rt.uscita.find("(dei mezzi guidati; 3 pezzi con i km non noti)"), std::string::npos) << rt.uscita;
+    // K-CTR-172: un capo senza km (variante 0) o tutti e due (variante 1).
+    const Lettura l = leggi_pacchetto(CartellaSuDisco(c));
+    std::vector<Problem> v;
+    check_cards(l.pacchetto, Index(l.pacchetto), v);
+    std::vector<int> varianti;
+    for (const Problem& p : v)
+        if (p.check == Check::CardTripPartKmUnknown) varianti.push_back(p.variant);
+    EXPECT_EQ(varianti, (std::vector<int>{0, 1, 0}));
+    // La corsa intera in un turno: i km del piede, come prima.
+    const fs::path d = giornata_con_pezzi(lavoro, "intera", {{"", "", "", ""}});
+    const JsonDati h = JsonDati::parse(comando({"giornata", d.string(), "--data", "2026-11-24", "--formato", "json"}).uscita);
+    const JsonDati x = turno(h, "T-PEZZO-1");
+    EXPECT_EQ(x.at("elementi").at(0).at("km_pieni"), 25.0);
+    EXPECT_EQ(x.at("totali").at("km_pieni"), 25.0);
+    EXPECT_EQ(x.at("totali").at("pezzi_km_non_noti"), 0);
+    EXPECT_EQ(h.at("totali").at("pezzi_km_non_noti"), 0);
 }

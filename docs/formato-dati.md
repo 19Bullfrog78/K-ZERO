@@ -935,7 +935,7 @@ Gruppo di passeggeri (`servizi[].domanda.gruppi[]`):
 | `scuola` | no | comune | Scuola o centro di arrivo (andata) o di partenza (ritorno): da qui il grado |
 | `finestra` | no | comune | `dalle`, `alle`: finestra oraria di arrivo (andata) o di partenza (ritorno) |
 | `conteggi` | si' | comune | `esatti`, `stimati` oppure `non_noti` (es. gli utenti di una linea): con `non_noti` le fermate non hanno numeri |
-| `fermate[]` | si' | comune | Fermate di salita e di discesa: `luogo`, `salgono`, `scendono` |
+| `fermate[]` | si' | comune | Fermate di salita e di discesa: `luogo`, `salgono`, `scendono`. Un luogo una volta sola, con tutte le persone che salgono e scendono li' (K-022: due voci con lo stesso luogo danno l'avviso di pulizia K-CTR-175; i controlli le sommano) |
 | `fermate[].carrozzine` | no | particolare | Persone che salgono a questa fermata e viaggiano **sedute sulla carrozzina** (servono pedana e posto carrozzina). Chi viaggia su un posto normale con la carrozzina piegata non conta qui, ma tra gli ausili piegati |
 | `fermate[].ausili_piegati` | no | particolare | Ausili piegati da caricare a questa fermata per chi sale qui: carrozzine piegate, deambulatori e altri ausili dichiarati |
 | `assistente_richiesto` | no | particolare | Il gruppo chiede l'assistente a bordo (obbligatorio se un passeggero del gruppo ne ha bisogno: errore K-CTR-047) |
@@ -960,7 +960,9 @@ Passeggero (`passeggeri[]`):
 I conteggi del gruppo e i passeggeri uno per uno devono coincidere (errore K-CTR-031): le carrozzine di una
 fermata sono i passeggeri che salgono li' con `carrozzina: sulla_carrozzina`; gli ausili piegati sono le
 carrozzine `piegata` piu' gli `ausili_piegati` dei passeggeri che salgono li'. La domanda e le persone
-caricate dalle corse possono differire (avviso K-CTR-042). Un passeggino non si dichiara e non si pianifica.
+caricate dalle corse possono differire (avviso K-CTR-042: le corse dello stesso calendario e le voci della domanda si sommano per
+luogo, e si confrontano le somme; un luogo scritto due volte nella domanda ha l'avviso di pulizia K-CTR-175). Anche i conteggi e i
+passeggeri uno per uno (K-CTR-031) si confrontano per luogo, con le voci sommate. Un passeggino non si dichiara e non si pianifica.
 
 ```json
 {
@@ -1661,14 +1663,18 @@ leggi-schede` e `kzero togli-scheda`. Schema: [docs/schema/schede_servizi.v1.sch
   numero prima della barra (tipo servizio);
 - **gruppo** (uno solo, D3): tipo dal profilo, verso dal testo di verso e momento, `conteggi: esatti`, le fermate con salgono e
   scendono come sulla scheda **meno l'accompagnatore** sulle righe dove sale o scende (lo dice la colonna, mai indovinato),
-  `assistente_richiesto` se c'e' l'accompagnatore. Con una scuola sola il gruppo ha la sua `scuola`; con piu' scuole il gruppo
+  `assistente_richiesto` se c'e' l'accompagnatore. **Un luogo una volta sola** (K-022): una scheda con due giri passa due volte dallo
+  stesso luogo (es. la scuola dell'infanzia a meta', con le discese del primo giro, e alla fine); nella domanda le persone dei due
+  passaggi si sommano in una voce sola (nell'ordine del primo passaggio), mentre la corsa tiene i due passaggi. Con una scuola sola il gruppo ha la sua `scuola`; con piu' scuole il gruppo
   **non ha scuola**: le salite non sono divise per scuola sulla scheda e il programma non le divide mai indovinando; le discese a
   ogni scuola (o le salite, al ritorno) restano vere, ognuna al luogo della sua scuola;
 - **corsa**: un passaggio per riga, nell'ordine, con l'orario, le persone del gruppo, l'assistente (`sale` / `scende`) e i km
   scritti su quella riga; `km_totali` = Tot Km Carico e Tot Km Vuoto del piede. **In una corsa fatta da una scheda i km di un
   passaggio coprono il tratto dal passaggio prima che ha dei km** (sulle schede i km sono scritti solo su alcune righe), non
   solo dal passaggio subito prima: per questo i totali della corsa sono sempre quelli del piede, e nessun calcolo legge i km dei
-  passaggi come km di un tratto;
+  passaggi come km di un tratto. Un pezzo della corsa in un turno sa i suoi km solo se i suoi capi hanno dei km (o sono i capi della
+  corsa); altrimenti (K-022) in `kzero giornata` i km del pezzo e dei suoi passaggi sono "non noti" (null nel JSON, versione 6), mai 0,
+  e i totali del turno e della giornata sono la somma dei km noti, "almeno", con quanti pezzi non sono contati (avviso K-CTR-172);
 - **calendario**: base = il calendario del pacchetto con il codice esterno della parola della scheda (es. SCOLASTICO, MATERNA;
   `tipo_calendario` del profilo), periodo = da quando vale la versione alla sua fine, giorni = quelli con la X (cadenza a giorni
   segnati), oppure nessun giorno e le date una per una (`date_aggiunte`, cadenza a date elencate: il programma non ricava mai un

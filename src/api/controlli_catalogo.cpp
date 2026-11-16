@@ -232,11 +232,12 @@ void aggiungi_schede(std::vector<DefinizioneControllo>& c) {
                   "--validita-scheda con il Nr, un uguale e la scelta."}});
     c.push_back({Check::CardTotalDaysDiffer, "K-CTR-163", A, N, "Tot Giorni diverso dai giorni del calendario",
                  {"Scheda {scheda}: Tot Giorni e' {tot_giorni}, ma il calendario {calendario} con i giorni segnati nel periodo della "
-                  "scheda da' {giorni} giorni: il calendario del committente o quello del pacchetto e' diverso. La scheda va avanti; "
+                  "scheda da' {giorni:# giorno|# giorni}: il calendario del committente o quello del pacchetto e' diverso. La scheda va avanti; "
                   "controllare il calendario."}});
     c.push_back({Check::CardListedDateOutside, "K-CTR-164", A, N, "Date della scheda fuori dai giorni segnati o dal calendario",
-                 {"Scheda {scheda}: {quante} date elencate (la prima: {prima}) non cadono in un giorno con la X o non sono giorni del "
-                  "calendario {calendario}: il programma non sceglie quale sia giusto. Valgono le date; controllare la copia."}});
+                 {"Scheda {scheda}: {quante:# data elencata|# date elencate} ({quante:e' il|la prima:} {prima}) {quante:non cade|non cadono} in "
+                  "un giorno con la X o non {quante:e' un giorno|sono giorni} del calendario {calendario}: il programma non sceglie quale "
+                  "sia giusto. Valgono le date; controllare la copia."}});
     c.push_back({Check::CardNewOrChangeOdd, "K-CTR-165", A, N, "Scheda nuova o modifica che non torna con il registro",
                  {"Scheda {scheda}: e' segnata \"scheda nuova\", ma il suo ID c'e' gia' nel registro ({codice}): si legge come versione "
                   "nuova di quella scheda.",
@@ -249,11 +250,13 @@ void aggiungi_schede(std::vector<DefinizioneControllo>& c) {
                  {"Scheda {scheda}: ha l'ID della scheda {codice}, che aveva il Nr {prima}: si legge come versione nuova (i codici della "
                   "versione nuova seguono il Nr nuovo)."}});
     c.push_back({Check::CardChosenBeforeTaken, "K-CTR-168", A, N, "Versione nuova da una data prima della presa in carico",
-                 {"Scheda {scheda}: la versione nuova vale dal {dal}, prima della presa in carico ({presa_in_carico}): cambiano "
-                  "{giornate} giornate prima della presa in carico (scelta dell'utente, scritta nel registro).",
-                  "Scheda {scheda}: la versione nuova vale dal {dal}, prima della presa in carico ({presa_in_carico}): cambiano "
-                  "{giornate} giornate prima della presa in carico e si tolgono le versioni {versioni}, che cominciavano da quel "
-                  "giorno in poi (scelta dell'utente, scritta nel registro)."}});
+                 {"Scheda {scheda}: la versione nuova vale dal {dal}, prima della presa in carico ({presa_in_carico}): "
+                  "{giornate:cambia # giornata|cambiano # giornate} prima della presa in carico (scelta dell'utente, scritta nel "
+                  "registro).",
+                  "Scheda {scheda}: la versione nuova vale dal {dal}, prima della presa in carico ({presa_in_carico}): "
+                  "{giornate:cambia # giornata|cambiano # giornate} prima della presa in carico e "
+                  "{quante_versioni:si toglie la versione|si tolgono le versioni} {versioni}, che {quante_versioni:cominciava|cominciavano} "
+                  "da quel giorno in poi (scelta dell'utente, scritta nel registro)."}});
     c.push_back({Check::CardServiceOverlap, "K-CTR-169", A, N, "Schede dello stesso servizio con periodi che si sovrappongono",
                  {"Le schede {scheda} e {altra} sono dello stesso servizio {servizio} e valgono tutte e due dal {dal} al {al}: il "
                   "programma non le unisce (ID diversi). Controllare: forse una delle due va tolta (kzero togli-scheda)."}});
@@ -267,18 +270,22 @@ void aggiungi_schede(std::vector<DefinizioneControllo>& c) {
                   "l'accompagnatore, e il regolamento {regolamento} lo chiede ({fonte}). Il servizio va fatto comunque con "
                   "l'accompagnatore: controllare la scheda.",
                   "Corsa {corsa} (scheda {scheda}): dal passaggio {da} (alle {orario}) a {a} c'e' qualcuno a bordo senza "
-                  "l'accompagnatore; il regolamento {regolamento} lo chiede se il mezzo ha piu' di {posti} posti per i passeggeri "
+                  "l'accompagnatore; il regolamento {regolamento} lo chiede se il mezzo ha piu' di {posti:# posto|# posti} per i passeggeri "
                   "({fonte}): dipende dal mezzo, che la scheda non dice.",
                   "Corsa {corsa} (scheda {scheda}): dal passaggio {da} (alle {orario}) a {a} c'e' qualcuno a bordo senza "
                   "l'accompagnatore, e il regolamento {regolamento} lo chiede ({fonte}). Il servizio va fatto comunque con "
                   "l'accompagnatore: controllare la scheda.",
                   "Corsa {corsa} (scheda {scheda}): dal passaggio {da} (alle {orario}) a {a} c'e' qualcuno a bordo senza "
-                  "l'accompagnatore; il regolamento {regolamento} lo chiede se il mezzo ha piu' di {posti} posti per i passeggeri "
+                  "l'accompagnatore; il regolamento {regolamento} lo chiede se il mezzo ha piu' di {posti:# posto|# posti} per i passeggeri "
                   "({fonte}): dipende dal mezzo, che la scheda non dice."},
                  {{2, PA}, {3, PA}}});
     c.push_back({Check::CardTripPartKmUnknown, "K-CTR-172", A, N, "Pezzo di una corsa di una scheda con i km non noti",
                  {"Nel turno {turno} c'e' un pezzo della corsa {corsa}, fatta da una scheda: sulla scheda i km di una riga coprono il "
-                  "tratto dalla riga prima che ha dei km, e i capi del pezzo non ne hanno: i km del pezzo non si sanno (contati 0)."}});
+                  "tratto dalla riga prima che ha dei km, e un capo del pezzo non ne ha: i km del pezzo non si sanno (nella giornata "
+                  "sono \"non noti\" e i totali dicono \"almeno\").",
+                  "Nel turno {turno} c'e' un pezzo della corsa {corsa}, fatta da una scheda: sulla scheda i km di una riga coprono il "
+                  "tratto dalla riga prima che ha dei km, e i capi del pezzo non ne hanno: i km del pezzo non si sanno (nella giornata "
+                  "sono \"non noti\" e i totali dicono \"almeno\")."}});
     c.push_back({Check::CardProfileInvalid, "K-CTR-173", E, N, "Profilo delle schede ambiguo",
                  {"Nel profilo {profilo} la parola \"{parola}\" vuol dire sia \"sale\" sia \"scende\" (accompagnatore), o c'e' due "
                   "volte.",
@@ -291,6 +298,10 @@ void aggiungi_schede(std::vector<DefinizioneControllo>& c) {
                  {"Le schede {scheda} e {altra} del registro hanno lo stesso ID: due schede con lo stesso ID non possono esserci.",
                   "Nella scheda {scheda} la versione {versione} finisce prima di cominciare, o non viene dopo quella di prima (numero e "
                   "periodo)."}});
+    // K-022: la domanda di un gruppo (anche fuori dalle schede).
+    c.push_back({Check::DemandSamePlaceTwice, "K-CTR-175", A, N, "Stesso luogo due volte nella domanda di un gruppo",
+                 {"Gruppo {gruppo}: il luogo {luogo} e' due volte nella domanda. Unire le voci in una sola (salgono e scendono "
+                  "sommati): i controlli contano gia' il luogo una volta sola, con le voci sommate."}});
 }
 
 // K-019: l'elenco utenti del committente. Sui dati (kzero controlla) e sulle righe del file letto (kzero leggi-elenco).
@@ -1713,6 +1724,19 @@ std::string Presentatore::riferimento(kzero::Element e, const std::string& codic
     return mostra ? codice + " (" + nome + ")" : codice;
 }
 
+namespace {
+// {numero:uno|altri} (K-022): il testo per 1 oppure per gli altri numeri, con "#" al posto del numero.
+std::string numero_con_forma(const std::string& codice, long long n, const std::string& forma) {
+    const std::size_t barra = forma.find('|');
+    if (barra == std::string::npos || forma.find('|', barra + 1) != std::string::npos)
+        throw std::logic_error(codice + ": forma del numero senza \"uno|altri\"");
+    const std::string scelta = n == 1 ? forma.substr(0, barra) : forma.substr(barra + 1);
+    std::string out;
+    for (char c : scelta) out += c == '#' ? std::to_string(n) : std::string(1, c);
+    return out;
+}
+}  // namespace
+
 std::string Presentatore::messaggio(const kzero::Problem& p) const {
     const DefinizioneControllo& d = definizione_controllo(p.check);
     if (p.variant < 0 || static_cast<std::size_t>(p.variant) >= d.messaggi.size())
@@ -1735,7 +1759,9 @@ std::string Presentatore::messaggio(const kzero::Problem& p) const {
         }
         const std::size_t fine = modello.find('}', i);
         std::string nome = modello.substr(i + 1, fine - i - 1);
-        std::string forma;   // {giorni:settimane}: i giorni come inizi di settimane, mesi o periodi
+        // {giorni:settimane}: i giorni come inizi di settimane, mesi o periodi. K-022: {numero:uno|altri}, il testo per 1 o per gli
+        // altri numeri (0 compreso), con "#" al posto del numero (es. {giornate:cambia # giornata|cambiano # giornate}).
+        std::string forma;
         if (const std::size_t due_punti = nome.find(':'); due_punti != std::string::npos) {
             forma = nome.substr(due_punti + 1);
             nome = nome.substr(0, due_punti);
@@ -1751,7 +1777,7 @@ std::string Presentatore::messaggio(const kzero::Problem& p) const {
         } else {
             switch (it->kind) {
                 case kzero::Param::Kind::Text: valore = it->text; break;
-                case kzero::Param::Kind::Number: valore = std::to_string(it->number); break;
+                case kzero::Param::Kind::Number: valore = forma.empty() ? std::to_string(it->number) : numero_con_forma(d.codice, it->number, forma); break;
                 case kzero::Param::Kind::Decimal: valore = decimale(it->decimal); break;
                 case kzero::Param::Kind::Time: valore = kzero::text_from_minutes(static_cast<kzero::Minutes>(it->number)); break;
                 case kzero::Param::Kind::Date: valore = kzero::text_from_day(static_cast<kzero::Day>(it->number)); break;

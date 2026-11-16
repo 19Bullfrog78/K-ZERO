@@ -399,7 +399,9 @@ Risultato uscita_lettura(const DefinizioneComando& comando, const Parametri& par
                 if (!o.removed_versions.empty()) {
                     std::string vv;
                     for (int n : o.removed_versions) vv += (vv.empty() ? "" : ", ") + std::to_string(n);
-                    t += "     Versioni tolte (cominciavano dal " + kzero::text_from_day(o.valid.from) + " in poi): " + vv + ".\n";
+                    t += o.removed_versions.size() == 1
+                             ? "     Versione tolta (cominciava dal " + kzero::text_from_day(o.valid.from) + " in poi): " + vv + ".\n"
+                             : "     Versioni tolte (cominciavano dal " + kzero::text_from_day(o.valid.from) + " in poi): " + vv + ".\n";
                 }
                 if (o.valid.from < *par.data_sblocco)
                     t += "     Giornate prima della presa in carico che cambiano: " + std::to_string(o.days_before_taken) + ".\n";
@@ -604,7 +606,7 @@ Risultato esegui_togli_scheda(const DefinizioneComando& comando, const Parametri
         t = calcola_togli(vecchia, par, cartella.string());
         std::string vv;
         for (const kzero::CardVersion& v : t->esito.removed) vv += (vv.empty() ? "" : ", ") + std::to_string(v.number);
-        return std::make_pair(t->nuova, "scheda dei servizi tolta: " + t->esito.card + ", versioni " + vv);
+        return std::make_pair(t->nuova, "scheda dei servizi tolta: " + t->esito.card + (t->esito.removed.size() == 1 ? ", versione " : ", versioni ") + vv);
     });
     return uscita_togli(comando, par, *t, true, r, r.registro_voci, elenco::avvisi_di(r, par.utente));
 }
