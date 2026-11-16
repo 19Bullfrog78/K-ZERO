@@ -238,8 +238,9 @@ public:
         j["inizio"] = orario(it.start);
         j["fine"] = orario(it.end);
         j["fermo_prima_minuti"] = fermo_prima;
-        j["km_pieni"] = arrotonda(it.loaded_km, 3);
-        j["km_vuoti"] = arrotonda(it.empty_km, 3);
+        // K-022 (giornata 6): i km di un pezzo di una corsa da scheda i cui capi non hanno km non si sanno: null, mai 0.
+        j["km_pieni"] = it.km_known ? Json(arrotonda(it.loaded_km, 3)) : Json(nullptr);
+        j["km_vuoti"] = it.km_known ? Json(arrotonda(it.empty_km, 3)) : Json(nullptr);
         Json servizi = Json::array();
         bool non_noti = false;
         const kzero::Contract* primo_contratto = nullptr;
@@ -288,9 +289,10 @@ public:
             }
             y["salgono"] = salgono;
             y["scendono"] = scendono;
-            // I km di un passaggio sono quelli dal passaggio precedente: al primo passaggio del pezzo non contano.
-            y["km_pieni"] = k == it.from ? 0.0 : arrotonda(ps.loaded_km.value_or(0.0), 3);
-            y["km_vuoti"] = k == it.from ? 0.0 : arrotonda(ps.empty_km.value_or(0.0), 3);
+            // I km di un passaggio sono quelli dal passaggio precedente: al primo passaggio del pezzo non contano. K-022: in un pezzo
+            // con i km non noti, null (sulla scheda i km di una riga possono venire da prima del pezzo).
+            y["km_pieni"] = !it.km_known ? Json(nullptr) : k == it.from ? Json(0.0) : Json(arrotonda(ps.loaded_km.value_or(0.0), 3));
+            y["km_vuoti"] = !it.km_known ? Json(nullptr) : k == it.from ? Json(0.0) : Json(arrotonda(ps.empty_km.value_or(0.0), 3));
             y["assistente"] = ps.assistant == kzero::AssistantMove::Boards    ? Json("sale")
                               : ps.assistant == kzero::AssistantMove::Alights ? Json("scende")
                                                                               : Json(nullptr);
@@ -372,6 +374,7 @@ public:
         Json totali = Json::object();
         totali["km_pieni"] = arrotonda(kzero::loaded_km(sd), 3);
         totali["km_vuoti"] = arrotonda(kzero::empty_km(sd), 3);
+        totali["pezzi_km_non_noti"] = kzero::unknown_km_parts(sd);
         totali["minuti_fermi"] = kzero::idle_minutes(sd);
         j["totali"] = totali;
         return j;
@@ -512,6 +515,7 @@ Json in_json(const DefinizioneComando& comando, const Resoconto& r, const Parame
     int scoperti = 0, senza_mezzo = 0, non_verificati = 0;
     long long fermi = 0;
     double pieni = 0.0, vuoti = 0.0;
+    int pezzi_non_noti = 0;
     std::set<kzero::Code> persone, mezzi;
     for (const kzero::ShiftDay* p_sd : scelti) {
         const kzero::ShiftDay& sd = *p_sd;
@@ -528,6 +532,7 @@ Json in_json(const DefinizioneComando& comando, const Resoconto& r, const Parame
         if (guidato) {
             pieni += kzero::loaded_km(sd);
             vuoti += kzero::empty_km(sd);
+            pezzi_non_noti += kzero::unknown_km_parts(sd);
         }
         if (sd.person && sd.person_verified) persone.insert(sd.person->code);
         if (sd.vehicle && sd.vehicle_verified) mezzi.insert(sd.vehicle->code);
@@ -543,6 +548,7 @@ Json in_json(const DefinizioneComando& comando, const Resoconto& r, const Parame
     totali["mezzi"] = mezzi.size();
     totali["km_pieni"] = arrotonda(pieni, 3);
     totali["km_vuoti"] = arrotonda(vuoti, 3);
+    totali["pezzi_km_non_noti"] = pezzi_non_noti;
     totali["minuti_fermi"] = fermi;
     j["turni"] = turni;
     j["totali"] = totali;
@@ -593,7 +599,19 @@ std::string posizione_testo(const Json& p) {
 }
 
 std::string km_testo(const Json& pieni, const Json& vuoti) {
+    if (pieni.is_null() || vuoti.is_null()) return "km non noti (corsa da scheda: i capi del pezzo non hanno tutti dei km, K-CTR-172)";
     return "km a pieno " + testo(pieni) + ", a vuoto " + testo(vuoti);
+}
+
+// I totali dei km (K-022): con pezzi di corse da scheda con i km non noti la somma dei km noti e' un minimo, e lo si dice.
+std::string km_totali_testo(const Json& tot) {
+    if (tot.at("pezzi_km_non_noti").get<long long>() == 0) return km_testo(tot.at("km_pieni"), tot.at("km_vuoti"));
+    return "km a pieno almeno " + testo(tot.at("km_pieni")) + ", a vuoto almeno " + testo(tot.at("km_vuoti"));
+}
+// "1 pezzo con i km non noti", "2 pezzi con i km non noti"; vuoto se sono tutti noti.
+std::string pezzi_non_noti_testo(const Json& tot) {
+    const long long n = tot.at("pezzi_km_non_noti").get<long long>();
+    return n == 0 ? std::string() : std::to_string(n) + (n == 1 ? " pezzo con i km non noti" : " pezzi con i km non noti");
 }
 
 void elemento_testo(std::string& t, const Json& e) {
@@ -638,8 +656,8 @@ void elemento_testo(std::string& t, const Json& e) {
         for (const auto& h : ps.at("trasbordi"))
             t += std::string("  ") + (h.at("azione") == "consegna" ? "consegna" : "riceve") + " il trasbordo " +
                  h.at("codice").get<std::string>() + " (" + testo(h.at("persone")) + ")";
-        if (ps.at("km_pieni").get<double>() > 0) t += "  km a pieno " + testo(ps.at("km_pieni"));
-        if (ps.at("km_vuoti").get<double>() > 0) t += "  km a vuoto " + testo(ps.at("km_vuoti"));
+        if (ps.at("km_pieni").is_number() && ps.at("km_pieni").get<double>() > 0) t += "  km a pieno " + testo(ps.at("km_pieni"));
+        if (ps.at("km_vuoti").is_number() && ps.at("km_vuoti").get<double>() > 0) t += "  km a vuoto " + testo(ps.at("km_vuoti"));
         t += "  a bordo " + (ps.at("a_bordo").is_null() ? std::string("non noto") : testo(ps.at("a_bordo"))) + "\n";
     }
 }
@@ -718,7 +736,8 @@ void turno_testo(std::string& t, const Json& x) {
     if (!x.at("nota").is_null()) t += "   Nota: " + x.at("nota").get<std::string>() + "\n";
     for (const auto& e : x.at("elementi")) elemento_testo(t, e);
     const Json& tot = x.at("totali");
-    t += "   Totale del turno: " + km_testo(tot.at("km_pieni"), tot.at("km_vuoti")) + "; fermo " +
+    const std::string pezzi = pezzi_non_noti_testo(tot);
+    t += "   Totale del turno: " + km_totali_testo(tot) + (pezzi.empty() ? std::string() : " (" + pezzi + ")") + "; fermo " +
          durata(tot.at("minuti_fermi").get<long long>()) + ".\n";
 }
 
@@ -787,9 +806,9 @@ std::string in_testo(const Json& j) {
          (tot.at("persone").get<long long>() == 0 ? std::string("nessuna persona")
                                                    : quanti(tot.at("persone").get<long long>(), "persona", "persone")) +
          ", " +
-         quanti(tot.at("mezzi").get<long long>(), "mezzo", "mezzi") + "; " + km_testo(tot.at("km_pieni"), tot.at("km_vuoti")) +
+         quanti(tot.at("mezzi").get<long long>(), "mezzo", "mezzi") + "; " + km_totali_testo(tot) +
          " (dei mezzi guidati" + std::string(v.at("tipo") == "persona" ? " dalla persona" : v.at("tipo") == "mezzo" ? ": solo questo mezzo" : "") +
-         "); fermi " + durata(tot.at("minuti_fermi").get<long long>()) + ".\n";
+         (pezzi_non_noti_testo(tot).empty() ? std::string() : "; " + pezzi_non_noti_testo(tot)) + "); fermi " + durata(tot.at("minuti_fermi").get<long long>()) + ".\n";
     return t;
 }
 

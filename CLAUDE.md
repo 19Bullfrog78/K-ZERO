@@ -256,7 +256,7 @@ Si parte da ALP (3 minibus + 1 auto) e si deve poter crescere fino a 500 mezzi e
 - Posti dei mezzi = posti per i passeggeri, conducente escluso (sul libretto il campo S.1 lo comprende).
 - Schede dei servizi (K-021): in una corsa fatta da una scheda i km di un passaggio coprono il tratto dal passaggio prima che ha dei
   km (sulla scheda sono scritti solo su alcune righe; una cella vuota e' "non scritto", mai 0): nessun calcolo li legge come km di
-  un tratto (i totali della corsa sono il piede; un pezzo di corsa li sa solo se i suoi capi hanno dei km, `part_km`). I numeri della
+  un tratto (i totali della corsa sono il piede; un pezzo di corsa li sa solo se i suoi capi hanno dei km, `part_km`; se no, K-022, sono "non noti", mai 0, e i totali "almeno"). I numeri della
   scheda comprendono l'accompagnatore: si toglie dal gruppo solo dove lo dice la sua colonna. Mai dividere i St. Car. tra piu'
   scuole; mai scegliere la data da cui vale una scheda; mai unire schede con ID diversi.
 - Cassaforte (K-010): un valore si lega al suo elemento per codice (o per la chiave dichiarata nello schema,

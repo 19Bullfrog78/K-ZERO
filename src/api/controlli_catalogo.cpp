@@ -281,7 +281,11 @@ void aggiungi_schede(std::vector<DefinizioneControllo>& c) {
                  {{2, PA}, {3, PA}}});
     c.push_back({Check::CardTripPartKmUnknown, "K-CTR-172", A, N, "Pezzo di una corsa di una scheda con i km non noti",
                  {"Nel turno {turno} c'e' un pezzo della corsa {corsa}, fatta da una scheda: sulla scheda i km di una riga coprono il "
-                  "tratto dalla riga prima che ha dei km, e i capi del pezzo non ne hanno: i km del pezzo non si sanno (contati 0)."}});
+                  "tratto dalla riga prima che ha dei km, e un capo del pezzo non ne ha: i km del pezzo non si sanno (nella giornata "
+                  "sono \"non noti\" e i totali dicono \"almeno\").",
+                  "Nel turno {turno} c'e' un pezzo della corsa {corsa}, fatta da una scheda: sulla scheda i km di una riga coprono il "
+                  "tratto dalla riga prima che ha dei km, e i capi del pezzo non ne hanno: i km del pezzo non si sanno (nella giornata "
+                  "sono \"non noti\" e i totali dicono \"almeno\")."}});
     c.push_back({Check::CardProfileInvalid, "K-CTR-173", E, N, "Profilo delle schede ambiguo",
                  {"Nel profilo {profilo} la parola \"{parola}\" vuol dire sia \"sale\" sia \"scende\" (accompagnatore), o c'e' due "
                   "volte.",

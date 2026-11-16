@@ -1193,7 +1193,8 @@ PartKm part_km(const Trip& t, std::size_t from, std::size_t to, bool from_card) 
     if (!from_card) return k;
     const auto con_km = [&](std::size_t i) { return t.passages[i].loaded_km || t.passages[i].empty_km; };
     // I km scritti su una riga coprono il tratto dalla riga prima che ha dei km: il pezzo li sa solo se i suoi capi ne hanno.
-    k.known = (from == 0 || con_km(from)) && (to + 1 >= t.passages.size() || con_km(to));
+    k.ends_without_km = (from == 0 || con_km(from) ? 0 : 1) + (to + 1 >= t.passages.size() || con_km(to) ? 0 : 1);
+    k.known = k.ends_without_km == 0;
     if (!k.known) k.loaded = k.empty = 0;
     return k;
 }
@@ -1363,8 +1364,10 @@ void check_cards(const Package& p, const Index& idx, std::vector<Problem>& out) 
             if (!t) continue;
             const PartResolution r = resolve_part(it.trip, *t);
             if (r.problem != PartProblem::None || (r.from == 0 && r.to + 1 == t->passages.size())) continue;
-            if (!part_km(*t, r.from, r.to, true).known)
-                add(Check::CardTripPartKmUnknown, it.src, {ref_param("turno", Element::Shift, sh.code), ref_param("corsa", Element::Trip, t->code)});
+            const PartKm k = part_km(*t, r.from, r.to, true);
+            if (!k.known)   // variante 0: un capo senza km; 1: tutti e due
+                add(Check::CardTripPartKmUnknown, it.src, {ref_param("turno", Element::Shift, sh.code), ref_param("corsa", Element::Trip, t->code)},
+                    k.ends_without_km == 2 ? 1 : 0);
         }
 }
 

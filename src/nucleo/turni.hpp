@@ -34,6 +34,7 @@ struct PlannedItem {
     bool whole = true;              // corsa intera
     Minutes start = 0, end = 0;
     double loaded_km = 0.0, empty_km = 0.0;   // km scritti nei dati (corsa o pezzo; attivita': km a vuoto)
+    bool km_known = true;           // K-022: false per un pezzo di una corsa da scheda i cui capi non hanno km (km a 0, non noti)
     bool uses_vehicle = true;       // impegna il mezzo del turno
 };
 
@@ -173,6 +174,8 @@ std::vector<RequiredAuthorization> required_authorizations(const ShiftDay& sd, c
 // Totali di un turno in un giorno: km a pieno e a vuoto scritti nei dati, minuti fermi tra un elemento e l'altro.
 double loaded_km(const ShiftDay& sd);
 double empty_km(const ShiftDay& sd);
+// K-022: i pezzi di corse da scheda con i km non noti (non contati in loaded_km ed empty_km, che sono la somma dei km noti).
+int unknown_km_parts(const ShiftDay& sd);
 Minutes idle_minutes(const ShiftDay& sd);
 
 // Luogo in cui finisce e in cui comincia un elemento del turno (per le pause tra un elemento e l'altro).

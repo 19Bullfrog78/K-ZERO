@@ -1672,7 +1672,9 @@ leggi-schede` e `kzero togli-scheda`. Schema: [docs/schema/schede_servizi.v1.sch
   scritti su quella riga; `km_totali` = Tot Km Carico e Tot Km Vuoto del piede. **In una corsa fatta da una scheda i km di un
   passaggio coprono il tratto dal passaggio prima che ha dei km** (sulle schede i km sono scritti solo su alcune righe), non
   solo dal passaggio subito prima: per questo i totali della corsa sono sempre quelli del piede, e nessun calcolo legge i km dei
-  passaggi come km di un tratto;
+  passaggi come km di un tratto. Un pezzo della corsa in un turno sa i suoi km solo se i suoi capi hanno dei km (o sono i capi della
+  corsa); altrimenti (K-022) in `kzero giornata` i km del pezzo e dei suoi passaggi sono "non noti" (null nel JSON, versione 6), mai 0,
+  e i totali del turno e della giornata sono la somma dei km noti, "almeno", con quanti pezzi non sono contati (avviso K-CTR-172);
 - **calendario**: base = il calendario del pacchetto con il codice esterno della parola della scheda (es. SCOLASTICO, MATERNA;
   `tipo_calendario` del profilo), periodo = da quando vale la versione alla sua fine, giorni = quelli con la X (cadenza a giorni
   segnati), oppure nessun giorno e le date una per una (`date_aggiunte`, cadenza a date elencate: il programma non ricava mai un
