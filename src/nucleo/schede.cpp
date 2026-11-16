@@ -1108,7 +1108,8 @@ CardsMerge merge_cards(const Package& p, const CardProfile& pr, const Code& cont
         if (dal < taken)
             problema(Check::CardChosenBeforeTaken, o.removed_versions.empty() ? 0 : 1,
                      {text_param("scheda", r.nr), date_param("dal", dal), date_param("presa_in_carico", taken),
-                      number_param("giornate", o.days_before_taken), text_param("versioni", [&] {
+                      number_param("giornate", o.days_before_taken),
+                      number_param("quante_versioni", static_cast<int>(o.removed_versions.size())), text_param("versioni", [&] {
                           std::string t;
                           for (int n : o.removed_versions) t += (t.empty() ? "" : ", ") + std::to_string(n);
                           return t;

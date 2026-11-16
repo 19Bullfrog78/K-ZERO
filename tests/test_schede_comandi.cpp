@@ -212,7 +212,7 @@ TEST(SchedeComandi, TogliScheda) {
     // Il registro degli accessi: codici e conteggi, nient'altro.
     p.amb.password = {kPw};
     const Risultato r = comando({"registro", p.chiuso.string(), "--utente", "A"});
-    EXPECT_NE(r.uscita.find("scheda dei servizi tolta: SCH-4000123-3, versioni 2"), std::string::npos) << r.uscita;
+    EXPECT_NE(r.uscita.find("scheda dei servizi tolta: SCH-4000123-3, versione 2"), std::string::npos) << r.uscita;
     EXPECT_NE(r.uscita.find("lettura delle schede dei servizi, profilo PS-CVA, contratto CT-SCU"), std::string::npos) << r.uscita;
     // Una corsa usata da un turno non si toglie.
     PacchettoInMemoria m = pacchetto_con_schede();

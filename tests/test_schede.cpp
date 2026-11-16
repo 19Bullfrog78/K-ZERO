@@ -782,3 +782,36 @@ TEST(Schede, GiornatePrimaDellaPresaInCaricoSoloConServizio) {
     ASSERT_EQ(v2.m.outcomes.at(0).kind, CardOutcome::Kind::NewVersion);
     EXPECT_EQ(v2.m.outcomes.at(0).days_before_taken, 13);
 }
+
+// Punto 3 (K-022): i testi con un numero al singolare con 1. K-CTR-168: "cambia 1 giornata" (non "cambiano 1 giornate") e "si toglie la
+// versione 2, che cominciava"; con piu' giornate il testo resta quello di prima. Sabotaggio: la forma del numero ignorata.
+TEST(Schede, TestiAlSingolareConUno) {
+    const Lettura l0 = lettura_di_prova();
+    const Letto v1 = leggi(l0, una(1), attivazione());
+    Fogli mod = una(1);
+    mod.schede[1][21] = "Modifica";
+    mod.fermate[1][1] = "07:25";
+    DateChoices s;
+    s.by_nr["4000123/3"] = DateChoice{DateChoice::Kind::Date, day_from_ymd(2026, 11, 19)};
+    const Letto v2 = leggi(v1.dopo, mod, s, day_from_ymd(2026, 11, 20));
+    std::vector<std::string> m = messaggi(v2.dopo, v2.m.problems);
+    ASSERT_EQ(m.size(), 1u);
+    EXPECT_EQ(m[0], "K-CTR-168 v0: Scheda 4000123/3: la versione nuova vale dal 2026-11-19, prima della presa in carico (2026-11-20): cambia 1 "
+                    "giornata prima della presa in carico (scelta dell'utente, scritta nel registro).");
+    mod.fermate[1][1] = "07:15";
+    s.by_nr["4000123/3"] = DateChoice{DateChoice::Kind::Date, day_from_ymd(2026, 11, 18)};
+    const Letto v3 = leggi(v2.dopo, mod, s, day_from_ymd(2026, 11, 20));
+    m = messaggi(v3.dopo, v3.m.problems);
+    ASSERT_EQ(m.size(), 1u);
+    EXPECT_EQ(m[0], "K-CTR-168 v1: Scheda 4000123/3: la versione nuova vale dal 2026-11-18, prima della presa in carico (2026-11-20): cambiano "
+                    "2 giornate prima della presa in carico e si toglie la versione 2, che cominciava da quel giorno in poi (scelta "
+                    "dell'utente, scritta nel registro).");
+    // K-CTR-163 con 1 giorno: una scheda di un giorno solo (lunedi' 21/09/2026) con Tot Giorni 2.
+    Fogli f = una(1);
+    f.schede[1][4] = "21/09/2026";
+    f.schede[1][5] = "21/09/2026";
+    f.schede[1][16] = "#2";
+    m = messaggi(leggi(l0, f, attivazione()).dopo, leggi(l0, f, attivazione()).m.problems);
+    ASSERT_FALSE(m.empty());
+    EXPECT_NE(m[0].find("nel periodo della scheda da' 1 giorno: "), std::string::npos) << m[0];
+}
