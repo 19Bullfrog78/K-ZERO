@@ -29,6 +29,28 @@ bool contiene_parola(const std::string& testo, const std::string& parola) {
 
 std::string pulito(const std::string& s) { return clean_cell(s); }
 
+// Un testo UTF-8 valido (forme piu' corte, niente meta' di coppie, niente oltre U+10FFFF). Il lettore Excel da' sempre UTF-8
+// valido; la regola deve reggere da sola (fuzzing del K-021): un testo che non lo e' rende la cella illeggibile.
+bool utf8_valido(const std::string& t) {
+    for (std::size_t i = 0; i < t.size();) {
+        const unsigned char c = static_cast<unsigned char>(t[i]);
+        std::size_t n = c < 0x80 ? 1 : (c >> 5) == 0x6 ? 2 : (c >> 4) == 0xE ? 3 : (c >> 3) == 0x1E ? 4 : 0;
+        if (!n || i + n > t.size()) return false;
+        char32_t cp = n == 1 ? c : n == 2 ? (c & 0x1F) : n == 3 ? (c & 0x0F) : (c & 0x07);
+        for (std::size_t k = 1; k < n; ++k) {
+            const unsigned char d = static_cast<unsigned char>(t[i + k]);
+            if ((d & 0xC0) != 0x80) return false;
+            cp = (cp << 6) | (d & 0x3F);
+        }
+        if ((n == 2 && cp < 0x80) || (n == 3 && cp < 0x800) || (n == 4 && cp < 0x10000) || cp > 0x10FFFF || (cp >= 0xD800 && cp <= 0xDFFF))
+            return false;
+        i += n;
+    }
+    return true;
+}
+// Al massimo 300 byte: la misura dei testi del formato (Nr e ID si copiano nel registro).
+constexpr std::size_t kTestoMassimo = 300;
+
 bool solo_cifre(const std::string& t) {
     return !t.empty() && std::all_of(t.begin(), t.end(), [](char c) { return c >= '0' && c <= '9'; });
 }
@@ -215,7 +237,7 @@ struct Riga {
         if (fermo) return std::nullopt;
         const TableCell* x = cella(r, c.colonna(titolo));
         if (!x) return std::string();
-        if (x->unreadable) {
+        if (x->unreadable || !utf8_valido(x->text) || pulito(x->text).size() > kTestoMassimo) {
             ferma(CardFault::UnreadableCell, titolo);
             return std::nullopt;
         }
@@ -337,8 +359,8 @@ CardsRead read_cards(const CardTables& tab, const CardProfile& pr, const Index& 
         x.row = r.number;
         const TableCell* n = cella(r, ks.colonna(cs.nr));
         const TableCell* d = cella(r, ks.colonna(cs.id));
-        if (n && !n->unreadable) x.nr = card_nr_key(n->text, pr);
-        if (d && !d->unreadable) x.id = pulito(d->text);
+        if (n && !n->unreadable && utf8_valido(n->text) && pulito(n->text).size() <= kTestoMassimo) x.nr = card_nr_key(n->text, pr);
+        if (d && !d->unreadable && utf8_valido(d->text) && pulito(d->text).size() <= kTestoMassimo) x.id = pulito(d->text);
         if (!x.nr.empty()) ++nr_visti[x.nr];
         if (!x.id.empty()) ++id_visti[chiave_id(x.id)];
         out.cards.push_back(std::move(x));
@@ -354,7 +376,7 @@ CardsRead read_cards(const CardTables& tab, const CardProfile& pr, const Index& 
         for (std::size_t i = 1; i < t.rows.size(); ++i) {
             const TableRow& r = t.rows[i];
             const TableCell* n = cella(r, k.colonna(titolo_nr));
-            const std::string nr = n && !n->unreadable ? card_nr_key(n->text, pr) : std::string();
+            const std::string nr = n && !n->unreadable && utf8_valido(n->text) ? card_nr_key(n->text, pr) : std::string();
             if (!nr.empty() && nr_visti.count(nr)) {
                 dove[nr].push_back(&r);
                 continue;
@@ -393,7 +415,7 @@ CardsRead read_cards(const CardTables& tab, const CardProfile& pr, const Index& 
             q.ferma(CardFault::ServiceText, cs.service);
             continue;
         }
-        k.service_text = *servizio;
+        k.service_text = sv->text;   // la parola del profilo (il testo del file e' uguale a meno di maiuscole e punteggiatura)
         k.direction = sv->direction;
         const auto scuole = q.serve(cs.schools);
         if (!scuole) continue;
@@ -499,7 +521,7 @@ CardsRead read_cards(const CardTables& tab, const CardProfile& pr, const Index& 
             q.ferma(CardFault::CalendarAmbiguous, cs.calendar);
             continue;
         }
-        k.calendar_word = *cal;
+        k.calendar_word = normalize_name(*cal);   // come il codice esterno del calendario, confrontato sempre normalizzato
         k.base_calendar = cv->front();
         const auto cad = q.serve(cs.cadence);
         if (!cad) continue;
@@ -510,7 +532,7 @@ CardsRead read_cards(const CardTables& tab, const CardProfile& pr, const Index& 
             q.ferma(CardFault::CadenceUnknown, cs.cadence);   // mai trattata come un'altra (es. "Sempre")
             continue;
         }
-        k.cadence_word = *cad;
+        k.cadence_word = cd->word;
         k.cadence_form = cd->form;
         const auto nm = q.serve(cs.new_or_change);
         if (!nm) continue;

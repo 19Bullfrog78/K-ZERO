@@ -553,3 +553,26 @@ TEST(Schede, ElementoCambiatoAMano) {
     EXPECT_NE(messaggi(cambiata, v)[0].find("K-CTR-170 v0: Scheda SCH-4000123-3, versione 1: l'elemento C-4000123-3"), std::string::npos)
         << messaggi(cambiata, v)[0];
 }
+
+// Fuzzing del K-021: un testo non UTF-8 (o oltre i 300 byte dei testi del formato) in una cella copiata nel registro (Nr, ID) rompeva
+// la scrittura dei documenti. Il lettore Excel da' sempre UTF-8 valido, ma la regola deve reggere da sola: la cella non si legge e la
+// scheda si ferma; i documenti fatti dal programma restano conformi agli schemi. (Il caso del fuzzing non puo' stare in
+// tests/fuzz/casi: il deposito ammette solo testi UTF-8, K-016.)
+TEST(Schede, CelleNonUtf8OTroppoLunghe) {
+    const Lettura l = lettura_di_prova();
+    for (const std::string& id : {std::string("5c1e2f40-\x82-0001"), std::string(301, 'a')}) {
+        Fogli f = fogli_di_prova();
+        f.schede[1][1] = id;
+        const Letto x = leggi(l, f, attivazione());   // con documenti_dopo e con_documenti: nessuna eccezione
+        EXPECT_EQ(x.m.outcomes.at(0).fault, CardFault::UnreadableCell) << id.size();
+        EXPECT_EQ(x.m.outcomes.at(1).kind, CardOutcome::Kind::New);
+    }
+    Fogli f = fogli_di_prova();
+    f.schede[1][2] = "Andata  Mattino \x82";
+    EXPECT_EQ(leggi(l, f, attivazione()).m.outcomes.at(0).fault, CardFault::UnreadableCell);
+    f = fogli_di_prova();
+    f.schede[1][2] = "andata, mattino";   // la parola del profilo si riconosce e nel registro si tiene quella del profilo
+    const Letto y = leggi(l, f, attivazione());
+    ASSERT_EQ(y.m.outcomes.at(0).kind, CardOutcome::Kind::New);
+    EXPECT_EQ(y.m.cards.at(0).versions[0].card.service_text, "Andata Mattino");
+}

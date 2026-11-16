@@ -326,3 +326,9 @@ Formato: data - decisione - perche'.
 - 2026-11-15 - K-021 - **Le date e gli orari che Excel trasforma in numeri**: in una colonna di date un numero e' una data di Excel,
   nel sistema della cartella di lavoro (1900, o 1904 se la cartella lo dice: il lettore Excel legge ora quel segno); in una colonna di
   orari un numero e' una frazione del giorno (fino a 47:59). Una data fuori dal 1900-2100 o un orario oltre 47:59 fermano la scheda.
+- 2026-11-16 - K-021 - **Testi delle celle copiati nel registro** (fuzzing del K-021, primi minuti): un testo non UTF-8, o piu' lungo dei
+  300 byte dei testi del formato, nel Nr o nell'ID rompeva la scrittura dei documenti (eccezione della libreria JSON). Nel programma il
+  lettore Excel da' sempre UTF-8 valido, ma la regola deve reggere da sola: una cella cosi' non si legge (la scheda si ferma, variante
+  0); per verso e momento, cadenza e calendario il registro tiene la parola del profilo (o il codice esterno normalizzato), mai il
+  testo grezzo della cella. Il caso del fuzzing non puo' stare in tests/fuzz/casi (il deposito ammette solo testi UTF-8, K-016): e'
+  una prova normale (Schede.CelleNonUtf8OTroppoLunghe) con il byte scritto nel codice.

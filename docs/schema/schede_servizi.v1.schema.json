@@ -192,8 +192,8 @@
                       "description": "Il Nr della scheda come sul file (es. '4000123 / 3')."
                     },
                     "servizio": {
-                      "$ref": "#/definitions/parola",
-                      "description": "Il testo di verso e momento (es. 'Andata Mattino')."
+                      "$ref": "#/definitions/testo",
+                      "description": "Il testo di verso e momento, come nel profilo (es. 'Andata Mattino')."
                     },
                     "verso": {
                       "enum": [
@@ -260,15 +260,16 @@
                       "$ref": "#/definitions/km"
                     },
                     "calendario": {
-                      "$ref": "#/definitions/parola",
-                      "description": "La parola del calendario (es. SCOLASTICO)."
+                      "$ref": "#/definitions/testo",
+                      "description": "La parola del calendario (es. SCOLASTICO), normalizzata come i codici esterni."
                     },
                     "calendario_base": {
                       "$ref": "#/definitions/codice",
                       "description": "Il calendario del pacchetto con quel codice esterno."
                     },
                     "cadenza": {
-                      "$ref": "#/definitions/parola"
+                      "$ref": "#/definitions/testo",
+                      "description": "La cadenza, come nel profilo."
                     },
                     "forma_cadenza": {
                       "enum": [

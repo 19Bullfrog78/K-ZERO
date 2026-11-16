@@ -719,7 +719,8 @@ void prova_schede_righe(const std::uint8_t* dati, std::size_t n) {
                 for (const kzero::CardOutcome& o : m.outcomes)
                     if ((o.kind == kzero::CardOutcome::Kind::New || o.kind == kzero::CardOutcome::Kind::NewVersion) && o.from != kzero::ChoiceFrom::None)
                         guasto("data scelta dal programma");
-            if (m.added.empty()) continue;
+            // I documenti (lenti: rileggono tutto il pacchetto) con una scelta sola.
+            if (m.added.empty() || scelta != kzero::DateChoice::Kind::Activation) continue;
             try {
                 const Lettura d = schede::con_documenti(l, schede::documenti_dopo(l, m.cards, l.pacchetto.removed_cards, m.added, m.removed,
                                                                                    m.cuts, m.new_homes));
