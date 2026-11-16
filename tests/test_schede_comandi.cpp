@@ -36,7 +36,9 @@ struct Prova {
         amb.password = {kPw, kPwB};
         comando({"aggiungi-utente", "--scrivi", chiuso.string(), "--utente", "A", "--nuovo-utente", "B", "--permessi", "personali"});
     }
-    void file(const std::string& nome, const Fogli& f) { std::ofstream(lavoro / nome, std::ios::binary) << file_schede(f); }
+    void file(const std::string& nome, const Fogli& f, bool date1904 = false) {
+        std::ofstream(lavoro / nome, std::ios::binary) << file_schede(f, date1904);
+    }
     Risultato leggi(const std::string& nome, std::vector<std::string> altri, bool scrivere = true, const std::string& utente = "A",
                     const std::string& pw = kPw, const std::string& data = "2026-11-16") {
         amb.password = {pw};
@@ -219,4 +221,27 @@ TEST(SchedeComandi, TogliScheda) {
     m.file["turni.json"] = turni.dump(2);
     Prova q(m);
     EXPECT_EQ(errore_di([&] { q.togli("SCH-4000124-1", {}); }), "K-ERR-055");
+}
+
+// S11 (K-022): il segno "date dal 1904" della cartella di lavoro si legge dal file, fino alle date lette: le stesse date scritte come
+// numeri di Excel nel sistema del 1904 danno gli stessi giorni; senza il segno, gli stessi numeri sono altri giorni (sistema 1900).
+// Sabotaggi: il segno del file ignorato (dal lettore Excel o dal comando).
+TEST(SchedeComandi, DateDal1904LetteDalFile) {
+    Prova p;
+    const Fogli tutte = fogli_di_prova();
+    Fogli f;
+    f.schede = {tutte.schede[0], tutte.schede[2]};   // 4000124/1: attivazione e disattivazione come numeri di Excel
+    f.fermate = {tutte.fermate[0], tutte.fermate[4], tutte.fermate[5], tutte.fermate[6], tutte.fermate[7]};
+    f.schede[1][4] = "#44817";   // 2026-09-14 nel sistema del 1904 (1462 giorni in meno)
+    f.schede[1][5] = "#45088";   // 2027-06-12
+    p.file("1904.xlsx", f, true);
+    p.file("1900.xlsx", f, false);
+    const auto periodo = [&](const std::string& nome) {
+        const JsonDati j = JsonDati::parse(p.leggi(nome, {"--validita", "attivazione", "--formato", "json"}, false).uscita);
+        const JsonDati& s = j.at("schede").at(0);
+        EXPECT_EQ(s.at("esito"), "nuova") << j.dump(2);
+        return s.at("dal").get<std::string>() + " " + s.at("al").get<std::string>();
+    };
+    EXPECT_EQ(periodo("1904.xlsx"), "2026-09-14 2027-06-12");
+    EXPECT_EQ(periodo("1900.xlsx"), "2022-09-13 2023-06-11");
 }
