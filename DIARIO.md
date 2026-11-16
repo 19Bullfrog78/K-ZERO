@@ -843,6 +843,18 @@
   sistematica); Tot Giorni diverso che ferma la scheda; cella dei km vuota letta come 0; infanzia senza accompagnatore senza avviso;
   avviso senza la regola nel regolamento (valore scritto nel programma); e di nuovo quelli del punto 0 (A, C, D, G, H).
 - 2026-11-16 - (fuori dai mandati, solo documenti) Introdotta la regola del controllo del modello (REGOLE.md Parte 3, DECISIONI.md, richiamo in testa a CLAUDE.md).
+- 2026-11-16 - K-022 (programma, proposta "K-022: correzioni delle schede"). Punto 1, difetto: una scheda con due giri passa due volte
+  dallo stesso luogo con delle persone (l'infanzia: la scuola a meta' e alla fine); la lettura scriveva una voce per passaggio nella
+  domanda del gruppo e K-CTR-042 (che somma le corse per luogo) dava due avvisi falsi per scheda. Ora nella domanda un luogo una volta
+  sola, con salgono e scendono sommati (src/api/schede_scrittura.cpp; K-CTR-170 usa la stessa regola); avviso nuovo K-CTR-175 per lo
+  stesso luogo due volte nella domanda di un gruppo scritto a mano (il demo non ne ha). Punto 2, prove nuove sui sabotaggi dell'arbitro
+  che nessuna prova vedeva (S3, S5, S8, S9, S11 dal file .xlsx con date1904, S16, S17). Punto 3: i testi del K-021 con un numero al
+  singolare con 1 (forma {numero:uno|altri} nei messaggi del catalogo: K-CTR-163, 164, 168, 171; "versione tolta" nelle uscite); per i
+  km non noti di un pezzo di corsa da scheda solo la proposta (K-022-proposta-km-non-noti.md, consegnata come file), niente codice.
+  Prove: test_schede (+9), test_schede_comandi (+1), test_controlli (+1). Sabotaggi sul codice finale, tutti presi: una voce per
+  passaggio nella domanda; avviso K-CTR-175 tolto (due prove); orario che torna indietro accettato; `k.from + 1 < taken`; scelta chiesta
+  anche lo stesso giorno; `>` al posto di `>=` nelle versioni tolte; soglia `a_bordo > 1`; segno 1904 ignorato dal lettore Excel e dal
+  comando; capo finale del pezzo non guardato; giornate prima della presa in carico contate tutte; forma del numero ignorata.
 ## Bug e limiti noti
 - (K-018) L'avviso sui nomi liberi trova solo il nome scritto come nei dati (senza maiuscole ne' accenti, parole intere):
   non i nomi scritti male, i soprannomi, le iniziali, le sigle ("S-DIS"), un nome dentro una parola piu' lunga, le parole
@@ -948,6 +960,11 @@
   "dalla riga prima che ha dei km", non dal passaggio prima (lo dice formato-dati.md); i totali della corsa sono giusti.
 - (K-021) Il confronto degli elementi con la scheda (K-CTR-170) guarda solo i dati comuni che vengono dalla scheda: una pedana o un tipo
   cambiati a mano nel servizio non hanno l'avviso.
+- (K-022) Il controllo dei conteggi del gruppo contro i passeggeri uno per uno (K-CTR-031, errore) legge la domanda come K-CTR-042:
+  somma i passeggeri per luogo e confronta con ogni voce. Con lo stesso luogo due volte nella domanda darebbe errori falsi; c'e' l'avviso
+  K-CTR-175, ma K-CTR-031 non e' stato cambiato (il mandato chiede di dirlo prima). I gruppi delle schede non hanno passeggeri.
+- (K-022) Un pacchetto scritto con la lettura del K-021 con una scheda a due giri ha il gruppo con due voci: ora K-CTR-175 e K-CTR-170
+  (il gruppo non e' quello che la scheda da'); si rifa' con `kzero togli-scheda` e una nuova lettura, oppure con la versione dopo.
 - (K-021) Con piu' scuole il gruppo non ha scuola: i controlli che usano la scuola del gruppo (attesa concordata, finestra) non si
   fanno per quel gruppo (scelta D3 A).
 

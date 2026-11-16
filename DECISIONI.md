@@ -333,3 +333,13 @@ Formato: data - decisione - perche'.
   testo grezzo della cella. Il caso del fuzzing non puo' stare in tests/fuzz/casi (il deposito ammette solo testi UTF-8, K-016): e'
   una prova normale (Schede.CelleNonUtf8OTroppoLunghe) con il byte scritto nel codice.
 - 2026-11-16 - **Controllo del modello**: decisione del supervisore, in questo progetto vale la regola "Controllo del modello" (REGOLE.md, Parte 3). Parole del supervisore, verbatim: «Se il modello dichiarato nel mandato non è quello in esecuzioni avvertimi prima di partire. Così posso modificare.» (dette il 12/11/2026 per l'altro progetto, estese a questo il 16/11/2026) - un mandato pensato per un modello e fatto da un altro costa crediti e qualita' senza che nessuno se ne accorga.
+- 2026-11-16 - K-022 - **Un luogo una volta sola nella domanda di un gruppo**: una scheda con due giri passa due volte dallo stesso
+  luogo con delle persone (l'infanzia: la scuola a meta' con le discese del primo giro e alla fine). Nella domanda del gruppo fatto da una
+  scheda il luogo e' una volta sola, con salgono e scendono sommati, nell'ordine del primo passaggio; la corsa tiene i passaggi uno per
+  uno. Perche': K-CTR-042 somma le corse per luogo e confronta la somma con ogni voce, e con due voci dava avvisi falsi. K-CTR-042 non
+  cambia; il formato non vieta due voci con lo stesso luogo (un pacchetto scritto a mano potrebbe averle): avviso nuovo K-CTR-175, sulla
+  seconda voce, una volta per luogo. Gli elementi gia' scritti dal K-021 non si rifanno da soli (le versioni che restano non si rifanno
+  mai): K-CTR-170 li indica.
+- 2026-11-16 - K-022 - **Numeri al singolare nei messaggi**: un messaggio del catalogo puo' scrivere un numero con la forma
+  `{numero:uno|altri}` (il testo per 1, quello per gli altri numeri, 0 compreso; "#" al posto del numero). Con piu' di uno i testi del
+  K-021 restano quelli di prima.
