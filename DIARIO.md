@@ -842,6 +842,7 @@
   come "Sempre"; casa scritta come luogo comune; tipo, pedana e individualizzato visibili senza il parametro (anche dalla prova
   sistematica); Tot Giorni diverso che ferma la scheda; cella dei km vuota letta come 0; infanzia senza accompagnatore senza avviso;
   avviso senza la regola nel regolamento (valore scritto nel programma); e di nuovo quelli del punto 0 (A, C, D, G, H).
+- 2026-11-16 - (fuori dai mandati, solo documenti) Introdotta la regola del controllo del modello (REGOLE.md Parte 3, DECISIONI.md, richiamo in testa a CLAUDE.md).
 ## Bug e limiti noti
 - (K-018) L'avviso sui nomi liberi trova solo il nome scritto come nei dati (senza maiuscole ne' accenti, parole intere):
   non i nomi scritti male, i soprannomi, le iniziali, le sigle ("S-DIS"), un nome dentro una parola piu' lunga, le parole

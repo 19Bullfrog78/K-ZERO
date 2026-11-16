@@ -332,3 +332,4 @@ Formato: data - decisione - perche'.
   0); per verso e momento, cadenza e calendario il registro tiene la parola del profilo (o il codice esterno normalizzato), mai il
   testo grezzo della cella. Il caso del fuzzing non puo' stare in tests/fuzz/casi (il deposito ammette solo testi UTF-8, K-016): e'
   una prova normale (Schede.CelleNonUtf8OTroppoLunghe) con il byte scritto nel codice.
+- 2026-11-16 - **Controllo del modello**: decisione del supervisore, in questo progetto vale la regola "Controllo del modello" (REGOLE.md, Parte 3). Parole del supervisore, verbatim: «Se il modello dichiarato nel mandato non è quello in esecuzioni avvertimi prima di partire. Così posso modificare.» (dette il 12/11/2026 per l'altro progetto, estese a questo il 16/11/2026) - un mandato pensato per un modello e fatto da un altro costa crediti e qualita' senza che nessuno se ne accorga.

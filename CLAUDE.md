@@ -1,5 +1,7 @@
 # K-Zero
 
+Prima di tutto: controllo del modello (REGOLE.md, "Controllo del modello"). Se il modello o l'effort del mandato non e' quello in esecuzione, fermati e dillo prima di usare qualunque strumento.
+
 K-Zero e' universale: aziende, consorzi ed enti di ogni dimensione e di ogni paese; ALP e' il primo caso di prova.
 
 Software di pianificazione flotta: servizi di linea, handicap, scolastici, NCC, promiscui.
