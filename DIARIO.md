@@ -855,6 +855,16 @@
   passaggio nella domanda; avviso K-CTR-175 tolto (due prove); orario che torna indietro accettato; `k.from + 1 < taken`; scelta chiesta
   anche lo stesso giorno; `>` al posto di `>=` nelle versioni tolte; soglia `a_bordo > 1`; segno 1904 ignorato dal lettore Excel e dal
   comando; capo finale del pezzo non guardato; giornate prima della presa in carico contate tutte; forma del numero ignorata.
+- 2026-11-16 - K-022 (seguito, dopo le risposte dell'arbitro A-D). D: la proposta "Documenti: controllo del modello" aggiornata con main
+  (conflitti di DECISIONI.md e DIARIO.md risolti tenendo tutte le righe), poi unita dal supervisore; il K-022 riallineato con main. B:
+  K-CTR-031 (conteggi contro passeggeri) e K-CTR-042 (domanda contro corse) confrontano per luogo, con le voci della domanda dello stesso
+  luogo sommate: un luogo scritto due volte non da' mai problemi falsi; K-CTR-175 resta come avviso di pulizia, senza "K-CTR-042 non e'
+  affidabile". A: in `kzero giornata` (versione 6) i km di un pezzo di corsa da scheda con i capi senza km sono "non noti" (null),
+  anche nei passaggi del pezzo; i totali del turno e della giornata sono la somma dei km noti, "almeno", con `pezzi_km_non_noti`;
+  K-CTR-172 dice "un capo" o "i capi". Nessun altro comando somma i km dei pezzi (`kzero ore` e la dimostrazione usano la corsa
+  intera). C: nessun codice, il rimedio per i pacchetti scritti con il K-021 in DECISIONI.md. Prove: test_controlli (+1), test_schede_comandi
+  (+1). Sabotaggi, tutti presi: K-CTR-031 e K-CTR-042 sulle voci una per una (K-CTR-042 da due prove); 0 scritto come prima; km di
+  tutta la corsa scritti su un passaggio del pezzo; K-CTR-172 sempre al plurale.
 ## Bug e limiti noti
 - (K-018) L'avviso sui nomi liberi trova solo il nome scritto come nei dati (senza maiuscole ne' accenti, parole intere):
   non i nomi scritti male, i soprannomi, le iniziali, le sigle ("S-DIS"), un nome dentro una parola piu' lunga, le parole
@@ -957,14 +967,13 @@
 - (K-021) La riga ACCOMPAGNATORE e' stata decisa sui fatti di una scheda vera dell'infanzia: altre forme della scheda (un
   accompagnatore che sale a una fermata, una scheda "handicap") potranno chiedere un profilo diverso o una colonna in piu'.
 - (K-021) Le uscite di `kzero giornata` mostrano i km di ogni passaggio come scritti: per una corsa fatta da una scheda vogliono dire
-  "dalla riga prima che ha dei km", non dal passaggio prima (lo dice formato-dati.md); i totali della corsa sono giusti.
+  "dalla riga prima che ha dei km", non dal passaggio prima (lo dice formato-dati.md); i totali della corsa sono giusti. Dal K-022, in
+  un pezzo con i km non noti, i km dei passaggi non si scrivono (null).
 - (K-021) Il confronto degli elementi con la scheda (K-CTR-170) guarda solo i dati comuni che vengono dalla scheda: una pedana o un tipo
   cambiati a mano nel servizio non hanno l'avviso.
-- (K-022) Il controllo dei conteggi del gruppo contro i passeggeri uno per uno (K-CTR-031, errore) legge la domanda come K-CTR-042:
-  somma i passeggeri per luogo e confronta con ogni voce. Con lo stesso luogo due volte nella domanda darebbe errori falsi; c'e' l'avviso
-  K-CTR-175, ma K-CTR-031 non e' stato cambiato (il mandato chiede di dirlo prima). I gruppi delle schede non hanno passeggeri.
 - (K-022) Un pacchetto scritto con la lettura del K-021 con una scheda a due giri ha il gruppo con due voci: ora K-CTR-175 e K-CTR-170
-  (il gruppo non e' quello che la scheda da'); si rifa' con `kzero togli-scheda` e una nuova lettura, oppure con la versione dopo.
+  (il gruppo non e' quello che la scheda da'), niente problemi falsi; si rifa' con `kzero togli-scheda` e una nuova lettura, oppure
+  con la versione dopo (DECISIONI.md, K-022). Nessun pacchetto vero ha schede.
 - (K-021) Con piu' scuole il gruppo non ha scuola: i controlli che usano la scuola del gruppo (attesa concordata, finestra) non si
   fanno per quel gruppo (scelta D3 A).
 
