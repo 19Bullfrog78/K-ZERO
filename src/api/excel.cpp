@@ -371,6 +371,11 @@ struct FoglioDichiarato {
 class GestoreCartella : public Gestore {
 public:
     void inizio(std::string_view nome, const Attributi& a) override {
+        // K-021: il sistema delle date della cartella di lavoro (le date che Excel trasforma in numeri contano dal 1900 o dal 1904).
+        if (nome == "workbookPr") {
+            if (const char* v = a["date1904"]) date1904 = std::string_view(v) == "1" || std::string_view(v) == "true";
+            return;
+        }
         if (nome != "sheet") return;
         FoglioDichiarato f;
         if (const char* v = a["name"]) f.nome = v;
@@ -380,6 +385,7 @@ public:
     void fine(std::string_view) override {}
     void testo(std::string_view) override {}
     std::vector<FoglioDichiarato> fogli;
+    bool date1904 = false;
 };
 
 bool finisce_con(std::string_view s, std::string_view fine) {
@@ -780,7 +786,9 @@ Foglio leggi_foglio(std::string_view file, const std::string& nome_foglio, const
     }
     const std::optional<std::string> xml_foglio = a.leggi(*parte_foglio);
     if (!xml_foglio) errore(Motivo::ParteMancante, "Il file non ha la parte del foglio da leggere.");
-    return foglio_da(*xml_foglio, condivisi, l);
+    Foglio f = foglio_da(*xml_foglio, condivisi, l);
+    f.date1904 = gc.date1904;
+    return f;
 }
 
 }  // namespace kzero::api::excel

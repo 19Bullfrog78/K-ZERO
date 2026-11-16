@@ -1,0 +1,536 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "K-Zero - file di dati profili_schede.json, versione 1",
+  "description": "Profili di lettura delle schede dei servizi di un committente (K-021): come e' fatto il modello Excel in cui si copiano le schede (nomi dei fogli, titoli delle colonne, sigle dei giorni, segno delle caselle, testi di verso e momento, cadenze, parola dell'accompagnatore, separatori) e come si collegano scuole, punti di raccolta e calendari agli elementi del pacchetto. Il modello di K-Zero e' il primo profilo; un committente che manda le schede in Excel avra' il suo. Il programma non conosce nessuna di queste parole. Tutti dati comuni.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "schema_versione",
+    "profili"
+  ],
+  "properties": {
+    "schema": {
+      "const": "profili_schede",
+      "x-kzero-classe": "comune"
+    },
+    "schema_versione": {
+      "const": 1,
+      "x-kzero-classe": "comune"
+    },
+    "profili": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "codice",
+          "committente",
+          "fogli",
+          "codici_esterni",
+          "colonne",
+          "giorni",
+          "segno",
+          "servizi",
+          "separatore_scuole",
+          "separatore_nr",
+          "separatore_data",
+          "separatore_ora",
+          "cadenze",
+          "accompagnatore",
+          "nuova",
+          "modifica",
+          "servizio"
+        ],
+        "properties": {
+          "codice": {
+            "$ref": "#/definitions/codice",
+            "x-kzero-classe": "comune"
+          },
+          "nome": {
+            "$ref": "#/definitions/testo",
+            "x-kzero-classe": "comune"
+          },
+          "committente": {
+            "$ref": "#/definitions/codice",
+            "description": "Il committente che manda le schede (committenti.json).",
+            "x-kzero-classe": "comune"
+          },
+          "fogli": {
+            "description": "Nomi dei tre fogli del modello: una riga per scheda, una riga per fermata, una riga per data (solo le cadenze con le date una per una).",
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "schede",
+              "fermate",
+              "date"
+            ],
+            "properties": {
+              "schede": {
+                "$ref": "#/definitions/parola"
+              },
+              "fermate": {
+                "$ref": "#/definitions/parola"
+              },
+              "date": {
+                "$ref": "#/definitions/parola"
+              }
+            },
+            "x-kzero-classe": "comune"
+          },
+          "codici_esterni": {
+            "description": "Il sistema del committente e i tipi dei codici esterni: l'ID e il Nr della scheda e il numero del servizio (prima della barra) si scrivono come codici esterni del servizio; scuole, punti di raccolta e calendari della scheda si cercano tra i codici esterni del pacchetto con questo sistema e questi tipi (il codice e' il testo del file).",
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "sistema",
+              "tipo_scheda",
+              "tipo_nr",
+              "tipo_servizio",
+              "tipo_scuola",
+              "tipo_fermata",
+              "tipo_calendario"
+            ],
+            "properties": {
+              "sistema": {
+                "$ref": "#/definitions/testo"
+              },
+              "tipo_scheda": {
+                "$ref": "#/definitions/testo"
+              },
+              "tipo_nr": {
+                "$ref": "#/definitions/testo"
+              },
+              "tipo_servizio": {
+                "$ref": "#/definitions/testo"
+              },
+              "tipo_scuola": {
+                "$ref": "#/definitions/testo"
+              },
+              "tipo_fermata": {
+                "$ref": "#/definitions/testo"
+              },
+              "tipo_calendario": {
+                "$ref": "#/definitions/testo"
+              }
+            },
+            "x-kzero-classe": "comune"
+          },
+          "colonne": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "schede",
+              "fermate",
+              "date"
+            ],
+            "properties": {
+              "schede": {
+                "description": "Titoli delle colonne del foglio delle schede (prima riga). I giorni stanno in 'giorni'.",
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "nr",
+                  "id",
+                  "servizio",
+                  "scuole",
+                  "attivazione",
+                  "disattivazione",
+                  "totali_alunni",
+                  "individualizzato",
+                  "attrezzato",
+                  "tot_giorni",
+                  "tot_km_carico",
+                  "tot_km_vuoto",
+                  "calendario",
+                  "cadenza",
+                  "nuova_modifica"
+                ],
+                "properties": {
+                  "nr": {
+                    "$ref": "#/definitions/parola"
+                  },
+                  "id": {
+                    "$ref": "#/definitions/parola"
+                  },
+                  "servizio": {
+                    "$ref": "#/definitions/parola"
+                  },
+                  "scuole": {
+                    "$ref": "#/definitions/parola"
+                  },
+                  "attivazione": {
+                    "$ref": "#/definitions/parola"
+                  },
+                  "disattivazione": {
+                    "$ref": "#/definitions/parola"
+                  },
+                  "totali_alunni": {
+                    "$ref": "#/definitions/parola"
+                  },
+                  "individualizzato": {
+                    "$ref": "#/definitions/parola"
+                  },
+                  "attrezzato": {
+                    "$ref": "#/definitions/parola"
+                  },
+                  "tot_giorni": {
+                    "$ref": "#/definitions/parola"
+                  },
+                  "tot_km_carico": {
+                    "$ref": "#/definitions/parola"
+                  },
+                  "tot_km_vuoto": {
+                    "$ref": "#/definitions/parola"
+                  },
+                  "calendario": {
+                    "$ref": "#/definitions/parola"
+                  },
+                  "cadenza": {
+                    "$ref": "#/definitions/parola"
+                  },
+                  "nuova_modifica": {
+                    "$ref": "#/definitions/parola"
+                  }
+                },
+                "x-kzero-classe": "comune"
+              },
+              "fermate": {
+                "description": "Titoli delle colonne del foglio delle fermate (prima riga).",
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "nr",
+                  "orario",
+                  "punto",
+                  "casa",
+                  "salgono",
+                  "scendono",
+                  "km_pieni",
+                  "km_vuoti",
+                  "accompagnatore"
+                ],
+                "properties": {
+                  "nr": {
+                    "$ref": "#/definitions/parola"
+                  },
+                  "orario": {
+                    "$ref": "#/definitions/parola"
+                  },
+                  "punto": {
+                    "$ref": "#/definitions/parola"
+                  },
+                  "casa": {
+                    "$ref": "#/definitions/parola"
+                  },
+                  "salgono": {
+                    "$ref": "#/definitions/parola"
+                  },
+                  "scendono": {
+                    "$ref": "#/definitions/parola"
+                  },
+                  "km_pieni": {
+                    "$ref": "#/definitions/parola"
+                  },
+                  "km_vuoti": {
+                    "$ref": "#/definitions/parola"
+                  },
+                  "accompagnatore": {
+                    "$ref": "#/definitions/parola"
+                  }
+                },
+                "x-kzero-classe": "comune"
+              },
+              "date": {
+                "description": "Titoli delle colonne del foglio delle date (prima riga).",
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "nr",
+                  "data"
+                ],
+                "properties": {
+                  "nr": {
+                    "$ref": "#/definitions/parola"
+                  },
+                  "data": {
+                    "$ref": "#/definitions/parola"
+                  }
+                },
+                "x-kzero-classe": "comune"
+              }
+            },
+            "x-kzero-classe": "comune"
+          },
+          "giorni": {
+            "description": "Le colonne dei giorni del foglio delle schede (es. 'Lu' = lunedi): una X sotto il giorno = il servizio si fa quel giorno.",
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "colonna",
+                "giorno"
+              ],
+              "properties": {
+                "colonna": {
+                  "$ref": "#/definitions/parola"
+                },
+                "giorno": {
+                  "enum": [
+                    "lunedi",
+                    "martedi",
+                    "mercoledi",
+                    "giovedi",
+                    "venerdi",
+                    "sabato",
+                    "domenica"
+                  ]
+                }
+              }
+            },
+            "x-kzero-classe": "comune"
+          },
+          "segno": {
+            "description": "Le parole che segnano una casella (es. 'X'): giorni, servizio individualizzato, attrezzato. Una casella vuota non e' segnata; un'altra parola ferma la scheda.",
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "$ref": "#/definitions/parola"
+            },
+            "x-kzero-classe": "comune"
+          },
+          "servizi": {
+            "description": "I testi della colonna 'servizio' (verso e momento, es. 'Andata Mattino') e il verso che vogliono dire in K-Zero.",
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "testo",
+                "verso"
+              ],
+              "properties": {
+                "testo": {
+                  "$ref": "#/definitions/parola"
+                },
+                "verso": {
+                  "enum": [
+                    "andata",
+                    "ritorno"
+                  ]
+                }
+              }
+            },
+            "x-kzero-classe": "comune"
+          },
+          "separatore_scuole": {
+            "$ref": "#/definitions/separatore",
+            "description": "Tra le scuole della colonna delle scuole, se piu' di una (es. ';').",
+            "x-kzero-classe": "comune"
+          },
+          "separatore_nr": {
+            "$ref": "#/definitions/separatore",
+            "description": "Tra il numero del servizio e il numero della scheda nel Nr (es. '/' in '4000123 / 3'): gli spazi intorno non contano.",
+            "x-kzero-classe": "comune"
+          },
+          "separatore_data": {
+            "$ref": "#/definitions/separatore",
+            "description": "Nelle date scritte come testo, tra giorno, mese e anno (es. '/' in '15/09/2026'). Una data che Excel ha gia' trasformato in numero si legge come data di Excel.",
+            "x-kzero-classe": "comune"
+          },
+          "separatore_ora": {
+            "$ref": "#/definitions/separatore",
+            "description": "Negli orari scritti come testo, tra ore e minuti (es. ':' in '07:35'). Un orario che Excel ha gia' trasformato in numero si legge come orario di Excel.",
+            "x-kzero-classe": "comune"
+          },
+          "cadenze": {
+            "description": "Le cadenze della scheda e la loro forma. Una cadenza che il profilo non ha ferma la scheda.",
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "parola",
+                "forma"
+              ],
+              "properties": {
+                "parola": {
+                  "$ref": "#/definitions/parola"
+                },
+                "forma": {
+                  "description": "giorni_segnati = i giorni con la X nel periodo ('Sempre'); date_elencate = solo le date del foglio delle date (servizi non regolari, es. ogni 15 giorni): il programma non ricava mai un ritmo.",
+                  "enum": [
+                    "giorni_segnati",
+                    "date_elencate"
+                  ]
+                }
+              }
+            },
+            "x-kzero-classe": "comune"
+          },
+          "accompagnatore": {
+            "description": "L'accompagnatore (l'assistente a bordo): i numeri della riga lo comprendono, come sulla scheda.",
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "parola",
+              "sale",
+              "scende"
+            ],
+            "properties": {
+              "parola": {
+                "$ref": "#/definitions/parola",
+                "description": "La parola che la scheda scrive dentro il punto di raccolta (es. 'ACCOMPAGNATORE'): nel modello va nella colonna dell'accompagnatore, mai nel punto (se c'e', la scheda si ferma)."
+              },
+              "sale": {
+                "description": "Le parole della colonna dell'accompagnatore per 'sale qui'.",
+                "type": "array",
+                "minItems": 1,
+                "uniqueItems": true,
+                "items": {
+                  "$ref": "#/definitions/parola"
+                }
+              },
+              "scende": {
+                "description": "Le parole della colonna dell'accompagnatore per 'scende qui'.",
+                "type": "array",
+                "minItems": 1,
+                "uniqueItems": true,
+                "items": {
+                  "$ref": "#/definitions/parola"
+                }
+              }
+            },
+            "x-kzero-classe": "comune"
+          },
+          "nuova": {
+            "description": "Le parole della colonna nuova/modifica per una scheda nuova.",
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "$ref": "#/definitions/parola"
+            },
+            "x-kzero-classe": "comune"
+          },
+          "modifica": {
+            "description": "Le parole della colonna nuova/modifica per una modifica.",
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "$ref": "#/definitions/parola"
+            },
+            "x-kzero-classe": "comune"
+          },
+          "servizio": {
+            "description": "Come diventano i servizi fatti dalle schede: scelte dell'utente, non parole del file.",
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "tipo",
+              "tipo_gruppo",
+              "liberta_oraria"
+            ],
+            "properties": {
+              "tipo": {
+                "description": "Tipo dei servizi fatti dalle schede (es. scolastico).",
+                "enum": [
+                  "linea",
+                  "scolastico",
+                  "disabili",
+                  "ncc",
+                  "altro"
+                ]
+              },
+              "tipo_descrizione": {
+                "$ref": "#/definitions/testo",
+                "description": "Con il tipo 'altro'."
+              },
+              "tipo_gruppo": {
+                "description": "Tipo del gruppo dei passeggeri (es. studenti).",
+                "enum": [
+                  "studenti",
+                  "disabili",
+                  "utenti_linea",
+                  "adulti_autorizzati",
+                  "altro"
+                ]
+              },
+              "tipo_gruppo_descrizione": {
+                "$ref": "#/definitions/testo",
+                "description": "Con il tipo del gruppo 'altro'."
+              },
+              "liberta_oraria": {
+                "description": "La liberta' oraria dei servizi fatti dalle schede, come in servizi.json (con 'libera' serve la soglia).",
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "tipo"
+                ],
+                "properties": {
+                  "tipo": {
+                    "enum": [
+                      "fissa",
+                      "libera"
+                    ]
+                  },
+                  "soglia_da_concordare_minuti": {
+                    "type": "integer",
+                    "minimum": 0,
+                    "maximum": 1440
+                  }
+                }
+              }
+            },
+            "x-kzero-classe": "comune"
+          },
+          "nota": {
+            "$ref": "#/definitions/nota",
+            "x-kzero-classe": "comune"
+          }
+        }
+      }
+    }
+  },
+  "definitions": {
+    "codice": {
+      "description": "Codice K-Zero: scelto da chi scrive i dati, unico per tipo di elemento. Lettere senza accenti, cifre, '-', '_' e '.'; inizia con una lettera o una cifra; al massimo 64 caratteri.",
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+    },
+    "testo": {
+      "description": "Testo di una riga, non vuoto (al massimo 300 caratteri).",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 300,
+      "pattern": "\\S"
+    },
+    "nota": {
+      "description": "Testo libero, non vuoto (al massimo 2000 caratteri).",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2000,
+      "pattern": "\\S"
+    },
+    "parola": {
+      "description": "Una parola o un titolo del file del committente, come lo scrive lui (titolo di colonna, sigla, parola dello stato): si confronta senza maiuscole, accenti, punteggiatura e spazi doppi. Non e' un testo libero sulle persone: non entra nell'avviso sui nomi liberi (K-018).",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100,
+      "pattern": "\\S"
+    },
+    "separatore": {
+      "description": "Un separatore del file del committente (es. \"/\", \"|\", \"-\", \"//\"): da 1 a 5 caratteri, almeno uno diverso da uno spazio; gli spazi intorno non contano.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 5,
+      "pattern": "\\S"
+    }
+  }
+}

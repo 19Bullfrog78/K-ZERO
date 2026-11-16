@@ -28,6 +28,7 @@
 #include "controlli.hpp"
 #include "lettore.hpp"
 #include "riservatezza.hpp"
+#include "schede_prove.hpp"
 #include "orari.hpp"
 #include "schemi_dati.hpp"
 #include "tempo.hpp"
@@ -947,6 +948,39 @@ TEST(Unione, ModificheAManoNellaCassaforte) {
         }
 }
 
+// K-021 (punto 0, C): anche la fermata di prima (cambiata a mano) in un luogo sensibile lega l'utente, come la scuola di prima: la
+// fermata di oggi (F-PRADELLO) non e' sensibile, quella di prima e' il centro diurno (L-CENTRO). Nome e casa stanno tra i legati e
+// chi ha i soli dati personali non li legge. Sabotaggio: la fermata di prima tolta dal legame (riservatezza.cpp).
+TEST(Unione, FermataDiPrimaInUnLuogoSensibile) {
+    InMemoria chiaro = pacchetto_k020();
+    JsonDati d = JsonDati::parse(chiaro.file.at("elenco_utenti.json"));
+    for (JsonDati& u : d.at("elenchi").at(0).at("utenti"))
+        if (u.at("codice") == "U-000001")
+            u["a_mano"] = {{"campi", {{"fermata", {{"riferimento", "Mail del committente del 12/11"}, {"data", "2026-11-12"},
+                                                   {"prima", {{"luogo", "L-CENTRO"}, {"riconosciuta", "codice_esterno"}}}}}}}};
+    chiaro.file["elenco_utenti.json"] = d.dump(2);
+    const Lettura l = leggi_pacchetto(chiaro);
+    ASSERT_TRUE(l.forma_valida()) << elenco(l.problemi);
+    const kzero::Index idx(l.pacchetto);
+    EXPECT_TRUE(LegameSensibile(&idx).utente("U-000001"));
+    const Chiuso c = chiudi(chiaro);
+    std::map<std::string, std::string> trovate;
+    for (const Voce& v : c.voci)
+        if (v.file == "elenco_utenti.json" && v.percorso[3].at("codice") == "U-000001" && v.percorso.size() == 4)
+            trovate[v.campo] = std::string(v.classe == Classe::Particolare ? "particolare" : "personale") + (v.legato ? " legato" : "");
+    const std::map<std::string, std::string> attese = {
+        {"nome", "particolare legato"}, {"casa", "particolare legato"}, {"classe", "particolare legato"}, {"sezione", "particolare legato"}};
+    EXPECT_EQ(trovate, attese);
+    const ValoriCassaforte x = valori(c, Visibilita{true, false});
+    const Lettura lb = leggi_pacchetto(c.normali, &x);
+    ASSERT_TRUE(lb.forma_valida()) << elenco(lb.problemi);
+    for (const kzero::ClientList& e : lb.pacchetto.client_lists)
+        for (const kzero::ListUser& u : e.users)
+            if (u.code == "U-000001") {
+                EXPECT_TRUE(u.name.empty());
+            }
+}
+
 // K-011 aggiunta 2: la dichiarazione del modo delle corse e' un dato particolare; motivo e chi, personali dentro un dato
 // particolare, stanno tra i legati (tutti e due i permessi). La forzatura resta comune: motivo e chi solo personali.
 TEST(Unione, DichiarazioneParticolareConMotivoLegato) {
@@ -1069,6 +1103,19 @@ TEST(Unione, OgniCampoRiservatoDegliSchemiCompareNeiPacchettiDelleProve) {
     std::vector<PacchettoDiProva> pacchetti = pacchetti_delle_prove();
     pacchetti.push_back({"k019-elenco", pacchetto_k019()});   // K-019: profili ed elenco utenti
     pacchetti.push_back({"k020-elenco", pacchetto_k020()});   // K-020: elenco della versione 2, con le modifiche a mano
+    {
+        InMemoria k021;   // K-021: servizi della versione 4 (individualizzato) e il registro delle schede (le due caselle)
+        k021.file = kzero::prove::schede::pacchetto_con_schede().file;
+        // Un servizio "altro" della versione 4, con la sua descrizione (dato particolare).
+        JsonDati sv = JsonDati::parse(k021.file.at("servizi.json"));
+        for (JsonDati& x : sv.at("servizi"))
+            if (x.at("codice") == "S-4000124-1") {
+                x["tipo"] = "altro";
+                x["tipo_descrizione"] = "navetta di prova";
+            }
+        k021.file["servizi.json"] = sv.dump(2);
+        pacchetti.push_back({"k021-schede", k021});
+    }
     for (const PacchettoDiProva& p : pacchetti)
         for (const auto& [file, testo] : p.chiaro.file) {
             const FileDati* f = file_dati_per_nome(file);

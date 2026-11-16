@@ -83,6 +83,12 @@ Si parte da ALP (3 minibus + 1 auto) e si deve poter crescere fino a 500 mezzi e
   `cancella-da-elenco` (questi con `--utente-elenco U-000001`), sempre con `--riferimento "..." --data AAAA-MM-GG --utente CODICE
   [--scrivi <pacchetto chiuso>]`; i valori dei campi sull'ingresso standard (`campo: valore`, una riga per campo, dopo la password),
   mai come argomenti. Prove: tests/test_elenco_a_mano.cpp; elenco della versione 2 di prova: tests/esempi/k020-elenco.
+- Schede dei servizi del committente (K-021, docs/formato-dati.md `profili_schede.json` e `schede_servizi.json`): `./build/kzero
+  leggi-schede <file.xlsx> <pacchetto chiuso> --profilo CODICE --contratto CODICE --data AAAA-MM-GG --riferimento "..." --utente CODICE
+  [--validita attivazione|presa-in-carico|AAAA-MM-GG] [--validita-scheda "NR=valore;NR=valore"] [--scrivi <pacchetto chiuso>]` (senza
+  `--scrivi` anteprima); `./build/kzero togli-scheda <pacchetto chiuso> --scheda CODICE-o-ID --riferimento "..." --data AAAA-MM-GG
+  --utente CODICE [--tutte] [--scrivi <pacchetto chiuso>]`. Prove con dati inventati: tests/esempi/k021-schede (profilo e testi dei
+  tre fogli, da cui le prove costruiscono il file .xlsx; `build/tests/crea_xlsx --fogli`).
 - Eseguire le prove: `ctest --test-dir build --output-on-failure`
 - Controllo del deposito pubblico (K-015: i quattro nomi in nessun file, nessun file di dati ne' manifesto di un pacchetto
   fuori da tests/ ed esempi/; K-016: solo testi UTF-8 e binari ammessi, cartelle saltate uguali a quelle di .gitignore):
@@ -106,10 +112,11 @@ Si parte da ALP (3 minibus + 1 auto) e si deve poter crescere fino a 500 mezzi e
 - Fuzzing (prove con dati casuali e deformati, libFuzzer, solo clang; su Ubuntu serve il pacchetto libclang-rt-18-dev):
   `CC=clang CXX=clang++ cmake -S . -B build-fuzz -DKZERO_FUZZ=ON -DCMAKE_BUILD_TYPE=RelWithDebInfo &&
   cmake --build build-fuzz --target fuzz_pacchetto fuzz_parametri fuzz_date_e_orari fuzz_cassaforte fuzz_elenco rigioca_fuzz`
-  (rigioca_fuzz prepara i semi della cassaforte, con chiavi nuove a ogni giro, e quelli dell'elenco dai testi delle prove), poi
-  `tests/fuzz/fuzz.sh build-fuzz <secondi per bersaglio> [cartella di lavoro] [bersagli]` (36 bersagli: `pacchetto-<file>`,
+  (rigioca_fuzz prepara i semi della cassaforte, con chiavi nuove a ogni giro, e quelli dell'elenco e delle schede dai testi delle
+  prove), poi
+  `tests/fuzz/fuzz.sh build-fuzz <secondi per bersaglio> [cartella di lavoro] [bersagli]` (39 bersagli: `pacchetto-<file>`,
   `parametri`, `date-e-orari` e, dal K-010, `cassaforte`, `cassaforte-voci`, `registro`, `registro-voci`, `password`; dal K-019
-  `elenco-archivio`, `elenco-foglio`, `elenco-righe`; dal K-020 `elenco-campi`; nel
+  `elenco-archivio`, `elenco-foglio`, `elenco-righe`; dal K-020 `elenco-campi`; dal K-021 `schede-righe` e i file `profili_schede.json` e `schede_servizi.json`; nel
   controllo GitHub 20 secondi; in locale a lungo, es. `KZERO_FUZZ_PARALLELI=4
   tests/fuzz/fuzz.sh build-fuzz 3600 ~/kzero-fuzz`). Un guasto lascia il file che lo provoca in
   `<lavoro>/guasti/<bersaglio>/`: si corregge e il file va in `tests/fuzz/casi/<bersaglio>/` (diventa una prova normale).
@@ -245,6 +252,11 @@ Si parte da ALP (3 minibus + 1 auto) e si deve poter crescere fino a 500 mezzi e
   R-TN, che riporta regole pubbliche con la fonte): non usarli come dati reali.
 - Un orario oltre le 24:00 resta tale ("24:12"), anche in uscita: non riportarlo alla mezzanotte.
 - Posti dei mezzi = posti per i passeggeri, conducente escluso (sul libretto il campo S.1 lo comprende).
+- Schede dei servizi (K-021): in una corsa fatta da una scheda i km di un passaggio coprono il tratto dal passaggio prima che ha dei
+  km (sulla scheda sono scritti solo su alcune righe; una cella vuota e' "non scritto", mai 0): nessun calcolo li legge come km di
+  un tratto (i totali della corsa sono il piede; un pezzo di corsa li sa solo se i suoi capi hanno dei km, `part_km`). I numeri della
+  scheda comprendono l'accompagnatore: si toglie dal gruppo solo dove lo dice la sua colonna. Mai dividere i St. Car. tra piu'
+  scuole; mai scegliere la data da cui vale una scheda; mai unire schede con ID diversi.
 - Cassaforte (K-010): un valore si lega al suo elemento per codice (o per la chiave dichiarata nello schema,
   `x-kzero-chiave`), mai per posizione; un valore senza il suo elemento e' un errore K-CTR, mai un'unione sbagliata.
   Chi ha solo i dati personali non riceve mai la chiave dei particolari, nemmeno durante il cambio delle chiavi.

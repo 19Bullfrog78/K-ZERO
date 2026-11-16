@@ -56,6 +56,8 @@ Solo il manifesto e' obbligatorio; un file che manca vuol dire "nessun elemento 
 | `blocchi.json` | no | Blocchi: corse fissate su un mezzo, per il calcolo futuro |
 | `profili_elenchi.json` | no | (K-019) Profili di lettura dell'elenco utenti di un committente: come e' fatto il suo file |
 | `elenco_utenti.json` | no | (K-019) Elenco utenti dei committenti come lo mandano: casa, scuola, stato, fermata indicata, ditta e orari di ogni tratta, sblocchi; dal K-020 le modifiche a mano non ancora confermate dal file. Solo nel livello completo |
+| `profili_schede.json` | no | (K-021) Profili di lettura delle schede dei servizi di un committente: com'e' fatto il modello Excel in cui si copiano |
+| `schede_servizi.json` | no | (K-021) Registro delle schede dei servizi lette: le versioni di ogni scheda, con la copia letta e gli elementi fatti dalla scheda |
 
 Un file con un nome diverso da questi non viene letto (avviso K-CTR-008): di solito e' un nome scritto male.
 
@@ -876,8 +878,10 @@ scambia una corsa alla volta, a volte un intero lotto. Schema:
 Il **servizio** e' il lavoro che un committente affida con un contratto: si paga, si perde, si rinuncia,
 si scambia. La sua **domanda** dice chi deve andare da dove a dove ed entro quando, indipendente dalle corse
 di oggi: cosi' un calcolo futuro potra' rifare i giri con mezzi diversi. Schema:
-[docs/schema/servizi.v3.schema.json](schema/servizi.v3.schema.json) (versione attuale, K-012: il tipo `ncc`; per passare alla
-3 si cambia solo `"schema_versione"`), [docs/schema/servizi.v2.schema.json](schema/servizi.v2.schema.json) (versione 2,
+[docs/schema/servizi.v4.schema.json](schema/servizi.v4.schema.json) (versione attuale, K-021: `individualizzato`; per passare
+alla 4 si cambia solo `"schema_versione"`; `kzero leggi-schede` scrive la 4),
+[docs/schema/servizi.v3.schema.json](schema/servizi.v3.schema.json) (versione 3, ancora letta: K-012, il tipo `ncc`),
+[docs/schema/servizi.v2.schema.json](schema/servizi.v2.schema.json) (versione 2,
 ancora letta: un servizio `altro` resta `altro`, mai `ncc` da solo) e
 [docs/schema/servizi.v1.schema.json](schema/servizi.v1.schema.json) (versione 1, ancora letta: e' la versione 2 senza
 `competenze_richieste`).
@@ -897,6 +901,7 @@ ancora letta: un servizio `altro` resta `altro`, mai `ncc` da solo) e
 | `servizi[].regole.pedana_obbligatoria` | no | particolare | Pedana obbligatoria per questo servizio: dice che a bordo viaggia una carrozzina |
 | `servizi[].domanda.gruppi[]` | si' | | Gruppi di passeggeri (sotto) |
 | `servizi[].competenze_richieste[]` | no | particolare | Versione 2. Competenze richieste a chi fa il servizio (codici dell'elenco dell'azienda del contratto). Dato particolare: una competenza come "formato per la pedana" fa capire che a bordo viaggia una carrozzina |
+| `servizi[].individualizzato` | no | particolare | Versione 4 (K-021). `true` = servizio individualizzato: il committente lo fa per un solo utente (la casella "Servizio Individualizzato" della scheda). Dato particolare: di solito dice un bisogno di salute; il calcolo dei giri dovra' sapere che non si unisce ad altri |
 | `servizi[].nota` | no | comune | Note |
 
 **Il tipo `ncc`** (versione 3, K-012). Noleggio con conducente: servizi per **gruppi formati su iniziativa del cliente o
@@ -1000,7 +1005,7 @@ allora e' una corsa promiscua (es. medie del consorzio + superiori a supporto di
 | `passaggi[].persone[]` | no | comune | Persone di ogni `gruppo` che `salgono` e `scendono` (come "St. Car." e "St. Scar." sulle schede) |
 | `passaggi[].assistente` | no | comune | `sale` oppure `scende`: movimento dell'assistente (persona del personale, non un passeggero) |
 | `passaggi[].trasbordi[]` | no | comune | Meta' di un trasbordo: `codice` (uguale sulle due meta'), `azione` (`consegna` o `ricezione`), `gruppo`, `persone`, `passeggero` (facoltativo; con il passeggero, `persone` vale 1) |
-| `passaggi[].km` | no | comune | `pieni`, `vuoti`: km dal passaggio precedente, come li scrive il committente |
+| `passaggi[].km` | no | comune | `pieni`, `vuoti`: km dal passaggio precedente, come li scrive il committente; in una corsa fatta da una scheda (K-021) dal passaggio prima che ha dei km (schede_servizi.json) |
 | `passaggi[].nota` | no | comune | Note |
 
 **Trasbordo**: una consegna su una corsa e una ricezione su un'altra corsa, nello stesso punto di
@@ -1562,6 +1567,134 @@ Uscita: schema [modifica_elenco versione 1](schema/modifica_elenco.v1.schema.jso
 `--includi-dati-personali` (di chi e' legato a un luogo sensibile anche con `--includi-dati-particolari`), ed entro i permessi.
 L'uscita di `kzero leggi-elenco` e' dalla versione 2 ([elenco.v2](schema/elenco.v2.schema.json)): i casi nuovi (tolti a mano ancora
 nel file o che se ne vanno davvero, aggiunti o rimessi a mano non nel file) e le modifiche confermate.
+
+### profili_schede.json
+
+(K-021) Il committente manda una **scheda per ogni giro** (un servizio, un verso e un momento, un periodo), oggi in PDF. Chi la
+riceve la copia una volta in un **modello Excel di K-Zero**; il **profilo delle schede** dice com'e' fatto quel modello: nomi dei
+fogli, titoli delle colonne, colonne dei giorni, il segno delle caselle, i testi di verso e momento, le cadenze, la parola
+dell'accompagnatore, i separatori, e come si collegano scuole, punti di raccolta e calendari agli elementi del pacchetto. E' un
+dato: il programma conosce solo le **forme** (cadenza a giorni segnati o a date elencate), mai le parole; il modello di K-Zero e'
+il primo profilo, e se il committente mandera' le schede in Excel sara' un altro profilo. Tutti dati comuni. Schema:
+[docs/schema/profili_schede.v1.schema.json](schema/profili_schede.v1.schema.json).
+
+| Campo | Obbl. | Classe | Significato |
+|---|---|---|---|
+| `profili[].codice` | si' | comune | Codice del profilo (si usa con `kzero leggi-schede --profilo`) |
+| `profili[].nome` | no | comune | Nome |
+| `profili[].committente` | si' | comune | Il committente delle schede |
+| `profili[].fogli` | si' | comune | Nomi dei tre fogli: `schede`, `fermate`, `date` |
+| `profili[].codici_esterni` | si' | comune | `sistema` e i tipi: `tipo_scheda` (l'ID), `tipo_nr` (il Nr), `tipo_servizio` (il numero prima della barra), scritti sul servizio; `tipo_scuola`, `tipo_fermata`, `tipo_calendario`, con cui si cercano scuole, punti di raccolta e calendari |
+| `profili[].colonne.schede` | si' | comune | Titoli delle colonne del foglio delle schede: `nr`, `id`, `servizio` (verso e momento), `scuole`, `attivazione`, `disattivazione`, `totali_alunni`, `individualizzato`, `attrezzato`, `tot_giorni`, `tot_km_carico`, `tot_km_vuoto`, `calendario`, `cadenza`, `nuova_modifica` |
+| `profili[].colonne.fermate` | si' | comune | Titoli del foglio delle fermate: `nr`, `orario`, `punto` (punto di raccolta), `casa`, `salgono` (St. Car.), `scendono` (St. Scar.), `km_pieni`, `km_vuoti`, `accompagnatore` |
+| `profili[].colonne.date` | si' | comune | Titoli del foglio delle date: `nr`, `data` |
+| `profili[].giorni[]` | si' | comune | `colonna` (es. "Lu") e `giorno` (`lunedi` ... `domenica`) |
+| `profili[].segno[]` | si' | comune | Le parole che segnano una casella (es. "X") |
+| `profili[].servizi[]` | si' | comune | `testo` di verso e momento (es. "Andata Mattino") e `verso` in K-Zero |
+| `profili[].separatore_scuole`, `separatore_nr`, `separatore_data`, `separatore_ora` | si' | comune | Tra le scuole; nel Nr tra il numero del servizio e quello della scheda (es. "/"); nelle date e negli orari scritti come testo |
+| `profili[].cadenze[]` | si' | comune | `parola` (es. "Sempre") e `forma`: `giorni_segnati` o `date_elencate` |
+| `profili[].accompagnatore` | si' | comune | `parola` (es. "ACCOMPAGNATORE"), `sale[]` e `scende[]`: le parole della colonna dell'accompagnatore |
+| `profili[].nuova[]`, `modifica[]` | si' | comune | Le parole della colonna "Scheda nuova" / "Modifica" |
+| `profili[].servizio` | si' | comune | Come diventano i servizi: `tipo` (es. `scolastico`, con `tipo_descrizione` per `altro`), `tipo_gruppo` (es. `studenti`), `liberta_oraria` come in servizi.json. Scelte dell'utente, non parole del file |
+| `profili[].nota` | no | comune | Note |
+
+Titoli e parole si confrontano come quelli dei profili degli elenchi (senza maiuscole, accenti, punteggiatura e spazi doppi); hanno
+la definizione `parola` e non entrano nell'avviso sui nomi liberi (K-018).
+
+**Il modello** (scelta A dell'arbitro): tre fogli, la prima riga di ognuno sono i titoli.
+- **Schede**: una riga per scheda, con tutti i campi dell'intestazione e del piede: Nr (es. "4000123 / 3"), ID (es. un uuid), verso
+  e momento, scuole (piu' di una con il separatore delle scuole: codici esterni delle scuole), attivazione e disattivazione, una X
+  sotto ogni giorno, Totali alunni, le caselle "Servizio Individualizzato" e "Attrezzato" (X o vuote), Tot Giorni, Tot Km Carico,
+  Tot Km Vuoto, Calendario (es. SCOLASTICO, MATERNA), Cadenza (es. Sempre), Scheda nuova / Modifica. La dichiarazione firmata in
+  fondo alla scheda non si copia: sono dati personali del titolare.
+- **Fermate**: una riga per riga della scheda, nell'ordine: Nr (quello della scheda), orario, punto di raccolta, casa, St. Car.,
+  St. Scar., km pieno, km vuoto, accompagnatore.
+- **Date**: solo per le cadenze a date elencate, una riga per data: Nr, data.
+Il Nr lega le righe dei tre fogli; si confronta senza badare agli spazi intorno alla barra ("4000123/3" = "4000123 / 3"). Le
+celle vuote di St. Car. e St. Scar. valgono 0 (sulle schede ci sono righe con la sola salita); una cella dei km vuota vuol dire
+"non scritto", **mai 0** (0,0 scritto e' zero). Date e orari si scrivono come sulla scheda: un testo (con i separatori del profilo)
+oppure come Excel li trasforma da solo (numeri di data e di orario di Excel, nel sistema del file: 1900, o 1904 se la cartella di
+lavoro lo dice). Il modello vuoto non sta nel deposito (nessun file .xlsx): questa pagina basta per prepararlo.
+
+**Punto di raccolta.** Si cerca, in quest'ordine: tra le scuole (codice esterno `tipo_scuola` del profilo: e' il luogo della
+scuola), tra i codici esterni dei luoghi pubblici (`tipo_fermata`), per nome o nome alternativo tra tutti i luoghi pubblici
+(ricerca dei luoghi, sotto). Sconosciuto o ambiguo: la scheda si ferma. **La casa di un utente** (es. un servizio
+individualizzato) non si scrive mai con l'indirizzo: nella colonna "casa", al posto del punto di raccolta, si scrive un **codice di
+luogo privato porta a porta** scelto da chi copia, che non contiene mai nomi o indirizzi (es. `PAP-001`). Se il codice c'e' gia'
+nel pacchetto ed e' una casa porta a porta si usa quella (andata e ritorno della stessa persona = la stessa casa); se non c'e' il
+programma crea il luogo privato senza nome, indirizzo e posizione (li attacchera' il mandato del legame con le persone); un codice
+che e' un luogo pubblico o un ricovero ferma la scheda. Mai una casa come luogo comune; un punto di raccolta non si cerca mai tra
+le case.
+
+**L'accompagnatore** (l'assistente a bordo, D2): sulla scheda la parola ACCOMPAGNATORE e' scritta dentro il punto di raccolta
+della riga dove sale (di solito la scuola dell'infanzia, con St. Car. 1) e di quella dove scende ("... + ACCOMPAGNATORE", con
+St. Scar. = i bambini + l'accompagnatore); i Totali alunni lo contano. Nel modello il punto di raccolta si scrive **senza** la
+parola, e nella colonna "accompagnatore" una parola del profilo per "sale" o "scende"; i numeri si copiano come sulla scheda.
+
+### schede_servizi.json
+
+(K-021) Il **registro delle schede** lette con `kzero leggi-schede`: per ogni scheda (riconosciuta dall'**ID** del committente,
+mai dal Nr) le **versioni**, ognuna con la copia della scheda letta, da quando a quando vale, la presa in carico, il riferimento,
+come e' stata scelta la data, e i codici degli elementi del pacchetto fatti da quella versione. Lo scrivono solo `kzero
+leggi-schede` e `kzero togli-scheda`. Schema: [docs/schema/schede_servizi.v1.schema.json](schema/schede_servizi.v1.schema.json).
+
+| Campo | Obbl. | Classe | Significato |
+|---|---|---|---|
+| `schede[].codice` | si' | comune | Codice K-Zero della scheda, dal Nr della prima versione (es. `SCH-4000123-3`) |
+| `schede[].id` | si' | comune | L'ID della scheda del committente: due schede con ID diversi non si uniscono mai |
+| `schede[].committente`, `profilo`, `contratto` | si' | comune | Il committente, il profilo dell'ultima lettura, il contratto dei servizi |
+| `schede[].versioni[].numero` | si' | comune | 1, 2, ... (riconosce la versione anche nella cassaforte) |
+| `schede[].versioni[].dal`, `al` | si' | comune | Dove la versione vale in K-Zero: dalla data scelta alla disattivazione, o al giorno prima della versione dopo |
+| `schede[].versioni[].al_prima` | no | comune | Se questa versione ha accorciato quella di prima: la fine che aveva (per `kzero togli-scheda`) |
+| `schede[].versioni[].tolte[]` | no | comune | Le versioni che questa ha tolto (cominciavano dalla sua data in poi) |
+| `schede[].versioni[].presa_in_carico`, `riferimento` | si' | comune | La data `--data` e il `--riferimento` della lettura |
+| `schede[].versioni[].scelta` | si' | comune | `modo` (`attivazione`, `presa_in_carico`, `data`) e `da` (`nessuna`, `file` = `--validita`, `scheda` = `--validita-scheda`) |
+| `schede[].versioni[].elementi` | si' | comune | Codici di `servizio`, `gruppo`, `corsa`, `calendario` fatti dalla versione |
+| `schede[].versioni[].scheda` | si' | comune | La copia letta: `nr`, `servizio` (verso e momento) e `verso`, `scuole[]`, `attivazione`, `disattivazione`, `giorni[]`, `totali_alunni`, `tot_giorni`, `tot_km_carico`, `tot_km_vuoto`, `calendario` (la parola) e `calendario_base` (il calendario del pacchetto), `cadenza` e `forma_cadenza`, `nuova_modifica`, `fermate[]` (`orario`, `luogo`, `riconosciuto`, `salgono`, `scendono`, `km_pieni`, `km_vuoti`, `accompagnatore`), `date[]` |
+| `...scheda.individualizzato`, `...scheda.attrezzato` | no | particolare | Le due caselle della scheda (come la pedana obbligatoria e `individualizzato` del servizio) |
+| `tolte[]` | no | comune | Le versioni tolte con `kzero togli-scheda`: `scheda`, `id`, `versioni[]`, `riferimento`, `data`; i loro numeri non si danno piu' |
+
+**Come una scheda diventa servizio, gruppo, corsa e calendario** (una versione = un servizio, un gruppo, una corsa, un calendario):
+- **servizio**: tipo e liberta' oraria dal profilo, contratto da `--contratto`, il calendario della versione,
+  `regole.pedana_obbligatoria: true` se Attrezzato, `individualizzato: true` se la casella e' segnata (versione 4 di
+  servizi.json), nome = Nr e verso e momento; codici esterni (sistema del profilo): l'ID (tipo scheda), il Nr (tipo nr) e il
+  numero prima della barra (tipo servizio);
+- **gruppo** (uno solo, D3): tipo dal profilo, verso dal testo di verso e momento, `conteggi: esatti`, le fermate con salgono e
+  scendono come sulla scheda **meno l'accompagnatore** sulle righe dove sale o scende (lo dice la colonna, mai indovinato),
+  `assistente_richiesto` se c'e' l'accompagnatore. Con una scuola sola il gruppo ha la sua `scuola`; con piu' scuole il gruppo
+  **non ha scuola**: le salite non sono divise per scuola sulla scheda e il programma non le divide mai indovinando; le discese a
+  ogni scuola (o le salite, al ritorno) restano vere, ognuna al luogo della sua scuola;
+- **corsa**: un passaggio per riga, nell'ordine, con l'orario, le persone del gruppo, l'assistente (`sale` / `scende`) e i km
+  scritti su quella riga; `km_totali` = Tot Km Carico e Tot Km Vuoto del piede. **In una corsa fatta da una scheda i km di un
+  passaggio coprono il tratto dal passaggio prima che ha dei km** (sulle schede i km sono scritti solo su alcune righe), non
+  solo dal passaggio subito prima: per questo i totali della corsa sono sempre quelli del piede, e nessun calcolo legge i km dei
+  passaggi come km di un tratto;
+- **calendario**: base = il calendario del pacchetto con il codice esterno della parola della scheda (es. SCOLASTICO, MATERNA;
+  `tipo_calendario` del profilo), periodo = da quando vale la versione alla sua fine, giorni = quelli con la X (cadenza a giorni
+  segnati), oppure nessun giorno e le date una per una (`date_aggiunte`, cadenza a date elencate: il programma non ricava mai un
+  ritmo);
+- codici (D9): `S-`, `G-`, `C-`, `CAL-` seguiti dal Nr con i caratteri non ammessi nei codici cambiati in "-" (es. `S-4000123-3`),
+  dalla seconda versione `-V2`, `-V3`...; un codice gia' usato da un altro elemento si salta al numero dopo, mai sovrascritto.
+
+**Validita'** (regola di ALP): attivazione uguale o dopo `--data` (la presa in carico) = vale dall'attivazione; attivazione prima di
+`--data` = il programma non sceglie: senza una scelta la scheda si ferma e l'uscita elenca le scelte (`attivazione`,
+`presa-in-carico`, o una data). La scelta si scrive nei parametri, non nel file: `--validita` per tutte le schede del file che ne
+hanno bisogno (la prima volta, con le schede da settembre, `--validita attivazione` una volta sola) e `--validita-scheda
+"NR=valore"` per una scheda (vince su `--validita`). Una data scritta prima dell'attivazione ferma la scheda. La scelta resta nel
+registro.
+
+**Versioni.** Lo stesso ID gia' nel registro = **versione nuova** della stessa scheda: vale dalla data scelta; la versione che vale il
+giorno prima finisce il giorno prima, quelle che cominciano dalla data scelta in poi si tolgono; **i giorni prima della data scelta
+non cambiano mai**. La data scelta puo' essere anche prima della presa in carico (D4, scelta B: il committente puo' dire che una
+modifica arrivata il 15/11 vale dal 10/11), mai di base: l'uscita dice quante giornate prima della presa in carico cambiano e quali
+versioni si tolgono. Contenuto uguale all'ultima versione (la parola nuova/modifica non conta): niente da fare. L'uscita dice cosa
+cambia: Nr, verso e momento, scuole, fermate (luoghi e ordine), orari, numeri, km, totali, date e giorni, calendario, cadenza, e le
+caselle (solo con i dati particolari). Mai unire schede con ID diversi.
+
+**Togliere una scheda scritta per errore**: `kzero togli-scheda <pacchetto> --scheda <codice o ID> --riferimento "..." --data
+AAAA-MM-GG --utente U [--tutte] [--scrivi <pacchetto>]` toglie l'ultima versione (servizio, gruppo, corsa, calendario) e rida' alla
+versione di prima la fine che aveva; se era l'unica, la scheda sparisce dal registro; con `--tutte`, tutte le versioni. Non si
+toglie (errore) una versione che ha tolto altre versioni (solo con `--tutte`), ne' una corsa usata da un turno o da un blocco.
 
 ## Ricerca dei luoghi per nome o codice esterno
 

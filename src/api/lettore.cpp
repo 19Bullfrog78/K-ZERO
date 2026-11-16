@@ -1450,6 +1450,7 @@ void servizi(const JsonDati& d, Package& pk) {
         x.agree_threshold_min = c.intero(lib, "soglia_da_concordare_minuti");
         x.rules = regole(s, p, c);
         x.competences = riferimenti(s, "competenze_richieste", p, c);   // versione 2
+        if (s.contains("individualizzato")) x.individual = s.at("individualizzato").get<bool>();   // versione 4 (K-021)
         const auto& gruppi = s.at("domanda").at("gruppi");
         for (std::size_t k = 0; k < gruppi.size(); ++k) {
             const auto& g = gruppi[k];
@@ -2123,6 +2124,170 @@ void elenco_utenti(const JsonDati& d, Package& pk) {
     }
 }
 
+// --- Schede dei servizi (K-021) ---------------------------------------------------------------------------------------------
+
+std::vector<std::string> parole_di(const JsonDati& o, const char* k) { return Conversione::testi(o, k); }
+
+void profili_schede(const JsonDati& d, Package& pk) {
+    const Conversione c("profili_schede.json");
+    const auto& v = d.at("profili");
+    for (std::size_t i = 0; i < v.size(); ++i) {
+        const auto& o = v[i];
+        const std::string p = indice("/profili", i);
+        CardProfile x;
+        x.code = o.at("codice").get<std::string>();
+        x.name = c.testo(o, "nome");
+        x.client = c.ref(o, "committente", p);
+        const auto& f = o.at("fogli");
+        x.sheet_cards = f.at("schede").get<std::string>();
+        x.sheet_stops = f.at("fermate").get<std::string>();
+        x.sheet_dates = f.at("date").get<std::string>();
+        const auto& e = o.at("codici_esterni");
+        x.ext_system = e.at("sistema").get<std::string>();
+        x.ext_card = e.at("tipo_scheda").get<std::string>();
+        x.ext_nr = e.at("tipo_nr").get<std::string>();
+        x.ext_service = e.at("tipo_servizio").get<std::string>();
+        x.ext_school = e.at("tipo_scuola").get<std::string>();
+        x.ext_stop = e.at("tipo_fermata").get<std::string>();
+        x.ext_calendar = e.at("tipo_calendario").get<std::string>();
+        const auto& k = o.at("colonne");
+        CardProfile::CardColumns& s = x.card_cols;
+        for (const auto& [campo, dove] : std::vector<std::pair<const char*, std::string*>>{
+                 {"nr", &s.nr}, {"id", &s.id}, {"servizio", &s.service}, {"scuole", &s.schools}, {"attivazione", &s.from},
+                 {"disattivazione", &s.to}, {"totali_alunni", &s.pupils}, {"individualizzato", &s.individual},
+                 {"attrezzato", &s.equipped}, {"tot_giorni", &s.total_days}, {"tot_km_carico", &s.total_loaded_km},
+                 {"tot_km_vuoto", &s.total_empty_km}, {"calendario", &s.calendar}, {"cadenza", &s.cadence},
+                 {"nuova_modifica", &s.new_or_change}})
+            *dove = k.at("schede").at(campo).get<std::string>();
+        CardProfile::StopColumns& t = x.stop_cols;
+        for (const auto& [campo, dove] : std::vector<std::pair<const char*, std::string*>>{
+                 {"nr", &t.nr}, {"orario", &t.time}, {"punto", &t.point}, {"casa", &t.home}, {"salgono", &t.boarding},
+                 {"scendono", &t.alighting}, {"km_pieni", &t.loaded_km}, {"km_vuoti", &t.empty_km}, {"accompagnatore", &t.escort}})
+            *dove = k.at("fermate").at(campo).get<std::string>();
+        x.date_cols.nr = k.at("date").at("nr").get<std::string>();
+        x.date_cols.date = k.at("date").at("data").get<std::string>();
+        for (const auto& g : o.at("giorni")) x.days.push_back({g.at("colonna").get<std::string>(), giorno_da(g.at("giorno").get<std::string>())});
+        x.mark_words = parole_di(o, "segno");
+        for (const auto& g : o.at("servizi"))
+            x.services.push_back({g.at("testo").get<std::string>(),
+                                  g.at("verso").get<std::string>() == "ritorno" ? Direction::Return : Direction::Outbound});
+        x.schools_sep = o.at("separatore_scuole").get<std::string>();
+        x.nr_sep = o.at("separatore_nr").get<std::string>();
+        x.date_sep = o.at("separatore_data").get<std::string>();
+        x.time_sep = o.at("separatore_ora").get<std::string>();
+        for (const auto& g : o.at("cadenze"))
+            x.cadences.push_back({g.at("parola").get<std::string>(),
+                                  g.at("forma").get<std::string>() == "date_elencate" ? CadenceForm::ListedDates : CadenceForm::MarkedDays});
+        const auto& a = o.at("accompagnatore");
+        x.escort_word = a.at("parola").get<std::string>();
+        x.escort_boards = parole_di(a, "sale");
+        x.escort_alights = parole_di(a, "scende");
+        x.new_words = parole_di(o, "nuova");
+        x.change_words = parole_di(o, "modifica");
+        const auto& sv = o.at("servizio");
+        x.service_kind = valore_di(kTipiServizio, sv.at("tipo").get<std::string>());
+        x.service_kind_description = c.testo(sv, "tipo_descrizione");
+        x.group_type = valore_di(kTipiGruppo, sv.at("tipo_gruppo").get<std::string>());
+        x.group_type_description = c.testo(sv, "tipo_gruppo_descrizione");
+        const auto& lib = sv.at("liberta_oraria");
+        x.freedom = lib.at("tipo").get<std::string>() == "libera" ? TimeFreedom::Free : TimeFreedom::Fixed;
+        x.agree_threshold_min = c.intero(lib, "soglia_da_concordare_minuti");
+        x.src = c.src(p);
+        pk.card_profiles.push_back(std::move(x));
+    }
+}
+
+void schede_servizi(const JsonDati& d, Package& pk) {
+    const Conversione c("schede_servizi.json");
+    const auto& v = d.at("schede");
+    for (std::size_t i = 0; i < v.size(); ++i) {
+        const auto& o = v[i];
+        const std::string p = indice("/schede", i);
+        ServiceCard x;
+        x.code = o.at("codice").get<std::string>();
+        x.id = o.at("id").get<std::string>();
+        x.client = c.ref(o, "committente", p);
+        x.profile = c.ref(o, "profilo", p);
+        x.contract = c.ref(o, "contratto", p);
+        const auto& versioni = o.at("versioni");
+        for (std::size_t j = 0; j < versioni.size(); ++j) {
+            const auto& w = versioni[j];
+            const std::string pv = indice(p + "/versioni", j);
+            CardVersion y;
+            y.number = w.at("numero").get<int>();
+            y.valid = {c.data(w.at("dal")), c.data(w.at("al"))};
+            y.previous_end = c.data_opz(w, "al_prima");
+            for (const auto& n : c.elenco(w, "tolte")) y.removed.push_back(n.get<int>());
+            y.taken = c.data(w.at("presa_in_carico"));
+            y.reference = w.at("riferimento").get<std::string>();
+            const std::string modo = w.at("scelta").at("modo").get<std::string>();
+            y.mode = modo == "attivazione" ? ChoiceMode::Activation : modo == "presa_in_carico" ? ChoiceMode::TakenInCharge : ChoiceMode::Date;
+            const std::string da = w.at("scelta").at("da").get<std::string>();
+            y.from = da == "file" ? ChoiceFrom::File : da == "scheda" ? ChoiceFrom::Card : ChoiceFrom::None;
+            const auto& el = w.at("elementi");
+            y.service = el.at("servizio").get<std::string>();
+            y.group = el.at("gruppo").get<std::string>();
+            y.trip = el.at("corsa").get<std::string>();
+            y.calendar = el.at("calendario").get<std::string>();
+            const auto& s = w.at("scheda");
+            Card& k = y.card;
+            k.nr = s.at("nr").get<std::string>();
+            k.service_text = s.at("servizio").get<std::string>();
+            k.direction = s.at("verso").get<std::string>() == "ritorno" ? Direction::Return : Direction::Outbound;
+            k.schools = c.testi(s, "scuole");
+            k.from = c.data(s.at("attivazione"));
+            k.to = c.data(s.at("disattivazione"));
+            k.days = c.giorni(s.at("giorni"));
+            k.pupils = s.at("totali_alunni").get<int>();
+            if (s.contains("individualizzato")) k.individual = s.at("individualizzato").get<bool>();   // particolare
+            if (s.contains("attrezzato")) k.equipped = s.at("attrezzato").get<bool>();                 // particolare
+            k.total_days = s.at("tot_giorni").get<int>();
+            k.total_loaded_km = s.at("tot_km_carico").get<double>();
+            k.total_empty_km = s.at("tot_km_vuoto").get<double>();
+            k.calendar_word = s.at("calendario").get<std::string>();
+            k.base_calendar = s.at("calendario_base").get<std::string>();
+            k.cadence_word = s.at("cadenza").get<std::string>();
+            k.cadence_form = s.at("forma_cadenza").get<std::string>() == "date_elencate" ? CadenceForm::ListedDates : CadenceForm::MarkedDays;
+            k.is_change = s.at("nuova_modifica").get<std::string>() == "modifica";
+            const auto& fermate = s.at("fermate");
+            for (std::size_t q = 0; q < fermate.size(); ++q) {
+                const auto& f = fermate[q];
+                CardStop z;
+                z.time = c.orario(f.at("orario"));
+                z.place = f.at("luogo").get<std::string>();
+                const std::string r = f.at("riconosciuto").get<std::string>();
+                z.match = r == "scuola" ? CardStopMatch::School : r == "nome" ? CardStopMatch::Name : r == "casa" ? CardStopMatch::Home
+                                                                                                    : CardStopMatch::ExternalCode;
+                z.boarding = f.at("salgono").get<int>();
+                z.alighting = f.at("scendono").get<int>();
+                z.loaded_km = c.decimale(f, "km_pieni");
+                z.empty_km = c.decimale(f, "km_vuoti");
+                const std::string a = c.testo(f, "accompagnatore");
+                z.escort = a == "sale" ? AssistantMove::Boards : a == "scende" ? AssistantMove::Alights : AssistantMove::None;
+                z.src = c.src(indice(pv + "/scheda/fermate", q));
+                k.stops.push_back(std::move(z));
+            }
+            for (const auto& g : c.elenco(s, "date")) k.dates.push_back(c.data(g));
+            y.src = c.src(pv);
+            x.versions.push_back(std::move(y));
+        }
+        x.src = c.src(p);
+        pk.service_cards.push_back(std::move(x));
+    }
+    const auto& tolte = c.elenco(d, "tolte");
+    for (std::size_t i = 0; i < tolte.size(); ++i) {
+        const auto& o = tolte[i];
+        RemovedCardVersions x;
+        x.card = o.at("scheda").get<std::string>();
+        x.id = o.at("id").get<std::string>();
+        for (const auto& n : o.at("versioni")) x.versions.push_back(n.get<int>());
+        x.reference = o.at("riferimento").get<std::string>();
+        x.date = c.data(o.at("data"));
+        x.src = c.src(indice("/tolte", i));
+        pk.removed_cards.push_back(std::move(x));
+    }
+}
+
 void converti(const std::string& file, const JsonDati& d, Package& pk) {
     using Funzione = void (*)(const JsonDati&, Package&);
     static const std::vector<std::pair<const char*, Funzione>> conversioni = {
@@ -2133,7 +2298,7 @@ void converti(const std::string& file, const JsonDati& d, Package& pk) {
         {"tempi_sosta.json", tempi_sosta}, {"persone.json", persone}, {"assenze.json", assenze}, {"fermi.json", fermi},
         {"turni.json", turni}, {"rotazioni.json", rotazioni}, {"servizi_fissi.json", servizi_fissi},
         {"assegnazioni.json", assegnazioni}, {"blocchi.json", blocchi}, {"profili_elenchi.json", profili_elenchi},
-        {"elenco_utenti.json", elenco_utenti}};
+        {"elenco_utenti.json", elenco_utenti}, {"profili_schede.json", profili_schede}, {"schede_servizi.json", schede_servizi}};
     for (const auto& [nome, f] : conversioni)
         if (file == nome) return f(d, pk);
     throw std::logic_error("file del formato senza conversione: " + file);

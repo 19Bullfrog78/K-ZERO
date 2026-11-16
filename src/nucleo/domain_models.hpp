@@ -995,6 +995,7 @@ struct Service {
     VehicleRules rules;                       // proprie del servizio, se diverse dal contratto
     std::vector<PassengerGroup> groups;       // la domanda
     std::vector<Ref> competences;             // competenze richieste a chi lo fa (versione 2; dato particolare)
+    std::optional<bool> individual;           // K-021, versione 4: servizio individualizzato, per una persona sola (dato particolare)
     Source src;
 };
 
@@ -1784,6 +1785,122 @@ struct ClientList {
     Source src;
 };
 
+// --- Schede dei servizi del committente (K-021) ----------------------------------------------------------------------------
+// Il committente manda una scheda per ogni giro (un servizio, un verso, un periodo). Chi le riceve le copia in un modello Excel di
+// K-Zero; come e' fatto il modello sta in un profilo (profili_schede.json), un dato: nomi dei fogli, titoli, parole, separatori. Il
+// programma conosce solo le forme (es. cadenze a giorni segnati o a date elencate), mai le parole di un committente. Le schede lette
+// stanno nel registro (schede_servizi.json) con le loro versioni; ognuna fa un servizio, un gruppo, una corsa e un calendario.
+
+enum class CadenceForm { MarkedDays, ListedDates };   // giorni_segnati, date_elencate
+struct CardProfileCadence {
+    std::string word;
+    CadenceForm form = CadenceForm::MarkedDays;
+};
+struct CardProfileService {   // un testo di verso e momento (es. "Andata Mattino") e il verso in K-Zero
+    std::string text;
+    Direction direction = Direction::Outbound;
+};
+struct CardProfileDay {
+    std::string column;   // titolo della colonna del giorno (es. "Lu")
+    Weekday day = Weekday::Monday;
+};
+struct CardProfile {
+    Code code;
+    std::string name;
+    Ref client;
+    std::string sheet_cards, sheet_stops, sheet_dates;
+    std::string ext_system, ext_card, ext_nr, ext_service, ext_school, ext_stop, ext_calendar;
+    struct CardColumns {
+        std::string nr, id, service, schools, from, to, pupils, individual, equipped, total_days, total_loaded_km, total_empty_km,
+            calendar, cadence, new_or_change;
+    } card_cols;
+    struct StopColumns {
+        std::string nr, time, point, home, boarding, alighting, loaded_km, empty_km, escort;
+    } stop_cols;
+    struct DateColumns {
+        std::string nr, date;
+    } date_cols;
+    std::vector<CardProfileDay> days;
+    std::vector<std::string> mark_words;
+    std::vector<CardProfileService> services;
+    std::string schools_sep, nr_sep, date_sep, time_sep;
+    std::vector<CardProfileCadence> cadences;
+    std::string escort_word;
+    std::vector<std::string> escort_boards, escort_alights;
+    std::vector<std::string> new_words, change_words;
+    ServiceKind service_kind = ServiceKind::School;
+    std::string service_kind_description;
+    GroupType group_type = GroupType::Students;
+    std::string group_type_description;
+    TimeFreedom freedom = TimeFreedom::Free;
+    std::optional<int> agree_threshold_min;
+    Source src;
+};
+
+enum class CardStopMatch { School, ExternalCode, Name, Home };   // scuola, codice esterno, nome, casa (codice del luogo privato)
+struct CardStop {
+    Minutes time = 0;
+    Code place;
+    CardStopMatch match = CardStopMatch::ExternalCode;
+    int boarding = 0, alighting = 0;              // come sulla scheda: l'accompagnatore compreso
+    std::optional<double> loaded_km, empty_km;    // scritti su questa riga: dal passaggio prima che ha dei km (mai 0 se vuoti)
+    AssistantMove escort = AssistantMove::None;   // l'accompagnatore sale o scende qui
+    int row = 0;                                  // riga del foglio delle fermate (0 se la scheda viene dal registro)
+    Source src;
+};
+// Una scheda come e' stata letta (la copia nel registro).
+struct Card {
+    std::string nr;
+    std::string service_text;   // verso e momento, come sul file
+    Direction direction = Direction::Outbound;
+    std::vector<Code> schools;
+    Day from = 0, to = 0;       // attivazione, disattivazione
+    Weekdays days;
+    int pupils = 0;             // Totali alunni (l'accompagnatore compreso)
+    std::optional<bool> individual, equipped;   // dati particolari: non noti a chi non puo' leggerli
+    int total_days = 0;
+    double total_loaded_km = 0, total_empty_km = 0;
+    std::string calendar_word;
+    Code base_calendar;
+    std::string cadence_word;
+    CadenceForm cadence_form = CadenceForm::MarkedDays;
+    bool is_change = false;     // "Modifica" (altrimenti "Scheda nuova")
+    std::vector<CardStop> stops;
+    std::vector<Day> dates;     // con la cadenza a date elencate
+};
+enum class ChoiceMode { Activation, TakenInCharge, Date };   // attivazione, presa in carico, un'altra data
+enum class ChoiceFrom { None, File, Card };                   // nessuna scelta serviva, --validita, --validita-scheda
+struct CardVersion {
+    int number = 1;
+    DateRange valid;                     // dove vale in K-Zero
+    std::optional<Day> previous_end;     // la fine che aveva la versione di prima, se questa l'ha accorciata
+    std::vector<int> removed;            // versioni tolte da questa (cominciavano dalla sua data in poi)
+    Day taken = 0;                       // presa in carico
+    std::string reference;
+    ChoiceMode mode = ChoiceMode::Activation;
+    ChoiceFrom from = ChoiceFrom::None;
+    Code service, group, trip, calendar;
+    Card card;
+    Source src;
+};
+struct ServiceCard {
+    Code code;
+    std::string id;   // l'ID della scheda del committente
+    Ref client, profile, contract;
+    std::vector<CardVersion> versions;
+    Source src;
+};
+// Versioni tolte con kzero togli-scheda (scritte per errore): restano scritte con il riferimento e la data; i loro numeri non si
+// danno piu'.
+struct RemovedCardVersions {
+    Code card;
+    std::string id;
+    std::vector<int> versions;
+    std::string reference;
+    Day date = 0;
+    Source src;
+};
+
 // Tutti i dati di un pacchetto. I luoghi privati (case) stanno insieme ai pubblici, segnati da is_private.
 struct Package {
     Manifest manifest;
@@ -1815,6 +1932,10 @@ struct Package {
     std::vector<ReadingProfile> reading_profiles;
     std::vector<ClientList> client_lists;
     int list_last_number = 0;    // ultimo numero dei codici degli utenti dell'elenco dato dal programma
+    // K-021: profili delle schede dei servizi e registro delle schede lette.
+    std::vector<CardProfile> card_profiles;
+    std::vector<ServiceCard> service_cards;
+    std::vector<RemovedCardVersions> removed_cards;
 };
 
 // --- Regole del mestiere sulle corse --------------------------------------------------------

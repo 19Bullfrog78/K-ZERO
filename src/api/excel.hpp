@@ -62,6 +62,7 @@ struct Riga {
 
 struct Foglio {
     std::vector<Riga> righe;    // solo le righe con almeno un valore, in ordine
+    bool date1904 = false;      // K-021: la cartella di lavoro conta le date dal 1904 (altrimenti dal 1900)
 };
 
 class ErroreExcel : public std::runtime_error {

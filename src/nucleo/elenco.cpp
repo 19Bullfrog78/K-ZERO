@@ -1266,6 +1266,8 @@ std::set<Code> all_codes(const Package& p, bool with_list_users) {
     tutti(p.fixed);
     tutti(p.blocks);
     tutti(p.reading_profiles);
+    tutti(p.card_profiles);   // K-021
+    tutti(p.service_cards);
     if (with_list_users)
         for (const ClientList& l : p.client_lists) tutti(l.users);
     return s;

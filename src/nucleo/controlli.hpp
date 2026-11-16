@@ -67,6 +67,23 @@ enum class Check {
     ListFileNewerValue,        // il file ha un terzo valore: vince il file (variante 1: colonna che il profilo non ha piu')
     ListAddedNowInFile,        // utente aggiunto a mano, ora nel file: vale il file, un campo diverso
     ListRemovedStillInFile,    // utente tolto a mano che il file ha ancora: resta fuori
+    // Schede dei servizi (K-021, schede.hpp): sulle schede lette (solo kzero leggi-schede) ...
+    CardUnreadable,            // scheda che non si legge (CardFault): ferma
+    CardRowWithoutCard,        // riga del foglio delle fermate o delle date senza la sua scheda
+    CardChoiceMissing,         // attivazione prima della presa in carico, senza una scelta: ferma
+    CardTotalDaysDiffer,       // Tot Giorni diverso dai giorni del calendario nel periodo
+    CardListedDateOutside,     // date elencate fuori dai giorni segnati o dai giorni del calendario di base
+    CardNewOrChangeOdd,        // "Scheda nuova" con un ID gia' nel registro, o "Modifica" con un ID mai visto
+    CardEndedBeforeTaken,      // la scheda finisce prima della presa in carico
+    CardNrChanged,             // lo stesso ID con un Nr diverso
+    CardChosenBeforeTaken,     // versione nuova con la data scelta prima della presa in carico: giornate che cambiano
+    // ... e sul registro (anche kzero controlla).
+    CardServiceOverlap,        // schede dello stesso servizio con periodi che si sovrappongono
+    CardElementChanged,        // servizio, gruppo, corsa o calendario di una scheda non piu' quelli della scheda (o mancanti)
+    CardEscortMissing,         // corsa di una scheda con qualcuno a bordo senza l'accompagnatore, dove il regolamento lo chiede
+    CardTripPartKmUnknown,     // pezzo di una corsa di una scheda in un turno: i km del pezzo non si sanno
+    CardProfileInvalid,        // profilo delle schede ambiguo (una parola per due cose)
+    CardRegisterInvalid,       // registro incoerente (ID doppio, versioni fuori ordine)
     // Turni (K-008): errori.
     ShiftPartInvalid,
     ShiftItemsOrder,
@@ -200,6 +217,8 @@ enum class Element {
     Regime, WorkRule,
     // K-019
     ReadingProfile, ClientList, ListUser,
+    // K-021
+    CardProfile, ServiceCard,
 };
 
 // Un valore da mettere nel messaggio, al posto di {nome}.

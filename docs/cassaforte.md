@@ -90,6 +90,14 @@ Una regola sola, ricavata dalle marcature degli schemi (`x-kzero-classe`, src/ap
   insieme); gli altri vedono il codice del committente. Nel demo chiuso: chi ha tutti e due i permessi vede CP-01 (il
   matrimonio) e CP-02 (il noleggio verso il centro diurno); chi ha solo i personali vede CP-01 e di CP-02 solo il codice; chi
   ha solo i particolari vede i codici;
+- (K-021) le **schede dei servizi** lette con `kzero leggi-schede` (formato-dati.md, `schede_servizi.json`): nella cassaforte, con
+  le stesse classi degli schemi e nessuna regola nuova, il tipo del servizio e del gruppo, la pedana obbligatoria, il servizio
+  **individualizzato** (servizi.json versione 4), l'assistente richiesto e, nel registro delle schede, le due caselle
+  "individualizzato" e "attrezzato" della copia della scheda (riconosciute dal numero della versione, `x-kzero-chiave`). Le case
+  porta a porta che le schede creano hanno solo il codice e il tipo (nessun nome, indirizzo o posizione: niente nella
+  cassaforte finche' il mandato del legame con le persone non le completa); con il porta a porta sensibile, o un giro che passa
+  da un luogo sensibile, sono legate come le altre case. Scrivono nella cassaforte solo chi ha i dati personali e particolari,
+  con la scrittura dei comandi dell'elenco (pacchetto nuovo in memoria, riaperto con la password, poi cassaforte e file normali);
 - per la stessa ragione **un campo personale dentro un dato particolare** va tra i legati (regola ricavata dagli schemi, K-011
   aggiunta 2): oggi motivo e chi della dichiarazione del modo delle corse (dato particolare). Chi ha solo i particolari
   riceve la dichiarazione senza motivo e chi; chi ha solo i personali non la riceve. Un elemento marcato intero non puo'

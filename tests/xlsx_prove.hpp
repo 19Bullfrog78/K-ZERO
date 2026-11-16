@@ -222,7 +222,8 @@ struct Foglio {
 };
 
 // Le parti di un file .xlsx come le scrive Excel (ridotte all'essenziale), dai fogli.
-inline std::vector<Parte> parti_xlsx(const std::vector<Foglio>& fogli, int metodo = 8) {
+// date1904 (K-021): la cartella di lavoro conta le date dal 1904.
+inline std::vector<Parte> parti_xlsx(const std::vector<Foglio>& fogli, int metodo = 8, bool date1904 = false) {
     std::vector<std::string> condivisi;
     std::vector<Parte> parti;
     std::string tipi = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n"
@@ -238,7 +239,8 @@ inline std::vector<Parte> parti_xlsx(const std::vector<Foglio>& fogli, int metod
                      metodo));
     std::string cartella = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n"
                            "<workbook xmlns=\"http://schemas.openxmlformats.org/spreadsheetml/2006/main\" "
-                           "xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\"><sheets>";
+                           "xmlns:r=\"http://schemas.openxmlformats.org/officeDocument/2006/relationships\">" +
+                           std::string(date1904 ? "<workbookPr date1904=\"1\"/>" : "") + "<sheets>";
     std::string rel = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"yes\"?>\n"
                       "<Relationships xmlns=\"http://schemas.openxmlformats.org/package/2006/relationships\">";
     for (std::size_t f = 0; f < fogli.size(); ++f) {
@@ -289,7 +291,9 @@ inline std::vector<Parte> parti_xlsx(const std::vector<Foglio>& fogli, int metod
     return parti;
 }
 
-inline std::string file_xlsx(const std::vector<Foglio>& fogli, int metodo = 8) { return Archivio{parti_xlsx(fogli, metodo), 0}.scrivi(); }
+inline std::string file_xlsx(const std::vector<Foglio>& fogli, int metodo = 8, bool date1904 = false) {
+    return Archivio{parti_xlsx(fogli, metodo, date1904), 0}.scrivi();
+}
 inline std::string file_righe(const std::vector<std::vector<std::string>>& righe, int metodo = 8) {
     return file_xlsx(std::vector<Foglio>{Foglio{"Foglio1", righe, false}}, metodo);
 }
