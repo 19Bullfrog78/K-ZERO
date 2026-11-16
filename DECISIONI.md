@@ -286,3 +286,43 @@ Formato: data - decisione - perche'.
   l'aggiunta saltava i codici usati nel pacchetto, ma non quelli dell'elenco che sta cambiando se quell'elenco non e' ancora nel
   pacchetto; nei comandi l'elenco viene sempre dal pacchetto (nessun guasto vero), ma la regola deve valere da sola: ora salta
   anche quelli.
+- 2026-11-15 - K-021 - **Risposte dell'arbitro alle domande prima del codice** (D1-D9, P1-P14, C1-C9, con un'aggiunta del
+  supervisore): **il modello ha tre fogli** (D1 A: Schede, Fermate, Date), legati dal Nr confrontato senza badare agli spazi intorno
+  alla barra. **L'accompagnatore** (D2, ne' A ne' B, dai fatti di una scheda vera dell'infanzia): sulla scheda la parola sta dentro il
+  punto di raccolta della prima e dell'ultima riga, e i numeri lo comprendono; nel modello una colonna "Accompagnatore" (parole del
+  profilo per sale e scende) e il punto senza la parola; il programma toglie l'accompagnatore dai numeri del gruppo solo dove lo dice
+  la colonna, scrive `assistente: sale/scende` sulla corsa e `assistente_richiesto` sul gruppo, ferma la scheda se sale dove St.
+  Car. e' 0 (scende dove St. Scar. e' 0), scende prima di salire, resta a bordo o la parola e' dentro il punto; piu' coppie in ordine
+  ammesse. **Due scuole** (D3 A): un gruppo solo, senza scuola. **Data prima della presa in carico per una versione nuova** (D4 B,
+  regola di ALP): ammessa, mai di base; l'uscita dice quante giornate prima della presa in carico cambiano e quali versioni si
+  tolgono; "i giorni passati non cambiano mai" vuol dire i giorni prima della data **scelta**. **Individualizzato** (D5 B):
+  servizi.json versione 4 (`individualizzato`, particolare; la 3 si legge ancora, il demo resta alla sua versione); nel registro
+  resta come copia della scheda. D6 A (il registro tiene la copia della scheda), D7 A (togliere l'ultima versione; `--tutte`), D8 A
+  (la casa con un codice di luogo privato che non contiene mai nomi o indirizzi), D9 A (codici dal Nr). P1-P14 accettate; C1-C9
+  accettati.
+- 2026-11-15 - K-021 - **Km scritti solo su alcune righe** (K1, dalle schede vere): i km di una riga coprono il tratto dalla riga prima
+  che ha dei km; una cella vuota e' "non scritto", mai 0; in una corsa fatta da una scheda `passaggi[].km` sono i km della riga e
+  `km_totali` il piede (route_km usa gia' i totali). Il solo calcolo che leggeva i km dei passaggi come km di un tratto era il pezzo di
+  corsa di un turno (turni.cpp): per una corsa di una scheda i km di un pezzo si sanno solo se i suoi capi hanno dei km (o sono i capi
+  della corsa); altrimenti contano 0 con l'avviso K-CTR-172, mai una somma sbagliata in silenzio.
+- 2026-11-15 - K-021 - **Avviso dell'accompagnatore con la regola dei dati** (aggiunta del supervisore): K-CTR-171 usa il parametro
+  `assistente_a_bordo` del regolamento del contratto (nessun valore nel programma: senza il parametro nessun avviso), solo sulle corse
+  fatte da una scheda (le uscite di oggi non cambiano; lo stesso controllo su tutte le corse, con il mezzo del turno, verra' con la
+  fotografia dei giri). Con piu' scuole valgono i gradi di tutte (prudente); una condizione con i posti non si decide senza il mezzo:
+  una variante lo dice. Il controllo richiede i dati particolari (le condizioni possono usare il tipo del servizio o del gruppo) e
+  rivela un dato particolare quando la condizione che vale e' su un tipo, un'esigenza o un centro.
+- 2026-11-15 - K-021 - **Le versioni e i loro elementi**: una versione = un servizio, un gruppo, una corsa, un calendario, con i codici
+  dal Nr (`S-`, `G-`, `C-`, `CAL-`, poi `-V2`...); un codice gia' usato si salta al numero dopo; i numeri delle versioni tolte con
+  `kzero togli-scheda` non si ridanno mai (restano nel registro, con riferimento e data). Una versione nuova accorcia quella che vale
+  il giorno prima della data scelta e toglie quelle che cominciano da quella data in poi; il calendario accorciato si rifa' dalla
+  versione (anche le date una per una dopo la fine se ne vanno: una data aggiunta varrebbe anche fuori dal periodo). Gli elementi delle
+  versioni che restano non si rifanno mai (un profilo cambiato dopo non cambia i giorni passati). Il confronto con il pacchetto
+  (K-CTR-170, kzero controlla) guarda solo i dati comuni che vengono dalla scheda: niente tipo, pedana, nome, liberta' oraria, codici
+  esterni (dipendono dal profilo o sono riservati).
+- 2026-11-15 - K-021 - **Le uscite delle schede senza i dati particolari** (trovato dalla prova dei comandi): tra le cose che cambiano
+  tra due versioni non si dice quale casella particolare cambia (lo direbbe); una voce sola, "dati_particolari", riservata. Uscite
+  nuove `schede` 1 e `togli_scheda` 1; descrivi resta alla versione 6 (i parametri nuovi usano forme che c'erano: `--validita-scheda`
+  e' una riga sola con le voci separate da ";", non un parametro ripetuto).
+- 2026-11-15 - K-021 - **Le date e gli orari che Excel trasforma in numeri**: in una colonna di date un numero e' una data di Excel,
+  nel sistema della cartella di lavoro (1900, o 1904 se la cartella lo dice: il lettore Excel legge ora quel segno); in una colonna di
+  orari un numero e' una frazione del giorno (fino a 47:59). Una data fuori dal 1900-2100 o un orario oltre 47:59 fermano la scheda.
