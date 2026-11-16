@@ -296,8 +296,8 @@ void aggiungi_schede(std::vector<DefinizioneControllo>& c) {
                   "periodo)."}});
     // K-022: la domanda di un gruppo (anche fuori dalle schede).
     c.push_back({Check::DemandSamePlaceTwice, "K-CTR-175", A, N, "Stesso luogo due volte nella domanda di un gruppo",
-                 {"Gruppo {gruppo}: il luogo {luogo} e' due volte nella domanda. Unire le voci (salgono e scendono sommati): finche' "
-                  "sono due, il confronto con le corse (K-CTR-042) non e' affidabile."}});
+                 {"Gruppo {gruppo}: il luogo {luogo} e' due volte nella domanda. Unire le voci in una sola (salgono e scendono "
+                  "sommati): i controlli contano gia' il luogo una volta sola, con le voci sommate."}});
 }
 
 // K-019: l'elenco utenti del committente. Sui dati (kzero controlla) e sulle righe del file letto (kzero leggi-elenco).

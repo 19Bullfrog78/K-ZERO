@@ -935,7 +935,7 @@ Gruppo di passeggeri (`servizi[].domanda.gruppi[]`):
 | `scuola` | no | comune | Scuola o centro di arrivo (andata) o di partenza (ritorno): da qui il grado |
 | `finestra` | no | comune | `dalle`, `alle`: finestra oraria di arrivo (andata) o di partenza (ritorno) |
 | `conteggi` | si' | comune | `esatti`, `stimati` oppure `non_noti` (es. gli utenti di una linea): con `non_noti` le fermate non hanno numeri |
-| `fermate[]` | si' | comune | Fermate di salita e di discesa: `luogo`, `salgono`, `scendono`. Un luogo una volta sola, con tutte le persone che salgono e scendono li' (K-022: due voci con lo stesso luogo danno l'avviso K-CTR-175, perche' il confronto con le corse non e' piu' affidabile) |
+| `fermate[]` | si' | comune | Fermate di salita e di discesa: `luogo`, `salgono`, `scendono`. Un luogo una volta sola, con tutte le persone che salgono e scendono li' (K-022: due voci con lo stesso luogo danno l'avviso di pulizia K-CTR-175; i controlli le sommano) |
 | `fermate[].carrozzine` | no | particolare | Persone che salgono a questa fermata e viaggiano **sedute sulla carrozzina** (servono pedana e posto carrozzina). Chi viaggia su un posto normale con la carrozzina piegata non conta qui, ma tra gli ausili piegati |
 | `fermate[].ausili_piegati` | no | particolare | Ausili piegati da caricare a questa fermata per chi sale qui: carrozzine piegate, deambulatori e altri ausili dichiarati |
 | `assistente_richiesto` | no | particolare | Il gruppo chiede l'assistente a bordo (obbligatorio se un passeggero del gruppo ne ha bisogno: errore K-CTR-047) |
@@ -960,8 +960,9 @@ Passeggero (`passeggeri[]`):
 I conteggi del gruppo e i passeggeri uno per uno devono coincidere (errore K-CTR-031): le carrozzine di una
 fermata sono i passeggeri che salgono li' con `carrozzina: sulla_carrozzina`; gli ausili piegati sono le
 carrozzine `piegata` piu' gli `ausili_piegati` dei passeggeri che salgono li'. La domanda e le persone
-caricate dalle corse possono differire (avviso K-CTR-042: le corse dello stesso calendario si sommano per luogo, e la somma si
-confronta con la voce di quel luogo; per questo un luogo sta una volta sola nella domanda, avviso K-CTR-175). Un passeggino non si dichiara e non si pianifica.
+caricate dalle corse possono differire (avviso K-CTR-042: le corse dello stesso calendario e le voci della domanda si sommano per
+luogo, e si confrontano le somme; un luogo scritto due volte nella domanda ha l'avviso di pulizia K-CTR-175). Anche i conteggi e i
+passeggeri uno per uno (K-CTR-031) si confrontano per luogo, con le voci sommate. Un passeggino non si dichiara e non si pianifica.
 
 ```json
 {

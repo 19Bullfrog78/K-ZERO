@@ -974,6 +974,25 @@ private:
             }
     }
 
+    // K-022: la domanda di un gruppo per luogo: le voci dello stesso luogo sommate (salgono, scendono, carrozzine, ausili piegati),
+    // nell'ordine della prima voce e con la sua posizione. I confronti per luogo (K-CTR-031, K-CTR-042) usano questa, mai le voci
+    // una per una: un luogo scritto due volte non da' mai un problema falso (ha solo l'avviso K-CTR-175).
+    static std::vector<DemandStop> demand_by_place(const PassengerGroup& g) {
+        std::vector<DemandStop> out;
+        for (const DemandStop& d : g.stops) {
+            const auto it = std::find_if(out.begin(), out.end(), [&](const DemandStop& x) { return x.place.code == d.place.code; });
+            if (it == out.end()) {
+                out.push_back(d);
+                continue;
+            }
+            it->boarding += d.boarding;
+            it->alighting += d.alighting;
+            it->wheelchairs += d.wheelchairs;
+            it->folded_aids += d.folded_aids;
+        }
+        return out;
+    }
+
     // --- Conteggi del gruppo e passeggeri uno per uno --------------------------------------------
 
     void passenger_counts() {
@@ -1004,7 +1023,9 @@ private:
                         }
                     }
                 }
-                for (const DemandStop& d : g.stops) {
+                // K-022: per luogo, con le voci della domanda dello stesso luogo sommate (K-CTR-175 chiede di unirle): mai un errore
+                // falso per un luogo scritto due volte. Il problema sta sulla prima voce del luogo.
+                for (const DemandStop& d : demand_by_place(g)) {
                     const Expected e = expected[d.place.code];
                     const Param place = ref_param("luogo", Element::Place, d.place.code);
                     if (d.boarding != e.boarding)
@@ -1190,7 +1211,8 @@ private:
                 for (const auto& [calendar, by_place] : by_calendar->second) {
                     const Param cal = ref_param("calendario", Element::Calendar, calendar);
                     std::set<Code> in_demand;
-                    for (const DemandStop& d : g.stops) {
+                    // K-022: per luogo, con le voci della domanda dello stesso luogo sommate (come le corse).
+                    for (const DemandStop& d : demand_by_place(g)) {
                         in_demand.insert(d.place.code);
                         const auto it = by_place.find(d.place.code);
                         const Load l = it == by_place.end() ? Load{} : it->second;

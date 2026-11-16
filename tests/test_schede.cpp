@@ -627,9 +627,9 @@ TEST(Schede, DueGiriUnLuogoUnaVoltaSolaNellaDomanda) {
 }
 
 // K-022: un gruppo scritto con lo stesso luogo due volte nella domanda (qui come lo scriveva la lettura del K-021: una voce per
-// passaggio). Il confronto con le corse (K-CTR-042) da' due avvisi falsi; l'avviso nuovo K-CTR-175 lo dice, sulla seconda voce, una
-// volta per luogo; il confronto con la scheda (K-CTR-170) vede che il gruppo non e' quello che la scheda da'. Sabotaggio: l'avviso
-// che manca.
+// passaggio). Il confronto con le corse (K-CTR-042) somma le voci dello stesso luogo: nessun avviso falso; l'avviso di pulizia
+// K-CTR-175 lo dice, sulla seconda voce, una volta per luogo; il confronto con la scheda (K-CTR-170) vede che il gruppo non e' quello
+// che la scheda da'. Sabotaggi: l'avviso che manca; K-CTR-042 sulle voci una per una.
 TEST(Schede, StessoLuogoDueVolteAvvisoNuovo) {
     const Lettura l = lettura_di_prova();
     const Letto x = leggi(l, due_giri(), attivazione());
@@ -647,8 +647,8 @@ TEST(Schede, StessoLuogoDueVolteAvvisoNuovo) {
     EXPECT_EQ(due[0].where.pointer.substr(due[0].where.pointer.size() - 10), "/fermate/5") << due[0].where.pointer;
     EXPECT_EQ(messaggi(vecchia, due)[0],
               "K-CTR-175 v0: Gruppo G-4000300-1: il luogo L-INFANZIA (Lagobello, Scuola dell'infanzia) e' due volte nella domanda. Unire "
-              "le voci (salgono e scendono sommati): finche' sono due, il confronto con le corse (K-CTR-042) non e' affidabile.");
-    EXPECT_EQ(sui_gruppi(v, {"G-4000300-1"}, Check::DemandDiffersFromTrips).size(), 2u);   // gli avvisi falsi che K-CTR-175 spiega
+              "le voci in una sola (salgono e scendono sommati): i controlli contano gia' il luogo una volta sola, con le voci sommate.");
+    EXPECT_TRUE(sui_gruppi(v, {"G-4000300-1"}, Check::DemandDiffersFromTrips).empty());   // K-CTR-042 somma le voci: niente di falso
     const std::vector<Problem> e = schede::controlla_elementi(vecchia);
     ASSERT_EQ(e.size(), 1u);
     EXPECT_NE(messaggi(vecchia, e)[0].find("S-4000300-1"), std::string::npos) << messaggi(vecchia, e)[0];

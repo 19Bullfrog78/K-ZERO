@@ -773,6 +773,43 @@ TEST(Controlli, K_CTR_175_stesso_luogo_due_volte_nella_domanda) {
     d.alighting = 0;
     g.stops.push_back(d);   // tre volte: sempre un avviso solo per quel luogo
     EXPECT_EQ(quanti(p, Check::DemandSamePlaceTwice), 1);
+    EXPECT_EQ(quanti(p, Check::DemandDiffersFromTrips), 0);   // le voci si sommano: 12 + 12 + 0 = 24, come le corse
+}
+
+// K-022 (B): un gruppo scritto a mano con lo stesso luogo due volte e i passeggeri uno per uno (G-ASILO: Sorgenta 2 + 2, l'asilo 4 +
+// 3). I confronti per luogo sommano le voci: niente K-CTR-031 ne' K-CTR-042 falsi, solo l'avviso di pulizia K-CTR-175 (uno per luogo).
+// E una differenza vera resta: Sorgenta 2 + 3 contro 4 passeggeri da' K-CTR-031 sulla prima voce, con la somma (5). Sabotaggi:
+// K-CTR-031 o K-CTR-042 sulle voci una per una.
+TEST(Controlli, K_CTR_031_e_042_per_luogo_con_le_voci_sommate) {
+    Package p = demo();
+    auto& g = gruppo(p, "G-ASILO");
+    g.stops[0].boarding = 2;   // F-SORGENTA: 4 = 2 + 2
+    g.stops[2].alighting = 4;  // L-INFANZIA: 7 = 4 + 3
+    DemandStop a = g.stops[0];
+    a.src = dove("servizi.json", "/servizi/4/domanda/gruppi/0/fermate/3");
+    DemandStop b = g.stops[2];
+    b.alighting = 3;
+    b.src = dove("servizi.json", "/servizi/4/domanda/gruppi/0/fermate/4");
+    g.stops.push_back(a);
+    g.stops.push_back(b);
+    const std::vector<Problem> v = check_package(p);
+    const auto conta = [&](Check c) { return std::count_if(v.begin(), v.end(), [c](const Problem& x) { return x.check == c; }); };
+    EXPECT_EQ(conta(Check::CountsDifferFromPassengers), 0) << elenco(v);
+    EXPECT_EQ(conta(Check::DemandDiffersFromTrips), 0) << elenco(v);
+    EXPECT_EQ(conta(Check::DemandSamePlaceTwice), 2) << elenco(v);
+    EXPECT_TRUE(segnala(p, Check::DemandSamePlaceTwice, 0, "servizi.json", "/servizi/4/domanda/gruppi/0/fermate/3"));
+    EXPECT_TRUE(segnala(p, Check::DemandSamePlaceTwice, 0, "servizi.json", "/servizi/4/domanda/gruppi/0/fermate/4"));
+    // Una differenza vera resta, con la somma, sulla prima voce del luogo.
+    gruppo(p, "G-ASILO").stops[3].boarding = 3;
+    EXPECT_TRUE(segnala(p, Check::CountsDifferFromPassengers, 0, "servizi.json", "/servizi/4/domanda/gruppi/0/fermate/0"));
+    const std::vector<Problem> w = check_package(p);
+    const Problem* x = primo(w, Check::CountsDifferFromPassengers);
+    ASSERT_NE(x, nullptr);
+    EXPECT_EQ(parametro(*x, "conteggio")->number, 5);
+    EXPECT_EQ(parametro(*x, "passeggeri")->number, 4);
+    const Problem* y = primo(w, Check::DemandDiffersFromTrips);
+    ASSERT_NE(y, nullptr);
+    EXPECT_EQ(parametro(*y, "domanda")->number, 5);
 }
 
 TEST(Controlli, K_CTR_043_trasbordo_autorizzato_a_voce) {
