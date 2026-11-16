@@ -831,7 +831,7 @@
   versione diventa servizio, gruppo, corsa e calendario, il confronto K-CTR-170; src/api/comando_schede.cpp: `kzero leggi-schede` e
   `kzero togli-scheda`, uscite `schede` 1 e `togli_scheda` 1); il lettore Excel legge il sistema delle date del 1904; K-CTR-160 ...
   174, K-ERR-052 ... 055; il pezzo di una corsa di una scheda in un turno conta i km solo se i suoi capi ne hanno (turni.cpp,
-  K-CTR-172). Prove: test_schede (16), test_schede_comandi (5), la prova sistematica allargata a leggi-schede e togli-scheda (222
+  K-CTR-172). Prove: test_schede (16), test_schede_comandi (4), la prova sistematica allargata a leggi-schede e togli-scheda (222
   uscite), Unione con un pacchetto di prova delle schede (servizi 4, caselle del registro), 11 prove sul programma (uscite JSON con lo
   schema), bersaglio di fuzzing `schede-righe` e i due file nuovi tra i bersagli del pacchetto (39 in tutto). Trovato dalle prove: senza
   i dati particolari l'uscita diceva quale casella cambiava tra due versioni; ora dice solo che cambia un dato particolare. Trovato dal
