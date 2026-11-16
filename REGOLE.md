@@ -367,10 +367,10 @@ sono scritte come regolamento, con la fonte di ogni valore.
 
 # Parte 3 - Regole di lavoro delle sessioni
 
-## Controllo del modello (regola fissa, decisione di Mauro del 16/11/2026)
+## Controllo del modello (regola fissa, decisione del supervisore del 16/11/2026)
 Prima di qualunque altra cosa, in ogni sessione:
 1. Dichiara il modello su cui stai girando (nome e versione esatti) e l'effort, se lo vedi. Se l'effort non lo vedi, dillo.
-2. Se il mandato o il prompt indica un modello o un effort diverso da quello su cui giri, FERMATI: niente strumenti, niente letture, niente modifiche. Scrivi soltanto quale modello e' indicato e quale e' in esecuzione, cosi' Mauro puo' cambiarlo.
+2. Se il mandato o il prompt indica un modello o un effort diverso da quello su cui giri, FERMATI: niente strumenti, niente letture, niente modifiche. Scrivi soltanto quale modello e' indicato e quale e' in esecuzione, cosi' il supervisore puo' cambiarlo.
 3. Se il mandato non indica nessun modello, dichiara il tuo e prosegui.
 Motivo: un mandato pensato per un modello e fatto da un altro costa crediti e qualita' senza che nessuno se ne accorga.
 Ogni mandato porta questa riga in testa al primo paragrafo: «Dichiara il modello della sessione. Atteso <Modello versione> con effort <livello>: se e' un altro, fermati e dillo prima di qualunque altra cosa.»
