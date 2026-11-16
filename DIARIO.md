@@ -809,6 +809,9 @@
   classi dei valori di prima e i legati), sei prove sul programma (uscite JSON controllate con lo schema), un bersaglio di
   fuzzing nuovo (`elenco-campi`: 36 in tutto). Il primo giro dei semi del fuzzing ha trovato che l'aggiunta a mano non saltava i
   codici dell'elenco che cambia se non era ancora nel pacchetto (corretto: DECISIONI.md).
+- 2026-11-16 - Documenti (prova del controllo del modello). Decisione del supervisore del 16/11: ogni mandato porta in
+  testa il modello e l'effort attesi; la sessione dichiara su che modello gira e, se non e' quello atteso, si ferma prima
+  di qualunque lavoro. Questa voce e' la prima prova della regola.
 ## Bug e limiti noti
 - (K-018) L'avviso sui nomi liberi trova solo il nome scritto come nei dati (senza maiuscole ne' accenti, parole intere):
   non i nomi scritti male, i soprannomi, le iniziali, le sigle ("S-DIS"), un nome dentro una parola piu' lunga, le parole
