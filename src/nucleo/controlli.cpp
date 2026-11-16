@@ -7,6 +7,7 @@
 #include <tuple>
 
 #include "elenco.hpp"
+#include "schede.hpp"
 #include "orari.hpp"
 #include "pacchetto.hpp"
 #include "ricerca.hpp"
@@ -295,6 +296,8 @@ private:
             case Element::ReadingProfile: return idx_.reading_profile(c) != nullptr;
             case Element::ClientList:
             case Element::ListUser: return true;     // K-019: controllati in controlli_elenco (elenco.cpp)
+            case Element::CardProfile: return idx_.card_profile(c) != nullptr;
+            case Element::ServiceCard: return idx_.service_card(c) != nullptr;
         }
         return false;
     }
@@ -1298,6 +1301,7 @@ std::vector<Problem> check_package(const Package& p, const HoursRequest* request
     std::vector<Problem> out = Checker(p).run();
     const Index idx(p);
     check_lists(p, idx, out);   // K-019: profili di lettura ed elenchi utenti dei committenti
+    check_cards(p, idx, out);   // K-021: profili delle schede e registro delle schede
     PlanCollector collector(p);
     check_shifts(p, out, &collector);
     // Orari di lavoro (K-011): i dati, poi il piano di tutto il periodo (le giornate raccolte dai controlli sui turni).

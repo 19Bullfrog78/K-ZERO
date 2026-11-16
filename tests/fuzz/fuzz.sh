@@ -30,13 +30,13 @@ lavoro="$(cd "$lavoro" && pwd)"
 file_formato=(pacchetto.json aziende.json norme.json luoghi.json tratti.json regolamenti.json festivita.json
   calendari.json scuole.json committenti.json contratti.json gruppi_servizi.json servizi.json corse.json mezzi.json
   rimesse.json tempi_sosta.json persone.json assenze.json fermi.json turni.json rotazioni.json servizi_fissi.json
-  assegnazioni.json blocchi.json)
+  assegnazioni.json blocchi.json profili_schede.json schede_servizi.json)
 if [ $# -gt 0 ]; then
   bersagli=("$@")
 else
   bersagli=()
   for f in "${file_formato[@]}"; do bersagli+=("pacchetto-$f"); done
-  bersagli+=(parametri date-e-orari cassaforte cassaforte-voci registro registro-voci password elenco-archivio elenco-foglio elenco-righe elenco-campi)
+  bersagli+=(parametri date-e-orari cassaforte cassaforte-voci registro registro-voci password elenco-archivio elenco-foglio elenco-righe elenco-campi schede-righe)
 fi
 # Semi dei bersagli della cassaforte (K-010, chiavi casuali) e dell'elenco (K-019, file .xlsx costruiti dai testi): preparati a
 # ogni giro da rigioca_fuzz.
@@ -85,13 +85,13 @@ prova_bersaglio() {
       programma="$build/tests/fuzz_pacchetto"
       ambiente=(KZERO_FILE="$f")
       for semi in "$radice/esempi/demo" "$radice/esempi/demo-numeri" "$radice/tests/esempi/k007-demo" "$radice/tests/esempi/k011-orari" \
-                  "$radice/tests/esempi/k012-servizi"; do
+                  "$radice/tests/esempi/k012-servizi" "$radice/tests/esempi/k021-schede"; do
         [ -f "$semi/$f" ] && cp "$semi/$f" "$corpus/seme-$(basename "$semi")-$f"
       done
       ;;
     parametri) programma="$build/tests/fuzz_parametri"; cp "$radice/tests/fuzz/semi/parametri/"* "$corpus/" ;;
     date-e-orari) programma="$build/tests/fuzz_date_e_orari"; cp "$radice/tests/fuzz/semi/date-e-orari/"* "$corpus/" ;;
-    elenco-archivio|elenco-foglio|elenco-righe|elenco-campi)
+    elenco-archivio|elenco-foglio|elenco-righe|elenco-campi|schede-righe)
       programma="$build/tests/fuzz_elenco"
       ambiente=(KZERO_BERSAGLIO="$b")
       cp "$semi_cassaforte/$b/"* "$corpus/" ;;

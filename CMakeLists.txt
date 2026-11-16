@@ -272,6 +272,7 @@ add_library(kzero_nucleo STATIC
   src/nucleo/orari_regole.cpp
   src/nucleo/pacchetto.cpp
   src/nucleo/ricerca.cpp
+  src/nucleo/schede.cpp
   src/nucleo/tempo.cpp
   src/nucleo/turni.cpp
 )
@@ -303,6 +304,8 @@ add_library(kzero_api STATIC
   src/api/elenco_scrittura.cpp
   src/api/campi_ingresso.cpp
   src/api/comando_elenco_a_mano.cpp
+  src/api/comando_schede.cpp
+  src/api/schede_scrittura.cpp
   src/api/comando_giornata.cpp
   src/api/comando_ore.cpp
   src/api/comando_versione.cpp

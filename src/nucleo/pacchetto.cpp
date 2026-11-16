@@ -26,6 +26,8 @@ Index::Index(const Package& p) : package_(&p) {
     fill(fixed_, p.fixed);
     fill(blocks_, p.blocks);
     fill(profiles_, p.reading_profiles);
+    fill(card_profiles_, p.card_profiles);
+    fill(service_cards_, p.service_cards);
     for (const ClientList& l : p.client_lists) {
         client_lists_.emplace(l.client.code, &l);
         for (const ListUser& u : l.users) list_users_.emplace(u.code, &u);

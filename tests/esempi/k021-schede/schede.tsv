@@ -1,0 +1,4 @@
+Nr	ID	Servizio	Scuole	Attivazione	Disattivazione	Lu	Ma	Me	Gi	Ve	Sa	Do	Totali alunni	Servizio Individualizzato	Attrezzato	Tot Giorni	Tot Km Carico	Tot Km Vuoto	Calendario	Cadenza	Scheda nuova / Modifica
+4000123 / 3	5c1e2f40-0a1b-4c2d-8e3f-000000000001	Andata Mattino	Scuola primaria Valfonda	14/09/2026	12/06/2027	X	X	X	X	X			#9			#175	12,4	6,0	SCOLASTICO	Sempre	Scheda nuova
+4000124/1	5c1e2f40-0a1b-4c2d-8e3f-000000000002	Andata Mattino	Scuola media Valfonda; Scuola primaria Valfonda	#46279	#46550	X	X	X	X	X	X		#11			#210	15,2	3,5	SCOLASTICO	Sempre	Scheda nuova
+4000125 / 2	5c1e2f40-0a1b-4c2d-8e3f-000000000003	Ritorno Pomeriggio	Scuola primaria Valfonda	14/09/2026	12/06/2027	X		X		X			#8			#103	9,8	4,0	SCOLASTICO	Sempre	Scheda nuova

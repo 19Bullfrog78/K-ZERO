@@ -6,6 +6,7 @@
 // "Giornata della persona" e "giornata del mezzo" sono due viste degli stessi turni.
 
 #include <map>
+#include <set>
 #include <optional>
 #include <string>
 #include <unordered_map>
@@ -228,6 +229,7 @@ private:
     Index idx_;
     CalendarDays days_;
     std::unordered_map<const ShiftItem*, TripItem> trip_items_;
+    std::set<Code> card_trips_;   // K-021: le corse fatte da una scheda (i km dei passaggi coprono tratti piu' lunghi)
     std::unordered_map<const Service*, UsesByKind> service_uses_;
     // Per ogni rotazione, riga e passo: i turni del passo (posizioni in Package::shifts) e la persona della riga.
     struct RotationRowPlan {

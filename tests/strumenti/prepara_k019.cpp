@@ -1,6 +1,7 @@
 // K-Zero - strumento delle prove (K-019): scrive in una cartella nuova il pacchetto demo (incorporato nel programma) con i
 // profili di lettura di prova e i codici esterni di tests/esempi/k019-elenco, in chiaro. Le prove poi lo chiudono con kzero.
-// Uso: prepara_k019 <cartella dei file di prova> <cartella nuova>
+// Uso: prepara_k019 <cartella dei file di prova> <cartella nuova> [<cartella delle prove delle schede>]
+// K-021: con la terza cartella (tests/esempi/k021-schede) anche i codici esterni di calendari e luoghi e il profilo delle schede.
 #include <filesystem>
 #include <fstream>
 #include <iostream>
@@ -39,25 +40,29 @@ void aggiungi_codici(JsonDati& elenco, const JsonDati& codici) {
 }  // namespace
 
 int main(int argc, char** argv) {
-    if (argc != 3) {
-        std::cerr << "uso: prepara_k019 <cartella dei file di prova> <cartella nuova>\n";
+    if (argc != 3 && argc != 4) {
+        std::cerr << "uso: prepara_k019 <cartella dei file di prova> <cartella nuova> [<cartella delle prove delle schede>]\n";
         return 2;
     }
     const fs::path prove(argv[1]), out(argv[2]);
     fs::create_directories(out);
     const kzero::api::PacchettoIncorporato demo("esempi/demo");
     const JsonDati codici = JsonDati::parse(leggi(prove / "codici_esterni.json"));
+    const JsonDati schede = argc == 4 ? JsonDati::parse(leggi(fs::path(argv[3]) / "codici_esterni.json")) : JsonDati::object();
     for (const auto& v : demo.voci()) {
         const auto f = demo.leggi(v.nome, kzero::api::kMassimoByteFile);
-        if (v.nome == "scuole.json" || v.nome == "luoghi.json") {
+        if (v.nome == "scuole.json" || v.nome == "luoghi.json" || (argc == 4 && v.nome == "calendari.json")) {
             JsonDati d = JsonDati::parse(f.testo);
             if (v.nome == "scuole.json") aggiungi_codici(d.at("scuole"), codici.at("scuole"));
-            else aggiungi_codici(d.at("luoghi"), codici.at("luoghi"));
+            else if (v.nome == "luoghi.json") aggiungi_codici(d.at("luoghi"), codici.at("luoghi"));
+            for (const char* e : {"luoghi", "calendari"})
+                if (v.nome == std::string(e) + ".json" && schede.contains(e)) aggiungi_codici(d.at(e), schede.at(e));
             scrivi(out / v.nome, d.dump(2) + "\n");
         } else {
             scrivi(out / v.nome, f.testo);
         }
     }
     scrivi(out / "profili_elenchi.json", leggi(prove / "profili_elenchi.json"));
+    if (argc == 4) scrivi(out / "profili_schede.json", leggi(fs::path(argv[3]) / "profili_schede.json"));
     return 0;
 }

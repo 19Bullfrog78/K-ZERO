@@ -83,6 +83,10 @@ enum class Errore {
     SbloccoNonAmmesso,
     CampiScrittiMale,      // K-020: i campi di una modifica a mano (ingresso standard)
     ModificaNonAmmessa,    // K-020: una modifica a mano che non si puo' fare
+    ContrattoNonValido,    // K-021: --contratto che non c'e' o di un altro committente
+    ValiditaScrittaMale,   // K-021: --validita o --validita-scheda scritti male
+    SchedaNonTrovata,      // K-021: --scheda che non c'e' nel registro
+    ToglimentoNonAmmesso,  // K-021: kzero togli-scheda non si puo' fare
 };
 
 struct DefinizioneErrore {

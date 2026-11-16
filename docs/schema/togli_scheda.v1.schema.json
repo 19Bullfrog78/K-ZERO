@@ -1,0 +1,176 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "kzero - togli_scheda, versione 1",
+  "description": "Uscita di 'kzero togli-scheda --formato json' (K-021): le versioni tolte di una scheda scritta per errore, con i loro elementi, e la versione che riprende la sua fine. Solo codici, date e il riferimento scritto dall'utente (dato comune).",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "schema_versione",
+    "comando",
+    "utente",
+    "scheda",
+    "id",
+    "riferimento",
+    "data",
+    "scritto",
+    "versioni_tolte",
+    "elementi_tolti",
+    "scheda_tolta",
+    "versione_ripresa",
+    "avvisi",
+    "cassaforte"
+  ],
+  "properties": {
+    "schema": {
+      "const": "togli_scheda"
+    },
+    "schema_versione": {
+      "const": 1
+    },
+    "comando": {
+      "const": "togli-scheda"
+    },
+    "utente": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+    },
+    "scheda": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+    },
+    "id": {
+      "type": "string"
+    },
+    "riferimento": {
+      "type": "string"
+    },
+    "data": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+    },
+    "scritto": {
+      "type": "boolean"
+    },
+    "versioni_tolte": {
+      "type": "array",
+      "items": {
+        "type": "integer",
+        "minimum": 1
+      },
+      "minItems": 1
+    },
+    "elementi_tolti": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "versione",
+          "servizio",
+          "gruppo",
+          "corsa",
+          "calendario"
+        ],
+        "properties": {
+          "versione": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "servizio": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+          },
+          "gruppo": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+          },
+          "corsa": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+          },
+          "calendario": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+          }
+        }
+      }
+    },
+    "scheda_tolta": {
+      "type": "boolean"
+    },
+    "versione_ripresa": {
+      "oneOf": [
+        {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "versione",
+            "al"
+          ],
+          "properties": {
+            "versione": {
+              "type": "integer",
+              "minimum": 1
+            },
+            "al": {
+              "type": "string",
+              "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+            }
+          }
+        },
+        {
+          "type": "null"
+        }
+      ]
+    },
+    "avvisi": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "codice",
+          "messaggio"
+        ],
+        "properties": {
+          "codice": {
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "messaggio": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "cassaforte": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "generazione",
+        "voci_registro"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "generazione": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "voci_registro": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    }
+  }
+}

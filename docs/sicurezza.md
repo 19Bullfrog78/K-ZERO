@@ -172,7 +172,8 @@ riga e il campo, mai il valore. Un bersaglio di fuzzing (`elenco-campi`) prova l
 che i valori scritti a mano possono finire altrove sul PC se chi li scrive li copia da un file in chiaro o da una mail: e' fuori
 dal controllo del programma (consigli, sotto).
 
-**File Excel del committente** (K-019, `kzero leggi-elenco`). L'elenco utenti arriva da fuori in un file .xlsx: e' del
+**File Excel del committente** (K-019, `kzero leggi-elenco`; dal K-021 anche `kzero leggi-schede`, con i tre fogli del modello delle
+schede, ognuno letto con le stesse regole e gli stessi limiti). L'elenco utenti arriva da fuori in un file .xlsx: e' del
 committente, puo' essere rovinato o preparato apposta, e non si modifica mai. Come si legge (src/api/excel.hpp):
 - **lettura blindata** come per i file del pacchetto (solo un file normale, aperto senza attese, mai oltre il massimo di
   byte, anche se il sistema non dice la dimensione o il file cresce), senza il vincolo della cartella: il file lo nomina
@@ -406,6 +407,16 @@ non ha una password; non protegge da tutto. Detto onestamente:
   ancora diverso, la lettura non puo' ritrovare l'utente: e' "uscito + nuovo" come nel K-019, con l'avviso "forse lo stesso"
   (K-CTR-150) se la casa e' la stessa. Il riferimento di una modifica e' un testo comune scritto a mano: se contiene un nome,
   l'avviso sui nomi liberi (K-CTR-136) lo dice, ma un soprannome o un nome scritto male no (come per gli altri testi comuni).
+- **Le schede dei servizi** (K-021): il modello Excel in cui si copiano le schede non ha posto per indirizzi ne' nomi (la casa di un
+  utente si scrive con un codice di luogo privato, es. PAP-001, che non deve contenerli: e' un dato comune, l'avviso sui nomi
+  liberi lo controlla), ma resta un file in chiaro sul PC con i giri, gli orari e le caselle "Servizio Individualizzato" e
+  "Attrezzato" (dati sulla salute): va tenuto con le regole dei dati veri (fuori dalla cartella del deposito, sul disco cifrato) e
+  cancellato dopo la lettura, come il PDF del committente. Il file si legge con la stessa lettura blindata e gli stessi limiti
+  dei file Excel del K-019 (sotto "File Excel del committente"); nessun messaggio riporta il valore di una cella. La scheda PDF
+  ha in fondo la dichiarazione firmata del titolare: non si copia (dati personali che per pianificare non servono). Il numero
+  "Totali alunni" e i conteggi restano dati comuni (come i conteggi dei gruppi); con un servizio individualizzato un conteggio di
+  1 e una casa porta a porta dicono che il giro e' per una persona: la casella e' particolare, il conteggio no (caso C9, accettato
+  dall'arbitro).
 - **Le librerie del sistema** (libreria C e C++ del compilatore) non sono nell'elenco dei componenti: le aggiorna il
   sistema operativo.
 

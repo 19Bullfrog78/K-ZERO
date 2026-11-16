@@ -88,6 +88,10 @@ const std::vector<DefinizioneErrore>& catalogo_errori() {
             {Errore::SbloccoNonAmmesso, "K-ERR-049", CodiceUscita::ErroreParametri, "Sblocco non ammesso"},
             {Errore::CampiScrittiMale, "K-ERR-050", CodiceUscita::ErroreParametri, "Campi della modifica a mano scritti male"},
             {Errore::ModificaNonAmmessa, "K-ERR-051", CodiceUscita::ErroreParametri, "Modifica a mano dell'elenco non ammessa"},
+            {Errore::ContrattoNonValido, "K-ERR-052", CodiceUscita::ErroreParametri, "Contratto delle schede non valido"},
+            {Errore::ValiditaScrittaMale, "K-ERR-053", CodiceUscita::ErroreParametri, "Scelta della validita' scritta male"},
+            {Errore::SchedaNonTrovata, "K-ERR-054", CodiceUscita::ErroreParametri, "Scheda non presente nel registro"},
+            {Errore::ToglimentoNonAmmesso, "K-ERR-055", CodiceUscita::ErroreParametri, "Scheda da togliere non ammessa"},
         };
         std::sort(c.begin(), c.end(), [](const DefinizioneErrore& a, const DefinizioneErrore& b) {
             return a.codice < b.codice;

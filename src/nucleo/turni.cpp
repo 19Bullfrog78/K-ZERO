@@ -5,6 +5,8 @@
 #include <set>
 #include <tuple>
 
+#include "schede.hpp"
+
 namespace kzero {
 
 const Source& ShiftDay::person_position() const {
@@ -276,6 +278,7 @@ Planner::Planner(const Package& p) : p_(p), idx_(p), days_(idx_, p.manifest.peri
         }
         rotation_plan_.push_back(std::move(rows));
     }
+    card_trips_ = card_trips(p);
     for (const Shift& s : p.shifts)
         for (const ShiftItem& item : s.items) {
             if (!item.is_trip) continue;
@@ -652,10 +655,11 @@ std::vector<ShiftDay> Planner::day(Day d) const {
                     pi.loaded_km = t->loaded_km();
                     pi.empty_km = t->empty_km();
                 } else {
-                    for (std::size_t k = pr.from + 1; k <= pr.to; ++k) {
-                        pi.loaded_km += t->passages[k].loaded_km.value_or(0.0);
-                        pi.empty_km += t->passages[k].empty_km.value_or(0.0);
-                    }
+                    // K-021: in una corsa fatta da una scheda i km di un passaggio coprono il tratto dal passaggio prima che ha dei
+                    // km: se i capi del pezzo non ne hanno, i km del pezzo non si sanno (contati 0, con l'avviso K-CTR-172).
+                    const PartKm k = part_km(*t, pr.from, pr.to, card_trips_.count(t->code) > 0);
+                    pi.loaded_km = k.loaded;
+                    pi.empty_km = k.empty;
                 }
             } else {
                 const ShiftActivity& a = item.activity;

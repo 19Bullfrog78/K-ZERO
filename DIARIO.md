@@ -809,6 +809,39 @@
   classi dei valori di prima e i legati), sei prove sul programma (uscite JSON controllate con lo schema), un bersaglio di
   fuzzing nuovo (`elenco-campi`: 36 in tutto). Il primo giro dei semi del fuzzing ha trovato che l'aggiunta a mano non saltava i
   codici dell'elenco che cambia se non era ancora nel pacchetto (corretto: DECISIONI.md).
+- 2026-11-15 - K-021 (programma, proposta "K-021: schede dei servizi"). Punto 0, le prove mancanti trovate dall'arbitro nel K-020,
+  ognuna con il suo sabotaggio provato: ElencoAManoComandi.NotaETestoDellaFermataRiservati (A: la nota dello stato e G: il testo di
+  una fermata non riconosciuta non si vedono senza --includi-dati-personali, testo e JSON; D: togliere a mano con una data prima
+  dell'aggiunta e' K-ERR-051, niente cambia; sabotaggi: la nota sempre mostrata, il testo della fermata senza il controllo, il
+  controllo della data tolto da manual_remove), Unione.FermataDiPrimaInUnLuogoSensibile (C: la fermata di prima nel centro diurno
+  lega l'utente come la scuola di prima; sabotaggio: la fermata tolta dal legame in riservatezza.cpp), ElencoAMano.LimitiDellIngresso
+  (H: i controlli C1 U+0080 ... U+009F rifiutati, lo spazio indivisibile no; sabotaggio: il controllo C1 tolto da
+  campi_ingresso.cpp) e la prova sistematica nuova UsciteElenco.NessunDatoPersonaleSenzaIParametri (tests/test_uscite_elenco.cpp:
+  203 uscite di leggi-elenco, sblocco e dei cinque comandi a mano, in testo e JSON, con ogni valore personale riconoscibile, anche
+  quelli di prima; senza il parametro nessuno, per gli utenti legati per la scuola o la fermata, di oggi o di prima, nessuno senza
+  tutti e due i parametri; con i parametri si vedono). La prova sistematica da sola prende anche A, C, G e tre sabotaggi in piu':
+  i nomi di leggi-elenco senza il parametro, i legati con i soli dati personali nei comandi a mano, la classe senza il parametro.
+  Domande e proposte per l'arbitro prima del resto (K-021-domande-per-l-arbitro.md, consegnato come file).
+  Punti 1-3, dopo le risposte dell'arbitro (D1 A, D2 con i fatti di una scheda vera e l'aggiunta del supervisore sull'accompagnatore
+  dell'infanzia, D3 A, D4 B, D5 B, D6-D9 A, P1-P14, C1-C9, K1 sui km: DECISIONI.md). Fatto: formato (profili_schede.json e
+  schede_servizi.json versione 1, servizi.json versione 4 con `individualizzato`); nucleo src/nucleo/schede.cpp (lettura dei tre fogli
+  del modello con il profilo, 43 motivi di stop di una scheda, totali, accompagnatore dalla sua colonna, km scritti solo su alcune
+  righe, case porta a porta con il solo codice, cadenze a giorni segnati o a date elencate, scelta della data, versioni che non
+  cambiano i giorni prima della data scelta, togliere una scheda, controlli sul registro); API (src/api/schede_scrittura.cpp: come una
+  versione diventa servizio, gruppo, corsa e calendario, il confronto K-CTR-170; src/api/comando_schede.cpp: `kzero leggi-schede` e
+  `kzero togli-scheda`, uscite `schede` 1 e `togli_scheda` 1); il lettore Excel legge il sistema delle date del 1904; K-CTR-160 ...
+  174, K-ERR-052 ... 055; il pezzo di una corsa di una scheda in un turno conta i km solo se i suoi capi ne hanno (turni.cpp,
+  K-CTR-172). Prove: test_schede (16), test_schede_comandi (4), la prova sistematica allargata a leggi-schede e togli-scheda (222
+  uscite), Unione con un pacchetto di prova delle schede (servizi 4, caselle del registro), 11 prove sul programma (uscite JSON con lo
+  schema), bersaglio di fuzzing `schede-righe` e i due file nuovi tra i bersagli del pacchetto (39 in tutto). Trovato dalle prove: senza
+  i dati particolari l'uscita diceva quale casella cambiava tra due versioni; ora dice solo che cambia un dato particolare. Trovato dal
+  fuzzing: un testo non UTF-8 o troppo lungo nel Nr o nell'ID rompeva la scrittura dei documenti (DECISIONI.md); corretto.
+  Sabotaggi sul codice finale, tutti presi: totali che non tornano accettati; la prima scuola data al gruppo di due scuole;
+  accompagnatore contato come passeggero (salita e discesa); versione nuova che toglie la versione di prima (giorni passati cambiati);
+  attivazione prima della presa in carico scelta dal programma; schede con ID diversi unite per il Nr; cadenza sconosciuta trattata
+  come "Sempre"; casa scritta come luogo comune; tipo, pedana e individualizzato visibili senza il parametro (anche dalla prova
+  sistematica); Tot Giorni diverso che ferma la scheda; cella dei km vuota letta come 0; infanzia senza accompagnatore senza avviso;
+  avviso senza la regola nel regolamento (valore scritto nel programma); e di nuovo quelli del punto 0 (A, C, D, G, H).
 - 2026-11-16 - (fuori dai mandati, solo documenti) Introdotta la regola del controllo del modello (REGOLE.md Parte 3, DECISIONI.md, richiamo in testa a CLAUDE.md).
 ## Bug e limiti noti
 - (K-018) L'avviso sui nomi liberi trova solo il nome scritto come nei dati (senza maiuscole ne' accenti, parole intere):
@@ -908,6 +941,15 @@
   semplificazione per avere turni regolari; i weekend e le linee festive sono provati nel demo.
 - (K-012) Il nome di un ente committente si vede sempre (dato comune); il nome di un committente privato non deve stare nei
   nomi dei servizi e dei contratti: oggi lo dice solo il formato, l'avviso arriva con il mandato dei nomi liberi.
+
+- (K-021) La riga ACCOMPAGNATORE e' stata decisa sui fatti di una scheda vera dell'infanzia: altre forme della scheda (un
+  accompagnatore che sale a una fermata, una scheda "handicap") potranno chiedere un profilo diverso o una colonna in piu'.
+- (K-021) Le uscite di `kzero giornata` mostrano i km di ogni passaggio come scritti: per una corsa fatta da una scheda vogliono dire
+  "dalla riga prima che ha dei km", non dal passaggio prima (lo dice formato-dati.md); i totali della corsa sono giusti.
+- (K-021) Il confronto degli elementi con la scheda (K-CTR-170) guarda solo i dati comuni che vengono dalla scheda: una pedana o un tipo
+  cambiati a mano nel servizio non hanno l'avviso.
+- (K-021) Con piu' scuole il gruppo non ha scuola: i controlli che usano la scuola del gruppo (attesa concordata, finestra) non si
+  fanno per quel gruppo (scelta D3 A).
 
 ## Idee
 - Generare scenari "gonfiati" (50-500 mezzi) dai giri reali per provare il carico.

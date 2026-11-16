@@ -78,6 +78,23 @@ target_link_libraries(test_elenco_a_mano_comandi PRIVATE kzero_api GTest::gtest_
 target_compile_options(test_elenco_a_mano_comandi PRIVATE ${KZERO_WARNINGS})
 target_compile_definitions(test_elenco_a_mano_comandi PRIVATE KZERO_CARTELLA_PROVE="${CMAKE_CURRENT_SOURCE_DIR}")
 gtest_discover_tests(test_elenco_a_mano_comandi PROPERTIES LABELS sicurezza)
+# K-021: schede dei servizi (nucleo e scrittura; i comandi a parte).
+add_executable(test_schede test_schede.cpp)
+target_link_libraries(test_schede PRIVATE kzero_api GTest::gtest_main)
+target_compile_options(test_schede PRIVATE ${KZERO_WARNINGS})
+target_compile_definitions(test_schede PRIVATE KZERO_CARTELLA_PROVE="${CMAKE_CURRENT_SOURCE_DIR}")
+gtest_discover_tests(test_schede PROPERTIES LABELS sicurezza)
+add_executable(test_schede_comandi test_schede_comandi.cpp)
+target_link_libraries(test_schede_comandi PRIVATE kzero_api GTest::gtest_main)
+target_compile_options(test_schede_comandi PRIVATE ${KZERO_WARNINGS})
+target_compile_definitions(test_schede_comandi PRIVATE KZERO_CARTELLA_PROVE="${CMAKE_CURRENT_SOURCE_DIR}")
+gtest_discover_tests(test_schede_comandi PROPERTIES LABELS sicurezza)
+# K-021: prova sistematica sulle uscite dei comandi dell'elenco (nessun dato personale senza i parametri).
+add_executable(test_uscite_elenco test_uscite_elenco.cpp)
+target_link_libraries(test_uscite_elenco PRIVATE kzero_api GTest::gtest_main)
+target_compile_options(test_uscite_elenco PRIVATE ${KZERO_WARNINGS})
+target_compile_definitions(test_uscite_elenco PRIVATE KZERO_CARTELLA_PROVE="${CMAKE_CURRENT_SOURCE_DIR}")
+gtest_discover_tests(test_uscite_elenco PROPERTIES LABELS sicurezza)
 add_executable(test_registro test_registro.cpp)
 target_link_libraries(test_registro PRIVATE kzero_api GTest::gtest_main)
 target_compile_options(test_registro PRIVATE ${KZERO_WARNINGS})
@@ -1691,6 +1708,53 @@ kzero_elenco_a_mano(elenco_campi_scritti_male USCITA 2 FORMATO json SCHEMA error
                     ARGOMENTI aggiungi-in-elenco @PACCHETTO@ --profilo PR-CVA --anno-scolastico 2026-2027 ${K020_RIF} --formato json)
 kzero_elenco_a_mano(elenco_modifica_senza_riferimento USCITA 2 FORMATO testo ERRORE K-ERR-013
                     ARGOMENTI togli-da-elenco @PACCHETTO@ --utente-elenco U-000004 --data 2026-11-12)
+
+# --- Schede dei servizi (K-021) -----------------------------------------------------------------------------------------
+set(KZERO_K021 ${CMAKE_CURRENT_BINARY_DIR}/k021)
+set(PW_K021 "una frase lunga per le schede di prova")
+add_test(NAME schede.prepara
+         COMMAND ${CMAKE_COMMAND} -DKZERO=$<TARGET_FILE:kzero> -DPREPARA=$<TARGET_FILE:prepara_k019> -DCREA=$<TARGET_FILE:crea_xlsx>
+                 -DELENCO=${CMAKE_CURRENT_SOURCE_DIR}/esempi/k019-elenco -DSORGENTI=${CMAKE_CURRENT_SOURCE_DIR}/esempi/k021-schede
+                 -DUSCITA=${KZERO_K021} -P ${CMAKE_CURRENT_SOURCE_DIR}/programma/prepara_k021.cmake)
+set_tests_properties(schede.prepara PROPERTIES FIXTURES_SETUP k021 LABELS programma)
+function(kzero_schede nome)
+  cmake_parse_arguments(E "" "" "ARGOMENTI" ${ARGN})
+  kzero_prova(${nome} BASE ${KZERO_K021}/chiuso INGRESSO "${PW_K021}" ${E_UNPARSED_ARGUMENTS}
+              ARGOMENTI ${E_ARGOMENTI} --utente TITOLARE --password-da-ingresso)
+  set_tests_properties(programma.${nome} PROPERTIES FIXTURES_REQUIRED k021)
+endfunction()
+set(K021_LEGGI --profilo PS-CVA --contratto CT-SCU --data 2026-11-16 --riferimento "mail del committente")
+kzero_schede(schede_senza_scelta USCITA 0 FORMATO testo
+             CONTIENE "Anteprima (niente e' stato scritto" "senza la scelta della data" "Errore K-CTR-162: Scheda 4000123/3"
+                      "Errore K-CTR-160: Scheda 4000125/2"
+             ARGOMENTI leggi-schede ${KZERO_K021}/tre-schede.xlsx @PACCHETTO@ ${K021_LEGGI})
+kzero_schede(schede_scrittura_json USCITA 0 FORMATO json SCHEMA schede
+             CONTIENE "\"scritto\": true" "\"nuove\": 2" "\"ferme\": 1" "\"particolari\": null"
+             NON_CONTIENE "\"pedana_obbligatoria\""
+             ARGOMENTI leggi-schede ${KZERO_K021}/tre-schede.xlsx @PACCHETTO@ ${K021_LEGGI} --validita attivazione --scrivi @PACCHETTO@
+                       --formato json)
+kzero_schede(schede_particolari_json USCITA 0 FORMATO json SCHEMA schede
+             CONTIENE "\"pedana_obbligatoria\": false" "\"tipo\": \"scolastico\""
+             ARGOMENTI leggi-schede ${KZERO_K021}/tre-schede.xlsx @PACCHETTO@ ${K021_LEGGI} --validita attivazione
+                       --includi-dati-particolari --formato json)
+kzero_schede(schede_togli_json USCITA 0 FORMATO json SCHEMA togli_scheda
+             PREPARA leggi-schede ${KZERO_K021}/tre-schede.xlsx @PACCHETTO@ ${K021_LEGGI} --validita attivazione --scrivi @PACCHETTO@
+                     --utente TITOLARE --password-da-ingresso
+             PREPARA_INGRESSO "${PW_K021}"
+             CONTIENE "\"scheda\": \"SCH-4000124-1\"" "\"scheda_tolta\": true" "\"scritto\": true"
+             ARGOMENTI togli-scheda @PACCHETTO@ --scheda SCH-4000124-1 --riferimento "scheda copiata per errore" --data 2026-11-17
+                       --scrivi @PACCHETTO@ --formato json)
+kzero_schede(schede_contratto_sbagliato USCITA 2 FORMATO json SCHEMA errore ERRORE K-ERR-052
+             ARGOMENTI leggi-schede ${KZERO_K021}/tre-schede.xlsx @PACCHETTO@ --profilo PS-CVA --contratto CT-LIN --data 2026-11-16
+                       --riferimento "mail" --formato json)
+kzero_schede(schede_validita_sbagliata USCITA 2 FORMATO testo ERRORE K-ERR-053
+             ARGOMENTI leggi-schede ${KZERO_K021}/tre-schede.xlsx @PACCHETTO@ ${K021_LEGGI} --validita domani)
+kzero_schede(schede_controlla USCITA 0 FORMATO testo
+             PREPARA leggi-schede ${KZERO_K021}/tre-schede.xlsx @PACCHETTO@ ${K021_LEGGI} --validita attivazione --scrivi @PACCHETTO@
+                     --utente TITOLARE --password-da-ingresso
+             PREPARA_INGRESSO "${PW_K021}"
+             NON_CONTIENE "K-CTR-170" "K-CTR-174"
+             ARGOMENTI controlla @PACCHETTO@)
 
 kzero_prova(elenco_pacchetto_in_chiaro USCITA 2 FORMATO testo ERRORE K-ERR-031
             ARGOMENTI leggi-elenco ${CMAKE_CURRENT_SOURCE_DIR}/esempi/k019-elenco/prima-lettura.tsv ${KZERO_DEMO} ${K019_LEGGI} --utente A)

@@ -85,6 +85,21 @@ Le regole sono divise in due parti:
 - Quali usi servono per ogni tipo di servizio e' un dato con la fonte (norme del paese, regolamento del
   territorio), mai una regola scritta nel programma.
 
+## Schede dei servizi del committente (K-021)
+- Il committente manda una scheda per ogni giro: un servizio (il numero prima della barra del Nr), un verso e un momento, una o
+  piu' scuole, un periodo (attivazione, disattivazione), i giorni, l'ID, i Totali alunni, le caselle "Servizio Individualizzato"
+  (fatto per un solo utente) e "Attrezzato" (serve il mezzo con la pedana), una riga per fermata (orario, punto di raccolta, St.
+  Car., St. Scar., km pieni e vuoti) e il piede (Tot Giorni, Tot Km Carico e Vuoto, calendario, cadenza, scheda nuova o modifica).
+- I totali tornano sempre: somma St. Car. = somma St. Scar. = Totali alunni (accompagnatore compreso); somma km pieni = Tot Km
+  Carico; somma km vuoti = Tot Km Vuoto; Tot Giorni = giorni del calendario nel periodo.
+- I km sono scritti solo su alcune righe e coprono il tratto dalla riga prima che ha dei km (a volte un solo valore, sull'ultima
+  riga, per tutto il giro). Una cella vuota e' "non scritto", mai 0.
+- Con due scuole i St. Car. non sono divisi per scuola: non si dividono mai indovinando.
+- Una modifica tiene l'ID e puo' cambiare tutto, date comprese; "4000123 / 3" e "4000123 / 4" sono lo stesso giro in due periodi,
+  con ID diversi. Validita' (regola di ALP): una scheda con l'attivazione dalla presa in carico in poi vale dall'attivazione;
+  prima, la data la sceglie l'utente (attivazione, presa in carico o un'altra data, anche prima della presa in carico per una
+  modifica che il committente fa valere da prima). I giorni prima della data scelta non cambiano mai.
+
 ## Trasbordi
 - Solo in un punto autorizzato dal committente.
 - Il secondo mezzo e' gia' sul posto quando arriva il primo: l'attesa del passeggero non si pianifica.
@@ -98,6 +113,10 @@ Le regole sono divise in due parti:
 - Occupa un posto.
 - Chi lo fornisce dipende dal contratto: di solito Provincia/Comune/associazione, a volte l'azienda.
 - Se e' dell'azienda va pianificato e pagato come un autista.
+- Infanzia (supervisore, 15/11): quando un bambino dell'infanzia e' a bordo l'accompagnatore c'e' SEMPRE (inserviente della scuola,
+  volontario designato, dipendente della scuola o dell'azienda; di solito personale della scuola). Sale per primo e scende per
+  ultimo: si prende alla scuola dell'infanzia e poi si va alla prima fermata. Sulla scheda del committente l'accompagnatore e'
+  contato nei Totali alunni e nei St. Car. e St. Scar. delle righe dove sale e scende (K-021).
 
 ## Autisti
 - La pausa fuori dal posto (rientro in rimessa o in un ricovero tra due corse) si giudica con la chiave del rientro
