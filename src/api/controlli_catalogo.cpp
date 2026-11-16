@@ -291,6 +291,10 @@ void aggiungi_schede(std::vector<DefinizioneControllo>& c) {
                  {"Le schede {scheda} e {altra} del registro hanno lo stesso ID: due schede con lo stesso ID non possono esserci.",
                   "Nella scheda {scheda} la versione {versione} finisce prima di cominciare, o non viene dopo quella di prima (numero e "
                   "periodo)."}});
+    // K-022: la domanda di un gruppo (anche fuori dalle schede).
+    c.push_back({Check::DemandSamePlaceTwice, "K-CTR-175", A, N, "Stesso luogo due volte nella domanda di un gruppo",
+                 {"Gruppo {gruppo}: il luogo {luogo} e' due volte nella domanda. Unire le voci (salgono e scendono sommati): finche' "
+                  "sono due, il confronto con le corse (K-CTR-042) non e' affidabile."}});
 }
 
 // K-019: l'elenco utenti del committente. Sui dati (kzero controlla) e sulle righe del file letto (kzero leggi-elenco).

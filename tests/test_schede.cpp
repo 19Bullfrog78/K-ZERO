@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <iostream>
+#include <set>
 #include <string>
 #include <vector>
 
@@ -575,4 +576,80 @@ TEST(Schede, CelleNonUtf8OTroppoLunghe) {
     const Letto y = leggi(l, f, attivazione());
     ASSERT_EQ(y.m.outcomes.at(0).kind, CardOutcome::Kind::New);
     EXPECT_EQ(y.m.cards.at(0).versions[0].card.service_text, "Andata Mattino");
+}
+
+// --- K-022 ------------------------------------------------------------------------------------------------------------------------
+
+namespace {
+
+// I problemi di kzero controlla (nucleo) su uno dei gruppi dati.
+std::vector<Problem> sui_gruppi(const std::vector<Problem>& v, const std::set<std::string>& gruppi, Check c) {
+    std::vector<Problem> out;
+    for (const Problem& p : v)
+        if (p.check == c)
+            for (const Param& x : p.params)
+                if (x.name == "gruppo" && gruppi.count(x.text)) out.push_back(p);
+    return out;
+}
+
+}  // namespace
+
+// K-022: una scheda con due giri passa due volte dallo stesso luogo con delle persone (l'infanzia: la scuola a meta' con le discese
+// del primo giro e alla fine; un'andata con la stessa scuola due volte). Nella domanda del gruppo il luogo e' una volta sola, con le
+// persone sommate; la corsa tiene i due passaggi. kzero controlla non da' K-CTR-042 (domanda contro corse) ne' K-CTR-175 su quei
+// gruppi, e il confronto con il pacchetto (K-CTR-170) torna. Sabotaggio: una voce per passaggio (K-CTR-042 falso, due volte).
+TEST(Schede, DueGiriUnLuogoUnaVoltaSolaNellaDomanda) {
+    const Lettura l = lettura_di_prova();
+    const Letto x = leggi(l, due_giri(), attivazione());
+    for (const std::string& m : messaggi(x.dopo, x.m.problems)) std::cout << m << "\n";
+    ASSERT_EQ(x.m.outcomes.size(), 2u);
+    ASSERT_EQ(x.m.outcomes[0].kind, CardOutcome::Kind::New) << (x.m.outcomes[0].fault ? static_cast<int>(*x.m.outcomes[0].fault) : -1);
+    ASSERT_EQ(x.m.outcomes[1].kind, CardOutcome::Kind::New) << (x.m.outcomes[1].fault ? static_cast<int>(*x.m.outcomes[1].fault) : -1);
+    const JsonDati g = elemento(x.dopo, "servizi.json", "servizi", "S-4000300-1").at("domanda").at("gruppi").at(0);
+    EXPECT_EQ(g.at("fermate"), JsonDati::parse(R"([{"luogo":"F-LAGOBELLO","salgono":6},{"luogo":"F-PRADELLO","salgono":5},
+                                                  {"luogo":"L-INFANZIA","scendono":22},{"luogo":"F-CASTELROVO","salgono":7},
+                                                  {"luogo":"F-MONTEBRINO","salgono":4}])"));
+    EXPECT_TRUE(g.at("assistente_richiesto").get<bool>());
+    const JsonDati c = elemento(x.dopo, "corse.json", "corse", "C-4000300-1");
+    ASSERT_EQ(c.at("passaggi").size(), 7u);
+    EXPECT_EQ(c.at("passaggi").at(3).at("persone"), JsonDati::parse(R"([{"gruppo":"G-4000300-1","scendono":11}])"));
+    EXPECT_EQ(c.at("passaggi").at(6).at("persone"), JsonDati::parse(R"([{"gruppo":"G-4000300-1","scendono":11}])"));
+    EXPECT_EQ(c.at("passaggi").at(6).at("assistente"), "scende");
+    EXPECT_EQ(c.at("passaggi").at(6).at("km"), JsonDati::parse(R"({"pieni":25.0})"));
+    EXPECT_EQ(elemento(x.dopo, "servizi.json", "servizi", "S-4000301-1").at("domanda").at("gruppi").at(0).at("fermate"),
+              JsonDati::parse(R"([{"luogo":"F-PRADELLO","salgono":5},{"luogo":"L-PRIM","scendono":9},{"luogo":"F-CASTELROVO","salgono":4}])"));
+    // kzero controlla: niente K-CTR-042 ne' K-CTR-175 sui due gruppi; gli elementi corrispondono alla scheda.
+    const std::vector<Problem> v = check_package(x.dopo.pacchetto);
+    const std::set<std::string> gruppi = {"G-4000300-1", "G-4000301-1"};
+    EXPECT_TRUE(sui_gruppi(v, gruppi, Check::DemandDiffersFromTrips).empty()) << messaggi(x.dopo, sui_gruppi(v, gruppi, Check::DemandDiffersFromTrips)).front();
+    EXPECT_TRUE(sui_gruppi(v, gruppi, Check::DemandSamePlaceTwice).empty());
+    EXPECT_TRUE(schede::controlla_elementi(x.dopo).empty());
+}
+
+// K-022: un gruppo scritto con lo stesso luogo due volte nella domanda (qui come lo scriveva la lettura del K-021: una voce per
+// passaggio). Il confronto con le corse (K-CTR-042) da' due avvisi falsi; l'avviso nuovo K-CTR-175 lo dice, sulla seconda voce, una
+// volta per luogo; il confronto con la scheda (K-CTR-170) vede che il gruppo non e' quello che la scheda da'. Sabotaggio: l'avviso
+// che manca.
+TEST(Schede, StessoLuogoDueVolteAvvisoNuovo) {
+    const Lettura l = lettura_di_prova();
+    const Letto x = leggi(l, due_giri(), attivazione());
+    std::map<std::string, JsonDati> d = {{"servizi.json", x.dopo.documenti.at("servizi.json")}};
+    for (JsonDati& s : d.at("servizi.json").at("servizi"))
+        if (s.at("codice") == "S-4000300-1")
+            s["domanda"]["gruppi"][0]["fermate"] = JsonDati::parse(R"([{"luogo":"F-LAGOBELLO","salgono":6},{"luogo":"F-PRADELLO","salgono":5},
+                {"luogo":"L-INFANZIA","scendono":11},{"luogo":"F-CASTELROVO","salgono":7},{"luogo":"F-MONTEBRINO","salgono":4},
+                {"luogo":"L-INFANZIA","scendono":11}])");
+    const Lettura vecchia = schede::con_documenti(x.dopo, d);
+    const std::vector<Problem> v = check_package(vecchia.pacchetto);
+    const std::vector<Problem> due = sui_gruppi(v, {"G-4000300-1"}, Check::DemandSamePlaceTwice);
+    ASSERT_EQ(due.size(), 1u);
+    EXPECT_EQ(due[0].where.file, "servizi.json");
+    EXPECT_EQ(due[0].where.pointer.substr(due[0].where.pointer.size() - 10), "/fermate/5") << due[0].where.pointer;
+    EXPECT_EQ(messaggi(vecchia, due)[0],
+              "K-CTR-175 v0: Gruppo G-4000300-1: il luogo L-INFANZIA (Lagobello, Scuola dell'infanzia) e' due volte nella domanda. Unire "
+              "le voci (salgono e scendono sommati): finche' sono due, il confronto con le corse (K-CTR-042) non e' affidabile.");
+    EXPECT_EQ(sui_gruppi(v, {"G-4000300-1"}, Check::DemandDiffersFromTrips).size(), 2u);   // gli avvisi falsi che K-CTR-175 spiega
+    const std::vector<Problem> e = schede::controlla_elementi(vecchia);
+    ASSERT_EQ(e.size(), 1u);
+    EXPECT_NE(messaggi(vecchia, e)[0].find("S-4000300-1"), std::string::npos) << messaggi(vecchia, e)[0];
 }

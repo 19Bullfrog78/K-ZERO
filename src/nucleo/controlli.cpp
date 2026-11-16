@@ -171,6 +171,7 @@ public:
         services_without_trips();
         trips_without_service();
         empty_groups();
+        demand_same_place_twice();
         demand_against_trips();
         verbal_transfers();
         vehicle_costs();
@@ -1147,6 +1148,20 @@ private:
                 if (g.counts != CountKind::Unknown && g.passengers.empty() && g.total_boarding() + g.total_alighting() == 0)
                     add(Check::GroupWithoutPassengers, g.src,
                         {ref_param("gruppo", Element::Group, g.code), ref_param("servizio", Element::Service, s.code)});
+    }
+
+    // K-022: lo stesso luogo due volte nella domanda di un gruppo. Il formato non lo vieta, ma il confronto con le corse (K-CTR-042)
+    // somma le corse per luogo e le confronta con ogni voce: con due voci darebbe avvisi falsi. Un avviso per luogo, sulla seconda
+    // voce; le voci vanno unite (salgono e scendono sommati), come fa la lettura delle schede.
+    void demand_same_place_twice() {
+        for (const Service& s : p_.services)
+            for (const PassengerGroup& g : s.groups) {
+                std::set<Code> seen, told;
+                for (const DemandStop& d : g.stops)
+                    if (!seen.insert(d.place.code).second && told.insert(d.place.code).second)
+                        add(Check::DemandSamePlaceTwice, d.src,
+                            {ref_param("gruppo", Element::Group, g.code), ref_param("luogo", Element::Place, d.place.code)});
+            }
     }
 
     // Domanda di ogni gruppo con conteggi esatti contro le persone delle corse, calendario per calendario:

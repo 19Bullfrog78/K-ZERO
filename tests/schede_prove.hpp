@@ -49,6 +49,34 @@ struct Fogli {
 };
 inline Fogli fogli_di_prova() { return {righe_di("schede.tsv"), righe_di("fermate.tsv"), righe_di("date.tsv")}; }
 
+// K-022: due schede con due giri, che passano due volte dallo stesso luogo con delle persone. La prima dell'infanzia (come le schede
+// vere): l'accompagnatore sale per primo alla scuola (St. Car. 1 = solo lui) e scende per ultimo (St. Scar. = i bambini del secondo giro
+// + lui), la scuola a meta' con le discese del primo giro, i km solo sull'ultima riga. La seconda un'andata con la stessa scuola due
+// volte, senza accompagnatore.
+inline Fogli due_giri() {
+    const Fogli base = fogli_di_prova();
+    Fogli f;
+    f.schede = {base.schede[0],
+                {"4000300 / 1", "5c1e2f40-0a1b-4c2d-8e3f-000000000300", "Andata Mattino", "Scuola infanzia Lagobello", "14/09/2026",
+                 "30/06/2027", "X", "X", "X", "X", "X", "", "", "#23", "", "", "#170", "25", "0", "MATERNA", "Sempre", "Scheda nuova"},
+                {"4000301 / 1", "5c1e2f40-0a1b-4c2d-8e3f-000000000301", "Andata Mattino", "Scuola primaria Valfonda", "14/09/2026",
+                 "12/06/2027", "X", "X", "X", "X", "X", "", "", "#9", "", "", "#175", "13", "6,0", "SCOLASTICO", "Sempre", "Scheda nuova"}};
+    f.fermate = {base.fermate[0],
+                 {"4000300 / 1", "07:00", "Scuola infanzia Lagobello", "", "#1", "", "", "", "SALE"},
+                 {"4000300 / 1", "07:10", "Lagobello, Lago", "", "#6", "", "", "", ""},
+                 {"4000300 / 1", "07:20", "PRADELLO PIAZZA", "", "#5", "", "", "", ""},
+                 {"4000300 / 1", "07:30", "Scuola infanzia Lagobello", "", "", "#11", "", "", ""},
+                 {"4000300 / 1", "07:40", "Castelrovo, Bivio", "", "#7", "", "", "", ""},
+                 {"4000300 / 1", "07:50", "MONTEBRINO CENTRO", "", "#4", "", "", "", ""},
+                 {"4000300 / 1", "08:05", "Scuola infanzia Lagobello", "", "", "#12", "25", "", "SCENDE"},
+                 {"4000301 / 1", "07:00", "PRADELLO PIAZZA", "", "#5", "", "", "6,0", ""},
+                 {"4000301 / 1", "07:15", "Scuola primaria Valfonda", "", "", "#5", "7", "", ""},
+                 {"4000301 / 1", "07:25", "Castelrovo, Bivio", "", "#4", "", "3", "", ""},
+                 {"4000301 / 1", "07:40", "Scuola primaria Valfonda", "", "", "#4", "3", "", ""}};
+    f.date = base.date;
+    return f;
+}
+
 inline std::string file_schede(const Fogli& f, bool date1904 = false) {
     std::vector<xlsx::Foglio> v = {{"Schede", f.schede, false}, {"Fermate", f.fermate, false}};
     if (!f.date.empty()) v.push_back({"Date", f.date, false});

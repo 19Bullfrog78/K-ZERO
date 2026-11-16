@@ -500,6 +500,11 @@ Le schede dei servizi del committente, copiate nel modello di K-Zero, si leggono
   (profilo ambiguo), K-CTR-174 (registro incoerente), piu' i controlli di sempre sui codici doppi (K-CTR-009) e sui riferimenti
   (K-CTR-010).
 
+La domanda del gruppo fatto da una scheda ha ogni luogo una volta sola (K-022): una scheda con due giri passa due volte dalla stessa
+scuola, e le persone dei due passaggi si sommano in una voce. Un pacchetto scritto a mano con lo stesso luogo due volte nella domanda
+di un gruppo ha l'avviso K-CTR-175: il confronto con le corse (K-CTR-042) su quel luogo non e' affidabile finche' le voci non sono
+unite.
+
 Varianti di K-CTR-160 (la scheda si ferma), nell'ordine in cui si controllano: 0 cella con un errore di Excel o troppo lunga; 1 cella
 vuota che serve; 2 Nr ripetuto nel foglio delle schede; 3 ID ripetuto nel file; 4 verso e momento sconosciuti; 5 scuola sconosciuta;
 6 scuola ambigua; 7 data scritta male; 8 disattivazione prima dell'attivazione; 9 casella con una parola che non e' un segno; 10
@@ -571,7 +576,7 @@ Un nuovo controllo prende il codice successivo all'ultimo.
 | K-CTR-039 | avviso | Servizio senza corse | Nessuna corsa soddisfa il servizio. | Aggiungere le corse, o toglierlo se il servizio e' stato perso. |
 | K-CTR-040 | avviso | Corsa che non soddisfa nessun servizio | La corsa non soddisfa nessun servizio. | Indicare i servizi della corsa. |
 | K-CTR-041 | avviso | Gruppo con zero passeggeri | Un gruppo con conteggi esatti non ha nessuna persona ne' passeggeri. | Completare la domanda o togliere il gruppo. |
-| K-CTR-042 | avviso | Domanda diversa dalle persone delle corse | Le persone che salgono o scendono a una fermata secondo la domanda sono diverse da quelle caricate dalle corse (es. domanda 8, corse 7). Il confronto si fa calendario per calendario: corse con lo stesso calendario si sommano. | Controllare se la domanda o le corse sono da aggiornare. |
+| K-CTR-042 | avviso | Domanda diversa dalle persone delle corse | Le persone che salgono o scendono a una fermata secondo la domanda sono diverse da quelle caricate dalle corse (es. domanda 8, corse 7). Il confronto si fa calendario per calendario: corse con lo stesso calendario si sommano. Con lo stesso luogo due volte nella domanda il confronto non e' affidabile (K-CTR-175). | Controllare se la domanda o le corse sono da aggiornare. |
 | K-CTR-043 | avviso | Punto di trasbordo autorizzato a voce, senza documento | Il punto di trasbordo e' autorizzato solo a voce. | Chiedere al committente il documento dell'autorizzazione. |
 | K-CTR-044 | avviso | Mezzo senza costo fisso giornaliero o senza costo al km | Al mezzo manca il costo fisso giornaliero, il costo al km o entrambi: senza, il confronto dei costi sarebbe falso. | Aggiungere i costi. |
 | K-CTR-045 | avviso | Azienda senza mezzi | Un'azienda del manifesto non ha mezzi nel pacchetto. | Aggiungere i mezzi o togliere l'azienda. |
@@ -704,3 +709,4 @@ Un nuovo controllo prende il codice successivo all'ultimo.
 | K-CTR-172 | avviso | Pezzo di una corsa di una scheda con i km non noti | Un turno ha un pezzo di una corsa fatta da una scheda e i capi del pezzo non hanno km (i km di una riga coprono il tratto dalla riga prima che ha dei km): i km del pezzo non si sanno e si contano 0. | Usare la corsa intera, o spezzarla in un punto con i km. |
 | K-CTR-173 | errore | Profilo delle schede ambiguo | Nel profilo delle schede una parola vuol dire due cose (es. "sale" e "scende") o c'e' due volte, o un giorno ha due colonne. | Correggere il profilo (profili_schede.json). |
 | K-CTR-174 | errore | Registro delle schede incoerente | Due schede del registro con lo stesso ID, o una versione che finisce prima di cominciare o non viene dopo quella di prima. | Il registro lo scrivono i comandi: rifare la lettura; se e' stato cambiato a mano, rimetterlo com'era. |
+| K-CTR-175 | avviso | Stesso luogo due volte nella domanda di un gruppo | (K-022) Nella domanda di un gruppo lo stesso luogo c'e' in due voci (il formato non lo vieta). Il confronto con le corse (K-CTR-042) somma le corse per luogo e le confronta con ogni voce: finche' le voci sono due, i suoi avvisi su quel luogo non sono affidabili. Un avviso per luogo, sulla seconda voce. La lettura delle schede scrive un luogo una volta sola. | Unire le voci in una sola, con salgono e scendono sommati. |

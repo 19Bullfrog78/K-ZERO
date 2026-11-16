@@ -757,6 +757,24 @@ TEST(Controlli, K_CTR_042_domanda_diversa_dalle_corse) {
     EXPECT_TRUE(segnala(r, Check::DemandDiffersFromTrips, 2, "corse.json", "/corse/1/passaggi/2/persone/0"));
 }
 
+// K-022: lo stesso luogo due volte nella domanda di un gruppo (il formato non lo vieta): il confronto con le corse (K-CTR-042) non e'
+// affidabile. Un avviso per luogo, sulla seconda voce; il demo non ne ha. Sabotaggio: l'avviso che manca.
+TEST(Controlli, K_CTR_175_stesso_luogo_due_volte_nella_domanda) {
+    EXPECT_EQ(quanti(demo(), Check::DemandSamePlaceTwice), 0);
+    Package p = demo();
+    auto& g = gruppo(p, "G-AM-MEDIE");
+    g.stops[3].alighting = 12;   // L-MEDIE: 24 scritti in due voci da 12
+    DemandStop d = g.stops[3];
+    d.src = dove("servizi.json", "/servizi/0/domanda/gruppi/0/fermate/4");
+    g.stops.push_back(d);
+    EXPECT_TRUE(segnala(p, Check::DemandSamePlaceTwice, 0, "servizi.json", "/servizi/0/domanda/gruppi/0/fermate/4"));
+    EXPECT_EQ(quanti(p, Check::DemandSamePlaceTwice), 1);
+    d.src = dove("servizi.json", "/servizi/0/domanda/gruppi/0/fermate/5");
+    d.alighting = 0;
+    g.stops.push_back(d);   // tre volte: sempre un avviso solo per quel luogo
+    EXPECT_EQ(quanti(p, Check::DemandSamePlaceTwice), 1);
+}
+
 TEST(Controlli, K_CTR_043_trasbordo_autorizzato_a_voce) {
     EXPECT_TRUE(segnala(demo(), Check::TransferVerbalOnly, 0, "luoghi.json", "/luoghi/17/trasbordo"));
     Package p = demo();
@@ -848,5 +866,7 @@ TEST(Controlli, catalogo_coperto) {
     EXPECT_EQ(api::definizione_controllo(Check::ListFileNewerValue).codice, "K-CTR-157");
     EXPECT_EQ(api::definizione_controllo(Check::ListAddedNowInFile).codice, "K-CTR-158");
     EXPECT_EQ(api::definizione_controllo(Check::ListRemovedStillInFile).codice, "K-CTR-159");
-    EXPECT_EQ(api::catalogo_controlli().size(), 174u);
+    // K-022: lo stesso luogo due volte nella domanda di un gruppo.
+    EXPECT_EQ(api::definizione_controllo(Check::DemandSamePlaceTwice).codice, "K-CTR-175");
+    EXPECT_EQ(api::catalogo_controlli().size(), 175u);
 }
