@@ -638,6 +638,56 @@ TEST(Controlli, K_CTR_031_carrozzine_e_ausili_piegati) {
     EXPECT_TRUE(segnala(s, Check::CountsDifferFromPassengers, 4, "servizi.json", "/servizi/3/domanda/gruppi/0/fermate/0"));
 }
 
+// K-023, prove mancanti del K-022 (N1, N2): un luogo scritto due volte nella domanda, con le carrozzine (N1) o gli ausili piegati (N2)
+// divisi tra le due voci. K-CTR-031 somma per luogo anche carrozzine e ausili piegati: nessun errore (senza la somma un errore falso
+// fermerebbe la giornata), solo l'avviso di pulizia K-CTR-175. Una differenza vera resta, con la somma, sulla prima voce del luogo.
+// Sabotaggi: le carrozzine (o gli ausili piegati) non sommati per luogo.
+namespace {
+int errori(const Package& p) {
+    const auto v = check_package(p);
+    return static_cast<int>(std::count_if(v.begin(), v.end(), [](const Problem& x) {
+        return api::definizione_controllo(x.check).livello == api::Livello::Errore;
+    }));
+}
+// Una voce in piu' nella domanda del gruppo G-VAL-3 (quinta voce), per lo stesso luogo della voce `voce`, con salgono 0.
+DemandStop& seconda_voce(Package& p, std::size_t voce) {
+    auto& g = gruppo(p, "G-VAL-3");
+    DemandStop d = g.stops[voce];
+    d.boarding = 0;
+    d.wheelchairs = 0;
+    d.folded_aids = 0;
+    d.src = dove("servizi.json", "/servizi/3/domanda/gruppi/0/fermate/4");
+    g.stops.push_back(d);
+    return g.stops.back();
+}
+}  // namespace
+
+TEST(Controlli, K_CTR_031_carrozzine_divise_tra_due_voci) {
+    Package p = demo();
+    gruppo(p, "G-VAL-3").stops[0].wheelchairs = 0;   // PP-01: P-D1 sale seduto sulla carrozzina, scritta nella seconda voce
+    seconda_voce(p, 0).wheelchairs = 1;
+    EXPECT_EQ(quanti(p, Check::CountsDifferFromPassengers), 0) << elenco(check_package(p));
+    EXPECT_EQ(errori(p), 0) << elenco(check_package(p));
+    EXPECT_TRUE(segnala(p, Check::DemandSamePlaceTwice, 0, "servizi.json", "/servizi/3/domanda/gruppi/0/fermate/4"));
+    // Una differenza vera resta: 1 + 1 carrozzine contro un passeggero sulla carrozzina, sulla prima voce.
+    gruppo(p, "G-VAL-3").stops[0].wheelchairs = 1;
+    EXPECT_TRUE(segnala(p, Check::CountsDifferFromPassengers, 2, "servizi.json", "/servizi/3/domanda/gruppi/0/fermate/0"));
+    EXPECT_EQ(quanti(p, Check::CountsDifferFromPassengers), 1);
+}
+
+TEST(Controlli, K_CTR_031_ausili_piegati_divisi_tra_due_voci) {
+    Package p = demo();
+    gruppo(p, "G-VAL-3").stops[1].folded_aids = 0;   // PP-02: il deambulatore di P-D2, scritto nella seconda voce
+    seconda_voce(p, 1).folded_aids = 1;
+    EXPECT_EQ(quanti(p, Check::CountsDifferFromPassengers), 0) << elenco(check_package(p));
+    EXPECT_EQ(errori(p), 0) << elenco(check_package(p));
+    EXPECT_TRUE(segnala(p, Check::DemandSamePlaceTwice, 0, "servizi.json", "/servizi/3/domanda/gruppi/0/fermate/4"));
+    // Una differenza vera resta: 1 + 1 ausili piegati contro uno, sulla prima voce.
+    gruppo(p, "G-VAL-3").stops[1].folded_aids = 1;
+    EXPECT_TRUE(segnala(p, Check::CountsDifferFromPassengers, 4, "servizi.json", "/servizi/3/domanda/gruppi/0/fermate/1"));
+    EXPECT_EQ(quanti(p, Check::CountsDifferFromPassengers), 1);
+}
+
 // Un passeggero che viaggia e ha bisogno dell'assistente, in un gruppo che non lo richiede: errore.
 TEST(Controlli, K_CTR_047_assistente_non_richiesto_dal_gruppo) {
     EXPECT_EQ(quanti(demo(), Check::AssistantNotRequested), 0);

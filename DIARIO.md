@@ -865,6 +865,15 @@
   intera). C: nessun codice, il rimedio per i pacchetti scritti con il K-021 in DECISIONI.md. Prove: test_controlli (+1), test_schede_comandi
   (+1). Sabotaggi, tutti presi: K-CTR-031 e K-CTR-042 sulle voci una per una (K-CTR-042 da due prove); 0 scritto come prima; km di
   tutta la corsa scritti su un passaggio del pezzo; K-CTR-172 sempre al plurale.
+- 2026-11-17 - K-023 (programma, proposta "K-023: interruzioni e coincidenze delle schede"). Punto 0, le prove mancanti del K-022 (sabotaggi
+  dell'arbitro che nessuna prova prendeva; il codice era gia' giusto): N1 e N2, K-CTR-031 con un luogo scritto due volte e le carrozzine o
+  gli ausili piegati divisi tra le due voci, nessun errore (e una differenza vera resta, sulla prima voce); N5, `kzero giornata` con un
+  turno che fa due pezzi della corsa da scheda con i km non noti, "2 pezzi" nel totale del turno e della giornata; N8, `kzero
+  leggi-schede` con una versione nuova che toglie una sola versione, "Versione tolta (cominciava ...)" al singolare (e con due il
+  plurale). Prove: test_controlli (+2), test_schede_comandi (+2). Sabotaggi, tutti presi e solo dalle prove nuove: carrozzine non sommate
+  per luogo; ausili piegati non sommati; pezzi di un turno contati al massimo uno; "pezzi" solo da 3 in su; "versioni tolte" sempre al
+  plurale; sempre al singolare. Per i punti 1 e 2 (interruzioni e coincidenze) prima le domande e le proposte per l'arbitro
+  (K-023-domande-per-l-arbitro.md, consegnato come file), niente codice.
 ## Bug e limiti noti
 - (K-018) L'avviso sui nomi liberi trova solo il nome scritto come nei dati (senza maiuscole ne' accenti, parole intere):
   non i nomi scritti male, i soprannomi, le iniziali, le sigle ("S-DIS"), un nome dentro una parola piu' lunga, le parole
