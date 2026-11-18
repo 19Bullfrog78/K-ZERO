@@ -335,11 +335,15 @@ CardsRead read_cards(const CardTables& tab, const CardProfile& pr, const Index& 
     const std::vector<std::string> titoli_fermate = {cf.nr, cf.time, cf.point, cf.home, cf.boarding, cf.alighting, cf.loaded_km,
                                                      cf.empty_km, cf.escort};
     const std::vector<std::string> titoli_date = {pr.date_cols.nr, pr.date_cols.date};
+    const std::vector<std::string> titoli_interruzioni = {pr.break_cols.nr, pr.break_cols.from, pr.break_cols.to};
     const Colonne ks = colonne_di(tab.cards, titoli_schede);
     const Colonne kf = colonne_di(tab.stops, titoli_fermate);
     const Colonne kd = tab.dates.rows.empty() ? Colonne{} : colonne_di(tab.dates, titoli_date);
+    // K-023: il foglio delle interruzioni si legge solo se il profilo lo nomina (versione 2); puo' mancare, come quello delle date.
+    const bool con_interruzioni = !pr.sheet_breaks.empty() && !tab.breaks.rows.empty();
+    const Colonne ki = con_interruzioni ? colonne_di(tab.breaks, titoli_interruzioni) : Colonne{};
     for (const auto& [k, foglio] : {std::make_pair(&ks, pr.sheet_cards), std::make_pair(&kf, pr.sheet_stops),
-                                    std::make_pair(&kd, pr.sheet_dates)})
+                                    std::make_pair(&kd, pr.sheet_dates), std::make_pair(&ki, pr.sheet_breaks)})
         if (k->fault != TableFault::None) {
             out.fault = k->fault;
             out.fault_sheet = foglio;
@@ -349,6 +353,7 @@ CardsRead read_cards(const CardTables& tab, const CardProfile& pr, const Index& 
     out.card_rows = static_cast<int>(tab.cards.rows.size()) - 1;
     out.stop_rows = static_cast<int>(tab.stops.rows.size()) - 1;
     out.date_rows = tab.dates.rows.empty() ? 0 : static_cast<int>(tab.dates.rows.size()) - 1;
+    out.break_rows = con_interruzioni ? static_cast<int>(tab.breaks.rows.size()) - 1 : 0;
     const Ricerche cerca(pk, pr);
 
     // Le schede: prima i Nr e gli ID (doppi: ferme tutte).
@@ -370,7 +375,7 @@ CardsRead read_cards(const CardTables& tab, const CardProfile& pr, const Index& 
         if (!x.nr.empty() && nr_visti[x.nr] == 1) per_nr[x.nr] = &x;
 
     // Le righe delle fermate e delle date, per scheda (le righe senza la loro scheda: K-CTR-161).
-    std::map<std::string, std::vector<const TableRow*>> fermate, date;
+    std::map<std::string, std::vector<const TableRow*>> fermate, date, interruzioni;
     const auto per_scheda = [&](const Table& t, const Colonne& k, const std::string& titolo_nr, const std::string& foglio,
                                 std::map<std::string, std::vector<const TableRow*>>& dove) {
         for (std::size_t i = 1; i < t.rows.size(); ++i) {
@@ -388,6 +393,7 @@ CardsRead read_cards(const CardTables& tab, const CardProfile& pr, const Index& 
     };
     per_scheda(tab.stops, kf, cf.nr, pr.sheet_stops, fermate);
     if (!tab.dates.rows.empty()) per_scheda(tab.dates, kd, pr.date_cols.nr, pr.sheet_dates, date);
+    if (con_interruzioni) per_scheda(tab.breaks, ki, pr.break_cols.nr, pr.sheet_breaks, interruzioni);
 
     for (std::size_t i = 0; i < out.cards.size(); ++i) {
         CardRead& x = out.cards[i];
@@ -571,6 +577,60 @@ CardsRead read_cards(const CardTables& tab, const CardProfile& pr, const Index& 
             }
             k.dates.assign(giorni_elencati.begin(), giorni_elencati.end());
         }
+
+        // Le interruzioni (K-023): periodi in cui il servizio non si fa, i due giorni compresi, dentro il periodo della scheda, senza
+        // sovrapposizioni e mai su una data elencata (la scheda direbbe due cose opposte per quel giorno). Il programma non ne corregge
+        // nessuna: un'interruzione che non torna ferma la scheda.
+        struct Interruzione {
+            DateRange periodo;
+            int riga = 0;
+        };
+        std::vector<Interruzione> lette;
+        for (const TableRow* ri : interruzioni[x.nr]) {
+            Riga z{*ri, ki, pr.sheet_breaks, &x};
+            const auto t1 = z.serve(pr.break_cols.from);
+            if (!t1) break;
+            const auto d1 = data(*t1, pr.date_sep, date1904);
+            if (!d1) {
+                z.ferma(CardFault::BadDate, pr.break_cols.from);
+                break;
+            }
+            const auto t2 = z.serve(pr.break_cols.to);
+            if (!t2) break;
+            const auto d2 = data(*t2, pr.date_sep, date1904);
+            if (!d2) {
+                z.ferma(CardFault::BadDate, pr.break_cols.to);
+                break;
+            }
+            if (*d2 < *d1) {
+                z.ferma(CardFault::BreakReversed, pr.break_cols.to);
+                break;
+            }
+            if (*d1 < k.from || *d2 > k.to) {
+                z.ferma(CardFault::BreakOutsidePeriod, *d1 < k.from ? pr.break_cols.from : pr.break_cols.to);
+                break;
+            }
+            lette.push_back({{*d1, *d2}, ri->number});
+        }
+        if (x.fault) continue;
+        std::stable_sort(lette.begin(), lette.end(), [](const Interruzione& a, const Interruzione& b) { return a.periodo.from < b.periodo.from; });
+        const auto ferma_interruzione = [&](CardFault f, int riga) {
+            x.fault = f;
+            x.fault_sheet = pr.sheet_breaks;
+            x.fault_row = riga;
+            x.fault_column = pr.break_cols.from;
+        };
+        for (std::size_t j = 1; j < lette.size() && !x.fault; ++j)
+            if (lette[j].periodo.from <= lette[j - 1].periodo.to)
+                ferma_interruzione(CardFault::BreaksOverlap, std::max(lette[j].riga, lette[j - 1].riga));
+        for (std::size_t j = 0; j < lette.size() && !x.fault; ++j)
+            for (Day d : k.dates)
+                if (d >= lette[j].periodo.from && d <= lette[j].periodo.to) {
+                    ferma_interruzione(CardFault::ListedDateInBreak, lette[j].riga);
+                    break;
+                }
+        if (x.fault) continue;
+        for (const Interruzione& i : lette) k.breaks.push_back(i.periodo);
 
         // Le fermate, nell'ordine.
         for (const TableRow* rf : fermate[x.nr]) {
@@ -766,6 +826,12 @@ Calendar card_calendar(const Card& c, const Code& code, DateRange valid) {
     else
         for (Day d : c.dates)
             if (d >= valid.from && d <= valid.to) k.added.push_back({d, {}});
+    // K-023: le interruzioni, tagliate al periodo (fuori dal periodo il calendario non vale gia', e una sospensione fuori dal periodo
+    // sarebbe un errore, K-CTR-013).
+    for (const DateRange& b : c.breaks) {
+        const Day da = std::max(b.from, valid.from), a = std::min(b.to, valid.to);
+        if (da <= a) k.suspensions.push_back({{da, a}, std::string(), {}});
+    }
     return k;
 }
 
@@ -855,6 +921,10 @@ std::vector<CardChange> card_changes(const Card& a, const Card& b) {
     for (Day d : a.dates) da.push_back(text_from_day(d));
     for (Day d : b.dates) db.push_back(text_from_day(d));
     cambia("date_elencate", lista(da), lista(db));
+    std::vector<std::string> ia, ib;   // K-023
+    for (const DateRange& r : a.breaks) ia.push_back(text_from_day(r.from) + " - " + text_from_day(r.to));
+    for (const DateRange& r : b.breaks) ib.push_back(text_from_day(r.from) + " - " + text_from_day(r.to));
+    cambia("interruzioni", lista(ia), lista(ib));
     if (normalize_name(a.calendar_word) != normalize_name(b.calendar_word) || a.base_calendar != b.base_calendar)
         out.push_back({"calendario", a.calendar_word + " (" + a.base_calendar + ")", b.calendar_word + " (" + b.base_calendar + ")", false});
     parola("cadenza", a.cadence_word, b.cadence_word);

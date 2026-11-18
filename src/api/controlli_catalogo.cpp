@@ -221,6 +221,13 @@ void aggiungi_schede(std::vector<DefinizioneControllo>& c) {
                   dove + "l'accompagnatore sale e scende nello stesso passaggio (due righe di fila nello stesso luogo alla stessa ora)" +
                       ferma,
                   dove + "la riga ha una casa, ma il pacchetto e' di livello \"solo numeri\": le case stanno solo nel livello completo" +
+                      ferma,
+                  // K-023: le interruzioni.
+                  dove + "l'interruzione finisce prima di cominciare (Al prima di Dal)" + ferma,
+                  dove + "l'interruzione esce dal periodo della scheda (attivazione, disattivazione): forse un anno scritto male" + ferma,
+                  dove + "l'interruzione si sovrappone a un'altra della stessa scheda (anche due righe uguali): il programma non sceglie "
+                         "quale e' giusta" + ferma,
+                  dove + "l'interruzione contiene una data elencata della scheda: per quel giorno la scheda direbbe due cose opposte" +
                       ferma}});
     c.push_back({Check::CardRowWithoutCard, "K-CTR-161", E, N, "Riga senza la sua scheda",
                  {"Foglio \"{foglio}\", riga {riga}: il Nr e' vuoto o non e' il Nr di una scheda del foglio delle schede: la riga non "

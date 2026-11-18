@@ -871,3 +871,192 @@ TEST(Schede, ProfiliERegistroAllaVersioneDue) {
     m.file["schede_servizi.json"] = r.dump(2);
     EXPECT_FALSE(leggi_pacchetto(m).forma_valida());
 }
+
+namespace {
+
+Lettura lettura_k023() {
+    Lettura l = leggi_pacchetto(pacchetto_k023());
+    EXPECT_TRUE(l.forma_valida());
+    return l;
+}
+// La scheda 4000123/3 (andata, scuola primaria, da lunedi' a venerdi', calendario SCOLASTICO, dal 14/09/2026 al 12/06/2027: 175 giorni)
+// con le interruzioni date (righe Nr, Dal, Al) e il Tot Giorni dato.
+Fogli con_interruzioni(const Righe& righe, const std::string& tot_giorni) {
+    Fogli f = una(1);
+    f.schede[1][16] = tot_giorni;
+    f.interruzioni = {{"Nr", "Dal", "Al"}};
+    for (const auto& r : righe) f.interruzioni.push_back(r);
+    return f;
+}
+// Tre interruzioni, scritte non in ordine: la prima comprende le vacanze di Natale del calendario SCOLASTICO (23/12 - 06/01) e due giorni
+// prima e dopo (21-22/12, 07-08/01: 4 giorni di servizio in meno); la seconda una settimana di febbraio (5 giorni); la terza un lunedi'
+// (1 giorno). 175 - 10 = 165.
+const Righe kTreInterruzioni = {{"4000123 / 3", "15/02/2027", "19/02/2027"},
+                                {"4000123 / 3", "21/12/2026", "08/01/2027"},
+                                {"4000123/3", "#46510", "#46510"}};   // 2027-05-03 come numero di data di Excel
+bool c_e(const std::vector<Problem>& v, Check c) {
+    return std::any_of(v.begin(), v.end(), [c](const Problem& p) { return p.check == c; });
+}
+int errori_di(const Package& p) {
+    const std::vector<Problem> v = check_package(p);
+    return static_cast<int>(std::count_if(v.begin(), v.end(), [](const Problem& x) {
+        return definizione_controllo(x.check).livello == Livello::Errore;
+    }));
+}
+
+}  // namespace
+
+// Punto 1 (K-023): le interruzioni diventano sospensioni del calendario della versione e contano nel Tot Giorni come insieme di giorni (le
+// vacanze di Natale gia' tolte dal calendario SCOLASTICO non si tolgono due volte): Tot Giorni 165, nessun K-CTR-163; con 175 l'avviso dice
+// 165. Nel registro le interruzioni in ordine; il calendario non vale nei giorni interrotti e vale il giorno dopo; kzero controlla senza
+// errori e senza K-CTR-170. Un profilo alla versione 1 non legge il foglio. Sabotaggi: interruzioni ignorate; contate due volte.
+TEST(Schede, InterruzioniNelCalendarioEInTotGiorni) {
+    const Lettura l = lettura_k023();
+    const Letto x = leggi(l, con_interruzioni(kTreInterruzioni, "#165"), attivazione());
+    ASSERT_EQ(x.m.outcomes.at(0).kind, CardOutcome::Kind::New) << (x.m.outcomes.at(0).fault ? static_cast<int>(*x.m.outcomes.at(0).fault) : -1);
+    EXPECT_EQ(x.r.break_rows, 3);
+    EXPECT_FALSE(c_e(x.m.problems, Check::CardTotalDaysDiffer)) << ::testing::PrintToString(messaggi(x.dopo, x.m.problems));
+    const ServiceCard sc = nel_registro(x.dopo, "SCH-4000123-3");
+    const Card& k = sc.versions.at(0).card;
+    ASSERT_EQ(k.breaks.size(), 3u);
+    EXPECT_EQ(text_from_day(k.breaks[0].from) + " " + text_from_day(k.breaks[0].to), "2026-12-21 2027-01-08");
+    EXPECT_EQ(text_from_day(k.breaks[1].from) + " " + text_from_day(k.breaks[1].to), "2027-02-15 2027-02-19");
+    EXPECT_EQ(text_from_day(k.breaks[2].from) + " " + text_from_day(k.breaks[2].to), "2027-05-03 2027-05-03");
+    EXPECT_EQ(card_days(k, Index(x.dopo.pacchetto)), 165);
+    const Index idx(x.dopo.pacchetto);
+    const Calendar* c = idx.calendar("CAL-4000123-3");
+    ASSERT_NE(c, nullptr);
+    ASSERT_EQ(c->suspensions.size(), 3u);
+    EXPECT_EQ(c->suspensions[0].reason, "Interruzione della scheda");
+    for (const auto& [g, vale] : std::vector<std::pair<Day, bool>>{{day_from_ymd(2026, 12, 18), true}, {day_from_ymd(2026, 12, 21), false},
+                                                                    {day_from_ymd(2027, 1, 8), false},  {day_from_ymd(2027, 1, 11), true},
+                                                                    {day_from_ymd(2027, 2, 17), false}, {day_from_ymd(2027, 2, 22), true},
+                                                                    {day_from_ymd(2027, 5, 3), false},  {day_from_ymd(2027, 5, 4), true}})
+        EXPECT_EQ(calendar_active(*c, g, idx), vale) << text_from_day(g);
+    EXPECT_EQ(errori_di(x.dopo.pacchetto), 0) << ::testing::PrintToString(messaggi(x.dopo, check_package(x.dopo.pacchetto)));
+    EXPECT_TRUE(schede::controlla_elementi(x.dopo).empty());
+    // Con il Tot Giorni senza interruzioni (175): l'avviso dice 165.
+    const Letto y = leggi(l, con_interruzioni(kTreInterruzioni, "#175"), attivazione());
+    ASSERT_EQ(y.m.outcomes.at(0).kind, CardOutcome::Kind::New);
+    ASSERT_TRUE(c_e(y.m.problems, Check::CardTotalDaysDiffer));
+    EXPECT_NE(messaggi(y.dopo, y.m.problems)[0].find("175"), std::string::npos);
+    EXPECT_NE(messaggi(y.dopo, y.m.problems)[0].find("165"), std::string::npos) << messaggi(y.dopo, y.m.problems)[0];
+    // Un profilo alla versione 1 (k021) non legge il quarto foglio: la scheda come prima, senza interruzioni.
+    const Letto z = leggi(lettura_di_prova(), con_interruzioni(kTreInterruzioni, "#175"), attivazione());
+    EXPECT_EQ(z.r.break_rows, 0);
+    EXPECT_TRUE(nel_registro(z.dopo, "SCH-4000123-3").versions.at(0).card.breaks.empty());
+    EXPECT_FALSE(c_e(z.m.problems, Check::CardTotalDaysDiffer));
+}
+
+// Punto 1 (K-023): le interruzioni che non tornano fermano la scheda, nel foglio delle interruzioni (le altre schede vanno avanti): data
+// scritta male (7) o vuota (1), Dal dopo Al (43), fuori dal periodo della scheda (44, prima dell'attivazione o dopo la disattivazione),
+// sovrapposte (45, anche due righe uguali), con dentro una data elencata (46). Una riga con un Nr che non c'e': K-CTR-161. Sabotaggi: Dal
+// dopo Al accettato; interruzione fuori dalla validita' senza segnalazione; data elencata dentro un'interruzione accettata.
+TEST(Schede, InterruzioniCheFermanoLaScheda) {
+    const Lettura l = lettura_k023();
+    const auto motivo = [&](const Righe& righe, Fogli f) {
+        f.interruzioni = {{"Nr", "Dal", "Al"}};
+        for (const auto& r : righe) f.interruzioni.push_back(r);
+        f.schede.push_back(fogli_di_prova().schede[2]);   // un'altra scheda del file (due scuole), senza interruzioni: va avanti
+        for (std::size_t i = 1; i < fogli_di_prova().fermate.size(); ++i)
+            if (fogli_di_prova().fermate[i][0] == "4000124 / 1") f.fermate.push_back(fogli_di_prova().fermate[i]);
+        const Letto x = leggi(l, f, attivazione());
+        EXPECT_EQ(x.m.outcomes.size(), 2u);
+        if (x.m.outcomes.size() == 2) {
+            EXPECT_NE(x.m.outcomes[1].kind, CardOutcome::Kind::Stopped) << "l'altra scheda";
+        }
+        const CardRead& r = x.r.cards.at(0);
+        if (r.fault) {
+            EXPECT_EQ(r.fault_sheet, "Interruzioni");
+        }
+        return std::make_pair(r.fault ? static_cast<int>(*r.fault) : -1, r.fault_row);
+    };
+    const Fogli f = una(1);
+    EXPECT_EQ(motivo({{"4000123 / 3", "31/02/2027", "03/03/2027"}}, f), std::make_pair(7, 2));
+    EXPECT_EQ(motivo({{"4000123 / 3", "15/02/2027", ""}}, f), std::make_pair(1, 2));
+    EXPECT_EQ(motivo({{"4000123 / 3", "19/02/2027", "15/02/2027"}}, f), std::make_pair(43, 2));
+    EXPECT_EQ(motivo({{"4000123 / 3", "10/09/2026", "15/09/2026"}}, f), std::make_pair(44, 2));
+    EXPECT_EQ(motivo({{"4000123 / 3", "10/06/2027", "14/06/2027"}}, f), std::make_pair(44, 2));
+    EXPECT_EQ(motivo({{"4000123 / 3", "15/02/2027", "19/02/2027"}, {"4000123 / 3", "21/12/2026", "08/01/2027"},
+                      {"4000123 / 3", "05/01/2027", "10/01/2027"}},
+                     f),
+              std::make_pair(45, 4));
+    EXPECT_EQ(motivo({{"4000123 / 3", "15/02/2027", "19/02/2027"}, {"4000123 / 3", "15/02/2027", "19/02/2027"}}, f), std::make_pair(45, 3));
+    EXPECT_EQ(motivo({{"4000123 / 3", "15/02/2027", "19/02/2027"}, {"4000123 / 3", "19/02/2027", "22/02/2027"}}, f), std::make_pair(45, 3));
+    EXPECT_EQ(motivo({{"4000123 / 3", "15/02/2027", "19/02/2027"}, {"4000123 / 3", "20/02/2027", "22/02/2027"}}, f), std::make_pair(-1, 0));
+    // Una data elencata dentro un'interruzione (cadenza a date elencate).
+    Fogli d = f;
+    d.schede[1][20] = "Ogni 15 giorni";
+    d.schede[1][16] = "#3";
+    d.date = {{"Nr", "Data"}, {"4000123 / 3", "21/09/2026"}, {"4000123 / 3", "05/10/2026"}, {"4000123 / 3", "19/10/2026"}};
+    EXPECT_EQ(motivo({{"4000123 / 3", "02/11/2026", "06/11/2026"}}, d), std::make_pair(-1, 0));
+    EXPECT_EQ(motivo({{"4000123 / 3", "02/11/2026", "06/11/2026"}, {"4000123 / 3", "05/10/2026", "05/10/2026"}}, d), std::make_pair(46, 3));
+    // Una riga con un Nr che non c'e': K-CTR-161, nel foglio delle interruzioni.
+    Fogli n = con_interruzioni({{"4000999 / 1", "15/02/2027", "19/02/2027"}}, "#175");
+    const Letto x = leggi(l, n, attivazione());
+    EXPECT_EQ(x.m.outcomes.at(0).kind, CardOutcome::Kind::New);
+    ASSERT_TRUE(c_e(x.r.problems, Check::CardRowWithoutCard));
+    EXPECT_NE(messaggi(x.dopo, x.r.problems)[0].find("Foglio \"Interruzioni\", riga 2"), std::string::npos) << messaggi(x.dopo, x.r.problems)[0];
+}
+
+// Punto 1 (K-023): un'interruzione a cavallo di due versioni (Natale, 21/12 - 08/01; la versione 2 vale dal 2027-01-01) si taglia al
+// periodo di ogni versione: la 1, accorciata al 2026-12-31, ha la sospensione 21/12 - 31/12; la 2 dal 01/01 all'08/01. Una versione che
+// comincia dopo l'interruzione (dal 2027-01-11) non la ha nel suo calendario (resta nella copia della scheda). kzero controlla senza errori
+// (una sospensione fuori dal periodo sarebbe K-CTR-013). Tra due versioni "cosa cambia" dice le interruzioni; due schede uguali tranne
+// le interruzioni non sono uguali. Sabotaggio: interruzione a cavallo di due versioni non tagliata.
+TEST(Schede, InterruzioneACavalloDiDueVersioni) {
+    const Lettura l = lettura_k023();
+    const Righe natale = {{"4000123 / 3", "21/12/2026", "08/01/2027"}};
+    const Letto v1 = leggi(l, con_interruzioni(natale, "#171"), attivazione());
+    ASSERT_EQ(v1.m.outcomes.at(0).kind, CardOutcome::Kind::New);
+    EXPECT_FALSE(c_e(v1.m.problems, Check::CardTotalDaysDiffer));
+    const auto sospensioni = [](const Lettura& d, const Code& cal) {
+        std::string t;
+        const Calendar* c = Index(d.pacchetto).calendar(cal);
+        if (!c) return std::string("nessun calendario");
+        for (const Suspension& s : c->suspensions) t += (t.empty() ? "" : ", ") + text_from_day(s.range.from) + " " + text_from_day(s.range.to);
+        return t;
+    };
+    for (const auto& [dal, prima, dopo] : std::vector<std::tuple<Day, std::string, std::string>>{
+             {day_from_ymd(2027, 1, 1), "2026-12-21 2026-12-31", "2027-01-01 2027-01-08"},
+             {day_from_ymd(2027, 1, 11), "2026-12-21 2027-01-08", ""}}) {
+        Fogli mod = con_interruzioni(natale, "#171");
+        mod.schede[1][21] = "Modifica";
+        mod.fermate[1][1] = "07:25";
+        DateChoices s;
+        s.by_nr["4000123/3"] = DateChoice{DateChoice::Kind::Date, dal};
+        const Letto v2 = leggi(v1.dopo, mod, s);
+        ASSERT_EQ(v2.m.outcomes.at(0).kind, CardOutcome::Kind::NewVersion);
+        EXPECT_EQ(sospensioni(v2.dopo, "CAL-4000123-3"), prima) << text_from_day(dal);
+        EXPECT_EQ(sospensioni(v2.dopo, "CAL-4000123-3-V2"), dopo) << text_from_day(dal);
+        EXPECT_EQ(errori_di(v2.dopo.pacchetto), 0) << ::testing::PrintToString(messaggi(v2.dopo, check_package(v2.dopo.pacchetto)));
+        EXPECT_TRUE(schede::controlla_elementi(v2.dopo).empty());
+        EXPECT_EQ(nel_registro(v2.dopo, "SCH-4000123-3").versions.at(1).card.breaks.size(), 1u);   // la copia resta intera
+    }
+    // Uguale tranne le interruzioni: versione nuova, e "cosa cambia" lo dice.
+    Fogli altre = con_interruzioni({{"4000123 / 3", "21/12/2026", "08/01/2027"}, {"4000123 / 3", "15/02/2027", "19/02/2027"}}, "#166");
+    altre.schede[1][21] = "Modifica";
+    const Letto v3 = leggi(v1.dopo, altre, attivazione());
+    ASSERT_EQ(v3.m.outcomes.at(0).kind, CardOutcome::Kind::NewVersion);
+    bool interruzioni = false;
+    for (const CardChange& c : v3.m.outcomes.at(0).changes)
+        if (c.what == "interruzioni") {
+            interruzioni = true;
+            EXPECT_EQ(c.before, "2026-12-21 - 2027-01-08");
+            EXPECT_EQ(c.after, "2026-12-21 - 2027-01-08, 2027-02-15 - 2027-02-19");
+        }
+    EXPECT_TRUE(interruzioni);
+    Fogli uguale = con_interruzioni(natale, "#171");
+    uguale.schede[1][21] = "Modifica";
+    EXPECT_EQ(leggi(v1.dopo, uguale, attivazione()).m.outcomes.at(0).kind, CardOutcome::Kind::Same);
+    // Le sospensioni del calendario cambiate a mano: K-CTR-170 (campo "sospensioni").
+    PacchettoInMemoria m;
+    for (const auto& [f, d] : v1.dopo.documenti) m.file[f] = chiusura::testo_file(d);
+    JsonDati cal = JsonDati::parse(m.file.at("calendari.json"));
+    for (JsonDati& c : cal.at("calendari"))
+        if (c.at("codice") == "CAL-4000123-3") c.at("sospensioni").at(0)["al"] = "2027-01-07";
+    m.file["calendari.json"] = cal.dump(2);
+    const std::vector<Problem> p = schede::controlla_elementi(leggi_pacchetto(m));
+    ASSERT_EQ(p.size(), 1u);
+    EXPECT_NE(messaggi(v1.dopo, p)[0].find("sospensioni"), std::string::npos) << messaggi(v1.dopo, p)[0];
+}

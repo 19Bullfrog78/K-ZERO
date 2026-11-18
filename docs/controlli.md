@@ -518,7 +518,10 @@ alunni; 29 scendono diverso da Totali alunni; 30 km pieni diversi da Tot Km Cari
 della scheda senza la sua riga; 33 riga in una scuola che non e' della scheda; 34 data elencata fuori dal periodo; 35 cadenza a date
 elencate senza date; 36 meno di due righe; 37 due righe di fila nello stesso luogo alla stessa ora con km sulla seconda; 38 data
 scelta prima dell'attivazione; 39 data scelta dopo la disattivazione; 40 stesso ID gia' nel registro con un altro contratto o
-committente; 41 accompagnatore che sale e scende nello stesso passaggio; 42 una casa in un pacchetto "solo numeri".
+committente; 41 accompagnatore che sale e scende nello stesso passaggio; 42 una casa in un pacchetto "solo numeri"; dal K-023, nel
+foglio delle interruzioni (dopo le date elencate, prima delle fermate; una data scritta male o vuota e' la variante 7 o 1): 43
+interruzione che finisce prima di cominciare; 44 interruzione che esce dal periodo della scheda (anche di un giorno); 45 interruzioni
+che si sovrappongono (anche due righe uguali); 46 interruzione con dentro una data elencata.
 
 **K-CTR-171** usa la regola che il regolamento del contratto ha gia' nei dati (`assistente_a_bordo`, con le sue condizioni e la sua
 fonte; nel demo R-TN: infanzia sui mezzi con piu' di 8 posti per i passeggeri, testo unico 1.C1.9): se in un tratto con qualcuno a
@@ -695,9 +698,9 @@ Un nuovo controllo prende il codice successivo all'ultimo.
 | K-CTR-158 | avviso | Utente aggiunto a mano, ora nel file: vale il file | Solo in `kzero leggi-elenco`: un utente aggiunto a mano ora e' nel file, con un campo diverso da quello scritto all'aggiunta (e non cambiato a mano dopo): vale il file. | Controllare il campo; se non e' giusto, cambiarlo a mano. |
 | K-CTR-159 | avviso | Utente tolto a mano che il file ha ancora | Solo in `kzero leggi-elenco`: un utente tolto a mano e' ancora nel file: resta fuori (nessun suo campo si aggiorna) e se ne andra' alla prima lettura completa senza di lui. | Niente; se deve restare, `kzero rimetti-in-elenco`. |
 | K-CTR-160 | errore | Scheda dei servizi che non si legge | Solo in `kzero leggi-schede`: una scheda del file non si legge (varianti sopra, "Schede dei servizi"): si ferma, con il Nr, il foglio, la riga e la colonna, mai il valore. Le altre schede vanno avanti. | Correggere la copia nel modello (o il pacchetto: codici esterni, profilo) e rileggere il file. |
-| K-CTR-161 | errore | Riga senza la sua scheda | Solo in `kzero leggi-schede`: una riga del foglio delle fermate o delle date ha il Nr vuoto o di una scheda che non c'e'. | Scrivere il Nr giusto. |
+| K-CTR-161 | errore | Riga senza la sua scheda | Solo in `kzero leggi-schede`: una riga del foglio delle fermate, delle date o (K-023) delle interruzioni ha il Nr vuoto o di una scheda che non c'e'. | Scrivere il Nr giusto. |
 | K-CTR-162 | errore | Scheda con l'attivazione prima della presa in carico, senza una scelta | Solo in `kzero leggi-schede`: l'attivazione e' prima di `--data` e il programma non sceglie da quando vale la scheda: si ferma, e il messaggio elenca le scelte. | `--validita attivazione`, `presa-in-carico` o una data (per tutto il file), oppure `--validita-scheda` per una scheda. |
-| K-CTR-163 | avviso | Tot Giorni diverso dai giorni del calendario | Solo in `kzero leggi-schede`: Tot Giorni della scheda e' diverso dai giorni del calendario della scheda (base, periodo, giorni segnati) nel periodo: uno dei due calendari e' diverso. La scheda va avanti. | Controllare il calendario del pacchetto (o la copia). |
+| K-CTR-163 | avviso | Tot Giorni diverso dai giorni del calendario | Solo in `kzero leggi-schede`: Tot Giorni della scheda e' diverso dai giorni del calendario della scheda (base, periodo, giorni segnati e, dal K-023, interruzioni, contate come insieme di giorni: un giorno gia' fuori dal calendario di base non si toglie due volte) nel periodo: uno dei due calendari e' diverso. La scheda va avanti. | Controllare il calendario del pacchetto (o la copia). |
 | K-CTR-164 | avviso | Date della scheda fuori dai giorni segnati o dal calendario | Solo in `kzero leggi-schede`: con la cadenza a date elencate, una o piu' date non cadono in un giorno con la X o non sono giorni del calendario di base. Valgono le date. | Controllare la copia. |
 | K-CTR-165 | avviso | Scheda nuova o modifica che non torna con il registro | Solo in `kzero leggi-schede`: "scheda nuova" con un ID gia' nel registro (si legge come versione nuova), o "modifica" con un ID mai visto (si legge come scheda nuova). | Controllare che non manchi una scheda. |
 | K-CTR-166 | avviso | Scheda gia' finita prima della presa in carico | Solo in `kzero leggi-schede`: la disattivazione e' prima di `--data`: la scheda ha solo giorni passati. | Niente, se e' voluto. |

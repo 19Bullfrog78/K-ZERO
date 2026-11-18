@@ -78,6 +78,11 @@ enum class CardFault {
     OtherContract = 40,         // lo stesso ID e' gia' nel registro con un altro contratto o un altro committente
     EscortSamePassage = 41,     // l'accompagnatore sale e scende nello stesso passaggio
     HomeInNumbersOnly = 42,     // una casa in un pacchetto "solo numeri" (le case stanno solo nel livello completo)
+    // K-023: le interruzioni (foglio delle interruzioni).
+    BreakReversed = 43,         // l'interruzione finisce prima di cominciare
+    BreakOutsidePeriod = 44,    // l'interruzione esce dal periodo della scheda (attivazione, disattivazione)
+    BreaksOverlap = 45,         // due interruzioni della stessa scheda si sovrappongono (anche due righe uguali)
+    ListedDateInBreak = 46,     // una data elencata cade dentro un'interruzione
 };
 
 struct CardRead {
@@ -97,6 +102,7 @@ struct CardsRead {
     std::string fault_sheet;     // il foglio con la riga dei titoli sbagliata
     std::string fault_title;     // il titolo che manca o e' ripetuto (una parola del profilo)
     int card_rows = 0, stop_rows = 0, date_rows = 0;   // righe dopo quella dei titoli
+    int break_rows = 0;                                 // K-023: righe del foglio delle interruzioni (0 se non c'e')
     std::vector<CardRead> cards;   // nell'ordine del foglio delle schede
     std::vector<Problem> problems; // K-CTR-161 (righe senza la loro scheda)
 };
@@ -175,9 +181,11 @@ struct CardsMerge {
 CardsMerge merge_cards(const Package& p, const CardProfile& profile, const Code& contract, Day taken, const std::string& reference,
                        const DateChoices& choices, const CardsRead& read);
 
-// I giorni in cui vale il calendario fatto da una scheda nel periodo dato (con la base del pacchetto).
+// I giorni in cui vale il calendario fatto da una scheda nel periodo dato (con la base del pacchetto). K-023: le interruzioni della
+// scheda sono sospensioni, tagliate al periodo (un'interruzione tutta fuori dal periodo non c'e'); il motivo lo scrive l'API.
 Calendar card_calendar(const Card& c, const Code& code, DateRange valid);
-// Quanti giorni conta la scheda (Tot Giorni): dall'attivazione alla disattivazione.
+// Quanti giorni conta la scheda (Tot Giorni): dall'attivazione alla disattivazione, interruzioni comprese (un insieme di giorni: un
+// giorno di interruzione che non e' un giorno di servizio non si toglie due volte).
 int card_days(const Card& c, const Index& idx);
 
 // Le cose che cambiano tra due schede (a: quella di prima).

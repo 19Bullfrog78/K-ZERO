@@ -1616,8 +1616,10 @@ la definizione `parola` e non entrano nell'avviso sui nomi liberi (K-018).
   St. Scar., km pieno, km vuoto, accompagnatore.
 - **Date**: solo per le cadenze a date elencate, una riga per data: Nr, data.
 - **Interruzioni** (K-023, solo con un profilo alla versione 2 che nomina il foglio): una riga per periodo in cui il servizio non si fa
-  (in fondo alla scheda, "Interruzioni:"): Nr, Dal, Al, i due giorni compresi (un giorno solo: Dal uguale ad Al). Il foglio puo'
-  mancare (nessuna interruzione), come quello delle date.
+  (in fondo alla scheda, "Interruzioni:"): Nr, Dal, Al, i due giorni compresi (un giorno solo: Dal uguale ad Al), scritti come le
+  altre date. Il foglio puo' mancare (nessuna interruzione), come quello delle date. Un'interruzione deve stare dentro il periodo della
+  scheda (attivazione, disattivazione), non sovrapporsi a un'altra e non contenere una data elencata: altrimenti la scheda si ferma
+  (K-CTR-160, varianti 43 ... 46); il programma non ne corregge nessuna.
 Il Nr lega le righe dei fogli; si confronta senza badare agli spazi intorno alla barra ("4000123/3" = "4000123 / 3"). Le
 celle vuote di St. Car. e St. Scar. valgono 0 (sulle schede ci sono righe con la sola salita); una cella dei km vuota vuol dire
 "non scritto", **mai 0** (0,0 scritto e' zero). Date e orari si scrivono come sulla scheda: un testo (con i separatori del profilo)
@@ -1686,7 +1688,10 @@ leggi-schede` e `kzero togli-scheda`. Schemi: [docs/schema/schede_servizi.v2.sch
 - **calendario**: base = il calendario del pacchetto con il codice esterno della parola della scheda (es. SCOLASTICO, MATERNA;
   `tipo_calendario` del profilo), periodo = da quando vale la versione alla sua fine, giorni = quelli con la X (cadenza a giorni
   segnati), oppure nessun giorno e le date una per una (`date_aggiunte`, cadenza a date elencate: il programma non ricava mai un
-  ritmo);
+  ritmo); dal K-023 le **interruzioni** della scheda sono **sospensioni** (motivo "Interruzione della scheda"), **tagliate al periodo
+  della versione**: un'interruzione a cavallo di due versioni va per meta' in ognuna, una tutta fuori dal periodo non c'e' (resta nella
+  copia della scheda). Tot Giorni (K-CTR-163) si confronta con i giorni del calendario con le interruzioni, contati come insieme di
+  giorni (un giorno di interruzione che non e' gia' un giorno di servizio non si toglie due volte);
 - codici (D9): `S-`, `G-`, `C-`, `CAL-` seguiti dal Nr con i caratteri non ammessi nei codici cambiati in "-" (es. `S-4000123-3`),
   dalla seconda versione `-V2`, `-V3`...; un codice gia' usato da un altro elemento si salta al numero dopo, mai sovrascritto.
 
@@ -1702,8 +1707,8 @@ giorno prima finisce il giorno prima, quelle che cominciano dalla data scelta in
 non cambiano mai**. La data scelta puo' essere anche prima della presa in carico (D4, scelta B: il committente puo' dire che una
 modifica arrivata il 15/11 vale dal 10/11), mai di base: l'uscita dice quante giornate prima della presa in carico cambiano e quali
 versioni si tolgono. Contenuto uguale all'ultima versione (la parola nuova/modifica non conta): niente da fare. L'uscita dice cosa
-cambia: Nr, verso e momento, scuole, fermate (luoghi e ordine), orari, numeri, km, totali, date e giorni, calendario, cadenza, e le
-caselle (solo con i dati particolari). Mai unire schede con ID diversi.
+cambia: Nr, verso e momento, scuole, fermate (luoghi e ordine), orari, numeri, km, totali, date e giorni, interruzioni (K-023),
+calendario, cadenza, e le caselle (solo con i dati particolari). Mai unire schede con ID diversi.
 
 **Togliere una scheda scritta per errore**: `kzero togli-scheda <pacchetto> --scheda <codice o ID> --riferimento "..." --data
 AAAA-MM-GG --utente U [--tutte] [--scrivi <pacchetto>]` toglie l'ultima versione (servizio, gruppo, corsa, calendario) e rida' alla

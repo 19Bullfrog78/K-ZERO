@@ -390,3 +390,62 @@ TEST(SchedeComandi, VersioniTolteAlSingolareEAlPlurale) {
     EXPECT_NE(due.find("     Versioni tolte (cominciavano dal 2026-11-21 in poi): 2, 4.\n"), std::string::npos) << due;
     EXPECT_EQ(due.find("Versione tolta"), std::string::npos) << due;
 }
+
+namespace {
+// K-023: la scheda 4000123/3 con tre interruzioni (Tot Giorni 165, come in test_schede.cpp).
+Fogli scheda_con_tre_interruzioni() {
+    const Fogli tutte = fogli_di_prova();
+    Fogli f;
+    f.schede = {tutte.schede[0], tutte.schede[1]};
+    f.fermate = {tutte.fermate[0], tutte.fermate[1], tutte.fermate[2], tutte.fermate[3]};
+    f.date = tutte.date;
+    f.schede[1][16] = "#165";
+    f.interruzioni = {{"Nr", "Dal", "Al"},
+                      {"4000123 / 3", "15/02/2027", "19/02/2027"},
+                      {"4000123 / 3", "21/12/2026", "08/01/2027"},
+                      {"4000123 / 3", "03/05/2027", "03/05/2027"}};
+    return f;
+}
+std::string riga_che_comincia(const std::string& testo, const std::string& inizio) {
+    const std::size_t a = testo.find(inizio);
+    return a == std::string::npos ? std::string() : testo.substr(a, testo.find('\n', a) - a);
+}
+}  // namespace
+
+// Punto 1 (K-023, D3): leggi-schede dice le interruzioni lette. Con il profilo alla versione 2: "3 interruzioni" nella riga delle righe e
+// una riga con i periodi sotto la scheda; nel JSON (schede versione 2) le righe del foglio e i periodi; nessun K-CTR-163; il registro del
+// pacchetto chiuso alla versione 2 con le interruzioni (dati comuni, nel file normale). Con il profilo di oggi (versione 1) il testo resta
+// quello di prima (la riga delle righe senza interruzioni) e il JSON ha i campi nuovi vuoti.
+TEST(SchedeComandi, InterruzioniNelleUscite) {
+    Prova p(pacchetto_k023());
+    p.file("interruzioni.xlsx", scheda_con_tre_interruzioni());
+    const Risultato t = p.leggi("interruzioni.xlsx", {"--validita", "attivazione"});
+    std::cout << "--- una scheda con tre interruzioni ---\n" << t.uscita;
+    EXPECT_EQ(riga_che_comincia(t.uscita, "Righe:"), "Righe: 1 scheda, 3 fermate, 0 date, 3 interruzioni.");
+    EXPECT_NE(t.uscita.find("     Interruzioni (il servizio non si fa): dal 2026-12-21 al 2027-01-08, dal 2027-02-15 al 2027-02-19, dal "
+                            "2027-05-03 al 2027-05-03.\n"),
+              std::string::npos)
+        << t.uscita;
+    EXPECT_EQ(t.uscita.find("K-CTR-163"), std::string::npos) << t.uscita;
+    const std::string registro = p.normale("schede_servizi.json");
+    EXPECT_NE(registro.find("\"schema_versione\": 2"), std::string::npos);
+    EXPECT_NE(registro.find("\"interruzioni\""), std::string::npos);
+    EXPECT_NE(p.normale("calendari.json").find("Interruzione della scheda"), std::string::npos);
+    Prova q(pacchetto_k023());
+    q.file("interruzioni.xlsx", scheda_con_tre_interruzioni());
+    const JsonDati j = JsonDati::parse(q.leggi("interruzioni.xlsx", {"--validita", "attivazione", "--formato", "json"}, false).uscita);
+    EXPECT_EQ(j.at("schema_versione"), 2);
+    EXPECT_EQ(j.at("righe").at("interruzioni"), 3);
+    ASSERT_EQ(j.at("schede").at(0).at("interruzioni").size(), 3u);
+    EXPECT_EQ(j.at("schede").at(0).at("interruzioni").at(0), JsonDati({{"dal", "2026-12-21"}, {"al", "2027-01-08"}}));
+    // Il profilo di oggi (versione 1): il quarto foglio non si legge, il testo resta quello di prima.
+    Prova r;
+    r.file("interruzioni.xlsx", scheda_con_tre_interruzioni());
+    const Risultato u = r.leggi("interruzioni.xlsx", {"--validita", "attivazione"}, false);
+    EXPECT_EQ(riga_che_comincia(u.uscita, "Righe:"), "Righe: 1 scheda, 3 fermate, 0 date.");
+    EXPECT_EQ(u.uscita.find("nterruzion"), std::string::npos) << u.uscita;
+    const JsonDati k = JsonDati::parse(r.leggi("interruzioni.xlsx", {"--validita", "attivazione", "--formato", "json"}, false).uscita);
+    EXPECT_EQ(k.at("schema_versione"), 2);
+    EXPECT_EQ(k.at("righe").at("interruzioni"), 0);
+    EXPECT_EQ(k.at("schede").at(0).at("interruzioni"), JsonDati::array());
+}
