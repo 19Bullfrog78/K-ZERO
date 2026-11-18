@@ -874,6 +874,25 @@
   per luogo; ausili piegati non sommati; pezzi di un turno contati al massimo uno; "pezzi" solo da 3 in su; "versioni tolte" sempre al
   plurale; sempre al singolare. Per i punti 1 e 2 (interruzioni e coincidenze) prima le domande e le proposte per l'arbitro
   (K-023-domande-per-l-arbitro.md, consegnato come file), niente codice.
+- 2026-11-18 - K-023 (seguito, dopo le risposte dell'arbitro: D1-D6 tutte A, P1-P10 accettate). Punto 1, interruzioni: profili_schede
+  versione 2 con il quarto foglio facoltativo (Nr, Dal, Al), schede_servizi versione 2 (scritto sempre alla 2) con le interruzioni nella
+  copia della scheda; le versioni 1 si leggono ancora. Le interruzioni sono sospensioni del calendario della versione, tagliate al suo
+  periodo, e contano nel Tot Giorni come insieme di giorni (K-CTR-163 ha una variante per le schede con interruzioni), in "cosa cambia" e
+  in K-CTR-170; quelle che non tornano fermano la scheda (K-CTR-160 varianti 43-46). Uscita `schede` versione 2 (le interruzioni lette;
+  con i profili di oggi il testo non cambia). D6: una versione senza giorni, o una versione di prima che accorciata resterebbe senza
+  giorni, ferma la scheda (variante 47; la prova S11 del K-022 ora si aspetta la scheda ferma). Punto 2, coincidenze: una scuola senza la
+  sua riga e' ammessa solo con una scuola sola e la corsa che finisce (andata) o comincia (ritorno) in un punto di trasbordo autorizzato
+  con qualcuno che prosegue (accompagnatore escluso): avviso K-CTR-176 (varianti per il ritorno e per il punto solo a voce), il gruppo
+  tiene la sua scuola; la variante 32 dice al condizionale come si scrive una coincidenza. Regola per i controlli d'arrivo futuri e
+  limite A -> B in DECISIONI.md. Dati di prova inventati in tests/esempi/k023-schede (due profili alla versione 2; tre schede per disabili:
+  una con tre interruzioni, due in coincidenza al Ponte di Sorgenta); prove sul programma (lettura, JSON, controlla dopo la scrittura);
+  fuzzing con il quarto foglio e i semi nuovi. Prove: test_schede (+8), test_schede_comandi (+1, una cambiata), test_controlli (catalogo).
+  Sabotaggi sul codice finale, 28, tutti presi: i 7 del mandato (interruzioni ignorate; contate due volte nel Tot Giorni; Dal dopo Al;
+  interruzione fuori dalla validita'; scuola senza riga senza trasbordo; con il trasbordo in mezzo; avviso della coincidenza che manca), i
+  6 del punto 0 rifatti, i 3 dell'arbitro (data elencata dentro un'interruzione; interruzione a cavallo di due versioni non tagliata;
+  versione senza giorni scritta) e 12 miei (sovrapposte; due scuole; nessuno che prosegue; accompagnatore contato; "a voce" non detto;
+  scuola tolta dal gruppo; K-CTR-170 senza sospensioni; interruzioni non in ordine; testo di oggi cambiato; interruzioni fuori da "cosa
+  cambia"; frase della variante 32 tolta; K-CTR-163 senza la sua variante).
 ## Bug e limiti noti
 - (K-018) L'avviso sui nomi liberi trova solo il nome scritto come nei dati (senza maiuscole ne' accenti, parole intere):
   non i nomi scritti male, i soprannomi, le iniziali, le sigle ("S-DIS"), un nome dentro una parola piu' lunga, le parole
@@ -985,6 +1004,11 @@
   con la versione dopo (DECISIONI.md, K-022). Nessun pacchetto vero ha schede.
 - (K-021) Con piu' scuole il gruppo non ha scuola: i controlli che usano la scuola del gruppo (attesa concordata, finestra) non si
   fanno per quel gruppo (scelta D3 A).
+
+- (K-023) Coincidenze delle schede: il legame A -> B (la persona che scende da A al punto di trasbordo e' quella che sale su B; B passa da
+  li' dopo A) non e' controllato: K-CTR-176 dice di vederlo a mano. Va nel mandato del confronto tra l'elenco e le schede.
+- (K-023) I controlli che confronteranno le corse con l'arrivo a scuola (lezioni, attesa, finestra, durata a bordo) non esistono ancora:
+  per un gruppo in coincidenza dovranno contare la catena A -> B, e senza il legame dire "non verificato" (DECISIONI.md, K-023).
 
 ## Idee
 - Generare scenari "gonfiati" (50-500 mezzi) dai giri reali per provare il carico.
