@@ -224,7 +224,8 @@ TEST(SchedeComandi, TogliScheda) {
 }
 
 // S11 (K-022): il segno "date dal 1904" della cartella di lavoro si legge dal file, fino alle date lette: le stesse date scritte come
-// numeri di Excel nel sistema del 1904 danno gli stessi giorni; senza il segno, gli stessi numeri sono altri giorni (sistema 1900).
+// numeri di Excel nel sistema del 1904 danno gli stessi giorni; senza il segno, gli stessi numeri sono altri giorni (sistema 1900: dal
+// 2022-09-13 al 2023-06-11, fuori dal calendario SCOLASTICO; dal K-023 la scheda si ferma, variante 47, perche' non avrebbe nessun giorno).
 // Sabotaggi: il segno del file ignorato (dal lettore Excel o dal comando).
 TEST(SchedeComandi, DateDal1904LetteDalFile) {
     Prova p;
@@ -236,14 +237,21 @@ TEST(SchedeComandi, DateDal1904LetteDalFile) {
     f.schede[1][5] = "#45088";   // 2027-06-12
     p.file("1904.xlsx", f, true);
     p.file("1900.xlsx", f, false);
-    const auto periodo = [&](const std::string& nome) {
-        const JsonDati j = JsonDati::parse(p.leggi(nome, {"--validita", "attivazione", "--formato", "json"}, false).uscita);
-        const JsonDati& s = j.at("schede").at(0);
-        EXPECT_EQ(s.at("esito"), "nuova") << j.dump(2);
-        return s.at("dal").get<std::string>() + " " + s.at("al").get<std::string>();
+    const auto lettura = [&](const std::string& nome) {
+        return JsonDati::parse(p.leggi(nome, {"--validita", "attivazione", "--formato", "json"}, false).uscita);
     };
-    EXPECT_EQ(periodo("1904.xlsx"), "2026-09-14 2027-06-12");
-    EXPECT_EQ(periodo("1900.xlsx"), "2022-09-13 2023-06-11");
+    const JsonDati j = lettura("1904.xlsx");
+    const JsonDati& s = j.at("schede").at(0);
+    EXPECT_EQ(s.at("esito"), "nuova") << j.dump(2);
+    EXPECT_EQ(s.at("dal").get<std::string>() + " " + s.at("al").get<std::string>(), "2026-09-14 2027-06-12");
+    // Sistema 1900: le stesse cifre sono il 2022-2023, fuori dal calendario della scheda.
+    const JsonDati k = lettura("1900.xlsx");
+    EXPECT_EQ(k.at("schede").at(0).at("esito"), "ferma") << k.dump(2);
+    bool senza_giorni = false;
+    for (const JsonDati& x : k.at("problemi"))
+        senza_giorni = senza_giorni || (x.at("codice") == "K-CTR-160" && x.at("messaggio").get<std::string>().find("nessun giorno di servizio") !=
+                                                                                 std::string::npos);
+    EXPECT_TRUE(senza_giorni) << k.dump(2);
 }
 
 namespace {

@@ -1060,3 +1060,47 @@ TEST(Schede, InterruzioneACavalloDiDueVersioni) {
     ASSERT_EQ(p.size(), 1u);
     EXPECT_NE(messaggi(v1.dopo, p)[0].find("sospensioni"), std::string::npos) << messaggi(v1.dopo, p)[0];
 }
+
+// Punto 1 (K-023, D6): una versione senza giorni non si scrive. La scheda 4000123/3 (da lunedi' a venerdi', fino al 12/06/2027, un sabato):
+// scelta dal 2027-06-12 = la versione nuova non ha nessun giorno di servizio; dal 2027-06-07 con l'interruzione 07/06 - 12/06 lo stesso.
+// Una versione 1 dal 2026-09-19 (sabato) e una versione 2 dal 2026-09-21 (lunedi'): la 1, accorciata al 20/09, resterebbe senza giorni.
+// In ogni caso la scheda si ferma (variante 47), niente e' scritto e restano solo l'errore (gli avvisi della lettura di quella scheda
+// no); con un giorno di servizio si scrive. Sabotaggio: versione senza giorni scritta.
+TEST(Schede, VersioneSenzaGiorniNonSiScrive) {
+    const Lettura l = lettura_k023();
+    const Day presa = day_from_ymd(2026, 9, 1);
+    const auto scelta = [](Day d) {
+        DateChoices s;
+        s.by_nr["4000123/3"] = DateChoice{DateChoice::Kind::Date, d};
+        return s;
+    };
+    const Fogli f = con_interruzioni({}, "#175");
+    const Letto a = leggi(l, f, scelta(day_from_ymd(2027, 6, 12)), presa);
+    EXPECT_EQ(a.m.outcomes.at(0).kind, CardOutcome::Kind::Stopped);
+    EXPECT_EQ(a.m.outcomes.at(0).fault, CardFault::VersionWithoutDays);
+    EXPECT_TRUE(a.m.added.empty());
+    ASSERT_EQ(a.m.problems.size(), 1u) << ::testing::PrintToString(messaggi(a.dopo, a.m.problems));
+    EXPECT_EQ(a.m.problems[0].check, Check::CardUnreadable);
+    EXPECT_EQ(a.m.problems[0].variant, 47);
+    EXPECT_EQ(leggi(l, f, scelta(day_from_ymd(2027, 6, 11)), presa).m.outcomes.at(0).kind, CardOutcome::Kind::New);   // un venerdi'
+    const Fogli g = con_interruzioni({{"4000123 / 3", "07/06/2027", "12/06/2027"}}, "#170");
+    EXPECT_EQ(leggi(l, g, scelta(day_from_ymd(2027, 6, 7)), presa).m.outcomes.at(0).fault, CardFault::VersionWithoutDays);
+    EXPECT_EQ(leggi(l, g, scelta(day_from_ymd(2027, 6, 4)), presa).m.outcomes.at(0).kind, CardOutcome::Kind::New);
+    // La versione di prima, accorciata, resterebbe senza giorni.
+    const Letto v1 = leggi(l, f, scelta(day_from_ymd(2026, 9, 19)), presa);
+    ASSERT_EQ(v1.m.outcomes.at(0).kind, CardOutcome::Kind::New);
+    Fogli mod = f;
+    mod.schede[1][21] = "Modifica";
+    mod.fermate[1][1] = "07:25";
+    const Letto v2 = leggi(v1.dopo, mod, scelta(day_from_ymd(2026, 9, 21)), presa);
+    EXPECT_EQ(v2.m.outcomes.at(0).fault, CardFault::VersionWithoutDays);
+    EXPECT_TRUE(v2.m.added.empty());
+    EXPECT_TRUE(v2.m.cuts.empty());
+    EXPECT_EQ(nel_registro(v2.dopo, "SCH-4000123-3").versions.size(), 1u);
+    ASSERT_EQ(v2.m.problems.size(), 1u) << ::testing::PrintToString(messaggi(v2.dopo, v2.m.problems));
+    EXPECT_NE(messaggi(v2.dopo, v2.m.problems)[0].find("resterebbe senza giorni"), std::string::npos);
+    // Dal 22/09 la versione 1 tiene il lunedi' 21/09: si scrive, e kzero controlla non ha errori.
+    const Letto v3 = leggi(v1.dopo, mod, scelta(day_from_ymd(2026, 9, 22)), presa);
+    EXPECT_EQ(v3.m.outcomes.at(0).kind, CardOutcome::Kind::NewVersion);
+    EXPECT_EQ(errori_di(v3.dopo.pacchetto), 0) << ::testing::PrintToString(messaggi(v3.dopo, check_package(v3.dopo.pacchetto)));
+}

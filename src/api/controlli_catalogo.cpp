@@ -228,7 +228,11 @@ void aggiungi_schede(std::vector<DefinizioneControllo>& c) {
                   dove + "l'interruzione si sovrappone a un'altra della stessa scheda (anche due righe uguali): il programma non sceglie "
                          "quale e' giusta" + ferma,
                   dove + "l'interruzione contiene una data elencata della scheda: per quel giorno la scheda direbbe due cose opposte" +
-                      ferma}});
+                      ferma,
+                  dove + "la versione nuova non avrebbe nessun giorno di servizio (calendario della scheda, interruzioni comprese, dalla "
+                         "data da cui varrebbe), oppure la versione di prima, accorciata al giorno prima, resterebbe senza giorni: la scheda "
+                         "si ferma e niente e' scritto (le altre del file vanno avanti). Scegliere un'altra data (--validita-scheda), o "
+                         "togliere prima la versione di prima (kzero togli-scheda)."}});
     c.push_back({Check::CardRowWithoutCard, "K-CTR-161", E, N, "Riga senza la sua scheda",
                  {"Foglio \"{foglio}\", riga {riga}: il Nr e' vuoto o non e' il Nr di una scheda del foglio delle schede: la riga non "
                   "si legge."}});

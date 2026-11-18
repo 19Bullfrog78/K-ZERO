@@ -83,6 +83,7 @@ enum class CardFault {
     BreakOutsidePeriod = 44,    // l'interruzione esce dal periodo della scheda (attivazione, disattivazione)
     BreaksOverlap = 45,         // due interruzioni della stessa scheda si sovrappongono (anche due righe uguali)
     ListedDateInBreak = 46,     // una data elencata cade dentro un'interruzione
+    VersionWithoutDays = 47,    // la versione nuova non avrebbe nessun giorno, o la versione di prima accorciata resterebbe senza
 };
 
 struct CardRead {

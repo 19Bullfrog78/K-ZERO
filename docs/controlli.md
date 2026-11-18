@@ -521,7 +521,9 @@ scelta prima dell'attivazione; 39 data scelta dopo la disattivazione; 40 stesso 
 committente; 41 accompagnatore che sale e scende nello stesso passaggio; 42 una casa in un pacchetto "solo numeri"; dal K-023, nel
 foglio delle interruzioni (dopo le date elencate, prima delle fermate; una data scritta male o vuota e' la variante 7 o 1): 43
 interruzione che finisce prima di cominciare; 44 interruzione che esce dal periodo della scheda (anche di un giorno); 45 interruzioni
-che si sovrappongono (anche due righe uguali); 46 interruzione con dentro una data elencata.
+che si sovrappongono (anche due righe uguali); 46 interruzione con dentro una data elencata; 47 (dopo la scelta della data) versione
+nuova senza nessun giorno di servizio, o versione di prima che, accorciata, resterebbe senza giorni (niente e' scritto: `kzero
+controlla` darebbe poi K-CTR-015).
 
 **K-CTR-171** usa la regola che il regolamento del contratto ha gia' nei dati (`assistente_a_bordo`, con le sue condizioni e la sua
 fonte; nel demo R-TN: infanzia sui mezzi con piu' di 8 posti per i passeggeri, testo unico 1.C1.9): se in un tratto con qualcuno a

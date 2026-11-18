@@ -1706,7 +1706,10 @@ registro.
 giorno prima finisce il giorno prima, quelle che cominciano dalla data scelta in poi si tolgono; **i giorni prima della data scelta
 non cambiano mai**. La data scelta puo' essere anche prima della presa in carico (D4, scelta B: il committente puo' dire che una
 modifica arrivata il 15/11 vale dal 10/11), mai di base: l'uscita dice quante giornate prima della presa in carico cambiano e quali
-versioni si tolgono. Contenuto uguale all'ultima versione (la parola nuova/modifica non conta): niente da fare. L'uscita dice cosa
+versioni si tolgono. Contenuto uguale all'ultima versione (la parola nuova/modifica non conta): niente da fare. **Una versione senza
+giorni non si scrive** (K-023): se la versione nuova non avrebbe nessun giorno di servizio dalla data scelta (calendario della scheda,
+interruzioni comprese), o se la versione di prima, accorciata al giorno prima, resterebbe senza giorni, la scheda si ferma (K-CTR-160
+variante 47) e l'utente sceglie un'altra data o toglie prima la versione di prima; il programma non toglie niente da solo. L'uscita dice cosa
 cambia: Nr, verso e momento, scuole, fermate (luoghi e ordine), orari, numeri, km, totali, date e giorni, interruzioni (K-023),
 calendario, cadenza, e le caselle (solo con i dati particolari). Mai unire schede con ID diversi.
 

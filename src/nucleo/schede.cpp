@@ -1049,7 +1049,8 @@ CardsMerge merge_cards(const Package& p, const CardProfile& pr, const Code& cont
         o.valid = {dal, k.to};
         o.mode = modo;
         o.from = da;
-        // Avvisi della lettura.
+        // Avvisi della lettura (tolti se poi la scheda si ferma, variante 47).
+        const std::size_t primo_avviso = out.problems.size();
         const int giorni = card_days(k, idx);
         if (giorni != k.total_days)
             problema(Check::CardTotalDaysDiffer, 0,
@@ -1090,6 +1091,22 @@ CardsMerge merge_cards(const Package& p, const CardProfile& pr, const Code& cont
             if (ultima.card.nr != k.nr)
                 problema(Check::CardNrChanged, 0, {text_param("scheda", r.nr), text_param("prima", ultima.card.nr),
                                                    ref_param("codice", Element::ServiceCard, esistente->code)}, r.row);
+        }
+        // K-023 (variante 47): una versione che non avrebbe nessun giorno di servizio, o che lascerebbe senza giorni la versione di
+        // prima accorciata, non si scrive (kzero controlla darebbe poi K-CTR-015, un errore che ferma la giornata): la scheda si ferma,
+        // e l'utente sceglie un'altra data o toglie la versione di prima. Il programma non toglie niente da solo.
+        const auto senza_giorni = [&](const Card& c, DateRange periodo) {
+            return !first_active_day(card_calendar(c, "", periodo), periodo, idx).has_value();
+        };
+        bool vuota = senza_giorni(k, o.valid);
+        if (!vuota && esistente)
+            for (const CardVersion& v : esistente->versions)
+                if (v.valid.from < dal && v.valid.to >= dal) vuota = senza_giorni(v.card, {v.valid.from, dal - 1});
+        if (vuota) {
+            out.problems.erase(out.problems.begin() + static_cast<std::ptrdiff_t>(primo_avviso), out.problems.end());
+            ferma(CardFault::VersionWithoutDays, pr.sheet_cards, r.row, pr.card_cols.from);
+            out.outcomes.push_back(o);
+            continue;
         }
         // Codici degli elementi e numero della versione (mai riusati).
         int numero = 1;
