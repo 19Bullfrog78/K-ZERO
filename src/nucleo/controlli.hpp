@@ -86,6 +86,7 @@ enum class Check {
     CardRegisterInvalid,       // registro incoerente (ID doppio, versioni fuori ordine)
     // K-022: la domanda di un gruppo.
     DemandSamePlaceTwice,      // lo stesso luogo due volte nella domanda di un gruppo: il confronto con le corse non e' affidabile
+    CardEndsAtTransfer,        // K-023: una scheda finisce (o comincia) a un punto di trasbordo senza la riga della sua scuola
     // Turni (K-008): errori.
     ShiftPartInvalid,
     ShiftItemsOrder,

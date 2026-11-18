@@ -27,9 +27,9 @@ Lettura lettura_di_prova() {
     EXPECT_TRUE(l.forma_valida());
     return l;
 }
-const CardProfile& profilo(const Lettura& l) {
+const CardProfile& profilo(const Lettura& l, const std::string& codice = "PS-CVA") {
     for (const CardProfile& p : l.pacchetto.card_profiles)
-        if (p.code == "PS-CVA") return p;
+        if (p.code == codice) return p;
     throw std::logic_error("profilo che non c'e'");
 }
 
@@ -40,12 +40,14 @@ struct Letto {
     CardsMerge m;
     Lettura dopo;
 };
-Letto leggi(const Lettura& l, const Fogli& f, DateChoices scelte = {}, Day presa = kPresa, bool date1904 = false) {
+Letto leggi(const Lettura& l, const Fogli& f, DateChoices scelte = {}, Day presa = kPresa, bool date1904 = false,
+            const std::string& codice_profilo = "PS-CVA") {
     const Index idx(l.pacchetto);
     Letto x;
-    x.r = read_cards(CardTables{tabella(f.schede), tabella(f.fermate), tabella(f.date), tabella(f.interruzioni)}, profilo(l), idx, date1904);
+    x.r = read_cards(CardTables{tabella(f.schede), tabella(f.fermate), tabella(f.date), tabella(f.interruzioni)}, profilo(l, codice_profilo),
+                     idx, date1904);
     EXPECT_EQ(x.r.fault, TableFault::None) << x.r.fault_title;
-    x.m = merge_cards(l.pacchetto, profilo(l), "CT-SCU", presa, "mail del committente", scelte, x.r);
+    x.m = merge_cards(l.pacchetto, profilo(l, codice_profilo), "CT-SCU", presa, "mail del committente", scelte, x.r);
     x.dopo = schede::con_documenti(l, schede::documenti_dopo(l, x.m.cards, l.pacchetto.removed_cards, x.m.added, x.m.removed, x.m.cuts,
                                                              x.m.new_homes));
     return x;
@@ -941,6 +943,8 @@ TEST(Schede, InterruzioniNelCalendarioEInTotGiorni) {
     ASSERT_TRUE(c_e(y.m.problems, Check::CardTotalDaysDiffer));
     EXPECT_NE(messaggi(y.dopo, y.m.problems)[0].find("175"), std::string::npos);
     EXPECT_NE(messaggi(y.dopo, y.m.problems)[0].find("165"), std::string::npos) << messaggi(y.dopo, y.m.problems)[0];
+    EXPECT_NE(messaggi(y.dopo, y.m.problems)[0].find("le interruzioni"), std::string::npos) << messaggi(y.dopo, y.m.problems)[0];
+    EXPECT_EQ(y.m.problems[0].variant, 1);   // la variante delle schede con interruzioni (quella di oggi, 0, non cambia)
     // Un profilo alla versione 1 (k021) non legge il quarto foglio: la scheda come prima, senza interruzioni.
     const Letto z = leggi(lettura_di_prova(), con_interruzioni(kTreInterruzioni, "#175"), attivazione());
     EXPECT_EQ(z.r.break_rows, 0);
@@ -1103,4 +1107,141 @@ TEST(Schede, VersioneSenzaGiorniNonSiScrive) {
     const Letto v3 = leggi(v1.dopo, mod, scelta(day_from_ymd(2026, 9, 22)), presa);
     EXPECT_EQ(v3.m.outcomes.at(0).kind, CardOutcome::Kind::NewVersion);
     EXPECT_EQ(errori_di(v3.dopo.pacchetto), 0) << ::testing::PrintToString(messaggi(v3.dopo, check_package(v3.dopo.pacchetto)));
+}
+
+namespace {
+// K-023: le schede dei servizi per disabili (profilo PS-CVA-H) lette con la scelta "attivazione".
+Letto leggi_h(const Lettura& l, const Fogli& f) { return leggi(l, f, attivazione(), kPresa, false, "PS-CVA-H"); }
+// Una scheda sola per disabili (4000502/1 di tests/esempi/k023-schede: andata, al Centro diurno Il Faro), con il verso e momento, le
+// scuole e le righe date (Orario, Punto di raccolta, Casa, St. Car., St. Scar., Km pieno, Km vuoto, Accompagnatore; il Nr lo mette la
+// funzione). Totali alunni e km del piede si fanno dalle righe.
+Fogli una_h(const std::string& servizio, const std::string& scuole, const Righe& righe) {
+    const Fogli k = fogli_k023();
+    Fogli f;
+    f.schede = {k.schede[0], k.schede[2]};
+    f.fermate = {k.fermate[0]};
+    f.date = k.date;
+    f.schede[1][2] = servizio;
+    f.schede[1][3] = scuole;
+    int su = 0;
+    double pieni = 0, vuoti = 0;
+    for (const auto& r : righe) {
+        std::vector<std::string> x = {"4000502 / 1"};
+        x.insert(x.end(), r.begin(), r.end());
+        f.fermate.push_back(x);
+        if (!r[3].empty()) su += std::stoi(r[3].substr(1));
+        const auto numero = [](std::string t) {
+            std::replace(t.begin(), t.end(), ',', '.');
+            return std::stod(t);
+        };
+        if (!r[5].empty()) pieni += numero(r[5]);
+        if (!r[6].empty()) vuoti += numero(r[6]);
+    }
+    const auto km = [](double v) {
+        std::string t = std::to_string(std::llround(v * 10));
+        if (t.size() < 2) t = "0" + t;
+        return t.substr(0, t.size() - 1) + "," + t.substr(t.size() - 1);
+    };
+    f.schede[1][13] = "#" + std::to_string(su);
+    f.schede[1][17] = km(pieni);
+    f.schede[1][18] = km(vuoti);
+    return f;
+}
+std::optional<int> motivo_h(const Lettura& l, const Fogli& f) {
+    const Letto x = leggi_h(l, f);
+    const CardRead& r = x.r.cards.at(0);
+    return r.fault ? std::optional<int>(static_cast<int>(*r.fault)) : std::nullopt;
+}
+}  // namespace
+
+// Punto 2 (K-023): le coincidenze. La scheda 4000502/1 ha nell'intestazione il Centro diurno Il Faro e finisce al punto di trasbordo del
+// Ponte di Sorgenta (autorizzato con il documento), dove la persona scende; la 4000503/1 passa dal Ponte (la persona sale) e arriva al
+// centro. Tutte e due si leggono: la prima con l'avviso K-CTR-176 (variante 0, scuola e luogo), il suo gruppo tiene la scuola (la meta) e
+// la domanda e' quella delle righe; kzero controlla senza errori e senza K-CTR-170. La scuola e' quella che lega la casa al centro sensibile:
+// senza il porta a porta tutto sensibile, la casa PAP-202 e' legata (la corsa non passa dal centro). Sabotaggi: avviso della coincidenza che
+// manca; la scuola tolta dal gruppo.
+TEST(Schede, CoincidenzaAlPuntoDiTrasbordo) {
+    PacchettoInMemoria m = pacchetto_k023();
+    JsonDati man = JsonDati::parse(m.file.at("pacchetto.json"));
+    man["impostazioni"]["porta_a_porta_sensibile"] = false;   // il legame deve venire dalla scuola del gruppo, non dal porta a porta
+    m.file["pacchetto.json"] = man.dump(2);
+    const Lettura l = leggi_pacchetto(m);
+    ASSERT_TRUE(l.forma_valida());
+    const Letto x = leggi_h(l, fogli_k023());
+    ASSERT_EQ(x.m.outcomes.size(), 3u);
+    for (const CardOutcome& o : x.m.outcomes) EXPECT_EQ(o.kind, CardOutcome::Kind::New) << o.nr;
+    std::vector<const Problem*> avvisi;
+    for (const Problem& p : x.m.problems)
+        if (p.check == Check::CardEndsAtTransfer) avvisi.push_back(&p);
+    ASSERT_EQ(avvisi.size(), 1u) << ::testing::PrintToString(messaggi(x.dopo, x.m.problems));
+    EXPECT_EQ(avvisi[0]->variant, 0);
+    EXPECT_EQ(avvisi[0]->where.line, 3);   // la riga della scheda 4000502/1
+    const std::vector<std::string> testi = messaggi(x.dopo, {*avvisi[0]});
+    EXPECT_NE(testi[0].find("Scheda 4000502/1: la corsa finisce al punto di trasbordo L-TRASB-PONTE"), std::string::npos) << testi[0];
+    EXPECT_NE(testi[0].find("scuola SC-CENTRO"), std::string::npos) << testi[0];
+    const Index idx(x.dopo.pacchetto);
+    const PassengerGroup* g = idx.group("G-4000502-1");
+    ASSERT_NE(g, nullptr);
+    ASSERT_TRUE(g->school.has_value());
+    EXPECT_EQ(g->school->code, "SC-CENTRO");
+    ASSERT_EQ(g->stops.size(), 2u);
+    EXPECT_EQ(g->stops[1].place.code, "L-TRASB-PONTE");
+    EXPECT_EQ(g->stops[1].alighting, 1);
+    EXPECT_EQ(errori_di(x.dopo.pacchetto), 0) << ::testing::PrintToString(messaggi(x.dopo, check_package(x.dopo.pacchetto)));
+    EXPECT_TRUE(schede::controlla_elementi(x.dopo).empty());
+    EXPECT_TRUE(LegameSensibile(&idx).casa("PAP-202"));
+    EXPECT_TRUE(LegameSensibile(&idx).casa("PAP-203"));
+}
+
+// Punto 2 (K-023): la regola a-b-c della coincidenza e i casi che fermano la scheda come oggi (variante 32): nessun punto di trasbordo;
+// il punto di trasbordo in mezzo alla corsa ma non alla fine; nessuno che scende li' (o solo l'accompagnatore); due scuole
+// nell'intestazione (D1); un'andata che comincia al punto di trasbordo. Il ritorno che comincia al punto di trasbordo si legge (variante
+// 1); un punto autorizzato solo a voce da' le varianti 2 e 3. Il messaggio della variante 32 dice, al condizionale, come si scrive una
+// coincidenza. Sabotaggi: scuola senza la sua riga accettata anche senza trasbordo; accettata con il trasbordo in mezzo ma non alla fine.
+TEST(Schede, CoincidenzaSoloAllaFineOAllInizio) {
+    const Lettura l = lettura_k023();
+    const std::string centro = "Centro diurno Il Faro", ponte = "Ponte di Sorgenta, piazzale", croce = "Croce di Pradello, parcheggio";
+    const std::string andata = "Andata Mattino", ritorno = "Ritorno Pomeriggio";
+    const auto variante_176 = [&](const Fogli& f) {
+        const Letto x = leggi_h(l, f);
+        for (const Problem& p : x.m.problems)
+            if (p.check == Check::CardEndsAtTransfer) return p.variant;
+        return -1;
+    };
+    // Si legge: finisce al Ponte (0), comincia al Ponte al ritorno (1), finisce o comincia alla Croce, autorizzata solo a voce (2, 3).
+    EXPECT_EQ(variante_176(una_h(andata, centro, {{"07:30", "", "PAP-202", "#1", "", "", "4,0", ""}, {"07:50", ponte, "", "", "#1", "7,2", "", ""}})), 0);
+    EXPECT_EQ(variante_176(una_h(ritorno, centro, {{"16:00", ponte, "", "#1", "", "", "3,0", ""}, {"16:20", "", "PAP-202", "", "#1", "7,2", "", ""}})), 1);
+    EXPECT_EQ(variante_176(una_h(andata, centro, {{"07:30", "", "PAP-202", "#1", "", "", "4,0", ""}, {"07:50", croce, "", "", "#1", "7,2", "", ""}})), 2);
+    EXPECT_EQ(variante_176(una_h(ritorno, centro, {{"16:00", croce, "", "#1", "", "", "3,0", ""}, {"16:20", "", "PAP-202", "", "#1", "7,2", "", ""}})), 3);
+    // Con l'accompagnatore, che scende al Ponte con la persona: chi prosegue e' uno (accompagnatore escluso), si legge.
+    EXPECT_EQ(variante_176(una_h(andata, centro, {{"07:30", "", "PAP-202", "#2", "", "", "4,0", "SALE"}, {"07:50", ponte, "", "", "#2", "7,2", "", "SCENDE"}})), 0);
+    const int scuola_senza_riga = static_cast<int>(CardFault::SchoolRowMissing);
+    // Nessun punto di trasbordo alla fine (Pradello e' una fermata senza il blocco "trasbordo").
+    EXPECT_EQ(motivo_h(l, una_h(andata, centro, {{"07:30", "", "PAP-202", "#1", "", "", "4,0", ""}, {"07:50", "PRADELLO PIAZZA", "", "", "#1", "7,2", "", ""}})),
+              scuola_senza_riga);
+    // Il punto di trasbordo in mezzo alla corsa, non alla fine.
+    EXPECT_EQ(motivo_h(l, una_h(andata, centro, {{"07:30", "", "PAP-202", "#1", "", "", "4,0", ""}, {"07:35", "", "PAP-204", "#1", "", "", "1,0", ""},
+                                                 {"07:40", ponte, "", "", "#1", "5,0", "", ""}, {"07:50", "PRADELLO PIAZZA", "", "", "#1", "2,2", "", ""}})),
+              scuola_senza_riga);
+    // Alla fine il Ponte, ma nessuno scende li' (o scende solo l'accompagnatore).
+    EXPECT_EQ(motivo_h(l, una_h(andata, centro, {{"07:30", "", "PAP-202", "#1", "", "", "4,0", ""}, {"07:45", "PRADELLO PIAZZA", "", "", "#1", "5,0", "", ""},
+                                                 {"07:50", ponte, "", "", "", "2,2", "", ""}})),
+              scuola_senza_riga);
+    EXPECT_EQ(motivo_h(l, una_h(andata, centro, {{"07:30", "", "PAP-202", "#2", "", "", "4,0", "SALE"}, {"07:45", "PRADELLO PIAZZA", "", "", "#1", "5,0", "", ""},
+                                                 {"07:50", ponte, "", "", "#1", "2,2", "", "SCENDE"}})),
+              scuola_senza_riga);
+    // Due scuole nell'intestazione (D1): mai la coincidenza.
+    EXPECT_EQ(motivo_h(l, una_h(andata, centro + "; Scuola primaria Valfonda",
+                                {{"07:30", "", "PAP-202", "#2", "", "", "4,0", ""}, {"07:40", "Scuola primaria Valfonda", "", "", "#1", "5,0", "", ""},
+                                 {"07:50", ponte, "", "", "#1", "2,2", "", ""}})),
+              scuola_senza_riga);
+    // Un'andata che comincia al Ponte (e finisce a casa), un ritorno che finisce al Ponte: il verso conta.
+    EXPECT_EQ(motivo_h(l, una_h(andata, centro, {{"07:30", ponte, "", "#1", "", "", "4,0", ""}, {"07:50", "", "PAP-202", "", "#1", "7,2", "", ""}})),
+              scuola_senza_riga);
+    EXPECT_EQ(motivo_h(l, una_h(ritorno, centro, {{"16:00", "", "PAP-202", "#1", "", "", "3,0", ""}, {"16:20", ponte, "", "", "#1", "7,2", "", ""}})),
+              scuola_senza_riga);
+    // Il messaggio della variante 32 dice come si scrive una coincidenza.
+    const Letto y = leggi_h(l, una_h(andata, centro, {{"07:30", "", "PAP-202", "#1", "", "", "4,0", ""}, {"07:50", "PRADELLO PIAZZA", "", "", "#1", "7,2", "", ""}}));
+    ASSERT_FALSE(y.m.problems.empty());
+    EXPECT_NE(messaggi(y.dopo, y.m.problems)[0].find("Se chi viaggia passasse su un altro mezzo"), std::string::npos) << messaggi(y.dopo, y.m.problems)[0];
 }

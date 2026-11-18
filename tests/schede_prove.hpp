@@ -50,6 +50,12 @@ struct Fogli {
     Righe interruzioni;   // K-023: il quarto foglio (vuoto = il file non lo ha)
 };
 inline Fogli fogli_di_prova() { return {righe_di("schede.tsv"), righe_di("fermate.tsv"), righe_di("date.tsv"), {}}; }
+// K-023: le tre schede di prova dei servizi per disabili (profilo PS-CVA-H): una con tre interruzioni, e la coppia in coincidenza al
+// punto di trasbordo del Ponte di Sorgenta (4000502/1 finisce li', 4000503/1 prende li' la persona). Dati inventati.
+inline Fogli fogli_k023() {
+    const auto r = [](const std::string& f) { return righe_tsv(elenco_a_mano::leggi_testo(kCartella23 + "/" + f)); };
+    return {r("schede.tsv"), r("fermate.tsv"), r("date.tsv"), r("interruzioni.tsv")};
+}
 
 // K-022: due schede con due giri, che passano due volte dallo stesso luogo con delle persone. La prima dell'infanzia (come le schede
 // vere): l'accompagnatore sale per primo alla scuola (St. Car. 1 = solo lui) e scende per ultimo (St. Scar. = i bambini del secondo giro

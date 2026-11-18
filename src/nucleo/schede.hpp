@@ -189,6 +189,19 @@ Calendar card_calendar(const Card& c, const Code& code, DateRange valid);
 // giorno di interruzione che non e' un giorno di servizio non si toglie due volte).
 int card_days(const Card& c, const Index& idx);
 
+// K-023: la coincidenza di una scheda. Una scheda con una scuola sola nell'intestazione e senza la riga di quella scuola e' ammessa solo
+// se la corsa finisce (andata) o comincia (ritorno) in un punto di trasbordo autorizzato (un luogo pubblico con il blocco "trasbordo",
+// lo stesso criterio di K-CTR-023), dove scende (andata) o sale (ritorno) almeno una persona, accompagnatore escluso: chi viaggia
+// prosegue su un'altra corsa. Il gruppo tiene la sua scuola (la meta, e quello che lega la casa a un luogo sensibile). Il legame con
+// l'altra corsa (stessa persona, l'altra corsa passa dopo) non c'e' ancora: mandato del confronto elenco/schede.
+struct CardTransferEnd {
+    Code school;              // la scuola dell'intestazione senza la sua riga
+    Code place;               // il punto di trasbordo
+    bool at_start = false;    // ritorno: la corsa comincia li'
+    bool verbal = false;      // autorizzato solo a voce (senza documento)
+};
+std::optional<CardTransferEnd> card_transfer_end(const Card& k, const Index& idx);
+
 // Le cose che cambiano tra due schede (a: quella di prima).
 std::vector<CardChange> card_changes(const Card& a, const Card& b);
 // Le due schede sono uguali (la parola nuova/modifica e le righe del file non contano)?

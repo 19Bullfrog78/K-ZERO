@@ -1695,6 +1695,19 @@ leggi-schede` e `kzero togli-scheda`. Schemi: [docs/schema/schede_servizi.v2.sch
 - codici (D9): `S-`, `G-`, `C-`, `CAL-` seguiti dal Nr con i caratteri non ammessi nei codici cambiati in "-" (es. `S-4000123-3`),
   dalla seconda versione `-V2`, `-V3`...; un codice gia' usato da un altro elemento si salta al numero dopo, mai sovrascritto.
 
+**Coincidenze** (K-023, punto di trasbordo). Un servizio per un disabile puo' andare con il mezzo A dalla casa al punto Y, dove la
+persona scende e sale sul mezzo B, che la porta alla scuola o al centro. La scheda di A ha nell'intestazione la scuola (il centro) di
+arrivo, ma la sua ultima riga e' Y. Una scuola dell'intestazione senza la sua riga ferma la scheda (K-CTR-160 variante 32), **tranne**
+quando tutte e tre queste cose sono vere: a. la scheda ha **una scuola sola** nell'intestazione; b. la corsa **finisce** (andata) o
+**comincia** (ritorno) in un **punto di trasbordo autorizzato** (un luogo pubblico con il blocco `trasbordo`, come per i trasbordi
+scritti: un luogo `punto_trasbordo` lo ha sempre; anche autorizzato solo a voce), non solo in mezzo alla corsa; c. li' **scende**
+(andata) o **sale** (ritorno) almeno una persona, accompagnatore escluso. Allora la scheda si legge con l'avviso K-CTR-176 (scuola e
+punto di trasbordo; varianti 2 e 3 se il punto e' autorizzato solo a voce) e il **gruppo tiene la sua scuola**: e' la meta della
+persona, ed e' quello che lega la casa a un luogo sensibile (la corsa A non passa dal centro). Domanda e corsa sono quelle delle righe;
+la corsa non ha `trasbordi` (la meta' di B non si sa). La scheda di B (Y come riga in mezzo, la persona sale li') si legge come ogni
+altra. **Il legame A -> B** (stessa persona; B passa da Y dopo A) **non c'e' ancora**: lo fara' il confronto tra l'elenco e le schede;
+fino ad allora va visto a mano (DECISIONI.md, K-023).
+
 **Validita'** (regola di ALP): attivazione uguale o dopo `--data` (la presa in carico) = vale dall'attivazione; attivazione prima di
 `--data` = il programma non sceglie: senza una scelta la scheda si ferma e l'uscita elenca le scelte (`attivazione`,
 `presa-in-carico`, o una data). La scelta si scrive nei parametri, non nel file: `--validita` per tutte le schede del file che ne

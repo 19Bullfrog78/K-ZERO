@@ -209,7 +209,10 @@ void aggiungi_schede(std::vector<DefinizioneControllo>& c) {
                   dove + "la somma di St. Scar. non e' uguale a Totali alunni" + ferma,
                   dove + "la somma dei km pieni non e' uguale a Tot Km Carico" + ferma,
                   dove + "la somma dei km vuoti non e' uguale a Tot Km Vuoto" + ferma,
-                  dove + "una scuola della scheda non ha la sua riga tra le fermate" + ferma,
+                  dove + "una scuola della scheda non ha la sua riga tra le fermate" + ferma +
+                      " Se chi viaggia passasse su un altro mezzo (coincidenza, K-023), la scheda dovrebbe avere una scuola sola e l'ultima "
+                      "riga (andata) o la prima (ritorno) dovrebbe essere un punto di trasbordo autorizzato, con qualcuno che scende (o sale) "
+                      "li'.",
                   dove + "il punto di raccolta e' una scuola che non e' tra le scuole della scheda" + ferma,
                   dove + "la data e' fuori dal periodo della scheda (attivazione, disattivazione)" + ferma,
                   dove + "la cadenza vuole le date una per una, e il foglio delle date non ne ha" + ferma,
@@ -244,7 +247,11 @@ void aggiungi_schede(std::vector<DefinizioneControllo>& c) {
     c.push_back({Check::CardTotalDaysDiffer, "K-CTR-163", A, N, "Tot Giorni diverso dai giorni del calendario",
                  {"Scheda {scheda}: Tot Giorni e' {tot_giorni}, ma il calendario {calendario} con i giorni segnati nel periodo della "
                   "scheda da' {giorni:# giorno|# giorni}: il calendario del committente o quello del pacchetto e' diverso. La scheda va avanti; "
-                  "controllare il calendario."}});
+                  "controllare il calendario.",
+                  // K-023: la scheda ha delle interruzioni (contate come insieme di giorni).
+                  "Scheda {scheda}: Tot Giorni e' {tot_giorni}, ma il calendario {calendario} con i giorni segnati e le interruzioni della "
+                  "scheda nel periodo della scheda da' {giorni:# giorno|# giorni}: il calendario del committente o quello del pacchetto, "
+                  "o un'interruzione, e' diverso. La scheda va avanti; controllare il calendario e le interruzioni."}});
     c.push_back({Check::CardListedDateOutside, "K-CTR-164", A, N, "Date della scheda fuori dai giorni segnati o dal calendario",
                  {"Scheda {scheda}: {quante:# data elencata|# date elencate} ({quante:e' il|la prima:} {prima}) {quante:non cade|non cadono} in "
                   "un giorno con la X o non {quante:e' un giorno|sono giorni} del calendario {calendario}: il programma non sceglie quale "
@@ -313,6 +320,18 @@ void aggiungi_schede(std::vector<DefinizioneControllo>& c) {
     c.push_back({Check::DemandSamePlaceTwice, "K-CTR-175", A, N, "Stesso luogo due volte nella domanda di un gruppo",
                  {"Gruppo {gruppo}: il luogo {luogo} e' due volte nella domanda. Unire le voci in una sola (salgono e scendono "
                   "sommati): i controlli contano gia' il luogo una volta sola, con le voci sommate."}});
+    // K-023: la coincidenza di una scheda (solo in kzero leggi-schede).
+    const std::string legame = " Il legame con quella corsa (stessa persona, che passa da li' dopo) non e' ancora controllato: va visto a mano.";
+    const std::string a_voce = " Il punto di trasbordo e' autorizzato solo a voce: manca il documento (K-CTR-043).";
+    c.push_back({Check::CardEndsAtTransfer, "K-CTR-176", A, N, "Scheda che finisce o comincia a un punto di trasbordo, senza la sua scuola",
+                 {"Scheda {scheda}: la corsa finisce al punto di trasbordo {luogo} senza passare dalla scuola {scuola} dell'intestazione: chi "
+                  "scende li' prosegue su un'altra corsa (coincidenza)." + legame,
+                  "Scheda {scheda}: la corsa comincia al punto di trasbordo {luogo} senza passare dalla scuola {scuola} dell'intestazione: chi "
+                  "sale li' arriva da un'altra corsa (coincidenza)." + legame,
+                  "Scheda {scheda}: la corsa finisce al punto di trasbordo {luogo} senza passare dalla scuola {scuola} dell'intestazione: chi "
+                  "scende li' prosegue su un'altra corsa (coincidenza)." + legame + a_voce,
+                  "Scheda {scheda}: la corsa comincia al punto di trasbordo {luogo} senza passare dalla scuola {scuola} dell'intestazione: chi "
+                  "sale li' arriva da un'altra corsa (coincidenza)." + legame + a_voce}});
 }
 
 // K-019: l'elenco utenti del committente. Sui dati (kzero controlla) e sulle righe del file letto (kzero leggi-elenco).

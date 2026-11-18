@@ -493,7 +493,8 @@ Le schede dei servizi del committente, copiate nel modello di K-Zero, si leggono
   dai giorni del calendario: la scheda va avanti), K-CTR-164 (date elencate fuori dai giorni segnati o dal calendario), K-CTR-165
   (scheda nuova con un ID gia' visto, modifica con un ID mai visto), K-CTR-166 (scheda finita prima della presa in carico),
   K-CTR-167 (stesso ID con un Nr diverso), K-CTR-168 (versione nuova da una data prima della presa in carico: quante giornate
-  cambiano e quali versioni si tolgono);
+  cambiano e quali versioni si tolgono), K-CTR-176 (K-023: la corsa finisce o comincia a un punto di trasbordo senza passare dalla
+  sua scuola, coincidenza);
 - **sul registro** (anche in `kzero controlla`): K-CTR-169 (schede dello stesso servizio con periodi che si sovrappongono),
   K-CTR-170 (servizio, gruppo, corsa o calendario di una scheda non piu' quelli che la scheda da', o mancanti), K-CTR-171
   (accompagnatore che manca su una corsa di una scheda), K-CTR-172 (pezzo di una corsa di una scheda con i km non noti), K-CTR-173
@@ -515,7 +516,7 @@ sconosciuto; 18 punto di raccolta ambiguo; 19 punto e casa insieme, o nessuno de
 (o scende) dove St. Car. (o St. Scar.) e' 0; 24 accompagnatore che scende prima di salire, o sale due volte; 25 accompagnatore
 ancora a bordo alla fine; 26 orario che torna indietro; 27 scendono piu' persone di quelle a bordo; 28 salgono diverso da Totali
 alunni; 29 scendono diverso da Totali alunni; 30 km pieni diversi da Tot Km Carico; 31 km vuoti diversi da Tot Km Vuoto; 32 scuola
-della scheda senza la sua riga; 33 riga in una scuola che non e' della scheda; 34 data elencata fuori dal periodo; 35 cadenza a date
+della scheda senza la sua riga (tranne la coincidenza del K-023, con l'avviso K-CTR-176); 33 riga in una scuola che non e' della scheda; 34 data elencata fuori dal periodo; 35 cadenza a date
 elencate senza date; 36 meno di due righe; 37 due righe di fila nello stesso luogo alla stessa ora con km sulla seconda; 38 data
 scelta prima dell'attivazione; 39 data scelta dopo la disattivazione; 40 stesso ID gia' nel registro con un altro contratto o
 committente; 41 accompagnatore che sale e scende nello stesso passaggio; 42 una casa in un pacchetto "solo numeri"; dal K-023, nel
@@ -715,3 +716,4 @@ Un nuovo controllo prende il codice successivo all'ultimo.
 | K-CTR-173 | errore | Profilo delle schede ambiguo | Nel profilo delle schede una parola vuol dire due cose (es. "sale" e "scende") o c'e' due volte, o un giorno ha due colonne. | Correggere il profilo (profili_schede.json). |
 | K-CTR-174 | errore | Registro delle schede incoerente | Due schede del registro con lo stesso ID, o una versione che finisce prima di cominciare o non viene dopo quella di prima. | Il registro lo scrivono i comandi: rifare la lettura; se e' stato cambiato a mano, rimetterlo com'era. |
 | K-CTR-175 | avviso | Stesso luogo due volte nella domanda di un gruppo | (K-022) Nella domanda di un gruppo lo stesso luogo c'e' in due voci (il formato non lo vieta). Avviso di pulizia: i confronti per luogo (K-CTR-031 con i passeggeri, K-CTR-042 con le corse) sommano gia' le voci dello stesso luogo e non danno problemi falsi. Un avviso per luogo, sulla seconda voce. La lettura delle schede scrive un luogo una volta sola. | Unire le voci in una sola, con salgono e scendono (e carrozzine e ausili piegati) sommati. |
+| K-CTR-176 | avviso | Scheda che finisce o comincia a un punto di trasbordo, senza la sua scuola | (K-023) Solo in `kzero leggi-schede`: una scheda con una scuola sola nell'intestazione non ha la riga della scuola, e la corsa finisce (andata, variante 0) o comincia (ritorno, variante 1) in un punto di trasbordo autorizzato dove scende (o sale) almeno una persona, accompagnatore escluso: chi viaggia prosegue su un'altra corsa (coincidenza). La scheda si legge e il gruppo tiene la sua scuola; il legame con l'altra corsa non e' ancora controllato. Varianti 2 e 3 come 0 e 1, con il punto autorizzato solo a voce. In ogni altro caso la scuola senza la sua riga ferma la scheda (K-CTR-160 variante 32). | Controllare a mano che l'altra corsa (es. la scheda che passa dal punto di trasbordo e arriva alla scuola) prenda la persona dopo. |

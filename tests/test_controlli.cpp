@@ -955,5 +955,7 @@ TEST(Controlli, catalogo_coperto) {
     EXPECT_EQ(api::definizione_controllo(Check::ListRemovedStillInFile).codice, "K-CTR-159");
     // K-022: lo stesso luogo due volte nella domanda di un gruppo.
     EXPECT_EQ(api::definizione_controllo(Check::DemandSamePlaceTwice).codice, "K-CTR-175");
-    EXPECT_EQ(api::catalogo_controlli().size(), 175u);
+    // K-023: la coincidenza di una scheda (le prove stanno in test_schede).
+    EXPECT_EQ(api::definizione_controllo(Check::CardEndsAtTransfer).codice, "K-CTR-176");
+    EXPECT_EQ(api::catalogo_controlli().size(), 176u);
 }

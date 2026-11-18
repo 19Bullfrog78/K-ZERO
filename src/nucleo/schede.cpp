@@ -752,12 +752,16 @@ CardsRead read_cards(const CardTables& tab, const CardProfile& pr, const Index& 
             ferma_su(CardFault::TooFewStops, pr.sheet_cards, x.row, cs.nr);
             continue;
         }
+        // Una scuola senza la sua riga ferma la scheda, tranne la coincidenza (K-023: una scuola sola, la corsa che finisce o comincia
+        // in un punto di trasbordo autorizzato con qualcuno che prosegue).
+        const std::optional<CardTransferEnd> coincidenza = card_transfer_end(k, idx);
         for (const Code& sc : k.schools) {
             const School* s = idx.school(sc);
             const bool c_e = std::any_of(k.stops.begin(), k.stops.end(), [&](const CardStop& f) {
                 return f.match == CardStopMatch::School && s && f.place == s->place.code;
             });
-            if (!c_e && !x.fault) ferma_su(CardFault::SchoolRowMissing, pr.sheet_cards, x.row, cs.schools);
+            if (!c_e && !x.fault && !(coincidenza && coincidenza->school == sc))
+                ferma_su(CardFault::SchoolRowMissing, pr.sheet_cards, x.row, cs.schools);
         }
         if (x.fault) continue;
         int a_bordo = 0;
@@ -840,6 +844,38 @@ int card_days(const Card& c, const Index& idx) {
     int n = 0;
     for (Day d = c.from; d <= c.to; ++d) n += calendar_active(k, d, idx) ? 1 : 0;
     return n;
+}
+
+// --- Coincidenze (K-023) --------------------------------------------------------------------------------------------------
+
+std::optional<CardTransferEnd> card_transfer_end(const Card& k, const Index& idx) {
+    if (k.schools.size() != 1 || k.stops.empty()) return std::nullopt;   // a. una scuola sola
+    const School* s = idx.school(k.schools.front());
+    if (!s) return std::nullopt;
+    for (const CardStop& f : k.stops)
+        if (f.match == CardStopMatch::School && f.place == s->place.code) return std::nullopt;   // la scuola ha la sua riga
+    // b. la corsa finisce (andata) o comincia (ritorno) in un punto di trasbordo autorizzato: il primo o l'ultimo passaggio (le righe
+    // di fila nello stesso luogo alla stessa ora sono un passaggio solo).
+    const bool ritorno = k.direction == Direction::Return;
+    const CardStop& capo = ritorno ? k.stops.front() : k.stops.back();
+    const Place* l = idx.place(capo.place);
+    if (!l || l->is_private || !l->transfer) return std::nullopt;
+    // c. li' scende (andata) o sale (ritorno) almeno una persona, accompagnatore escluso.
+    int persone = 0;
+    const auto conta = [&](const CardStop& f) {
+        if (f.place != capo.place || f.time != capo.time) return false;
+        persone += ritorno ? f.boarding - (f.escort == AssistantMove::Boards ? 1 : 0) : f.alighting - (f.escort == AssistantMove::Alights ? 1 : 0);
+        return true;
+    };
+    if (ritorno) {
+        for (auto it = k.stops.begin(); it != k.stops.end() && conta(*it); ++it) {
+        }
+    } else {
+        for (auto it = k.stops.rbegin(); it != k.stops.rend() && conta(*it); ++it) {
+        }
+    }
+    if (persone <= 0) return std::nullopt;
+    return CardTransferEnd{s->code, l->code, ritorno, l->transfer->verbal && l->transfer->document.empty()};
 }
 
 // --- Differenze ------------------------------------------------------------------------------------------------------------
@@ -1053,7 +1089,7 @@ CardsMerge merge_cards(const Package& p, const CardProfile& pr, const Code& cont
         const std::size_t primo_avviso = out.problems.size();
         const int giorni = card_days(k, idx);
         if (giorni != k.total_days)
-            problema(Check::CardTotalDaysDiffer, 0,
+            problema(Check::CardTotalDaysDiffer, k.breaks.empty() ? 0 : 1,   // K-023: 1 = con le interruzioni
                      {text_param("scheda", r.nr), number_param("tot_giorni", k.total_days), number_param("giorni", giorni),
                       ref_param("calendario", Element::Calendar, k.base_calendar)},
                      r.row);
@@ -1074,6 +1110,10 @@ CardsMerge merge_cards(const Package& p, const CardProfile& pr, const Code& cont
                           ref_param("calendario", Element::Calendar, k.base_calendar)},
                          r.row);
         }
+        if (const std::optional<CardTransferEnd> c = card_transfer_end(k, idx))   // K-023: la coincidenza (varianti: ritorno, a voce)
+            problema(Check::CardEndsAtTransfer, (c->at_start ? 1 : 0) + (c->verbal ? 2 : 0),
+                     {text_param("scheda", r.nr), ref_param("luogo", Element::Place, c->place), ref_param("scuola", Element::School, c->school)},
+                     r.row);
         if (k.to < taken) problema(Check::CardEndedBeforeTaken, 0, {text_param("scheda", r.nr), date_param("disattivazione", k.to)}, r.row);
         if (esistente && !k.is_change) problema(Check::CardNewOrChangeOdd, 0, {text_param("scheda", r.nr), ref_param("codice", Element::ServiceCard, esistente->code)}, r.row);
         if (!esistente && k.is_change) problema(Check::CardNewOrChangeOdd, 1, {text_param("scheda", r.nr)}, r.row);
