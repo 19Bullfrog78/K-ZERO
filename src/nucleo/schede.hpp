@@ -30,6 +30,7 @@ namespace kzero {
 
 struct CardTables {
     Table cards, stops, dates;   // i tre fogli (la prima riga di ognuno: i titoli); dates puo' essere vuoto
+    Table breaks;                // K-023: il foglio delle interruzioni (vuoto se il file o il profilo non lo hanno)
 };
 
 // Varianti di K-CTR-160 (scheda che non si legge): il motivo. Il numero e' la variante del messaggio.
@@ -77,6 +78,12 @@ enum class CardFault {
     OtherContract = 40,         // lo stesso ID e' gia' nel registro con un altro contratto o un altro committente
     EscortSamePassage = 41,     // l'accompagnatore sale e scende nello stesso passaggio
     HomeInNumbersOnly = 42,     // una casa in un pacchetto "solo numeri" (le case stanno solo nel livello completo)
+    // K-023: le interruzioni (foglio delle interruzioni).
+    BreakReversed = 43,         // l'interruzione finisce prima di cominciare
+    BreakOutsidePeriod = 44,    // l'interruzione esce dal periodo della scheda (attivazione, disattivazione)
+    BreaksOverlap = 45,         // due interruzioni della stessa scheda si sovrappongono (anche due righe uguali)
+    ListedDateInBreak = 46,     // una data elencata cade dentro un'interruzione
+    VersionWithoutDays = 47,    // la versione nuova non avrebbe nessun giorno, o la versione di prima accorciata resterebbe senza
 };
 
 struct CardRead {
@@ -96,6 +103,7 @@ struct CardsRead {
     std::string fault_sheet;     // il foglio con la riga dei titoli sbagliata
     std::string fault_title;     // il titolo che manca o e' ripetuto (una parola del profilo)
     int card_rows = 0, stop_rows = 0, date_rows = 0;   // righe dopo quella dei titoli
+    int break_rows = 0;                                 // K-023: righe del foglio delle interruzioni (0 se non c'e')
     std::vector<CardRead> cards;   // nell'ordine del foglio delle schede
     std::vector<Problem> problems; // K-CTR-161 (righe senza la loro scheda)
 };
@@ -174,10 +182,25 @@ struct CardsMerge {
 CardsMerge merge_cards(const Package& p, const CardProfile& profile, const Code& contract, Day taken, const std::string& reference,
                        const DateChoices& choices, const CardsRead& read);
 
-// I giorni in cui vale il calendario fatto da una scheda nel periodo dato (con la base del pacchetto).
+// I giorni in cui vale il calendario fatto da una scheda nel periodo dato (con la base del pacchetto). K-023: le interruzioni della
+// scheda sono sospensioni, tagliate al periodo (un'interruzione tutta fuori dal periodo non c'e'); il motivo lo scrive l'API.
 Calendar card_calendar(const Card& c, const Code& code, DateRange valid);
-// Quanti giorni conta la scheda (Tot Giorni): dall'attivazione alla disattivazione.
+// Quanti giorni conta la scheda (Tot Giorni): dall'attivazione alla disattivazione, interruzioni comprese (un insieme di giorni: un
+// giorno di interruzione che non e' un giorno di servizio non si toglie due volte).
 int card_days(const Card& c, const Index& idx);
+
+// K-023: la coincidenza di una scheda. Una scheda con una scuola sola nell'intestazione e senza la riga di quella scuola e' ammessa solo
+// se la corsa finisce (andata) o comincia (ritorno) in un punto di trasbordo autorizzato (un luogo pubblico con il blocco "trasbordo",
+// lo stesso criterio di K-CTR-023), dove scende (andata) o sale (ritorno) almeno una persona, accompagnatore escluso: chi viaggia
+// prosegue su un'altra corsa. Il gruppo tiene la sua scuola (la meta, e quello che lega la casa a un luogo sensibile). Il legame con
+// l'altra corsa (stessa persona, l'altra corsa passa dopo) non c'e' ancora: mandato del confronto elenco/schede.
+struct CardTransferEnd {
+    Code school;              // la scuola dell'intestazione senza la sua riga
+    Code place;               // il punto di trasbordo
+    bool at_start = false;    // ritorno: la corsa comincia li'
+    bool verbal = false;      // autorizzato solo a voce (senza documento)
+};
+std::optional<CardTransferEnd> card_transfer_end(const Card& k, const Index& idx);
 
 // Le cose che cambiano tra due schede (a: quella di prima).
 std::vector<CardChange> card_changes(const Card& a, const Card& b);

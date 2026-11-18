@@ -540,7 +540,7 @@ std::vector<DefinizioneComando> comandi_schede() {
                      "l'impronta.",
                      {{"file", "Il file Excel (.xlsx) con le schede copiate, che non si modifica mai."},
                       {"cartella", "Cartella del pacchetto chiuso."}},
-                     p, Schema{"schede", 1}, esegui_leggi_schede});
+                     p, Schema{"schede", 2}, esegui_leggi_schede});
     }
     {
         std::vector<DefinizioneParametro> p{parametro_formato(), parametro_password_da_ingresso(), parametro_utente(true),
@@ -670,6 +670,7 @@ const std::vector<Schema>& schemi_ritirati() {
         {"descrivi", 1},      {"descrivi", 2},      {"descrivi", 3},  {"descrivi", 4},  {"descrivi", 5},
         {"dimostrazione", 1}, {"dimostrazione", 2},
         {"elenco", 1},
+        {"schede", 1},
         {"giornata", 1},      {"giornata", 2},      {"giornata", 3},  {"giornata", 4},  {"giornata", 5},
         {"ore", 1},           {"ore", 2}};
     return s;

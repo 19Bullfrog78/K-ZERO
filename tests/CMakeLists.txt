@@ -1756,6 +1756,36 @@ kzero_schede(schede_controlla USCITA 0 FORMATO testo
              NON_CONTIENE "K-CTR-170" "K-CTR-174"
              ARGOMENTI controlla @PACCHETTO@)
 
+# --- Interruzioni e coincidenze delle schede (K-023) ---------------------------------------------------------------------
+set(KZERO_K023 ${CMAKE_CURRENT_BINARY_DIR}/k023)
+add_test(NAME schede23.prepara
+         COMMAND ${CMAKE_COMMAND} -DKZERO=$<TARGET_FILE:kzero> -DPREPARA=$<TARGET_FILE:prepara_k019> -DCREA=$<TARGET_FILE:crea_xlsx>
+                 -DELENCO=${CMAKE_CURRENT_SOURCE_DIR}/esempi/k019-elenco -DSORGENTI=${CMAKE_CURRENT_SOURCE_DIR}/esempi/k023-schede
+                 -DUSCITA=${KZERO_K023} -P ${CMAKE_CURRENT_SOURCE_DIR}/programma/prepara_k023.cmake)
+set_tests_properties(schede23.prepara PROPERTIES FIXTURES_SETUP k023 LABELS programma)
+function(kzero_schede23 nome)
+  cmake_parse_arguments(E "" "" "ARGOMENTI" ${ARGN})
+  kzero_prova(${nome} BASE ${KZERO_K023}/chiuso INGRESSO "${PW_K021}" ${E_UNPARSED_ARGUMENTS}
+              ARGOMENTI ${E_ARGOMENTI} --utente TITOLARE --password-da-ingresso)
+  set_tests_properties(programma.${nome} PROPERTIES FIXTURES_REQUIRED k023)
+endfunction()
+set(K023_LEGGI --profilo PS-CVA-H --contratto CT-SCU --data 2026-11-16 --riferimento "mail del committente" --validita attivazione)
+kzero_schede23(schede_interruzioni_e_coincidenze USCITA 0 FORMATO testo
+               CONTIENE "Schede: 3 nuove" "Righe: 3 schede, 7 fermate, 0 date, 3 interruzioni."
+                        "Interruzioni (il servizio non si fa): dal 2026-12-23 al 2027-01-06, dal 2027-02-15 al 2027-02-19, dal 2027-03-29 al 2027-04-02."
+                        "Avviso K-CTR-176: Scheda 4000502/1: la corsa finisce al punto di trasbordo L-TRASB-PONTE"
+               NON_CONTIENE "K-CTR-160" "K-CTR-163" "Errore"
+               ARGOMENTI leggi-schede ${KZERO_K023}/k023.xlsx @PACCHETTO@ ${K023_LEGGI} --scrivi @PACCHETTO@)
+kzero_schede23(schede_interruzioni_json USCITA 0 FORMATO json SCHEMA schede
+               CONTIENE "\"schema_versione\": 2" "\"interruzioni\": 3" "\"dal\": \"2026-12-23\"" "K-CTR-176"
+               ARGOMENTI leggi-schede ${KZERO_K023}/k023.xlsx @PACCHETTO@ ${K023_LEGGI} --formato json)
+kzero_schede23(schede23_controlla USCITA 0 FORMATO testo
+               PREPARA leggi-schede ${KZERO_K023}/k023.xlsx @PACCHETTO@ ${K023_LEGGI} --scrivi @PACCHETTO@ --utente TITOLARE
+                       --password-da-ingresso
+               PREPARA_INGRESSO "${PW_K021}"
+               NON_CONTIENE "Errore" "K-CTR-170" "K-CTR-174"
+               ARGOMENTI controlla @PACCHETTO@)
+
 kzero_prova(elenco_pacchetto_in_chiaro USCITA 2 FORMATO testo ERRORE K-ERR-031
             ARGOMENTI leggi-elenco ${CMAKE_CURRENT_SOURCE_DIR}/esempi/k019-elenco/prima-lettura.tsv ${KZERO_DEMO} ${K019_LEGGI} --utente A)
 

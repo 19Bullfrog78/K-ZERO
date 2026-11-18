@@ -12,6 +12,8 @@
 namespace kzero::api::schede {
 
 inline constexpr const char* kFile = "schede_servizi.json";
+// K-023: il motivo delle sospensioni del calendario fatte dalle interruzioni di una scheda.
+inline constexpr const char* kMotivoInterruzione = "Interruzione della scheda";
 
 struct Elementi {
     JsonDati servizio;     // con il gruppo dentro (domanda.gruppi)

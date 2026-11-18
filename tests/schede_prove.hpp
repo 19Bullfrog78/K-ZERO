@@ -21,6 +21,7 @@ using kzero::api::JsonDati;
 using kzero::api::PacchettoInMemoria;
 
 inline const std::string kCartella = KZERO_CARTELLA_PROVE "/esempi/k021-schede";
+inline const std::string kCartella23 = KZERO_CARTELLA_PROVE "/esempi/k023-schede";
 
 using Righe = std::vector<std::vector<std::string>>;
 
@@ -46,8 +47,15 @@ inline Righe righe_di(const std::string& file) { return righe_tsv(elenco_a_mano:
 
 struct Fogli {
     Righe schede, fermate, date;
+    Righe interruzioni;   // K-023: il quarto foglio (vuoto = il file non lo ha)
 };
-inline Fogli fogli_di_prova() { return {righe_di("schede.tsv"), righe_di("fermate.tsv"), righe_di("date.tsv")}; }
+inline Fogli fogli_di_prova() { return {righe_di("schede.tsv"), righe_di("fermate.tsv"), righe_di("date.tsv"), {}}; }
+// K-023: le tre schede di prova dei servizi per disabili (profilo PS-CVA-H): una con tre interruzioni, e la coppia in coincidenza al
+// punto di trasbordo del Ponte di Sorgenta (4000502/1 finisce li', 4000503/1 prende li' la persona). Dati inventati.
+inline Fogli fogli_k023() {
+    const auto r = [](const std::string& f) { return righe_tsv(elenco_a_mano::leggi_testo(kCartella23 + "/" + f)); };
+    return {r("schede.tsv"), r("fermate.tsv"), r("date.tsv"), r("interruzioni.tsv")};
+}
 
 // K-022: due schede con due giri, che passano due volte dallo stesso luogo con delle persone. La prima dell'infanzia (come le schede
 // vere): l'accompagnatore sale per primo alla scuola (St. Car. 1 = solo lui) e scende per ultimo (St. Scar. = i bambini del secondo giro
@@ -80,6 +88,7 @@ inline Fogli due_giri() {
 inline std::string file_schede(const Fogli& f, bool date1904 = false) {
     std::vector<xlsx::Foglio> v = {{"Schede", f.schede, false}, {"Fermate", f.fermate, false}};
     if (!f.date.empty()) v.push_back({"Date", f.date, false});
+    if (!f.interruzioni.empty()) v.push_back({"Interruzioni", f.interruzioni, false});
     return xlsx::file_xlsx(v, 8, date1904);
 }
 
@@ -99,6 +108,24 @@ inline PacchettoInMemoria pacchetto_di_prova() {
         m.file[file] = d.dump(2);
     }
     m.file["profili_schede.json"] = elenco_a_mano::leggi_testo(kCartella + "/profili_schede.json");
+    return m;
+}
+
+// K-023: il pacchetto di prova del K-021 con i codici esterni di tests/esempi/k023-schede (il calendario dei giorni feriali) e i suoi
+// profili alla versione 2: PS-CVA con il foglio delle interruzioni (le schede del K-021 si leggono come prima) e PS-CVA-H per i servizi
+// per disabili.
+inline PacchettoInMemoria pacchetto_k023() {
+    PacchettoInMemoria m = pacchetto_di_prova();
+    const JsonDati codici = JsonDati::parse(elenco_a_mano::leggi_testo(kCartella23 + "/codici_esterni.json"));
+    JsonDati d = JsonDati::parse(m.file.at("calendari.json"));
+    for (JsonDati& x : d.at("calendari")) {
+        const std::string c = x.at("codice").get<std::string>();
+        if (!codici.at("calendari").contains(c)) continue;
+        if (!x.contains("codici_esterni")) x["codici_esterni"] = JsonDati::array();
+        for (const JsonDati& e : codici.at("calendari").at(c)) x["codici_esterni"].push_back(e);
+    }
+    m.file["calendari.json"] = d.dump(2);
+    m.file["profili_schede.json"] = elenco_a_mano::leggi_testo(kCartella23 + "/profili_schede.json");
     return m;
 }
 
@@ -124,7 +151,8 @@ inline PacchettoInMemoria con_schede(const PacchettoInMemoria& m, const Fogli& f
     const kzero::api::Lettura l = kzero::api::leggi_pacchetto(m);
     const kzero::Index idx(l.pacchetto);
     const kzero::CardProfile* pr = idx.card_profile("PS-CVA");
-    const kzero::CardsRead r = kzero::read_cards(kzero::CardTables{tabella(f.schede), tabella(f.fermate), tabella(f.date)}, *pr, idx, false);
+    const kzero::CardsRead r =
+        kzero::read_cards(kzero::CardTables{tabella(f.schede), tabella(f.fermate), tabella(f.date), tabella(f.interruzioni)}, *pr, idx, false);
     kzero::DateChoices scelte;
     scelte.file.kind = kzero::DateChoice::Kind::Activation;
     const kzero::CardsMerge x = kzero::merge_cards(l.pacchetto, *pr, "CT-SCU", *kzero::day_from_text(presa), "mail del committente", scelte, r);

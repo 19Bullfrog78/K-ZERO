@@ -51,12 +51,12 @@ const std::vector<FileDati>& file_dati() {
         {"elenco_utenti.json", "elenco_utenti", {1, 2}, false,
          "Elenco utenti dei committenti come lo mandano (K-019): casa, scuola, stato, fermata indicata, ditta e orari di ogni "
          "tratta, sblocchi. Solo nel livello completo."},
-        {"profili_schede.json", "profili_schede", {1}, false,
+        {"profili_schede.json", "profili_schede", {1, 2}, false,
          "Profili di lettura delle schede dei servizi di un committente (K-021): fogli, titoli, parole, cadenze e separatori del "
-         "modello in cui si copiano le schede."},
-        {"schede_servizi.json", "schede_servizi", {1}, false,
+         "modello in cui si copiano le schede; dalla versione 2 il foglio delle interruzioni."},
+        {"schede_servizi.json", "schede_servizi", {1, 2}, false,
          "Registro delle schede dei servizi lette (K-021): per ogni scheda le versioni, con la copia letta, da quando a quando "
-         "valgono e gli elementi del pacchetto fatti dalla scheda."},
+         "valgono e gli elementi del pacchetto fatti dalla scheda; dalla versione 2 le interruzioni della scheda."},
     };
     return elenco;
 }

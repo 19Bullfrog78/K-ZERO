@@ -633,8 +633,10 @@ const Lettura& lettura_schede() {
         const PacchettoIncorporato demo("esempi/demo");
         const std::string k019 = std::string(KZERO_SORGENTI) + "/tests/esempi/k019-elenco/";
         const std::string k021 = std::string(KZERO_SORGENTI) + "/tests/esempi/k021-schede/";
+        const std::string k023 = std::string(KZERO_SORGENTI) + "/tests/esempi/k023-schede/";
         const JsonDati c19 = JsonDati::parse(testo_di(k019 + "codici_esterni.json"));
         const JsonDati c21 = JsonDati::parse(testo_di(k021 + "codici_esterni.json"));
+        const JsonDati c23 = JsonDati::parse(testo_di(k023 + "codici_esterni.json"));
         for (const auto& v : demo.voci()) {
             std::string t = demo.leggi(v.nome, kMassimoByteFile).testo;
             for (const char* f : {"scuole", "luoghi", "calendari"})
@@ -642,7 +644,7 @@ const Lettura& lettura_schede() {
                     JsonDati d = JsonDati::parse(t);
                     for (JsonDati& x : d.at(f)) {
                         const std::string c = x.at("codice").get<std::string>();
-                        for (const JsonDati* codici : {&c19, &c21}) {
+                        for (const JsonDati* codici : {&c19, &c21, &c23}) {
                             if (!codici->contains(f) || !codici->at(f).contains(c)) continue;
                             if (!x.contains("codici_esterni")) x["codici_esterni"] = JsonDati::array();
                             for (const JsonDati& e : codici->at(f).at(c)) x["codici_esterni"].push_back(e);
@@ -652,7 +654,8 @@ const Lettura& lettura_schede() {
                 }
             m.file[v.nome] = t;
         }
-        m.file["profili_schede.json"] = testo_di(k021 + "profili_schede.json");
+        // K-023: i profili alla versione 2 (PS-CVA con il foglio delle interruzioni, PS-CVA-H per i servizi per disabili).
+        m.file["profili_schede.json"] = testo_di(k023 + "profili_schede.json");
         Lettura x = leggi_pacchetto(m);
         if (!x.forma_valida()) guasto("pacchetto di prova delle schede con errori di forma");
         return x;
@@ -660,20 +663,20 @@ const Lettura& lettura_schede() {
     return l;
 }
 
-// Le tre tabelle dal testo: i fogli separati da una riga "@@" (schede, fermate, date).
+// Le quattro tabelle dal testo: i fogli separati da una riga "@@" (schede, fermate, date e, dal K-023, interruzioni).
 kzero::CardTables tabelle_da_testo(const std::string& t) {
     std::vector<std::string> parti(1);
     std::size_t a = 0;
     while (a <= t.size()) {
         const std::size_t b = std::min(t.find('\n', a), t.size());
         const std::string riga = t.substr(a, b - a);
-        if (riga == "@@" && parti.size() < 3) parti.emplace_back();
+        if (riga == "@@" && parti.size() < 4) parti.emplace_back();
         else parti.back() += riga + "\n";
         if (b == t.size()) break;
         a = b + 1;
     }
-    parti.resize(3);
-    return {tabella_da_testo(parti[0]), tabella_da_testo(parti[1]), tabella_da_testo(parti[2])};
+    parti.resize(4);
+    return {tabella_da_testo(parti[0]), tabella_da_testo(parti[1]), tabella_da_testo(parti[2]), tabella_da_testo(parti[3])};
 }
 
 }  // namespace
@@ -682,51 +685,90 @@ void prova_schede_righe(const std::uint8_t* dati, std::size_t n) {
     const Lettura& l = lettura_schede();
     const kzero::Index idx(l.pacchetto);
     const kzero::CardTables tab = tabelle_da_testo(std::string(reinterpret_cast<const char*>(dati), n));
-    const kzero::CardProfile& p = l.pacchetto.card_profiles.at(0);
-    for (const bool date1904 : {false, true}) {
-        const kzero::CardsRead r = kzero::read_cards(tab, p, idx, date1904);
-        if (r.fault != kzero::TableFault::None) continue;
-        // Una scheda letta torna sempre con i suoi totali: mai una scheda che non torna accettata.
-        for (const kzero::CardRead& c : r.cards) {
-            if (c.fault) continue;
-            const kzero::Card& k = c.card;
-            int su = 0, giu = 0, a_bordo = 0;
-            double pieni = 0, vuoti = 0;
-            if (k.stops.size() < 2 || k.schools.empty() || k.to < k.from || k.base_calendar.empty()) guasto("scheda incompleta accettata");
-            for (std::size_t i = 0; i < k.stops.size(); ++i) {
-                const kzero::CardStop& s = k.stops[i];
-                if (i && s.time < k.stops[i - 1].time) guasto("orario all'indietro accettato");
-                a_bordo += s.boarding - s.alighting;
-                if (a_bordo < 0) guasto("piu' persone scese di quelle a bordo");
-                su += s.boarding;
-                giu += s.alighting;
-                pieni += s.loaded_km.value_or(0.0);
-                vuoti += s.empty_km.value_or(0.0);
+    // K-023: tutti e due i profili di prova (alla versione 2, con il foglio delle interruzioni).
+    for (const kzero::CardProfile& p : l.pacchetto.card_profiles) {
+        for (const bool date1904 : {false, true}) {
+            const kzero::CardsRead r = kzero::read_cards(tab, p, idx, date1904);
+            if (r.fault != kzero::TableFault::None) continue;
+            // Una scheda letta torna sempre con i suoi totali: mai una scheda che non torna accettata.
+            for (const kzero::CardRead& c : r.cards) {
+                if (c.fault) continue;
+                const kzero::Card& k = c.card;
+                int su = 0, giu = 0, a_bordo = 0;
+                double pieni = 0, vuoti = 0;
+                if (k.stops.size() < 2 || k.schools.empty() || k.to < k.from || k.base_calendar.empty()) guasto("scheda incompleta accettata");
+                for (std::size_t i = 0; i < k.stops.size(); ++i) {
+                    const kzero::CardStop& s = k.stops[i];
+                    if (i && s.time < k.stops[i - 1].time) guasto("orario all'indietro accettato");
+                    a_bordo += s.boarding - s.alighting;
+                    if (a_bordo < 0) guasto("piu' persone scese di quelle a bordo");
+                    su += s.boarding;
+                    giu += s.alighting;
+                    pieni += s.loaded_km.value_or(0.0);
+                    vuoti += s.empty_km.value_or(0.0);
+                }
+                if (su != k.pupils || giu != k.pupils) guasto("totali che non tornano accettati");
+                if (std::llround(pieni * 100) != std::llround(k.total_loaded_km * 100) || std::llround(vuoti * 100) != std::llround(k.total_empty_km * 100))
+                    guasto("km che non tornano accettati");
+                if (k.cadence_form == kzero::CadenceForm::ListedDates && k.dates.empty()) guasto("date elencate vuote accettate");
+                // K-023: interruzioni dentro il periodo, in ordine, senza sovrapposizioni, mai su una data elencata.
+                for (std::size_t i = 0; i < k.breaks.size(); ++i) {
+                    const kzero::DateRange& b = k.breaks[i];
+                    if (b.to < b.from || b.from < k.from || b.to > k.to) guasto("interruzione rovesciata o fuori dal periodo accettata");
+                    if (i && b.from <= k.breaks[i - 1].to) guasto("interruzioni sovrapposte o fuori ordine accettate");
+                    for (kzero::Day d : k.dates)
+                        if (d >= b.from && d <= b.to) guasto("data elencata dentro un'interruzione accettata");
+                }
+                // K-023: una scuola senza la sua riga solo nella coincidenza (una scuola sola, la corsa che finisce o comincia in un punto
+                // di trasbordo autorizzato, con qualcuno che prosegue).
+                const std::optional<kzero::CardTransferEnd> coincidenza = kzero::card_transfer_end(k, idx);
+                for (const kzero::Code& sc : k.schools) {
+                    const kzero::School* x = idx.school(sc);
+                    const bool riga = x && std::any_of(k.stops.begin(), k.stops.end(), [&](const kzero::CardStop& f) {
+                                          return f.match == kzero::CardStopMatch::School && f.place == x->place.code;
+                                      });
+                    if (!riga && !(coincidenza && coincidenza->school == sc && k.schools.size() == 1))
+                        guasto("scuola senza la sua riga accettata fuori dalla coincidenza");
+                }
+                if (coincidenza) {
+                    const kzero::CardStop& capo = coincidenza->at_start ? k.stops.front() : k.stops.back();
+                    const kzero::Place* y = idx.place(capo.place);
+                    if (capo.place != coincidenza->place || !y || y->is_private || !y->transfer)
+                        guasto("coincidenza fuori da un punto di trasbordo autorizzato alla fine o all'inizio");
+                }
             }
-            if (su != k.pupils || giu != k.pupils) guasto("totali che non tornano accettati");
-            if (std::llround(pieni * 100) != std::llround(k.total_loaded_km * 100) || std::llround(vuoti * 100) != std::llround(k.total_empty_km * 100))
-                guasto("km che non tornano accettati");
-            if (k.cadence_form == kzero::CadenceForm::ListedDates && k.dates.empty()) guasto("date elencate vuote accettate");
-        }
-        // Il confronto (con le tre scelte) e i documenti fatti dal programma: sempre conformi agli schemi, codici mai ripetuti.
-        for (const kzero::DateChoice::Kind scelta : {kzero::DateChoice::Kind::None, kzero::DateChoice::Kind::Activation,
-                                                    kzero::DateChoice::Kind::TakenInCharge}) {
-            kzero::DateChoices sc;
-            sc.file.kind = scelta;
-            const kzero::CardsMerge m = kzero::merge_cards(l.pacchetto, p, "CT-SCU", kzero::day_from_ymd(2026, 11, 16), "prova", sc, r);
-            if (m.outcomes.size() != r.cards.size()) guasto("schede perse o inventate");
-            if (scelta == kzero::DateChoice::Kind::None)
-                for (const kzero::CardOutcome& o : m.outcomes)
-                    if ((o.kind == kzero::CardOutcome::Kind::New || o.kind == kzero::CardOutcome::Kind::NewVersion) && o.from != kzero::ChoiceFrom::None)
-                        guasto("data scelta dal programma");
-            // I documenti (lenti: rileggono tutto il pacchetto) con una scelta sola.
-            if (m.added.empty() || scelta != kzero::DateChoice::Kind::Activation) continue;
-            try {
-                const Lettura d = schede::con_documenti(l, schede::documenti_dopo(l, m.cards, l.pacchetto.removed_cards, m.added, m.removed,
-                                                                                   m.cuts, m.new_homes));
-                if (!schede::controlla_elementi(d).empty()) guasto("elementi fatti diversi da quelli della scheda");
-            } catch (const std::logic_error&) {
-                guasto("documenti fatti dal programma non conformi agli schemi");
+            // Il confronto (con le tre scelte) e i documenti fatti dal programma: sempre conformi agli schemi, codici mai ripetuti.
+            for (const kzero::DateChoice::Kind scelta : {kzero::DateChoice::Kind::None, kzero::DateChoice::Kind::Activation,
+                                                        kzero::DateChoice::Kind::TakenInCharge}) {
+                kzero::DateChoices sc;
+                sc.file.kind = scelta;
+                const kzero::CardsMerge m = kzero::merge_cards(l.pacchetto, p, "CT-SCU", kzero::day_from_ymd(2026, 11, 16), "prova", sc, r);
+                if (m.outcomes.size() != r.cards.size()) guasto("schede perse o inventate");
+                // K-023 (variante 47): mai una versione scritta senza nessun giorno di servizio.
+                for (const auto& [codice, numero] : m.added)
+                    for (const kzero::ServiceCard& s : m.cards)
+                        for (const kzero::CardVersion& v : s.versions)
+                            if (s.code == codice && v.number == numero &&
+                                !kzero::first_active_day(kzero::card_calendar(v.card, "", v.valid), v.valid, idx))
+                                guasto("versione senza giorni scritta");
+                if (scelta == kzero::DateChoice::Kind::None)
+                    for (const kzero::CardOutcome& o : m.outcomes)
+                        if ((o.kind == kzero::CardOutcome::Kind::New || o.kind == kzero::CardOutcome::Kind::NewVersion) && o.from != kzero::ChoiceFrom::None)
+                            guasto("data scelta dal programma");
+                // I documenti (lenti: rileggono tutto il pacchetto) con una scelta sola.
+                if (m.added.empty() || scelta != kzero::DateChoice::Kind::Activation) continue;
+                try {
+                    const Lettura d = schede::con_documenti(l, schede::documenti_dopo(l, m.cards, l.pacchetto.removed_cards, m.added, m.removed,
+                                                                                       m.cuts, m.new_homes));
+                    if (!schede::controlla_elementi(d).empty()) guasto("elementi fatti diversi da quelli della scheda");
+                    // K-023: le sospensioni (interruzioni) dentro il periodo del calendario (fuori sarebbe K-CTR-013).
+                    for (const kzero::Calendar& c : d.pacchetto.calendars)
+                        for (const kzero::Suspension& x : c.suspensions)
+                            if (x.range.from < c.range.from || x.range.to > c.range.to || x.range.to < x.range.from)
+                                guasto("interruzione non tagliata al periodo della versione");
+                } catch (const std::logic_error&) {
+                    guasto("documenti fatti dal programma non conformi agli schemi");
+                }
             }
         }
     }
@@ -738,6 +780,11 @@ void scrivi_semi_schede(const std::string& cartella) {
     fs::create_directories(fs::path(cartella) / "schede-righe");
     std::ofstream(fs::path(cartella) / "schede-righe" / "seme-tre-schede", std::ios::binary)
         << testo_di(k021 + "schede.tsv") << "@@\n" << testo_di(k021 + "fermate.tsv") << "@@\n" << testo_di(k021 + "date.tsv");
+    // K-023: le schede per disabili con le interruzioni e la coppia in coincidenza (quattro fogli).
+    const std::string k023 = std::string(KZERO_SORGENTI) + "/tests/esempi/k023-schede/";
+    std::ofstream(fs::path(cartella) / "schede-righe" / "seme-k023", std::ios::binary)
+        << testo_di(k023 + "schede.tsv") << "@@\n" << testo_di(k023 + "fermate.tsv") << "@@\n" << testo_di(k023 + "date.tsv") << "@@\n"
+        << testo_di(k023 + "interruzioni.tsv");
 }
 
 int prova_semi_schede() {
@@ -757,6 +804,17 @@ int prova_semi_schede() {
     const kzero::CardsRead r = kzero::read_cards(tabelle_da_testo(testo_di(k021 + "schede.tsv") + "@@\n" + testo_di(k021 + "fermate.tsv")),
                                                  lettura_schede().pacchetto.card_profiles.at(0), kzero::Index(lettura_schede().pacchetto), false);
     if (r.cards.size() != 3 || r.cards[0].fault || r.cards[1].fault || !r.cards[2].fault) guasto("il seme delle schede non si legge come atteso");
+    // K-023: le tre schede per disabili si leggono tutte, la prima con tre interruzioni, la seconda in coincidenza.
+    const std::string k023 = std::string(KZERO_SORGENTI) + "/tests/esempi/k023-schede/";
+    const kzero::Index idx(lettura_schede().pacchetto);
+    const kzero::CardProfile* h = idx.card_profile("PS-CVA-H");
+    if (!h) guasto("manca il profilo PS-CVA-H");
+    const kzero::CardsRead q = kzero::read_cards(tabelle_da_testo(testo_di(k023 + "schede.tsv") + "@@\n" + testo_di(k023 + "fermate.tsv") + "@@\n" +
+                                                                  testo_di(k023 + "date.tsv") + "@@\n" + testo_di(k023 + "interruzioni.tsv")),
+                                                 *h, idx, false);
+    if (q.cards.size() != 3 || q.cards[0].fault || q.cards[1].fault || q.cards[2].fault || q.cards[0].card.breaks.size() != 3 ||
+        !kzero::card_transfer_end(q.cards[1].card, idx))
+        guasto("il seme delle schede del K-023 non si legge come atteso");
     return n;
 }
 

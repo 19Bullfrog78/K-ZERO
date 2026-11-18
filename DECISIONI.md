@@ -357,3 +357,51 @@ Formato: data - decisione - perche'.
   schede): una scheda a due giri letta con il K-021 ha il gruppo con lo stesso luogo due volte; dopo il K-022 ha gli avvisi K-CTR-175 e
   K-CTR-170 e nessun problema falso. Rimedio: `kzero togli-scheda` e una nuova lettura della scheda, oppure la versione dopo della
   scheda, che rifa' gli elementi.
+- 2026-11-18 - K-023 - **Risposte dell'arbitro alle domande prima del codice** (D1-D6, P1-P10, tutte le prime scelte): coincidenza solo
+  con una scuola nell'intestazione (D1 A); interruzioni che si sovrappongono = la scheda si ferma (D2 A); uscita `schede` versione 2 con
+  le interruzioni lette (D3 A); K-CTR-176 dice anche "autorizzato solo a voce" (D4 A); una frase al condizionale nel messaggio della
+  variante 32 (D5 A); una versione senza giorni ferma la scheda, dentro il K-023 (D6 A). P1-P10 accettate come proposte.
+- 2026-11-18 - K-023 - **Interruzioni della scheda**: un quarto foglio facoltativo (Nr, Dal, Al, date comprese), nominato da un profilo alla
+  versione 2 (`fogli.interruzioni` e `colonne.interruzioni`, insieme); i profili alla versione 1 si leggono ancora e non hanno il foglio.
+  Nel calendario della versione ogni interruzione e' una sospensione (motivo "Interruzione della scheda") **tagliata al periodo della
+  versione**: una sospensione fuori dal periodo sarebbe un errore (K-CTR-013) e un'interruzione a cavallo di due versioni va per meta' in
+  ognuna. Tot Giorni si confronta con i giorni del calendario contati come insieme (mai una sottrazione: un giorno gia' fuori dal
+  calendario di base non si toglie due volte). Le interruzioni che non tornano fermano la scheda (K-CTR-160: 43 rovesciata, 44 fuori dal
+  periodo della scheda, 45 sovrapposte, 46 con dentro una data elencata, perche' nel calendario la sospensione vincerebbe sulla data e
+  sarebbe K-CTR-014); il programma non ne corregge nessuna. Il registro `schede_servizi` si scrive sempre alla versione 2 (contiene la
+  1, come `servizi.json` 4 nel K-021); la copia della scheda ha le interruzioni, che contano in "cosa cambia" e nel confronto K-CTR-170
+  (anche le sospensioni del calendario).
+- 2026-11-18 - K-023 - **Uscita di leggi-schede alla versione 2 per tutti** (D3, accettato dall'arbitro): il JSON (`schede` 2) ha
+  `righe.interruzioni` e, per ogni scheda, `interruzioni`, anche con i profili di oggi (campi vuoti: 0 e []); il **testo resta uguale**
+  con i profili di oggi (la riga "Righe" dice le interruzioni solo se il profilo ha il foglio; la riga dei periodi solo per le schede che
+  ne hanno). Perche': forma nuova = versione nuova (come `giornata` 6 nel K-022); la versione 1 resta tra quelle non piu' prodotte.
+  K-CTR-163 ha una variante per le schede con interruzioni (il messaggio di oggi non cambia).
+- 2026-11-18 - K-023 - **Una versione senza giorni non si scrive** (D6): una versione nuova senza nessun giorno di servizio dalla data
+  scelta, o una versione di prima che accorciata resterebbe senza giorni, ferma la scheda (K-CTR-160 variante 47): niente scritto, gli
+  avvisi della lettura di quella scheda tolti. Perche': prima si scriveva, e `kzero controlla` trovava poi K-CTR-015 (errore) che ferma la
+  giornata. Il programma non sceglie un'altra data e non toglie la versione di prima: lo fa l'utente. Si guarda il periodo della versione
+  (non quello del pacchetto: una scheda fuori dal periodo del pacchetto resta un avviso del pacchetto, K-CTR-015). Effetto su una prova del
+  K-022 (S11): le stesse cifre lette come date del 1900 cadono fuori dal calendario, e la scheda ora si ferma.
+- 2026-11-18 - K-023 - **Coincidenze (punto di trasbordo)**: una scuola dell'intestazione senza la sua riga non ferma la scheda solo se a.
+  la scheda ha una scuola sola, b. la corsa finisce (andata) o comincia (ritorno) in un punto di trasbordo autorizzato (un luogo pubblico
+  con il blocco `trasbordo`, lo stesso criterio di K-CTR-023; anche a voce), c. li' scende (o sale) almeno una persona, accompagnatore
+  escluso. Avviso K-CTR-176 (solo nella lettura; varianti 1 ritorno, 2 e 3 a voce). Il gruppo **tiene la sua scuola**: e' la meta della
+  persona, ed e' cio' che lega la casa a un luogo sensibile (`LegameSensibile`: la corsa A non passa dal centro e le schede non scrivono
+  trasbordi; senza la scuola sul gruppo la casa di chi va in un centro diurno resterebbe un dato personale normale). Per questo, con due
+  scuole (il gruppo senza scuola, D3 del K-021) mai la coincidenza (D1). La corsa non ha `trasbordi` (la meta' di B non si sa: K-CTR-024
+  sarebbe un errore). Nessun controllo di oggi cambia: K-CTR-021 (attesa concordata, dato della scuola), K-CTR-037 (durata massima
+  definita, non misurata), K-CTR-171 (grado delle scuole della scheda), K-CTR-023 ... 027 (trasbordi scritti, che le schede non scrivono),
+  K-CTR-043 (sul luogo, in `kzero controlla`).
+- 2026-11-18 - K-023 - **Controlli d'arrivo futuri** (regola per quando arriveranno; oggi nessun controllo confronta una corsa con l'orario
+  delle lezioni, l'attesa per corsa, la finestra del gruppo o la durata a bordo fino alla scuola): l'arrivo a scuola di un gruppo si
+  controlla sulla corsa che passa dalla sua scuola. Se la corsa del gruppo finisce (o comincia) in un punto di trasbordo senza passare
+  dalla scuola, arrivo, attesa, finestra e durata fino alla scuola si contano sulla catena A -> B quando il legame ci sara'; finche' non
+  c'e', "non verificato" (regola del K-017), mai un avviso falso e mai "regolare".
+- 2026-11-18 - K-023 - **Limite: il legame A -> B della coincidenza non c'e'**. K-Zero non controlla che la persona che scende da A al punto
+  di trasbordo sia quella che sale su B, ne' che B passi da li' dopo A (e con il margine del manifesto). Va nel mandato del confronto tra
+  l'elenco e le schede; fino ad allora K-CTR-176 dice di vederlo a mano.
+- 2026-11-18 - K-023 - **Codici doppi nel registro e nei profili delle schede** (fuzzing del K-023, file schede_servizi.json, dopo 10
+  minuti con il seme nuovo del registro alla versione 2): due schede del registro, o due profili delle schede, con lo stesso codice davano
+  K-CTR-009 senza il punto in cui il codice compare la prima volta, e il messaggio non si poteva scrivere (errore interno in `kzero
+  controlla`). Il difetto c'era dal K-021: il bersaglio del registro non aveva un seme vero. Ora come tutti gli altri codici doppi; il caso
+  sta in tests/fuzz/casi/pacchetto-schede_servizi.json.

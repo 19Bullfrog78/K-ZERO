@@ -55,9 +55,11 @@ void prova_elenco_campi(const std::uint8_t* dati, std::size_t n);
 // I semi dell'elenco (file .xlsx e XML costruiti dai testi di tests/esempi/k019-elenco), in <cartella>/<bersaglio>/.
 void scrivi_semi_elenco(const std::string& cartella);
 int prova_semi_elenco();
-// K-021: le schede dei servizi lette dai tre fogli (testo con le colonne separate da tabulazioni, i fogli separati da una riga "@@") con
-// il profilo di prova (tests/esempi/k021-schede): mai una scheda accettata con i totali che non tornano, mai la data scelta dal
-// programma, mai documenti non conformi agli schemi o diversi dalla scheda.
+// K-021: le schede dei servizi lette dai fogli (testo con le colonne separate da tabulazioni, i fogli separati da una riga "@@") con
+// i profili di prova: mai una scheda accettata con i totali che non tornano, mai la data scelta dal programma, mai documenti non conformi
+// agli schemi o diversi dalla scheda. K-023: il quarto foglio (interruzioni) e i due profili alla versione 2 di tests/esempi/k023-schede:
+// mai un'interruzione rovesciata, fuori dal periodo, sovrapposta o su una data elencata accettata, mai una scuola senza la sua riga fuori
+// dalla coincidenza, mai una versione senza giorni scritta, mai una sospensione fuori dal periodo del calendario.
 void prova_schede_righe(const std::uint8_t* dati, std::size_t n);
 void scrivi_semi_schede(const std::string& cartella);
 int prova_semi_schede();

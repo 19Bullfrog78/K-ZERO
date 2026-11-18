@@ -1577,19 +1577,22 @@ riceve la copia una volta in un **modello Excel di K-Zero**; il **profilo delle 
 fogli, titoli delle colonne, colonne dei giorni, il segno delle caselle, i testi di verso e momento, le cadenze, la parola
 dell'accompagnatore, i separatori, e come si collegano scuole, punti di raccolta e calendari agli elementi del pacchetto. E' un
 dato: il programma conosce solo le **forme** (cadenza a giorni segnati o a date elencate), mai le parole; il modello di K-Zero e'
-il primo profilo, e se il committente mandera' le schede in Excel sara' un altro profilo. Tutti dati comuni. Schema:
-[docs/schema/profili_schede.v1.schema.json](schema/profili_schede.v1.schema.json).
+il primo profilo, e se il committente mandera' le schede in Excel sara' un altro profilo. Tutti dati comuni. Schemi:
+[docs/schema/profili_schede.v2.schema.json](schema/profili_schede.v2.schema.json) (versione attuale, K-023: il foglio delle
+interruzioni) e [docs/schema/profili_schede.v1.schema.json](schema/profili_schede.v1.schema.json) (versione 1, ancora letta: e' la 2
+senza il foglio delle interruzioni; un profilo alla 1, o alla 2 senza il foglio, legge le schede come prima del K-023).
 
 | Campo | Obbl. | Classe | Significato |
 |---|---|---|---|
 | `profili[].codice` | si' | comune | Codice del profilo (si usa con `kzero leggi-schede --profilo`) |
 | `profili[].nome` | no | comune | Nome |
 | `profili[].committente` | si' | comune | Il committente delle schede |
-| `profili[].fogli` | si' | comune | Nomi dei tre fogli: `schede`, `fermate`, `date` |
+| `profili[].fogli` | si' | comune | Nomi dei fogli: `schede`, `fermate`, `date` e, dalla versione 2, `interruzioni` (facoltativo, insieme ai suoi titoli) |
 | `profili[].codici_esterni` | si' | comune | `sistema` e i tipi: `tipo_scheda` (l'ID), `tipo_nr` (il Nr), `tipo_servizio` (il numero prima della barra), scritti sul servizio; `tipo_scuola`, `tipo_fermata`, `tipo_calendario`, con cui si cercano scuole, punti di raccolta e calendari |
 | `profili[].colonne.schede` | si' | comune | Titoli delle colonne del foglio delle schede: `nr`, `id`, `servizio` (verso e momento), `scuole`, `attivazione`, `disattivazione`, `totali_alunni`, `individualizzato`, `attrezzato`, `tot_giorni`, `tot_km_carico`, `tot_km_vuoto`, `calendario`, `cadenza`, `nuova_modifica` |
 | `profili[].colonne.fermate` | si' | comune | Titoli del foglio delle fermate: `nr`, `orario`, `punto` (punto di raccolta), `casa`, `salgono` (St. Car.), `scendono` (St. Scar.), `km_pieni`, `km_vuoti`, `accompagnatore` |
 | `profili[].colonne.date` | si' | comune | Titoli del foglio delle date: `nr`, `data` |
+| `profili[].colonne.interruzioni` | no | comune | Versione 2, solo insieme a `fogli.interruzioni`: titoli del foglio delle interruzioni: `nr`, `dal`, `al` |
 | `profili[].giorni[]` | si' | comune | `colonna` (es. "Lu") e `giorno` (`lunedi` ... `domenica`) |
 | `profili[].segno[]` | si' | comune | Le parole che segnano una casella (es. "X") |
 | `profili[].servizi[]` | si' | comune | `testo` di verso e momento (es. "Andata Mattino") e `verso` in K-Zero |
@@ -1603,7 +1606,7 @@ il primo profilo, e se il committente mandera' le schede in Excel sara' un altro
 Titoli e parole si confrontano come quelli dei profili degli elenchi (senza maiuscole, accenti, punteggiatura e spazi doppi); hanno
 la definizione `parola` e non entrano nell'avviso sui nomi liberi (K-018).
 
-**Il modello** (scelta A dell'arbitro): tre fogli, la prima riga di ognuno sono i titoli.
+**Il modello** (scelta A dell'arbitro): tre fogli (dal K-023 un quarto, facoltativo), la prima riga di ognuno sono i titoli.
 - **Schede**: una riga per scheda, con tutti i campi dell'intestazione e del piede: Nr (es. "4000123 / 3"), ID (es. un uuid), verso
   e momento, scuole (piu' di una con il separatore delle scuole: codici esterni delle scuole), attivazione e disattivazione, una X
   sotto ogni giorno, Totali alunni, le caselle "Servizio Individualizzato" e "Attrezzato" (X o vuote), Tot Giorni, Tot Km Carico,
@@ -1612,7 +1615,12 @@ la definizione `parola` e non entrano nell'avviso sui nomi liberi (K-018).
 - **Fermate**: una riga per riga della scheda, nell'ordine: Nr (quello della scheda), orario, punto di raccolta, casa, St. Car.,
   St. Scar., km pieno, km vuoto, accompagnatore.
 - **Date**: solo per le cadenze a date elencate, una riga per data: Nr, data.
-Il Nr lega le righe dei tre fogli; si confronta senza badare agli spazi intorno alla barra ("4000123/3" = "4000123 / 3"). Le
+- **Interruzioni** (K-023, solo con un profilo alla versione 2 che nomina il foglio): una riga per periodo in cui il servizio non si fa
+  (in fondo alla scheda, "Interruzioni:"): Nr, Dal, Al, i due giorni compresi (un giorno solo: Dal uguale ad Al), scritti come le
+  altre date. Il foglio puo' mancare (nessuna interruzione), come quello delle date. Un'interruzione deve stare dentro il periodo della
+  scheda (attivazione, disattivazione), non sovrapporsi a un'altra e non contenere una data elencata: altrimenti la scheda si ferma
+  (K-CTR-160, varianti 43 ... 46); il programma non ne corregge nessuna.
+Il Nr lega le righe dei fogli; si confronta senza badare agli spazi intorno alla barra ("4000123/3" = "4000123 / 3"). Le
 celle vuote di St. Car. e St. Scar. valgono 0 (sulle schede ci sono righe con la sola salita); una cella dei km vuota vuol dire
 "non scritto", **mai 0** (0,0 scritto e' zero). Date e orari si scrivono come sulla scheda: un testo (con i separatori del profilo)
 oppure come Excel li trasforma da solo (numeri di data e di orario di Excel, nel sistema del file: 1900, o 1904 se la cartella di
@@ -1638,7 +1646,9 @@ parola, e nella colonna "accompagnatore" una parola del profilo per "sale" o "sc
 (K-021) Il **registro delle schede** lette con `kzero leggi-schede`: per ogni scheda (riconosciuta dall'**ID** del committente,
 mai dal Nr) le **versioni**, ognuna con la copia della scheda letta, da quando a quando vale, la presa in carico, il riferimento,
 come e' stata scelta la data, e i codici degli elementi del pacchetto fatti da quella versione. Lo scrivono solo `kzero
-leggi-schede` e `kzero togli-scheda`. Schema: [docs/schema/schede_servizi.v1.schema.json](schema/schede_servizi.v1.schema.json).
+leggi-schede` e `kzero togli-scheda`. Schemi: [docs/schema/schede_servizi.v2.schema.json](schema/schede_servizi.v2.schema.json)
+(versione attuale, K-023: le interruzioni nella copia della scheda) e
+[docs/schema/schede_servizi.v1.schema.json](schema/schede_servizi.v1.schema.json) (versione 1, ancora letta: nessuna interruzione).
 
 | Campo | Obbl. | Classe | Significato |
 |---|---|---|---|
@@ -1652,7 +1662,7 @@ leggi-schede` e `kzero togli-scheda`. Schema: [docs/schema/schede_servizi.v1.sch
 | `schede[].versioni[].presa_in_carico`, `riferimento` | si' | comune | La data `--data` e il `--riferimento` della lettura |
 | `schede[].versioni[].scelta` | si' | comune | `modo` (`attivazione`, `presa_in_carico`, `data`) e `da` (`nessuna`, `file` = `--validita`, `scheda` = `--validita-scheda`) |
 | `schede[].versioni[].elementi` | si' | comune | Codici di `servizio`, `gruppo`, `corsa`, `calendario` fatti dalla versione |
-| `schede[].versioni[].scheda` | si' | comune | La copia letta: `nr`, `servizio` (verso e momento) e `verso`, `scuole[]`, `attivazione`, `disattivazione`, `giorni[]`, `totali_alunni`, `tot_giorni`, `tot_km_carico`, `tot_km_vuoto`, `calendario` (la parola) e `calendario_base` (il calendario del pacchetto), `cadenza` e `forma_cadenza`, `nuova_modifica`, `fermate[]` (`orario`, `luogo`, `riconosciuto`, `salgono`, `scendono`, `km_pieni`, `km_vuoti`, `accompagnatore`), `date[]` |
+| `schede[].versioni[].scheda` | si' | comune | La copia letta: `nr`, `servizio` (verso e momento) e `verso`, `scuole[]`, `attivazione`, `disattivazione`, `giorni[]`, `totali_alunni`, `tot_giorni`, `tot_km_carico`, `tot_km_vuoto`, `calendario` (la parola) e `calendario_base` (il calendario del pacchetto), `cadenza` e `forma_cadenza`, `nuova_modifica`, `fermate[]` (`orario`, `luogo`, `riconosciuto`, `salgono`, `scendono`, `km_pieni`, `km_vuoti`, `accompagnatore`), `date[]` e, dalla versione 2, `interruzioni[]` (`dal`, `al`, in ordine) |
 | `...scheda.individualizzato`, `...scheda.attrezzato` | no | particolare | Le due caselle della scheda (come la pedana obbligatoria e `individualizzato` del servizio) |
 | `tolte[]` | no | comune | Le versioni tolte con `kzero togli-scheda`: `scheda`, `id`, `versioni[]`, `riferimento`, `data`; i loro numeri non si danno piu' |
 
@@ -1678,9 +1688,25 @@ leggi-schede` e `kzero togli-scheda`. Schema: [docs/schema/schede_servizi.v1.sch
 - **calendario**: base = il calendario del pacchetto con il codice esterno della parola della scheda (es. SCOLASTICO, MATERNA;
   `tipo_calendario` del profilo), periodo = da quando vale la versione alla sua fine, giorni = quelli con la X (cadenza a giorni
   segnati), oppure nessun giorno e le date una per una (`date_aggiunte`, cadenza a date elencate: il programma non ricava mai un
-  ritmo);
+  ritmo); dal K-023 le **interruzioni** della scheda sono **sospensioni** (motivo "Interruzione della scheda"), **tagliate al periodo
+  della versione**: un'interruzione a cavallo di due versioni va per meta' in ognuna, una tutta fuori dal periodo non c'e' (resta nella
+  copia della scheda). Tot Giorni (K-CTR-163) si confronta con i giorni del calendario con le interruzioni, contati come insieme di
+  giorni (un giorno di interruzione che non e' gia' un giorno di servizio non si toglie due volte);
 - codici (D9): `S-`, `G-`, `C-`, `CAL-` seguiti dal Nr con i caratteri non ammessi nei codici cambiati in "-" (es. `S-4000123-3`),
   dalla seconda versione `-V2`, `-V3`...; un codice gia' usato da un altro elemento si salta al numero dopo, mai sovrascritto.
+
+**Coincidenze** (K-023, punto di trasbordo). Un servizio per un disabile puo' andare con il mezzo A dalla casa al punto Y, dove la
+persona scende e sale sul mezzo B, che la porta alla scuola o al centro. La scheda di A ha nell'intestazione la scuola (il centro) di
+arrivo, ma la sua ultima riga e' Y. Una scuola dell'intestazione senza la sua riga ferma la scheda (K-CTR-160 variante 32), **tranne**
+quando tutte e tre queste cose sono vere: a. la scheda ha **una scuola sola** nell'intestazione; b. la corsa **finisce** (andata) o
+**comincia** (ritorno) in un **punto di trasbordo autorizzato** (un luogo pubblico con il blocco `trasbordo`, come per i trasbordi
+scritti: un luogo `punto_trasbordo` lo ha sempre; anche autorizzato solo a voce), non solo in mezzo alla corsa; c. li' **scende**
+(andata) o **sale** (ritorno) almeno una persona, accompagnatore escluso. Allora la scheda si legge con l'avviso K-CTR-176 (scuola e
+punto di trasbordo; varianti 2 e 3 se il punto e' autorizzato solo a voce) e il **gruppo tiene la sua scuola**: e' la meta della
+persona, ed e' quello che lega la casa a un luogo sensibile (la corsa A non passa dal centro). Domanda e corsa sono quelle delle righe;
+la corsa non ha `trasbordi` (la meta' di B non si sa). La scheda di B (Y come riga in mezzo, la persona sale li') si legge come ogni
+altra. **Il legame A -> B** (stessa persona; B passa da Y dopo A) **non c'e' ancora**: lo fara' il confronto tra l'elenco e le schede;
+fino ad allora va visto a mano (DECISIONI.md, K-023).
 
 **Validita'** (regola di ALP): attivazione uguale o dopo `--data` (la presa in carico) = vale dall'attivazione; attivazione prima di
 `--data` = il programma non sceglie: senza una scelta la scheda si ferma e l'uscita elenca le scelte (`attivazione`,
@@ -1693,9 +1719,12 @@ registro.
 giorno prima finisce il giorno prima, quelle che cominciano dalla data scelta in poi si tolgono; **i giorni prima della data scelta
 non cambiano mai**. La data scelta puo' essere anche prima della presa in carico (D4, scelta B: il committente puo' dire che una
 modifica arrivata il 15/11 vale dal 10/11), mai di base: l'uscita dice quante giornate prima della presa in carico cambiano e quali
-versioni si tolgono. Contenuto uguale all'ultima versione (la parola nuova/modifica non conta): niente da fare. L'uscita dice cosa
-cambia: Nr, verso e momento, scuole, fermate (luoghi e ordine), orari, numeri, km, totali, date e giorni, calendario, cadenza, e le
-caselle (solo con i dati particolari). Mai unire schede con ID diversi.
+versioni si tolgono. Contenuto uguale all'ultima versione (la parola nuova/modifica non conta): niente da fare. **Una versione senza
+giorni non si scrive** (K-023): se la versione nuova non avrebbe nessun giorno di servizio dalla data scelta (calendario della scheda,
+interruzioni comprese), o se la versione di prima, accorciata al giorno prima, resterebbe senza giorni, la scheda si ferma (K-CTR-160
+variante 47) e l'utente sceglie un'altra data o toglie prima la versione di prima; il programma non toglie niente da solo. L'uscita dice cosa
+cambia: Nr, verso e momento, scuole, fermate (luoghi e ordine), orari, numeri, km, totali, date e giorni, interruzioni (K-023),
+calendario, cadenza, e le caselle (solo con i dati particolari). Mai unire schede con ID diversi.
 
 **Togliere una scheda scritta per errore**: `kzero togli-scheda <pacchetto> --scheda <codice o ID> --riferimento "..." --data
 AAAA-MM-GG --utente U [--tutte] [--scrivi <pacchetto>]` toglie l'ultima versione (servizio, gruppo, corsa, calendario) e rida' alla

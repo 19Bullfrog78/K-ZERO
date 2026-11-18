@@ -2142,6 +2142,7 @@ void profili_schede(const JsonDati& d, Package& pk) {
         x.sheet_cards = f.at("schede").get<std::string>();
         x.sheet_stops = f.at("fermate").get<std::string>();
         x.sheet_dates = f.at("date").get<std::string>();
+        x.sheet_breaks = c.testo(f, "interruzioni");   // versione 2, facoltativo (lo schema lo vuole insieme ai suoi titoli)
         const auto& e = o.at("codici_esterni");
         x.ext_system = e.at("sistema").get<std::string>();
         x.ext_card = e.at("tipo_scheda").get<std::string>();
@@ -2166,6 +2167,10 @@ void profili_schede(const JsonDati& d, Package& pk) {
             *dove = k.at("fermate").at(campo).get<std::string>();
         x.date_cols.nr = k.at("date").at("nr").get<std::string>();
         x.date_cols.date = k.at("date").at("data").get<std::string>();
+        if (k.contains("interruzioni")) {
+            const auto& ki = k.at("interruzioni");
+            x.break_cols = {ki.at("nr").get<std::string>(), ki.at("dal").get<std::string>(), ki.at("al").get<std::string>()};
+        }
         for (const auto& g : o.at("giorni")) x.days.push_back({g.at("colonna").get<std::string>(), giorno_da(g.at("giorno").get<std::string>())});
         x.mark_words = parole_di(o, "segno");
         for (const auto& g : o.at("servizi"))
@@ -2268,6 +2273,7 @@ void schede_servizi(const JsonDati& d, Package& pk) {
                 k.stops.push_back(std::move(z));
             }
             for (const auto& g : c.elenco(s, "date")) k.dates.push_back(c.data(g));
+            for (const auto& g : c.elenco(s, "interruzioni")) k.breaks.push_back({c.data(g.at("dal")), c.data(g.at("al"))});   // versione 2
             y.src = c.src(pv);
             x.versions.push_back(std::move(y));
         }

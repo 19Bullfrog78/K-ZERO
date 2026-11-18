@@ -119,9 +119,12 @@ Tabelle tabelle_da(const FileSchede& f, const kzero::CardProfile& p) {
     const auto schede = foglio(p.sheet_cards, false);
     const auto fermate = foglio(p.sheet_stops, false);
     const auto date = foglio(p.sheet_dates, true);   // senza schede a date elencate puo' mancare
+    // K-023: il foglio delle interruzioni solo se il profilo lo nomina; puo' mancare (nessuna interruzione).
+    const auto interruzioni = p.sheet_breaks.empty() ? std::nullopt : foglio(p.sheet_breaks, true);
     out.t.cards = tabella_da(*schede);
     out.t.stops = tabella_da(*fermate);
     if (date) out.t.dates = tabella_da(*date);
+    if (interruzioni) out.t.breaks = tabella_da(*interruzioni);
     out.date1904 = schede->date1904;
     return out;
 }
@@ -185,6 +188,7 @@ struct Calcolo {
     Lettura vecchia;
     Lettura nuova;
     std::string committente;
+    bool con_interruzioni = false;   // K-023: il profilo ha il foglio delle interruzioni
 };
 
 Calcolo calcola(Lettura vecchia, const Parametri& par, const Tabelle& t, const std::string& cartella) {
@@ -201,6 +205,7 @@ Calcolo calcola(Lettura vecchia, const Parametri& par, const Tabelle& t, const s
                                                           ". Niente e' stato letto.");
     Calcolo c;
     c.committente = pr.client.code;
+    c.con_interruzioni = !pr.sheet_breaks.empty();
     c.letto = kzero::read_cards(t.t, pr, idx, t.date1904);
     if (c.letto.fault != kzero::TableFault::None)
         throw ErroreKZero(Errore::ColonnaMancante,
@@ -251,6 +256,13 @@ struct Problema {
     std::string codice, livello, messaggio;
     int riga = 0;
 };
+
+// K-023: le interruzioni di una scheda letta.
+Json interruzioni_json(const kzero::Card& k) {
+    Json a = Json::array();
+    for (const kzero::DateRange& b : k.breaks) a.push_back({{"dal", kzero::text_from_day(b.from)}, {"al", kzero::text_from_day(b.to)}});
+    return a;
+}
 
 // I dati particolari di una scheda letta (tipo, pedana, individualizzato, accompagnatore richiesto), dal pacchetto nuovo.
 struct Particolari {
@@ -314,11 +326,13 @@ Risultato uscita_lettura(const DefinizioneComando& comando, const Parametri& par
         j["riferimento"] = par.riferimento;
         j["impronta"] = impronta;
         j["scritto"] = scritto;
-        j["righe"] = {{"schede", c.letto.card_rows}, {"fermate", c.letto.stop_rows}, {"date", c.letto.date_rows}};
+        j["righe"] = {{"schede", c.letto.card_rows}, {"fermate", c.letto.stop_rows}, {"date", c.letto.date_rows},
+                      {"interruzioni", c.letto.break_rows}};
         j["conteggi"] = {{"nuove", conto("nuova")}, {"versioni_nuove", conto("versione_nuova")}, {"uguali", conto("uguale")},
                          {"ferme", conto("ferma")}, {"senza_scelta", conto("senza_scelta")}};
         Json schede = Json::array();
-        for (const kzero::CardOutcome& o : c.confronto.outcomes) {
+        for (std::size_t i = 0; i < c.confronto.outcomes.size(); ++i) {
+            const kzero::CardOutcome& o = c.confronto.outcomes[i];
             Json s = {{"riga", o.row}, {"nr", o.nr.empty() ? Json(nullptr) : Json(o.nr)}, {"id", o.id.empty() ? Json(nullptr) : Json(o.id)},
                       {"esito", nome_esito(o.kind)}};
             const bool scritta = o.kind == kzero::CardOutcome::Kind::New || o.kind == kzero::CardOutcome::Kind::NewVersion;
@@ -330,6 +344,7 @@ Risultato uscita_lettura(const DefinizioneComando& comando, const Parametri& par
             s["scelta"] = scritta ? Json{{"modo", nome_modo(o.mode)}, {"da", nome_da(o.from)}} : Json(nullptr);
             s["elementi"] = scritta ? Json{{"servizio", o.service}, {"gruppo", o.group}, {"corsa", o.trip}, {"calendario", o.calendar}} : Json(nullptr);
             s["case_nuove"] = o.new_homes;
+            s["interruzioni"] = con_date ? interruzioni_json(c.letto.cards.at(i).card) : Json(nullptr);   // K-023
             s["versione_accorciata"] = o.cut_version ? Json{{"versione", *o.cut_version}, {"al", kzero::text_from_day(o.cut_to)}} : Json(nullptr);
             s["versioni_tolte"] = o.removed_versions;
             s["giornate_prima_della_presa_in_carico"] =
@@ -372,11 +387,13 @@ Risultato uscita_lettura(const DefinizioneComando& comando, const Parametri& par
     t += "File: impronta " + impronta + " (del file si tiene solo l'impronta).\n";
     const auto n = [](int k, const char* uno, const char* tanti) { return std::to_string(k) + " " + (k == 1 ? uno : tanti); };
     t += "Righe: " + n(c.letto.card_rows, "scheda", "schede") + ", " + n(c.letto.stop_rows, "fermata", "fermate") + ", " +
-         n(c.letto.date_rows, "data", "date") + ".\n";
+         n(c.letto.date_rows, "data", "date") +
+         (c.con_interruzioni ? ", " + n(c.letto.break_rows, "interruzione", "interruzioni") : std::string()) + ".\n";   // K-023
     t += "Schede: " + n(conto("nuova"), "nuova", "nuove") + ", " + n(conto("versione_nuova"), "versione nuova", "versioni nuove") + ", " +
          n(conto("uguale"), "uguale", "uguali") + " (niente da fare), " + n(conto("ferma"), "ferma", "ferme") + ", " +
          n(conto("senza_scelta"), "senza", "senza") + " la scelta della data.\n";
-    for (const kzero::CardOutcome& o : c.confronto.outcomes) {
+    for (std::size_t i = 0; i < c.confronto.outcomes.size(); ++i) {
+        const kzero::CardOutcome& o = c.confronto.outcomes[i];
         t += "  " + (o.nr.empty() ? std::string("(senza Nr)") : o.nr) + " (riga " + std::to_string(o.row) + "): ";
         const std::string periodo = "vale dal " + kzero::text_from_day(o.valid.from) + " al " + kzero::text_from_day(o.valid.to);
         const std::string elementi = "servizio " + o.service + ", gruppo " + o.group + ", corsa " + o.trip + ", calendario " + o.calendar;
@@ -423,6 +440,12 @@ Risultato uscita_lettura(const DefinizioneComando& comando, const Parametri& par
             case kzero::CardOutcome::Kind::ChoiceMissing: t += "ferma: manca la scelta della data (K-CTR-162, sotto).\n"; break;
         }
         const bool scritta = o.kind == kzero::CardOutcome::Kind::New || o.kind == kzero::CardOutcome::Kind::NewVersion;
+        if (scritta && !c.letto.cards.at(i).card.breaks.empty()) {   // K-023
+            std::string ii;
+            for (const kzero::DateRange& b : c.letto.cards.at(i).card.breaks)
+                ii += (ii.empty() ? "" : ", ") + std::string("dal ") + kzero::text_from_day(b.from) + " al " + kzero::text_from_day(b.to);
+            t += "     Interruzioni (il servizio non si fa): " + ii + ".\n";
+        }
         if (scritta && v.particolari)
             if (const auto pa = particolari_di(in, o.service))
                 t += std::string("     Tipo ") + pa->tipo + ", pedana obbligatoria " + (pa->pedana ? "si'" : "no") + ", servizio individualizzato " +

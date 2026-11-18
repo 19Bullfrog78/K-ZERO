@@ -1820,6 +1820,11 @@ struct CardProfile {
     struct DateColumns {
         std::string nr, date;
     } date_cols;
+    // K-023 (versione 2 del profilo): il foglio delle interruzioni, facoltativo (vuoto = il modello non lo ha) e i suoi titoli.
+    std::string sheet_breaks;
+    struct BreakColumns {
+        std::string nr, from, to;
+    } break_cols;
     std::vector<CardProfileDay> days;
     std::vector<std::string> mark_words;
     std::vector<CardProfileService> services;
@@ -1867,6 +1872,7 @@ struct Card {
     bool is_change = false;     // "Modifica" (altrimenti "Scheda nuova")
     std::vector<CardStop> stops;
     std::vector<Day> dates;     // con la cadenza a date elencate
+    std::vector<DateRange> breaks;   // K-023: interruzioni (dal, al compresi) in ordine, senza sovrapposizioni, dentro il periodo
 };
 enum class ChoiceMode { Activation, TakenInCharge, Date };   // attivazione, presa in carico, un'altra data
 enum class ChoiceFrom { None, File, Card };                   // nessuna scelta serviva, --validita, --validita-scheda

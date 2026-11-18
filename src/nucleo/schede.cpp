@@ -335,11 +335,15 @@ CardsRead read_cards(const CardTables& tab, const CardProfile& pr, const Index& 
     const std::vector<std::string> titoli_fermate = {cf.nr, cf.time, cf.point, cf.home, cf.boarding, cf.alighting, cf.loaded_km,
                                                      cf.empty_km, cf.escort};
     const std::vector<std::string> titoli_date = {pr.date_cols.nr, pr.date_cols.date};
+    const std::vector<std::string> titoli_interruzioni = {pr.break_cols.nr, pr.break_cols.from, pr.break_cols.to};
     const Colonne ks = colonne_di(tab.cards, titoli_schede);
     const Colonne kf = colonne_di(tab.stops, titoli_fermate);
     const Colonne kd = tab.dates.rows.empty() ? Colonne{} : colonne_di(tab.dates, titoli_date);
+    // K-023: il foglio delle interruzioni si legge solo se il profilo lo nomina (versione 2); puo' mancare, come quello delle date.
+    const bool con_interruzioni = !pr.sheet_breaks.empty() && !tab.breaks.rows.empty();
+    const Colonne ki = con_interruzioni ? colonne_di(tab.breaks, titoli_interruzioni) : Colonne{};
     for (const auto& [k, foglio] : {std::make_pair(&ks, pr.sheet_cards), std::make_pair(&kf, pr.sheet_stops),
-                                    std::make_pair(&kd, pr.sheet_dates)})
+                                    std::make_pair(&kd, pr.sheet_dates), std::make_pair(&ki, pr.sheet_breaks)})
         if (k->fault != TableFault::None) {
             out.fault = k->fault;
             out.fault_sheet = foglio;
@@ -349,6 +353,7 @@ CardsRead read_cards(const CardTables& tab, const CardProfile& pr, const Index& 
     out.card_rows = static_cast<int>(tab.cards.rows.size()) - 1;
     out.stop_rows = static_cast<int>(tab.stops.rows.size()) - 1;
     out.date_rows = tab.dates.rows.empty() ? 0 : static_cast<int>(tab.dates.rows.size()) - 1;
+    out.break_rows = con_interruzioni ? static_cast<int>(tab.breaks.rows.size()) - 1 : 0;
     const Ricerche cerca(pk, pr);
 
     // Le schede: prima i Nr e gli ID (doppi: ferme tutte).
@@ -370,7 +375,7 @@ CardsRead read_cards(const CardTables& tab, const CardProfile& pr, const Index& 
         if (!x.nr.empty() && nr_visti[x.nr] == 1) per_nr[x.nr] = &x;
 
     // Le righe delle fermate e delle date, per scheda (le righe senza la loro scheda: K-CTR-161).
-    std::map<std::string, std::vector<const TableRow*>> fermate, date;
+    std::map<std::string, std::vector<const TableRow*>> fermate, date, interruzioni;
     const auto per_scheda = [&](const Table& t, const Colonne& k, const std::string& titolo_nr, const std::string& foglio,
                                 std::map<std::string, std::vector<const TableRow*>>& dove) {
         for (std::size_t i = 1; i < t.rows.size(); ++i) {
@@ -388,6 +393,7 @@ CardsRead read_cards(const CardTables& tab, const CardProfile& pr, const Index& 
     };
     per_scheda(tab.stops, kf, cf.nr, pr.sheet_stops, fermate);
     if (!tab.dates.rows.empty()) per_scheda(tab.dates, kd, pr.date_cols.nr, pr.sheet_dates, date);
+    if (con_interruzioni) per_scheda(tab.breaks, ki, pr.break_cols.nr, pr.sheet_breaks, interruzioni);
 
     for (std::size_t i = 0; i < out.cards.size(); ++i) {
         CardRead& x = out.cards[i];
@@ -572,6 +578,60 @@ CardsRead read_cards(const CardTables& tab, const CardProfile& pr, const Index& 
             k.dates.assign(giorni_elencati.begin(), giorni_elencati.end());
         }
 
+        // Le interruzioni (K-023): periodi in cui il servizio non si fa, i due giorni compresi, dentro il periodo della scheda, senza
+        // sovrapposizioni e mai su una data elencata (la scheda direbbe due cose opposte per quel giorno). Il programma non ne corregge
+        // nessuna: un'interruzione che non torna ferma la scheda.
+        struct Interruzione {
+            DateRange periodo;
+            int riga = 0;
+        };
+        std::vector<Interruzione> lette;
+        for (const TableRow* ri : interruzioni[x.nr]) {
+            Riga z{*ri, ki, pr.sheet_breaks, &x};
+            const auto t1 = z.serve(pr.break_cols.from);
+            if (!t1) break;
+            const auto d1 = data(*t1, pr.date_sep, date1904);
+            if (!d1) {
+                z.ferma(CardFault::BadDate, pr.break_cols.from);
+                break;
+            }
+            const auto t2 = z.serve(pr.break_cols.to);
+            if (!t2) break;
+            const auto d2 = data(*t2, pr.date_sep, date1904);
+            if (!d2) {
+                z.ferma(CardFault::BadDate, pr.break_cols.to);
+                break;
+            }
+            if (*d2 < *d1) {
+                z.ferma(CardFault::BreakReversed, pr.break_cols.to);
+                break;
+            }
+            if (*d1 < k.from || *d2 > k.to) {
+                z.ferma(CardFault::BreakOutsidePeriod, *d1 < k.from ? pr.break_cols.from : pr.break_cols.to);
+                break;
+            }
+            lette.push_back({{*d1, *d2}, ri->number});
+        }
+        if (x.fault) continue;
+        std::stable_sort(lette.begin(), lette.end(), [](const Interruzione& a, const Interruzione& b) { return a.periodo.from < b.periodo.from; });
+        const auto ferma_interruzione = [&](CardFault f, int riga) {
+            x.fault = f;
+            x.fault_sheet = pr.sheet_breaks;
+            x.fault_row = riga;
+            x.fault_column = pr.break_cols.from;
+        };
+        for (std::size_t j = 1; j < lette.size() && !x.fault; ++j)
+            if (lette[j].periodo.from <= lette[j - 1].periodo.to)
+                ferma_interruzione(CardFault::BreaksOverlap, std::max(lette[j].riga, lette[j - 1].riga));
+        for (std::size_t j = 0; j < lette.size() && !x.fault; ++j)
+            for (Day d : k.dates)
+                if (d >= lette[j].periodo.from && d <= lette[j].periodo.to) {
+                    ferma_interruzione(CardFault::ListedDateInBreak, lette[j].riga);
+                    break;
+                }
+        if (x.fault) continue;
+        for (const Interruzione& i : lette) k.breaks.push_back(i.periodo);
+
         // Le fermate, nell'ordine.
         for (const TableRow* rf : fermate[x.nr]) {
             Riga z{*rf, kf, pr.sheet_stops, &x};
@@ -692,12 +752,16 @@ CardsRead read_cards(const CardTables& tab, const CardProfile& pr, const Index& 
             ferma_su(CardFault::TooFewStops, pr.sheet_cards, x.row, cs.nr);
             continue;
         }
+        // Una scuola senza la sua riga ferma la scheda, tranne la coincidenza (K-023: una scuola sola, la corsa che finisce o comincia
+        // in un punto di trasbordo autorizzato con qualcuno che prosegue).
+        const std::optional<CardTransferEnd> coincidenza = card_transfer_end(k, idx);
         for (const Code& sc : k.schools) {
             const School* s = idx.school(sc);
             const bool c_e = std::any_of(k.stops.begin(), k.stops.end(), [&](const CardStop& f) {
                 return f.match == CardStopMatch::School && s && f.place == s->place.code;
             });
-            if (!c_e && !x.fault) ferma_su(CardFault::SchoolRowMissing, pr.sheet_cards, x.row, cs.schools);
+            if (!c_e && !x.fault && !(coincidenza && coincidenza->school == sc))
+                ferma_su(CardFault::SchoolRowMissing, pr.sheet_cards, x.row, cs.schools);
         }
         if (x.fault) continue;
         int a_bordo = 0;
@@ -766,6 +830,12 @@ Calendar card_calendar(const Card& c, const Code& code, DateRange valid) {
     else
         for (Day d : c.dates)
             if (d >= valid.from && d <= valid.to) k.added.push_back({d, {}});
+    // K-023: le interruzioni, tagliate al periodo (fuori dal periodo il calendario non vale gia', e una sospensione fuori dal periodo
+    // sarebbe un errore, K-CTR-013).
+    for (const DateRange& b : c.breaks) {
+        const Day da = std::max(b.from, valid.from), a = std::min(b.to, valid.to);
+        if (da <= a) k.suspensions.push_back({{da, a}, std::string(), {}});
+    }
     return k;
 }
 
@@ -774,6 +844,38 @@ int card_days(const Card& c, const Index& idx) {
     int n = 0;
     for (Day d = c.from; d <= c.to; ++d) n += calendar_active(k, d, idx) ? 1 : 0;
     return n;
+}
+
+// --- Coincidenze (K-023) --------------------------------------------------------------------------------------------------
+
+std::optional<CardTransferEnd> card_transfer_end(const Card& k, const Index& idx) {
+    if (k.schools.size() != 1 || k.stops.empty()) return std::nullopt;   // a. una scuola sola
+    const School* s = idx.school(k.schools.front());
+    if (!s) return std::nullopt;
+    for (const CardStop& f : k.stops)
+        if (f.match == CardStopMatch::School && f.place == s->place.code) return std::nullopt;   // la scuola ha la sua riga
+    // b. la corsa finisce (andata) o comincia (ritorno) in un punto di trasbordo autorizzato: il primo o l'ultimo passaggio (le righe
+    // di fila nello stesso luogo alla stessa ora sono un passaggio solo).
+    const bool ritorno = k.direction == Direction::Return;
+    const CardStop& capo = ritorno ? k.stops.front() : k.stops.back();
+    const Place* l = idx.place(capo.place);
+    if (!l || l->is_private || !l->transfer) return std::nullopt;
+    // c. li' scende (andata) o sale (ritorno) almeno una persona, accompagnatore escluso.
+    int persone = 0;
+    const auto conta = [&](const CardStop& f) {
+        if (f.place != capo.place || f.time != capo.time) return false;
+        persone += ritorno ? f.boarding - (f.escort == AssistantMove::Boards ? 1 : 0) : f.alighting - (f.escort == AssistantMove::Alights ? 1 : 0);
+        return true;
+    };
+    if (ritorno) {
+        for (auto it = k.stops.begin(); it != k.stops.end() && conta(*it); ++it) {
+        }
+    } else {
+        for (auto it = k.stops.rbegin(); it != k.stops.rend() && conta(*it); ++it) {
+        }
+    }
+    if (persone <= 0) return std::nullopt;
+    return CardTransferEnd{s->code, l->code, ritorno, l->transfer->verbal && l->transfer->document.empty()};
 }
 
 // --- Differenze ------------------------------------------------------------------------------------------------------------
@@ -855,6 +957,10 @@ std::vector<CardChange> card_changes(const Card& a, const Card& b) {
     for (Day d : a.dates) da.push_back(text_from_day(d));
     for (Day d : b.dates) db.push_back(text_from_day(d));
     cambia("date_elencate", lista(da), lista(db));
+    std::vector<std::string> ia, ib;   // K-023
+    for (const DateRange& r : a.breaks) ia.push_back(text_from_day(r.from) + " - " + text_from_day(r.to));
+    for (const DateRange& r : b.breaks) ib.push_back(text_from_day(r.from) + " - " + text_from_day(r.to));
+    cambia("interruzioni", lista(ia), lista(ib));
     if (normalize_name(a.calendar_word) != normalize_name(b.calendar_word) || a.base_calendar != b.base_calendar)
         out.push_back({"calendario", a.calendar_word + " (" + a.base_calendar + ")", b.calendar_word + " (" + b.base_calendar + ")", false});
     parola("cadenza", a.cadence_word, b.cadence_word);
@@ -979,10 +1085,11 @@ CardsMerge merge_cards(const Package& p, const CardProfile& pr, const Code& cont
         o.valid = {dal, k.to};
         o.mode = modo;
         o.from = da;
-        // Avvisi della lettura.
+        // Avvisi della lettura (tolti se poi la scheda si ferma, variante 47).
+        const std::size_t primo_avviso = out.problems.size();
         const int giorni = card_days(k, idx);
         if (giorni != k.total_days)
-            problema(Check::CardTotalDaysDiffer, 0,
+            problema(Check::CardTotalDaysDiffer, k.breaks.empty() ? 0 : 1,   // K-023: 1 = con le interruzioni
                      {text_param("scheda", r.nr), number_param("tot_giorni", k.total_days), number_param("giorni", giorni),
                       ref_param("calendario", Element::Calendar, k.base_calendar)},
                      r.row);
@@ -1003,6 +1110,10 @@ CardsMerge merge_cards(const Package& p, const CardProfile& pr, const Code& cont
                           ref_param("calendario", Element::Calendar, k.base_calendar)},
                          r.row);
         }
+        if (const std::optional<CardTransferEnd> c = card_transfer_end(k, idx))   // K-023: la coincidenza (varianti: ritorno, a voce)
+            problema(Check::CardEndsAtTransfer, (c->at_start ? 1 : 0) + (c->verbal ? 2 : 0),
+                     {text_param("scheda", r.nr), ref_param("luogo", Element::Place, c->place), ref_param("scuola", Element::School, c->school)},
+                     r.row);
         if (k.to < taken) problema(Check::CardEndedBeforeTaken, 0, {text_param("scheda", r.nr), date_param("disattivazione", k.to)}, r.row);
         if (esistente && !k.is_change) problema(Check::CardNewOrChangeOdd, 0, {text_param("scheda", r.nr), ref_param("codice", Element::ServiceCard, esistente->code)}, r.row);
         if (!esistente && k.is_change) problema(Check::CardNewOrChangeOdd, 1, {text_param("scheda", r.nr)}, r.row);
@@ -1020,6 +1131,22 @@ CardsMerge merge_cards(const Package& p, const CardProfile& pr, const Code& cont
             if (ultima.card.nr != k.nr)
                 problema(Check::CardNrChanged, 0, {text_param("scheda", r.nr), text_param("prima", ultima.card.nr),
                                                    ref_param("codice", Element::ServiceCard, esistente->code)}, r.row);
+        }
+        // K-023 (variante 47): una versione che non avrebbe nessun giorno di servizio, o che lascerebbe senza giorni la versione di
+        // prima accorciata, non si scrive (kzero controlla darebbe poi K-CTR-015, un errore che ferma la giornata): la scheda si ferma,
+        // e l'utente sceglie un'altra data o toglie la versione di prima. Il programma non toglie niente da solo.
+        const auto senza_giorni = [&](const Card& c, DateRange periodo) {
+            return !first_active_day(card_calendar(c, "", periodo), periodo, idx).has_value();
+        };
+        bool vuota = senza_giorni(k, o.valid);
+        if (!vuota && esistente)
+            for (const CardVersion& v : esistente->versions)
+                if (v.valid.from < dal && v.valid.to >= dal) vuota = senza_giorni(v.card, {v.valid.from, dal - 1});
+        if (vuota) {
+            out.problems.erase(out.problems.begin() + static_cast<std::ptrdiff_t>(primo_avviso), out.problems.end());
+            ferma(CardFault::VersionWithoutDays, pr.sheet_cards, r.row, pr.card_cols.from);
+            out.outcomes.push_back(o);
+            continue;
         }
         // Codici degli elementi e numero della versione (mai riusati).
         int numero = 1;
@@ -1223,11 +1350,13 @@ void check_cards(const Package& p, const Index& idx, std::vector<Problem>& out) 
     const auto ref = [&](const Ref& r, Element e, bool esiste) {
         if (!esiste) add(Check::UnknownReference, r.src, {text_param("codice", r.code), elements_param("elementi", e)});
     };
+    // Codici doppi: il messaggio dice dove compare la prima volta (K-023, fuzzing: senza, il messaggio non si poteva scrivere).
+    const auto prima = [](const Source* s) { return text_param("prima", s->pointer.empty() ? s->file : s->file + " " + s->pointer); };
     // Profili.
-    std::set<Code> visti;
+    std::map<Code, const Source*> visti;
     for (const CardProfile& pr : p.card_profiles) {
-        if (!visti.insert(pr.code).second)
-            add(Check::DuplicateCode, pr.src, {text_param("codice", pr.code), elements_param("elementi", Element::CardProfile)});
+        if (const auto [it, nuovo] = visti.emplace(pr.code, &pr.src); !nuovo)
+            add(Check::DuplicateCode, pr.src, {text_param("codice", pr.code), elements_param("elementi", Element::CardProfile), prima(it->second)});
         ref(pr.client, Element::Client, idx.client(pr.client.code) != nullptr);
         // Una parola che vuol dire due cose diverse (es. la stessa per "sale" e "scende"): il profilo e' ambiguo.
         const auto chi = ref_param("profilo", Element::CardProfile, pr.code);
@@ -1256,11 +1385,11 @@ void check_cards(const Package& p, const Index& idx, std::vector<Problem>& out) 
             if (!gg.insert(static_cast<int>(g.day)).second) add(Check::CardProfileInvalid, pr.src, {chi, text_param("parola", g.column)}, 5);
     }
     // Registro: codici, ID, riferimenti.
-    std::set<Code> schede;
+    std::map<Code, const Source*> schede;
     std::map<std::string, Code> per_id;
     for (const ServiceCard& s : p.service_cards) {
-        if (!schede.insert(s.code).second)
-            add(Check::DuplicateCode, s.src, {text_param("codice", s.code), elements_param("elementi", Element::ServiceCard)});
+        if (const auto [it, nuovo] = schede.emplace(s.code, &s.src); !nuovo)
+            add(Check::DuplicateCode, s.src, {text_param("codice", s.code), elements_param("elementi", Element::ServiceCard), prima(it->second)});
         const auto [it, nuovo] = per_id.emplace(chiave_id(s.id), s.code);
         if (!nuovo) add(Check::CardRegisterInvalid, s.src, {ref_param("scheda", Element::ServiceCard, s.code), ref_param("altra", Element::ServiceCard, it->second)}, 0);
         ref(s.client, Element::Client, idx.client(s.client.code) != nullptr);

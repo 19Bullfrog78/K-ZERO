@@ -1,0 +1,12 @@
+{
+  "descrizione": "K-023, prove: codici esterni da aggiungere al demo (oltre a quelli di tests/esempi/k019-elenco e k021-schede), cosi' il calendario dei giorni feriali delle schede di prova si riconosce. Dati inventati.",
+  "calendari": {
+    "CAL-LV-FER": [
+      {
+        "sistema": "Consorzio Valle Alta",
+        "tipo": "calendario",
+        "codice": "FERIALE"
+      }
+    ]
+  }
+}

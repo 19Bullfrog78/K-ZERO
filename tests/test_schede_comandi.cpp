@@ -224,7 +224,8 @@ TEST(SchedeComandi, TogliScheda) {
 }
 
 // S11 (K-022): il segno "date dal 1904" della cartella di lavoro si legge dal file, fino alle date lette: le stesse date scritte come
-// numeri di Excel nel sistema del 1904 danno gli stessi giorni; senza il segno, gli stessi numeri sono altri giorni (sistema 1900).
+// numeri di Excel nel sistema del 1904 danno gli stessi giorni; senza il segno, gli stessi numeri sono altri giorni (sistema 1900: dal
+// 2022-09-13 al 2023-06-11, fuori dal calendario SCOLASTICO; dal K-023 la scheda si ferma, variante 47, perche' non avrebbe nessun giorno).
 // Sabotaggi: il segno del file ignorato (dal lettore Excel o dal comando).
 TEST(SchedeComandi, DateDal1904LetteDalFile) {
     Prova p;
@@ -236,14 +237,21 @@ TEST(SchedeComandi, DateDal1904LetteDalFile) {
     f.schede[1][5] = "#45088";   // 2027-06-12
     p.file("1904.xlsx", f, true);
     p.file("1900.xlsx", f, false);
-    const auto periodo = [&](const std::string& nome) {
-        const JsonDati j = JsonDati::parse(p.leggi(nome, {"--validita", "attivazione", "--formato", "json"}, false).uscita);
-        const JsonDati& s = j.at("schede").at(0);
-        EXPECT_EQ(s.at("esito"), "nuova") << j.dump(2);
-        return s.at("dal").get<std::string>() + " " + s.at("al").get<std::string>();
+    const auto lettura = [&](const std::string& nome) {
+        return JsonDati::parse(p.leggi(nome, {"--validita", "attivazione", "--formato", "json"}, false).uscita);
     };
-    EXPECT_EQ(periodo("1904.xlsx"), "2026-09-14 2027-06-12");
-    EXPECT_EQ(periodo("1900.xlsx"), "2022-09-13 2023-06-11");
+    const JsonDati j = lettura("1904.xlsx");
+    const JsonDati& s = j.at("schede").at(0);
+    EXPECT_EQ(s.at("esito"), "nuova") << j.dump(2);
+    EXPECT_EQ(s.at("dal").get<std::string>() + " " + s.at("al").get<std::string>(), "2026-09-14 2027-06-12");
+    // Sistema 1900: le stesse cifre sono il 2022-2023, fuori dal calendario della scheda.
+    const JsonDati k = lettura("1900.xlsx");
+    EXPECT_EQ(k.at("schede").at(0).at("esito"), "ferma") << k.dump(2);
+    bool senza_giorni = false;
+    for (const JsonDati& x : k.at("problemi"))
+        senza_giorni = senza_giorni || (x.at("codice") == "K-CTR-160" && x.at("messaggio").get<std::string>().find("nessun giorno di servizio") !=
+                                                                                 std::string::npos);
+    EXPECT_TRUE(senza_giorni) << k.dump(2);
 }
 
 namespace {
@@ -253,22 +261,33 @@ namespace {
 struct Pezzo {
     std::string da_luogo, da_ora, a_luogo, a_ora;
 };
-fs::path giornata_con_pezzi(CartellaDiLavoro& lavoro, const std::string& nome, const std::vector<Pezzo>& pezzi) {
+// Ogni turno (T-PEZZO-1, T-PEZZO-2...) ha i suoi pezzi, nell'ordine.
+fs::path giornata_con_turni(CartellaDiLavoro& lavoro, const std::string& nome, const std::vector<std::vector<Pezzo>>& per_turno) {
     PacchettoInMemoria m = con_schede(pacchetto_di_prova(), due_giri());
     JsonDati turni = JsonDati::parse(m.file.at("turni.json"));
-    for (std::size_t i = 0; i < pezzi.size(); ++i) {
-        JsonDati e = {{"corsa", "C-4000300-1"}};
-        if (!pezzi[i].da_luogo.empty()) e["da"] = {{"luogo", pezzi[i].da_luogo}, {"orario", pezzi[i].da_ora}};
-        if (!pezzi[i].a_luogo.empty()) e["a"] = {{"luogo", pezzi[i].a_luogo}, {"orario", pezzi[i].a_ora}};
+    for (std::size_t i = 0; i < per_turno.size(); ++i) {
+        JsonDati elementi = JsonDati::array();
+        for (const Pezzo& pz : per_turno[i]) {
+            JsonDati e = {{"corsa", "C-4000300-1"}};
+            if (!pz.da_luogo.empty()) e["da"] = {{"luogo", pz.da_luogo}, {"orario", pz.da_ora}};
+            if (!pz.a_luogo.empty()) e["a"] = {{"luogo", pz.a_luogo}, {"orario", pz.a_ora}};
+            elementi.push_back(e);
+        }
         turni.at("turni").push_back({{"codice", "T-PEZZO-" + std::to_string(i + 1)}, {"azienda", "ALFA"}, {"ruolo", "autista"},
                                      {"calendario", "CAL-4000300-1"}, {"mezzo", {{"modo", "da_assegnare"}}}, {"inizio", "L-RIMESSA-ALFA"},
-                                     {"fine", "L-RIMESSA-ALFA"}, {"elementi", JsonDati::array({e})}});
+                                     {"fine", "L-RIMESSA-ALFA"}, {"elementi", elementi}});
     }
     m.file["turni.json"] = turni.dump(2);
     const fs::path c = lavoro / nome;
     fs::create_directories(c);
     for (const auto& [f, t] : m.file) std::ofstream(c / f, std::ios::binary) << t;
     return c;
+}
+// Un turno per pezzo.
+fs::path giornata_con_pezzi(CartellaDiLavoro& lavoro, const std::string& nome, const std::vector<Pezzo>& pezzi) {
+    std::vector<std::vector<Pezzo>> per_turno;
+    for (const Pezzo& pz : pezzi) per_turno.push_back({pz});
+    return giornata_con_turni(lavoro, nome, per_turno);
 }
 const JsonDati& turno(const JsonDati& g, const std::string& codice) {
     for (const JsonDati& t : g.at("turni"))
@@ -327,4 +346,114 @@ TEST(SchedeComandi, GiornataConIPezziConIKmNonNoti) {
     EXPECT_EQ(x.at("totali").at("km_pieni"), 25.0);
     EXPECT_EQ(x.at("totali").at("pezzi_km_non_noti"), 0);
     EXPECT_EQ(h.at("totali").at("pezzi_km_non_noti"), 0);
+}
+
+// K-023, prova mancante del K-022 (N5): un turno con due pezzi della corsa da scheda dai km non noti (fino a Pradello, poi da Pradello
+// alla fine: la corsa resta coperta tutta, altrimenti K-CTR-061). "2 pezzi" al plurale nel totale del turno e in quello della giornata, in testo e in JSON (con un pezzo il singolare:
+// GiornataConIPezziConIKmNonNoti). Sabotaggi: i pezzi di un turno contati al massimo uno; il plurale solo da 3 in su.
+TEST(SchedeComandi, GiornataConDuePezziNelloStessoTurno) {
+    CartellaDiLavoro lavoro;
+    const fs::path c = giornata_con_turni(lavoro, "due-pezzi", {{{"", "", "F-PRADELLO", "07:20"}, {"F-PRADELLO", "07:20", "", ""}}});
+    const Risultato rj = comando({"giornata", c.string(), "--data", "2026-11-24", "--formato", "json"});
+    const JsonDati g = JsonDati::parse(rj.uscita);
+    const JsonDati x = turno(g, "T-PEZZO-1");
+    ASSERT_EQ(x.at("elementi").size(), 2u);
+    for (const JsonDati& e : x.at("elementi")) EXPECT_TRUE(e.at("km_pieni").is_null());
+    EXPECT_EQ(x.at("totali").at("pezzi_km_non_noti"), 2);
+    EXPECT_EQ(g.at("totali").at("pezzi_km_non_noti"), 2);
+    const Risultato rt = comando({"giornata", c.string(), "--data", "2026-11-24"});
+    std::cout << "--- giornata con due pezzi della corsa C-4000300-1 nello stesso turno ---\n" << rt.uscita;
+    EXPECT_NE(rt.uscita.find("Totale del turno: km a pieno almeno 0, a vuoto almeno 0 (2 pezzi con i km non noti)"), std::string::npos)
+        << rt.uscita;
+    EXPECT_NE(rt.uscita.find("(dei mezzi guidati; 2 pezzi con i km non noti)"), std::string::npos) << rt.uscita;
+    EXPECT_EQ(rt.uscita.find("2 pezzo"), std::string::npos) << rt.uscita;
+}
+
+// K-023, prova mancante del K-022 (N8): una versione nuova che toglie una sola versione dice "Versione tolta (cominciava ...)" al
+// singolare; con due, "Versioni tolte (cominciavano ...)". La scheda 4000123/3 ha la versione 2 dal 23/11 e la 3 dal 25/11; una versione
+// nuova dal 24/11 toglie la 3 sola, una dal 21/11 toglie la 2 e la 4. Sabotaggi: sempre il plurale; sempre il singolare.
+TEST(SchedeComandi, VersioniTolteAlSingolareEAlPlurale) {
+    Prova p;
+    Fogli f = fogli_di_prova();
+    f.schede.resize(2);
+    f.fermate.resize(4);
+    p.file("v1.xlsx", f);
+    p.leggi("v1.xlsx", {"--validita", "attivazione"});
+    f.schede[1][21] = "Modifica";
+    const auto versione = [&](const std::string& orario, const std::string& dal) {
+        f.fermate[1][1] = orario;   // ogni versione con un orario diverso: altrimenti e' "uguale"
+        p.file("v.xlsx", f);
+        return p.leggi("v.xlsx", {"--validita-scheda", "4000123/3=" + dal}, true, "A", kPw, "2026-11-20").uscita;
+    };
+    EXPECT_NE(versione("07:25", "2026-11-23").find("versione nuova 2 della scheda SCH-4000123-3"), std::string::npos);
+    EXPECT_NE(versione("07:26", "2026-11-25").find("versione nuova 3 della scheda SCH-4000123-3"), std::string::npos);
+    const std::string una = versione("07:27", "2026-11-24");
+    std::cout << "--- versione nuova che toglie una versione ---\n" << una;
+    EXPECT_NE(una.find("versione nuova 4 della scheda SCH-4000123-3"), std::string::npos) << una;
+    EXPECT_NE(una.find("     Versione tolta (cominciava dal 2026-11-24 in poi): 3.\n"), std::string::npos) << una;
+    EXPECT_EQ(una.find("Versioni tolte"), std::string::npos) << una;
+    const std::string due = versione("07:28", "2026-11-21");
+    std::cout << "--- versione nuova che toglie due versioni ---\n" << due;
+    EXPECT_NE(due.find("versione nuova 5 della scheda SCH-4000123-3"), std::string::npos) << due;
+    EXPECT_NE(due.find("     Versioni tolte (cominciavano dal 2026-11-21 in poi): 2, 4.\n"), std::string::npos) << due;
+    EXPECT_EQ(due.find("Versione tolta"), std::string::npos) << due;
+}
+
+namespace {
+// K-023: la scheda 4000123/3 con tre interruzioni (Tot Giorni 165, come in test_schede.cpp).
+Fogli scheda_con_tre_interruzioni() {
+    const Fogli tutte = fogli_di_prova();
+    Fogli f;
+    f.schede = {tutte.schede[0], tutte.schede[1]};
+    f.fermate = {tutte.fermate[0], tutte.fermate[1], tutte.fermate[2], tutte.fermate[3]};
+    f.date = tutte.date;
+    f.schede[1][16] = "#165";
+    f.interruzioni = {{"Nr", "Dal", "Al"},
+                      {"4000123 / 3", "15/02/2027", "19/02/2027"},
+                      {"4000123 / 3", "21/12/2026", "08/01/2027"},
+                      {"4000123 / 3", "03/05/2027", "03/05/2027"}};
+    return f;
+}
+std::string riga_che_comincia(const std::string& testo, const std::string& inizio) {
+    const std::size_t a = testo.find(inizio);
+    return a == std::string::npos ? std::string() : testo.substr(a, testo.find('\n', a) - a);
+}
+}  // namespace
+
+// Punto 1 (K-023, D3): leggi-schede dice le interruzioni lette. Con il profilo alla versione 2: "3 interruzioni" nella riga delle righe e
+// una riga con i periodi sotto la scheda; nel JSON (schede versione 2) le righe del foglio e i periodi; nessun K-CTR-163; il registro del
+// pacchetto chiuso alla versione 2 con le interruzioni (dati comuni, nel file normale). Con il profilo di oggi (versione 1) il testo resta
+// quello di prima (la riga delle righe senza interruzioni) e il JSON ha i campi nuovi vuoti.
+TEST(SchedeComandi, InterruzioniNelleUscite) {
+    Prova p(pacchetto_k023());
+    p.file("interruzioni.xlsx", scheda_con_tre_interruzioni());
+    const Risultato t = p.leggi("interruzioni.xlsx", {"--validita", "attivazione"});
+    std::cout << "--- una scheda con tre interruzioni ---\n" << t.uscita;
+    EXPECT_EQ(riga_che_comincia(t.uscita, "Righe:"), "Righe: 1 scheda, 3 fermate, 0 date, 3 interruzioni.");
+    EXPECT_NE(t.uscita.find("     Interruzioni (il servizio non si fa): dal 2026-12-21 al 2027-01-08, dal 2027-02-15 al 2027-02-19, dal "
+                            "2027-05-03 al 2027-05-03.\n"),
+              std::string::npos)
+        << t.uscita;
+    EXPECT_EQ(t.uscita.find("K-CTR-163"), std::string::npos) << t.uscita;
+    const std::string registro = p.normale("schede_servizi.json");
+    EXPECT_NE(registro.find("\"schema_versione\": 2"), std::string::npos);
+    EXPECT_NE(registro.find("\"interruzioni\""), std::string::npos);
+    EXPECT_NE(p.normale("calendari.json").find("Interruzione della scheda"), std::string::npos);
+    Prova q(pacchetto_k023());
+    q.file("interruzioni.xlsx", scheda_con_tre_interruzioni());
+    const JsonDati j = JsonDati::parse(q.leggi("interruzioni.xlsx", {"--validita", "attivazione", "--formato", "json"}, false).uscita);
+    EXPECT_EQ(j.at("schema_versione"), 2);
+    EXPECT_EQ(j.at("righe").at("interruzioni"), 3);
+    ASSERT_EQ(j.at("schede").at(0).at("interruzioni").size(), 3u);
+    EXPECT_EQ(j.at("schede").at(0).at("interruzioni").at(0), JsonDati({{"dal", "2026-12-21"}, {"al", "2027-01-08"}}));
+    // Il profilo di oggi (versione 1): il quarto foglio non si legge, il testo resta quello di prima.
+    Prova r;
+    r.file("interruzioni.xlsx", scheda_con_tre_interruzioni());
+    const Risultato u = r.leggi("interruzioni.xlsx", {"--validita", "attivazione"}, false);
+    EXPECT_EQ(riga_che_comincia(u.uscita, "Righe:"), "Righe: 1 scheda, 3 fermate, 0 date.");
+    EXPECT_EQ(u.uscita.find("nterruzion"), std::string::npos) << u.uscita;
+    const JsonDati k = JsonDati::parse(r.leggi("interruzioni.xlsx", {"--validita", "attivazione", "--formato", "json"}, false).uscita);
+    EXPECT_EQ(k.at("schema_versione"), 2);
+    EXPECT_EQ(k.at("righe").at("interruzioni"), 0);
+    EXPECT_EQ(k.at("schede").at(0).at("interruzioni"), JsonDati::array());
 }

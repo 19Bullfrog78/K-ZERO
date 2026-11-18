@@ -27,9 +27,9 @@ Lettura lettura_di_prova() {
     EXPECT_TRUE(l.forma_valida());
     return l;
 }
-const CardProfile& profilo(const Lettura& l) {
+const CardProfile& profilo(const Lettura& l, const std::string& codice = "PS-CVA") {
     for (const CardProfile& p : l.pacchetto.card_profiles)
-        if (p.code == "PS-CVA") return p;
+        if (p.code == codice) return p;
     throw std::logic_error("profilo che non c'e'");
 }
 
@@ -40,12 +40,14 @@ struct Letto {
     CardsMerge m;
     Lettura dopo;
 };
-Letto leggi(const Lettura& l, const Fogli& f, DateChoices scelte = {}, Day presa = kPresa, bool date1904 = false) {
+Letto leggi(const Lettura& l, const Fogli& f, DateChoices scelte = {}, Day presa = kPresa, bool date1904 = false,
+            const std::string& codice_profilo = "PS-CVA") {
     const Index idx(l.pacchetto);
     Letto x;
-    x.r = read_cards(CardTables{tabella(f.schede), tabella(f.fermate), tabella(f.date)}, profilo(l), idx, date1904);
+    x.r = read_cards(CardTables{tabella(f.schede), tabella(f.fermate), tabella(f.date), tabella(f.interruzioni)}, profilo(l, codice_profilo),
+                     idx, date1904);
     EXPECT_EQ(x.r.fault, TableFault::None) << x.r.fault_title;
-    x.m = merge_cards(l.pacchetto, profilo(l), "CT-SCU", presa, "mail del committente", scelte, x.r);
+    x.m = merge_cards(l.pacchetto, profilo(l, codice_profilo), "CT-SCU", presa, "mail del committente", scelte, x.r);
     x.dopo = schede::con_documenti(l, schede::documenti_dopo(l, x.m.cards, l.pacchetto.removed_cards, x.m.added, x.m.removed, x.m.cuts,
                                                              x.m.new_homes));
     return x;
@@ -376,7 +378,7 @@ TEST(Schede, IdDiversiMaiUniti) {
     maiuscole.schede[1][1] = "5C1E2F40-0A1B-4C2D-8E3F-000000000001";
     EXPECT_EQ(leggi(v1.dopo, maiuscole, attivazione()).m.outcomes.at(0).kind, CardOutcome::Kind::Same);
     const Index i1(v1.dopo.pacchetto);
-    const CardsRead r = read_cards(CardTables{tabella(una(1).schede), tabella(una(1).fermate), {}}, profilo(v1.dopo), i1, false);
+    const CardsRead r = read_cards(CardTables{tabella(una(1).schede), tabella(una(1).fermate), {}, {}}, profilo(v1.dopo), i1, false);
     const CardsMerge m = merge_cards(v1.dopo.pacchetto, profilo(v1.dopo), "CT-ASILO", kPresa, "x", attivazione(), r);
     EXPECT_EQ(m.outcomes.at(0).fault, CardFault::OtherContract);
 }
@@ -814,4 +816,457 @@ TEST(Schede, TestiAlSingolareConUno) {
     m = messaggi(leggi(l0, f, attivazione()).dopo, leggi(l0, f, attivazione()).m.problems);
     ASSERT_FALSE(m.empty());
     EXPECT_NE(m[0].find("nel periodo della scheda da' 1 giorno: "), std::string::npos) << m[0];
+}
+
+// --- K-023 ------------------------------------------------------------------------------------------------------------------------
+
+// I formati alla versione 2 (K-023): il profilo con il foglio delle interruzioni (nome e titoli, insieme) e il registro con le interruzioni
+// nella copia della scheda. La versione 1 si legge ancora: un profilo alla 1 non ha il foglio, un registro alla 1 nessuna interruzione.
+// Il foglio senza i suoi titoli (o i titoli senza il foglio) e le interruzioni in un file alla versione 1 non rispettano lo schema.
+TEST(Schede, ProfiliERegistroAllaVersioneDue) {
+    const Lettura v1 = lettura_di_prova();
+    EXPECT_TRUE(profilo(v1).sheet_breaks.empty());
+    const Lettura v2 = leggi_pacchetto(pacchetto_k023());
+    ASSERT_TRUE(v2.forma_valida());
+    EXPECT_EQ(v2.versioni.at("profili_schede.json"), 2);
+    EXPECT_EQ(profilo(v2).sheet_breaks, "Interruzioni");
+    EXPECT_EQ(profilo(v2).break_cols.nr, "Nr");
+    EXPECT_EQ(profilo(v2).break_cols.from, "Dal");
+    EXPECT_EQ(profilo(v2).break_cols.to, "Al");
+    const CardProfile* h = Index(v2.pacchetto).card_profile("PS-CVA-H");
+    ASSERT_NE(h, nullptr);
+    EXPECT_EQ(h->service_kind, ServiceKind::Disability);
+    // Il foglio e i suoi titoli: tutti e due o nessuno.
+    for (const char* togli : {"fogli", "colonne"}) {
+        PacchettoInMemoria m = pacchetto_k023();
+        JsonDati d = JsonDati::parse(m.file.at("profili_schede.json"));
+        d.at("profili").at(0).at(togli).erase("interruzioni");
+        m.file["profili_schede.json"] = d.dump(2);
+        EXPECT_FALSE(leggi_pacchetto(m).forma_valida()) << togli;
+        d.at("profili").at(0).at(togli == std::string("fogli") ? "colonne" : "fogli").erase("interruzioni");
+        m.file["profili_schede.json"] = d.dump(2);
+        const Lettura senza = leggi_pacchetto(m);
+        EXPECT_TRUE(senza.forma_valida()) << togli;   // alla 2 senza il foglio: come alla 1
+        EXPECT_TRUE(profilo(senza).sheet_breaks.empty());
+        d["schema_versione"] = 1;
+        d.at("profili").at(0)["fogli"]["interruzioni"] = "Interruzioni";
+        d.at("profili").at(0)["colonne"]["interruzioni"] = {{"nr", "Nr"}, {"dal", "Dal"}, {"al", "Al"}};
+        m.file["profili_schede.json"] = d.dump(2);
+        EXPECT_FALSE(leggi_pacchetto(m).forma_valida()) << "il foglio in un profilo alla versione 1";
+    }
+    // Il registro: le interruzioni della copia della scheda si leggono alla versione 2, non alla 1.
+    PacchettoInMemoria m = pacchetto_con_schede();
+    JsonDati r = JsonDati::parse(m.file.at("schede_servizi.json"));
+    r["schema_versione"] = 2;
+    r.at("schede").at(0).at("versioni").at(0).at("scheda")["interruzioni"] =
+        JsonDati::array({{{"dal", "2026-12-23"}, {"al", "2027-01-06"}}, {{"dal", "2027-02-15"}, {"al", "2027-02-15"}}});
+    m.file["schede_servizi.json"] = r.dump(2);
+    const Lettura l = leggi_pacchetto(m);
+    ASSERT_TRUE(l.forma_valida());
+    const std::vector<DateRange>& b = l.pacchetto.service_cards.at(0).versions.at(0).card.breaks;
+    ASSERT_EQ(b.size(), 2u);
+    EXPECT_EQ(b[0].from, day_from_ymd(2026, 12, 23));
+    EXPECT_EQ(b[0].to, day_from_ymd(2027, 1, 6));
+    EXPECT_EQ(b[1].from, b[1].to);
+    EXPECT_TRUE(l.pacchetto.service_cards.at(1).versions.at(0).card.breaks.empty());
+    r["schema_versione"] = 1;
+    m.file["schede_servizi.json"] = r.dump(2);
+    EXPECT_FALSE(leggi_pacchetto(m).forma_valida());
+}
+
+namespace {
+
+Lettura lettura_k023() {
+    Lettura l = leggi_pacchetto(pacchetto_k023());
+    EXPECT_TRUE(l.forma_valida());
+    return l;
+}
+// La scheda 4000123/3 (andata, scuola primaria, da lunedi' a venerdi', calendario SCOLASTICO, dal 14/09/2026 al 12/06/2027: 175 giorni)
+// con le interruzioni date (righe Nr, Dal, Al) e il Tot Giorni dato.
+Fogli con_interruzioni(const Righe& righe, const std::string& tot_giorni) {
+    Fogli f = una(1);
+    f.schede[1][16] = tot_giorni;
+    f.interruzioni = {{"Nr", "Dal", "Al"}};
+    for (const auto& r : righe) f.interruzioni.push_back(r);
+    return f;
+}
+// Tre interruzioni, scritte non in ordine: la prima comprende le vacanze di Natale del calendario SCOLASTICO (23/12 - 06/01) e due giorni
+// prima e dopo (21-22/12, 07-08/01: 4 giorni di servizio in meno); la seconda una settimana di febbraio (5 giorni); la terza un lunedi'
+// (1 giorno). 175 - 10 = 165.
+const Righe kTreInterruzioni = {{"4000123 / 3", "15/02/2027", "19/02/2027"},
+                                {"4000123 / 3", "21/12/2026", "08/01/2027"},
+                                {"4000123/3", "#46510", "#46510"}};   // 2027-05-03 come numero di data di Excel
+bool c_e(const std::vector<Problem>& v, Check c) {
+    return std::any_of(v.begin(), v.end(), [c](const Problem& p) { return p.check == c; });
+}
+int errori_di(const Package& p) {
+    const std::vector<Problem> v = check_package(p);
+    return static_cast<int>(std::count_if(v.begin(), v.end(), [](const Problem& x) {
+        return definizione_controllo(x.check).livello == Livello::Errore;
+    }));
+}
+
+}  // namespace
+
+// Punto 1 (K-023): le interruzioni diventano sospensioni del calendario della versione e contano nel Tot Giorni come insieme di giorni (le
+// vacanze di Natale gia' tolte dal calendario SCOLASTICO non si tolgono due volte): Tot Giorni 165, nessun K-CTR-163; con 175 l'avviso dice
+// 165. Nel registro le interruzioni in ordine; il calendario non vale nei giorni interrotti e vale il giorno dopo; kzero controlla senza
+// errori e senza K-CTR-170. Un profilo alla versione 1 non legge il foglio. Sabotaggi: interruzioni ignorate; contate due volte.
+TEST(Schede, InterruzioniNelCalendarioEInTotGiorni) {
+    const Lettura l = lettura_k023();
+    const Letto x = leggi(l, con_interruzioni(kTreInterruzioni, "#165"), attivazione());
+    ASSERT_EQ(x.m.outcomes.at(0).kind, CardOutcome::Kind::New) << (x.m.outcomes.at(0).fault ? static_cast<int>(*x.m.outcomes.at(0).fault) : -1);
+    EXPECT_EQ(x.r.break_rows, 3);
+    EXPECT_FALSE(c_e(x.m.problems, Check::CardTotalDaysDiffer)) << ::testing::PrintToString(messaggi(x.dopo, x.m.problems));
+    const ServiceCard sc = nel_registro(x.dopo, "SCH-4000123-3");
+    const Card& k = sc.versions.at(0).card;
+    ASSERT_EQ(k.breaks.size(), 3u);
+    EXPECT_EQ(text_from_day(k.breaks[0].from) + " " + text_from_day(k.breaks[0].to), "2026-12-21 2027-01-08");
+    EXPECT_EQ(text_from_day(k.breaks[1].from) + " " + text_from_day(k.breaks[1].to), "2027-02-15 2027-02-19");
+    EXPECT_EQ(text_from_day(k.breaks[2].from) + " " + text_from_day(k.breaks[2].to), "2027-05-03 2027-05-03");
+    EXPECT_EQ(card_days(k, Index(x.dopo.pacchetto)), 165);
+    const Index idx(x.dopo.pacchetto);
+    const Calendar* c = idx.calendar("CAL-4000123-3");
+    ASSERT_NE(c, nullptr);
+    ASSERT_EQ(c->suspensions.size(), 3u);
+    EXPECT_EQ(c->suspensions[0].reason, "Interruzione della scheda");
+    for (const auto& [g, vale] : std::vector<std::pair<Day, bool>>{{day_from_ymd(2026, 12, 18), true}, {day_from_ymd(2026, 12, 21), false},
+                                                                    {day_from_ymd(2027, 1, 8), false},  {day_from_ymd(2027, 1, 11), true},
+                                                                    {day_from_ymd(2027, 2, 17), false}, {day_from_ymd(2027, 2, 22), true},
+                                                                    {day_from_ymd(2027, 5, 3), false},  {day_from_ymd(2027, 5, 4), true}})
+        EXPECT_EQ(calendar_active(*c, g, idx), vale) << text_from_day(g);
+    EXPECT_EQ(errori_di(x.dopo.pacchetto), 0) << ::testing::PrintToString(messaggi(x.dopo, check_package(x.dopo.pacchetto)));
+    EXPECT_TRUE(schede::controlla_elementi(x.dopo).empty());
+    // Con il Tot Giorni senza interruzioni (175): l'avviso dice 165.
+    const Letto y = leggi(l, con_interruzioni(kTreInterruzioni, "#175"), attivazione());
+    ASSERT_EQ(y.m.outcomes.at(0).kind, CardOutcome::Kind::New);
+    ASSERT_TRUE(c_e(y.m.problems, Check::CardTotalDaysDiffer));
+    EXPECT_NE(messaggi(y.dopo, y.m.problems)[0].find("175"), std::string::npos);
+    EXPECT_NE(messaggi(y.dopo, y.m.problems)[0].find("165"), std::string::npos) << messaggi(y.dopo, y.m.problems)[0];
+    EXPECT_NE(messaggi(y.dopo, y.m.problems)[0].find("le interruzioni"), std::string::npos) << messaggi(y.dopo, y.m.problems)[0];
+    EXPECT_EQ(y.m.problems[0].variant, 1);   // la variante delle schede con interruzioni (quella di oggi, 0, non cambia)
+    // Un profilo alla versione 1 (k021) non legge il quarto foglio: la scheda come prima, senza interruzioni.
+    const Letto z = leggi(lettura_di_prova(), con_interruzioni(kTreInterruzioni, "#175"), attivazione());
+    EXPECT_EQ(z.r.break_rows, 0);
+    EXPECT_TRUE(nel_registro(z.dopo, "SCH-4000123-3").versions.at(0).card.breaks.empty());
+    EXPECT_FALSE(c_e(z.m.problems, Check::CardTotalDaysDiffer));
+}
+
+// Punto 1 (K-023): le interruzioni che non tornano fermano la scheda, nel foglio delle interruzioni (le altre schede vanno avanti): data
+// scritta male (7) o vuota (1), Dal dopo Al (43), fuori dal periodo della scheda (44, prima dell'attivazione o dopo la disattivazione),
+// sovrapposte (45, anche due righe uguali), con dentro una data elencata (46). Una riga con un Nr che non c'e': K-CTR-161. Sabotaggi: Dal
+// dopo Al accettato; interruzione fuori dalla validita' senza segnalazione; data elencata dentro un'interruzione accettata.
+TEST(Schede, InterruzioniCheFermanoLaScheda) {
+    const Lettura l = lettura_k023();
+    const auto motivo = [&](const Righe& righe, Fogli f) {
+        f.interruzioni = {{"Nr", "Dal", "Al"}};
+        for (const auto& r : righe) f.interruzioni.push_back(r);
+        f.schede.push_back(fogli_di_prova().schede[2]);   // un'altra scheda del file (due scuole), senza interruzioni: va avanti
+        for (std::size_t i = 1; i < fogli_di_prova().fermate.size(); ++i)
+            if (fogli_di_prova().fermate[i][0] == "4000124 / 1") f.fermate.push_back(fogli_di_prova().fermate[i]);
+        const Letto x = leggi(l, f, attivazione());
+        EXPECT_EQ(x.m.outcomes.size(), 2u);
+        if (x.m.outcomes.size() == 2) {
+            EXPECT_NE(x.m.outcomes[1].kind, CardOutcome::Kind::Stopped) << "l'altra scheda";
+        }
+        const CardRead& r = x.r.cards.at(0);
+        if (r.fault) {
+            EXPECT_EQ(r.fault_sheet, "Interruzioni");
+        }
+        return std::make_pair(r.fault ? static_cast<int>(*r.fault) : -1, r.fault_row);
+    };
+    const Fogli f = una(1);
+    EXPECT_EQ(motivo({{"4000123 / 3", "31/02/2027", "03/03/2027"}}, f), std::make_pair(7, 2));
+    EXPECT_EQ(motivo({{"4000123 / 3", "15/02/2027", ""}}, f), std::make_pair(1, 2));
+    EXPECT_EQ(motivo({{"4000123 / 3", "19/02/2027", "15/02/2027"}}, f), std::make_pair(43, 2));
+    EXPECT_EQ(motivo({{"4000123 / 3", "10/09/2026", "15/09/2026"}}, f), std::make_pair(44, 2));
+    EXPECT_EQ(motivo({{"4000123 / 3", "10/06/2027", "14/06/2027"}}, f), std::make_pair(44, 2));
+    EXPECT_EQ(motivo({{"4000123 / 3", "15/02/2027", "19/02/2027"}, {"4000123 / 3", "21/12/2026", "08/01/2027"},
+                      {"4000123 / 3", "05/01/2027", "10/01/2027"}},
+                     f),
+              std::make_pair(45, 4));
+    EXPECT_EQ(motivo({{"4000123 / 3", "15/02/2027", "19/02/2027"}, {"4000123 / 3", "15/02/2027", "19/02/2027"}}, f), std::make_pair(45, 3));
+    EXPECT_EQ(motivo({{"4000123 / 3", "15/02/2027", "19/02/2027"}, {"4000123 / 3", "19/02/2027", "22/02/2027"}}, f), std::make_pair(45, 3));
+    EXPECT_EQ(motivo({{"4000123 / 3", "15/02/2027", "19/02/2027"}, {"4000123 / 3", "20/02/2027", "22/02/2027"}}, f), std::make_pair(-1, 0));
+    // Una data elencata dentro un'interruzione (cadenza a date elencate).
+    Fogli d = f;
+    d.schede[1][20] = "Ogni 15 giorni";
+    d.schede[1][16] = "#3";
+    d.date = {{"Nr", "Data"}, {"4000123 / 3", "21/09/2026"}, {"4000123 / 3", "05/10/2026"}, {"4000123 / 3", "19/10/2026"}};
+    EXPECT_EQ(motivo({{"4000123 / 3", "02/11/2026", "06/11/2026"}}, d), std::make_pair(-1, 0));
+    EXPECT_EQ(motivo({{"4000123 / 3", "02/11/2026", "06/11/2026"}, {"4000123 / 3", "05/10/2026", "05/10/2026"}}, d), std::make_pair(46, 3));
+    // Una riga con un Nr che non c'e': K-CTR-161, nel foglio delle interruzioni.
+    Fogli n = con_interruzioni({{"4000999 / 1", "15/02/2027", "19/02/2027"}}, "#175");
+    const Letto x = leggi(l, n, attivazione());
+    EXPECT_EQ(x.m.outcomes.at(0).kind, CardOutcome::Kind::New);
+    ASSERT_TRUE(c_e(x.r.problems, Check::CardRowWithoutCard));
+    EXPECT_NE(messaggi(x.dopo, x.r.problems)[0].find("Foglio \"Interruzioni\", riga 2"), std::string::npos) << messaggi(x.dopo, x.r.problems)[0];
+}
+
+// Punto 1 (K-023): un'interruzione a cavallo di due versioni (Natale, 21/12 - 08/01; la versione 2 vale dal 2027-01-01) si taglia al
+// periodo di ogni versione: la 1, accorciata al 2026-12-31, ha la sospensione 21/12 - 31/12; la 2 dal 01/01 all'08/01. Una versione che
+// comincia dopo l'interruzione (dal 2027-01-11) non la ha nel suo calendario (resta nella copia della scheda). kzero controlla senza errori
+// (una sospensione fuori dal periodo sarebbe K-CTR-013). Tra due versioni "cosa cambia" dice le interruzioni; due schede uguali tranne
+// le interruzioni non sono uguali. Sabotaggio: interruzione a cavallo di due versioni non tagliata.
+TEST(Schede, InterruzioneACavalloDiDueVersioni) {
+    const Lettura l = lettura_k023();
+    const Righe natale = {{"4000123 / 3", "21/12/2026", "08/01/2027"}};
+    const Letto v1 = leggi(l, con_interruzioni(natale, "#171"), attivazione());
+    ASSERT_EQ(v1.m.outcomes.at(0).kind, CardOutcome::Kind::New);
+    EXPECT_FALSE(c_e(v1.m.problems, Check::CardTotalDaysDiffer));
+    const auto sospensioni = [](const Lettura& d, const Code& cal) {
+        std::string t;
+        const Calendar* c = Index(d.pacchetto).calendar(cal);
+        if (!c) return std::string("nessun calendario");
+        for (const Suspension& s : c->suspensions) t += (t.empty() ? "" : ", ") + text_from_day(s.range.from) + " " + text_from_day(s.range.to);
+        return t;
+    };
+    for (const auto& [dal, prima, dopo] : std::vector<std::tuple<Day, std::string, std::string>>{
+             {day_from_ymd(2027, 1, 1), "2026-12-21 2026-12-31", "2027-01-01 2027-01-08"},
+             {day_from_ymd(2027, 1, 11), "2026-12-21 2027-01-08", ""}}) {
+        Fogli mod = con_interruzioni(natale, "#171");
+        mod.schede[1][21] = "Modifica";
+        mod.fermate[1][1] = "07:25";
+        DateChoices s;
+        s.by_nr["4000123/3"] = DateChoice{DateChoice::Kind::Date, dal};
+        const Letto v2 = leggi(v1.dopo, mod, s);
+        ASSERT_EQ(v2.m.outcomes.at(0).kind, CardOutcome::Kind::NewVersion);
+        EXPECT_EQ(sospensioni(v2.dopo, "CAL-4000123-3"), prima) << text_from_day(dal);
+        EXPECT_EQ(sospensioni(v2.dopo, "CAL-4000123-3-V2"), dopo) << text_from_day(dal);
+        EXPECT_EQ(errori_di(v2.dopo.pacchetto), 0) << ::testing::PrintToString(messaggi(v2.dopo, check_package(v2.dopo.pacchetto)));
+        EXPECT_TRUE(schede::controlla_elementi(v2.dopo).empty());
+        EXPECT_EQ(nel_registro(v2.dopo, "SCH-4000123-3").versions.at(1).card.breaks.size(), 1u);   // la copia resta intera
+    }
+    // Uguale tranne le interruzioni: versione nuova, e "cosa cambia" lo dice.
+    Fogli altre = con_interruzioni({{"4000123 / 3", "21/12/2026", "08/01/2027"}, {"4000123 / 3", "15/02/2027", "19/02/2027"}}, "#166");
+    altre.schede[1][21] = "Modifica";
+    const Letto v3 = leggi(v1.dopo, altre, attivazione());
+    ASSERT_EQ(v3.m.outcomes.at(0).kind, CardOutcome::Kind::NewVersion);
+    bool interruzioni = false;
+    for (const CardChange& c : v3.m.outcomes.at(0).changes)
+        if (c.what == "interruzioni") {
+            interruzioni = true;
+            EXPECT_EQ(c.before, "2026-12-21 - 2027-01-08");
+            EXPECT_EQ(c.after, "2026-12-21 - 2027-01-08, 2027-02-15 - 2027-02-19");
+        }
+    EXPECT_TRUE(interruzioni);
+    Fogli uguale = con_interruzioni(natale, "#171");
+    uguale.schede[1][21] = "Modifica";
+    EXPECT_EQ(leggi(v1.dopo, uguale, attivazione()).m.outcomes.at(0).kind, CardOutcome::Kind::Same);
+    // Le sospensioni del calendario cambiate a mano: K-CTR-170 (campo "sospensioni").
+    PacchettoInMemoria m;
+    for (const auto& [f, d] : v1.dopo.documenti) m.file[f] = chiusura::testo_file(d);
+    JsonDati cal = JsonDati::parse(m.file.at("calendari.json"));
+    for (JsonDati& c : cal.at("calendari"))
+        if (c.at("codice") == "CAL-4000123-3") c.at("sospensioni").at(0)["al"] = "2027-01-07";
+    m.file["calendari.json"] = cal.dump(2);
+    const std::vector<Problem> p = schede::controlla_elementi(leggi_pacchetto(m));
+    ASSERT_EQ(p.size(), 1u);
+    EXPECT_NE(messaggi(v1.dopo, p)[0].find("sospensioni"), std::string::npos) << messaggi(v1.dopo, p)[0];
+}
+
+// Punto 1 (K-023, D6): una versione senza giorni non si scrive. La scheda 4000123/3 (da lunedi' a venerdi', fino al 12/06/2027, un sabato):
+// scelta dal 2027-06-12 = la versione nuova non ha nessun giorno di servizio; dal 2027-06-07 con l'interruzione 07/06 - 12/06 lo stesso.
+// Una versione 1 dal 2026-09-19 (sabato) e una versione 2 dal 2026-09-21 (lunedi'): la 1, accorciata al 20/09, resterebbe senza giorni.
+// In ogni caso la scheda si ferma (variante 47), niente e' scritto e restano solo l'errore (gli avvisi della lettura di quella scheda
+// no); con un giorno di servizio si scrive. Sabotaggio: versione senza giorni scritta.
+TEST(Schede, VersioneSenzaGiorniNonSiScrive) {
+    const Lettura l = lettura_k023();
+    const Day presa = day_from_ymd(2026, 9, 1);
+    const auto scelta = [](Day d) {
+        DateChoices s;
+        s.by_nr["4000123/3"] = DateChoice{DateChoice::Kind::Date, d};
+        return s;
+    };
+    const Fogli f = con_interruzioni({}, "#175");
+    const Letto a = leggi(l, f, scelta(day_from_ymd(2027, 6, 12)), presa);
+    EXPECT_EQ(a.m.outcomes.at(0).kind, CardOutcome::Kind::Stopped);
+    EXPECT_EQ(a.m.outcomes.at(0).fault, CardFault::VersionWithoutDays);
+    EXPECT_TRUE(a.m.added.empty());
+    ASSERT_EQ(a.m.problems.size(), 1u) << ::testing::PrintToString(messaggi(a.dopo, a.m.problems));
+    EXPECT_EQ(a.m.problems[0].check, Check::CardUnreadable);
+    EXPECT_EQ(a.m.problems[0].variant, 47);
+    EXPECT_EQ(leggi(l, f, scelta(day_from_ymd(2027, 6, 11)), presa).m.outcomes.at(0).kind, CardOutcome::Kind::New);   // un venerdi'
+    const Fogli g = con_interruzioni({{"4000123 / 3", "07/06/2027", "12/06/2027"}}, "#170");
+    EXPECT_EQ(leggi(l, g, scelta(day_from_ymd(2027, 6, 7)), presa).m.outcomes.at(0).fault, CardFault::VersionWithoutDays);
+    EXPECT_EQ(leggi(l, g, scelta(day_from_ymd(2027, 6, 4)), presa).m.outcomes.at(0).kind, CardOutcome::Kind::New);
+    // La versione di prima, accorciata, resterebbe senza giorni.
+    const Letto v1 = leggi(l, f, scelta(day_from_ymd(2026, 9, 19)), presa);
+    ASSERT_EQ(v1.m.outcomes.at(0).kind, CardOutcome::Kind::New);
+    Fogli mod = f;
+    mod.schede[1][21] = "Modifica";
+    mod.fermate[1][1] = "07:25";
+    const Letto v2 = leggi(v1.dopo, mod, scelta(day_from_ymd(2026, 9, 21)), presa);
+    EXPECT_EQ(v2.m.outcomes.at(0).fault, CardFault::VersionWithoutDays);
+    EXPECT_TRUE(v2.m.added.empty());
+    EXPECT_TRUE(v2.m.cuts.empty());
+    EXPECT_EQ(nel_registro(v2.dopo, "SCH-4000123-3").versions.size(), 1u);
+    ASSERT_EQ(v2.m.problems.size(), 1u) << ::testing::PrintToString(messaggi(v2.dopo, v2.m.problems));
+    EXPECT_NE(messaggi(v2.dopo, v2.m.problems)[0].find("resterebbe senza giorni"), std::string::npos);
+    // Dal 22/09 la versione 1 tiene il lunedi' 21/09: si scrive, e kzero controlla non ha errori.
+    const Letto v3 = leggi(v1.dopo, mod, scelta(day_from_ymd(2026, 9, 22)), presa);
+    EXPECT_EQ(v3.m.outcomes.at(0).kind, CardOutcome::Kind::NewVersion);
+    EXPECT_EQ(errori_di(v3.dopo.pacchetto), 0) << ::testing::PrintToString(messaggi(v3.dopo, check_package(v3.dopo.pacchetto)));
+}
+
+namespace {
+// K-023: le schede dei servizi per disabili (profilo PS-CVA-H) lette con la scelta "attivazione".
+Letto leggi_h(const Lettura& l, const Fogli& f) { return leggi(l, f, attivazione(), kPresa, false, "PS-CVA-H"); }
+// Una scheda sola per disabili (4000502/1 di tests/esempi/k023-schede: andata, al Centro diurno Il Faro), con il verso e momento, le
+// scuole e le righe date (Orario, Punto di raccolta, Casa, St. Car., St. Scar., Km pieno, Km vuoto, Accompagnatore; il Nr lo mette la
+// funzione). Totali alunni e km del piede si fanno dalle righe.
+Fogli una_h(const std::string& servizio, const std::string& scuole, const Righe& righe) {
+    const Fogli k = fogli_k023();
+    Fogli f;
+    f.schede = {k.schede[0], k.schede[2]};
+    f.fermate = {k.fermate[0]};
+    f.date = k.date;
+    f.schede[1][2] = servizio;
+    f.schede[1][3] = scuole;
+    int su = 0;
+    double pieni = 0, vuoti = 0;
+    for (const auto& r : righe) {
+        std::vector<std::string> x = {"4000502 / 1"};
+        x.insert(x.end(), r.begin(), r.end());
+        f.fermate.push_back(x);
+        if (!r[3].empty()) su += std::stoi(r[3].substr(1));
+        const auto numero = [](std::string t) {
+            std::replace(t.begin(), t.end(), ',', '.');
+            return std::stod(t);
+        };
+        if (!r[5].empty()) pieni += numero(r[5]);
+        if (!r[6].empty()) vuoti += numero(r[6]);
+    }
+    const auto km = [](double v) {
+        std::string t = std::to_string(std::llround(v * 10));
+        if (t.size() < 2) t = "0" + t;
+        return t.substr(0, t.size() - 1) + "," + t.substr(t.size() - 1);
+    };
+    f.schede[1][13] = "#" + std::to_string(su);
+    f.schede[1][17] = km(pieni);
+    f.schede[1][18] = km(vuoti);
+    return f;
+}
+std::optional<int> motivo_h(const Lettura& l, const Fogli& f) {
+    const Letto x = leggi_h(l, f);
+    const CardRead& r = x.r.cards.at(0);
+    return r.fault ? std::optional<int>(static_cast<int>(*r.fault)) : std::nullopt;
+}
+}  // namespace
+
+// Punto 2 (K-023): le coincidenze. La scheda 4000502/1 ha nell'intestazione il Centro diurno Il Faro e finisce al punto di trasbordo del
+// Ponte di Sorgenta (autorizzato con il documento), dove la persona scende; la 4000503/1 passa dal Ponte (la persona sale) e arriva al
+// centro. Tutte e due si leggono: la prima con l'avviso K-CTR-176 (variante 0, scuola e luogo), il suo gruppo tiene la scuola (la meta) e
+// la domanda e' quella delle righe; kzero controlla senza errori e senza K-CTR-170. La scuola e' quella che lega la casa al centro sensibile:
+// senza il porta a porta tutto sensibile, la casa PAP-202 e' legata (la corsa non passa dal centro). Sabotaggi: avviso della coincidenza che
+// manca; la scuola tolta dal gruppo.
+TEST(Schede, CoincidenzaAlPuntoDiTrasbordo) {
+    PacchettoInMemoria m = pacchetto_k023();
+    JsonDati man = JsonDati::parse(m.file.at("pacchetto.json"));
+    man["impostazioni"]["porta_a_porta_sensibile"] = false;   // il legame deve venire dalla scuola del gruppo, non dal porta a porta
+    m.file["pacchetto.json"] = man.dump(2);
+    const Lettura l = leggi_pacchetto(m);
+    ASSERT_TRUE(l.forma_valida());
+    const Letto x = leggi_h(l, fogli_k023());
+    ASSERT_EQ(x.m.outcomes.size(), 3u);
+    for (const CardOutcome& o : x.m.outcomes) EXPECT_EQ(o.kind, CardOutcome::Kind::New) << o.nr;
+    std::vector<const Problem*> avvisi;
+    for (const Problem& p : x.m.problems)
+        if (p.check == Check::CardEndsAtTransfer) avvisi.push_back(&p);
+    ASSERT_EQ(avvisi.size(), 1u) << ::testing::PrintToString(messaggi(x.dopo, x.m.problems));
+    EXPECT_EQ(avvisi[0]->variant, 0);
+    EXPECT_EQ(avvisi[0]->where.line, 3);   // la riga della scheda 4000502/1
+    const std::vector<std::string> testi = messaggi(x.dopo, {*avvisi[0]});
+    EXPECT_NE(testi[0].find("Scheda 4000502/1: la corsa finisce al punto di trasbordo L-TRASB-PONTE"), std::string::npos) << testi[0];
+    EXPECT_NE(testi[0].find("scuola SC-CENTRO"), std::string::npos) << testi[0];
+    const Index idx(x.dopo.pacchetto);
+    const PassengerGroup* g = idx.group("G-4000502-1");
+    ASSERT_NE(g, nullptr);
+    ASSERT_TRUE(g->school.has_value());
+    EXPECT_EQ(g->school->code, "SC-CENTRO");
+    ASSERT_EQ(g->stops.size(), 2u);
+    EXPECT_EQ(g->stops[1].place.code, "L-TRASB-PONTE");
+    EXPECT_EQ(g->stops[1].alighting, 1);
+    EXPECT_EQ(errori_di(x.dopo.pacchetto), 0) << ::testing::PrintToString(messaggi(x.dopo, check_package(x.dopo.pacchetto)));
+    EXPECT_TRUE(schede::controlla_elementi(x.dopo).empty());
+    EXPECT_TRUE(LegameSensibile(&idx).casa("PAP-202"));
+    EXPECT_TRUE(LegameSensibile(&idx).casa("PAP-203"));
+}
+
+// Punto 2 (K-023): la regola a-b-c della coincidenza e i casi che fermano la scheda come oggi (variante 32): nessun punto di trasbordo;
+// il punto di trasbordo in mezzo alla corsa ma non alla fine; nessuno che scende li' (o solo l'accompagnatore); due scuole
+// nell'intestazione (D1); un'andata che comincia al punto di trasbordo. Il ritorno che comincia al punto di trasbordo si legge (variante
+// 1); un punto autorizzato solo a voce da' le varianti 2 e 3. Il messaggio della variante 32 dice, al condizionale, come si scrive una
+// coincidenza. Sabotaggi: scuola senza la sua riga accettata anche senza trasbordo; accettata con il trasbordo in mezzo ma non alla fine.
+TEST(Schede, CoincidenzaSoloAllaFineOAllInizio) {
+    const Lettura l = lettura_k023();
+    const std::string centro = "Centro diurno Il Faro", ponte = "Ponte di Sorgenta, piazzale", croce = "Croce di Pradello, parcheggio";
+    const std::string andata = "Andata Mattino", ritorno = "Ritorno Pomeriggio";
+    const auto variante_176 = [&](const Fogli& f) {
+        const Letto x = leggi_h(l, f);
+        for (const Problem& p : x.m.problems)
+            if (p.check == Check::CardEndsAtTransfer) return p.variant;
+        return -1;
+    };
+    // Si legge: finisce al Ponte (0), comincia al Ponte al ritorno (1), finisce o comincia alla Croce, autorizzata solo a voce (2, 3).
+    EXPECT_EQ(variante_176(una_h(andata, centro, {{"07:30", "", "PAP-202", "#1", "", "", "4,0", ""}, {"07:50", ponte, "", "", "#1", "7,2", "", ""}})), 0);
+    EXPECT_EQ(variante_176(una_h(ritorno, centro, {{"16:00", ponte, "", "#1", "", "", "3,0", ""}, {"16:20", "", "PAP-202", "", "#1", "7,2", "", ""}})), 1);
+    EXPECT_EQ(variante_176(una_h(andata, centro, {{"07:30", "", "PAP-202", "#1", "", "", "4,0", ""}, {"07:50", croce, "", "", "#1", "7,2", "", ""}})), 2);
+    EXPECT_EQ(variante_176(una_h(ritorno, centro, {{"16:00", croce, "", "#1", "", "", "3,0", ""}, {"16:20", "", "PAP-202", "", "#1", "7,2", "", ""}})), 3);
+    // Con l'accompagnatore, che scende al Ponte con la persona: chi prosegue e' uno (accompagnatore escluso), si legge.
+    EXPECT_EQ(variante_176(una_h(andata, centro, {{"07:30", "", "PAP-202", "#2", "", "", "4,0", "SALE"}, {"07:50", ponte, "", "", "#2", "7,2", "", "SCENDE"}})), 0);
+    const int scuola_senza_riga = static_cast<int>(CardFault::SchoolRowMissing);
+    // Nessun punto di trasbordo alla fine (Pradello e' una fermata senza il blocco "trasbordo").
+    EXPECT_EQ(motivo_h(l, una_h(andata, centro, {{"07:30", "", "PAP-202", "#1", "", "", "4,0", ""}, {"07:50", "PRADELLO PIAZZA", "", "", "#1", "7,2", "", ""}})),
+              scuola_senza_riga);
+    // Il punto di trasbordo in mezzo alla corsa, non alla fine.
+    EXPECT_EQ(motivo_h(l, una_h(andata, centro, {{"07:30", "", "PAP-202", "#1", "", "", "4,0", ""}, {"07:35", "", "PAP-204", "#1", "", "", "1,0", ""},
+                                                 {"07:40", ponte, "", "", "#1", "5,0", "", ""}, {"07:50", "PRADELLO PIAZZA", "", "", "#1", "2,2", "", ""}})),
+              scuola_senza_riga);
+    // Alla fine il Ponte, ma nessuno scende li' (o scende solo l'accompagnatore).
+    EXPECT_EQ(motivo_h(l, una_h(andata, centro, {{"07:30", "", "PAP-202", "#1", "", "", "4,0", ""}, {"07:45", "PRADELLO PIAZZA", "", "", "#1", "5,0", "", ""},
+                                                 {"07:50", ponte, "", "", "", "2,2", "", ""}})),
+              scuola_senza_riga);
+    EXPECT_EQ(motivo_h(l, una_h(andata, centro, {{"07:30", "", "PAP-202", "#2", "", "", "4,0", "SALE"}, {"07:45", "PRADELLO PIAZZA", "", "", "#1", "5,0", "", ""},
+                                                 {"07:50", ponte, "", "", "#1", "2,2", "", "SCENDE"}})),
+              scuola_senza_riga);
+    // Due scuole nell'intestazione (D1): mai la coincidenza.
+    EXPECT_EQ(motivo_h(l, una_h(andata, centro + "; Scuola primaria Valfonda",
+                                {{"07:30", "", "PAP-202", "#2", "", "", "4,0", ""}, {"07:40", "Scuola primaria Valfonda", "", "", "#1", "5,0", "", ""},
+                                 {"07:50", ponte, "", "", "#1", "2,2", "", ""}})),
+              scuola_senza_riga);
+    // Un'andata che comincia al Ponte (e finisce a casa), un ritorno che finisce al Ponte: il verso conta.
+    EXPECT_EQ(motivo_h(l, una_h(andata, centro, {{"07:30", ponte, "", "#1", "", "", "4,0", ""}, {"07:50", "", "PAP-202", "", "#1", "7,2", "", ""}})),
+              scuola_senza_riga);
+    EXPECT_EQ(motivo_h(l, una_h(ritorno, centro, {{"16:00", "", "PAP-202", "#1", "", "", "3,0", ""}, {"16:20", ponte, "", "", "#1", "7,2", "", ""}})),
+              scuola_senza_riga);
+    // Il messaggio della variante 32 dice come si scrive una coincidenza.
+    const Letto y = leggi_h(l, una_h(andata, centro, {{"07:30", "", "PAP-202", "#1", "", "", "4,0", ""}, {"07:50", "PRADELLO PIAZZA", "", "", "#1", "7,2", "", ""}}));
+    ASSERT_FALSE(y.m.problems.empty());
+    EXPECT_NE(messaggi(y.dopo, y.m.problems)[0].find("Se chi viaggia passasse su un altro mezzo"), std::string::npos) << messaggi(y.dopo, y.m.problems)[0];
+}
+
+// K-023 (fuzzing, file schede_servizi.json): due schede del registro, o due profili, con lo stesso codice danno K-CTR-009 con il punto
+// in cui il codice compare la prima volta, come gli altri codici doppi. Prima il messaggio non si poteva scrivere (mancava "{prima}") e il
+// programma si fermava con un errore interno. Il caso del fuzzing e' anche in tests/fuzz/casi/pacchetto-schede_servizi.json.
+TEST(Schede, CodiciDoppiNelRegistroENeiProfili) {
+    PacchettoInMemoria m = pacchetto_con_schede();
+    JsonDati r = JsonDati::parse(m.file.at("schede_servizi.json"));
+    r.at("schede").at(1)["codice"] = r.at("schede").at(0).at("codice");
+    m.file["schede_servizi.json"] = r.dump(2);
+    JsonDati p = JsonDati::parse(m.file.at("profili_schede.json"));
+    p.at("profili").push_back(p.at("profili").at(0));
+    m.file["profili_schede.json"] = p.dump(2);
+    const Lettura l = leggi_pacchetto(m);
+    ASSERT_TRUE(l.forma_valida());
+    std::vector<Problem> v;
+    check_cards(l.pacchetto, Index(l.pacchetto), v);
+    std::vector<std::string> doppi;
+    for (const std::string& t : messaggi(l, v))
+        if (t.rfind("K-CTR-009", 0) == 0) doppi.push_back(t);
+    ASSERT_EQ(doppi.size(), 2u) << ::testing::PrintToString(messaggi(l, v));
+    EXPECT_NE(doppi[0].find("la prima volta in profili_schede.json /profili/0"), std::string::npos) << doppi[0];
+    EXPECT_NE(doppi[1].find("la prima volta in schede_servizi.json /schede/0"), std::string::npos) << doppi[1];
+    const std::vector<Problem> tutti = check_package(l.pacchetto);   // e kzero controlla scrive tutti i messaggi
+    EXPECT_NO_THROW(messaggi(l, tutti));
 }

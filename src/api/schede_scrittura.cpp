@@ -167,6 +167,13 @@ Elementi elementi(const kzero::ServiceCard& s, const kzero::CardVersion& v, cons
         for (const kzero::DayEntry& x : cal.added) d.push_back(kzero::text_from_day(x.day));
         kj["date_aggiunte"] = d;
     }
+    // K-023: le interruzioni della scheda, tagliate al periodo della versione (card_calendar).
+    if (!cal.suspensions.empty()) {
+        JsonDati d = JsonDati::array();
+        for (const kzero::Suspension& x : cal.suspensions)
+            d.push_back({{"dal", kzero::text_from_day(x.range.from)}, {"al", kzero::text_from_day(x.range.to)}, {"motivo", kMotivoInterruzione}});
+        kj["sospensioni"] = d;
+    }
     e.calendario = kj;
     (void)idx;
     return e;
@@ -219,6 +226,11 @@ JsonDati scheda_json(const kzero::Card& k) {
         for (kzero::Day x : k.dates) d.push_back(kzero::text_from_day(x));
         j["date"] = d;
     }
+    if (!k.breaks.empty()) {   // K-023 (registro versione 2)
+        JsonDati d = JsonDati::array();
+        for (const kzero::DateRange& x : k.breaks) d.push_back({{"dal", kzero::text_from_day(x.from)}, {"al", kzero::text_from_day(x.to)}});
+        j["interruzioni"] = d;
+    }
     return j;
 }
 
@@ -230,7 +242,7 @@ const char* da_json(kzero::ChoiceFrom f) { return f == kzero::ChoiceFrom::File ?
 }  // namespace
 
 JsonDati registro(const std::vector<kzero::ServiceCard>& schede, const std::vector<kzero::RemovedCardVersions>& tolte) {
-    JsonDati d = {{"schema", "schede_servizi"}, {"schema_versione", 1}};
+    JsonDati d = {{"schema", "schede_servizi"}, {"schema_versione", 2}};   // K-023: sempre la 2 (contiene la 1)
     JsonDati v = JsonDati::array();
     for (const kzero::ServiceCard& s : schede) {
         JsonDati j = {{"codice", s.code}, {"id", s.id}, {"committente", s.client.code}, {"profilo", s.profile.code}, {"contratto", s.contract.code}};
@@ -365,7 +377,7 @@ JsonDati proietta_servizio(const JsonDati& s) {
     return o;
 }
 JsonDati proietta_corsa(const JsonDati& c) { return proietta(c, {"servizi", "calendario", "passaggi", "km_totali"}); }
-JsonDati proietta_calendario(const JsonDati& c) { return proietta(c, {"base", "dal", "al", "giorni", "date_aggiunte"}); }
+JsonDati proietta_calendario(const JsonDati& c) { return proietta(c, {"base", "dal", "al", "giorni", "date_aggiunte", "sospensioni"}); }
 
 const JsonDati* trova(const Lettura& l, const std::string& file, const char* elenco, const kzero::Code& codice) {
     const auto it = l.documenti.find(file);
