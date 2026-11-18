@@ -400,3 +400,8 @@ Formato: data - decisione - perche'.
 - 2026-11-18 - K-023 - **Limite: il legame A -> B della coincidenza non c'e'**. K-Zero non controlla che la persona che scende da A al punto
   di trasbordo sia quella che sale su B, ne' che B passi da li' dopo A (e con il margine del manifesto). Va nel mandato del confronto tra
   l'elenco e le schede; fino ad allora K-CTR-176 dice di vederlo a mano.
+- 2026-11-18 - K-023 - **Codici doppi nel registro e nei profili delle schede** (fuzzing del K-023, file schede_servizi.json, dopo 10
+  minuti con il seme nuovo del registro alla versione 2): due schede del registro, o due profili delle schede, con lo stesso codice davano
+  K-CTR-009 senza il punto in cui il codice compare la prima volta, e il messaggio non si poteva scrivere (errore interno in `kzero
+  controlla`). Il difetto c'era dal K-021: il bersaglio del registro non aveva un seme vero. Ora come tutti gli altri codici doppi; il caso
+  sta in tests/fuzz/casi/pacchetto-schede_servizi.json.

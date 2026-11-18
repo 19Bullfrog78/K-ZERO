@@ -1245,3 +1245,28 @@ TEST(Schede, CoincidenzaSoloAllaFineOAllInizio) {
     ASSERT_FALSE(y.m.problems.empty());
     EXPECT_NE(messaggi(y.dopo, y.m.problems)[0].find("Se chi viaggia passasse su un altro mezzo"), std::string::npos) << messaggi(y.dopo, y.m.problems)[0];
 }
+
+// K-023 (fuzzing, file schede_servizi.json): due schede del registro, o due profili, con lo stesso codice danno K-CTR-009 con il punto
+// in cui il codice compare la prima volta, come gli altri codici doppi. Prima il messaggio non si poteva scrivere (mancava "{prima}") e il
+// programma si fermava con un errore interno. Il caso del fuzzing e' anche in tests/fuzz/casi/pacchetto-schede_servizi.json.
+TEST(Schede, CodiciDoppiNelRegistroENeiProfili) {
+    PacchettoInMemoria m = pacchetto_con_schede();
+    JsonDati r = JsonDati::parse(m.file.at("schede_servizi.json"));
+    r.at("schede").at(1)["codice"] = r.at("schede").at(0).at("codice");
+    m.file["schede_servizi.json"] = r.dump(2);
+    JsonDati p = JsonDati::parse(m.file.at("profili_schede.json"));
+    p.at("profili").push_back(p.at("profili").at(0));
+    m.file["profili_schede.json"] = p.dump(2);
+    const Lettura l = leggi_pacchetto(m);
+    ASSERT_TRUE(l.forma_valida());
+    std::vector<Problem> v;
+    check_cards(l.pacchetto, Index(l.pacchetto), v);
+    std::vector<std::string> doppi;
+    for (const std::string& t : messaggi(l, v))
+        if (t.rfind("K-CTR-009", 0) == 0) doppi.push_back(t);
+    ASSERT_EQ(doppi.size(), 2u) << ::testing::PrintToString(messaggi(l, v));
+    EXPECT_NE(doppi[0].find("la prima volta in profili_schede.json /profili/0"), std::string::npos) << doppi[0];
+    EXPECT_NE(doppi[1].find("la prima volta in schede_servizi.json /schede/0"), std::string::npos) << doppi[1];
+    const std::vector<Problem> tutti = check_package(l.pacchetto);   // e kzero controlla scrive tutti i messaggi
+    EXPECT_NO_THROW(messaggi(l, tutti));
+}

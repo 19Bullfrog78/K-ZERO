@@ -1350,11 +1350,13 @@ void check_cards(const Package& p, const Index& idx, std::vector<Problem>& out) 
     const auto ref = [&](const Ref& r, Element e, bool esiste) {
         if (!esiste) add(Check::UnknownReference, r.src, {text_param("codice", r.code), elements_param("elementi", e)});
     };
+    // Codici doppi: il messaggio dice dove compare la prima volta (K-023, fuzzing: senza, il messaggio non si poteva scrivere).
+    const auto prima = [](const Source* s) { return text_param("prima", s->pointer.empty() ? s->file : s->file + " " + s->pointer); };
     // Profili.
-    std::set<Code> visti;
+    std::map<Code, const Source*> visti;
     for (const CardProfile& pr : p.card_profiles) {
-        if (!visti.insert(pr.code).second)
-            add(Check::DuplicateCode, pr.src, {text_param("codice", pr.code), elements_param("elementi", Element::CardProfile)});
+        if (const auto [it, nuovo] = visti.emplace(pr.code, &pr.src); !nuovo)
+            add(Check::DuplicateCode, pr.src, {text_param("codice", pr.code), elements_param("elementi", Element::CardProfile), prima(it->second)});
         ref(pr.client, Element::Client, idx.client(pr.client.code) != nullptr);
         // Una parola che vuol dire due cose diverse (es. la stessa per "sale" e "scende"): il profilo e' ambiguo.
         const auto chi = ref_param("profilo", Element::CardProfile, pr.code);
@@ -1383,11 +1385,11 @@ void check_cards(const Package& p, const Index& idx, std::vector<Problem>& out) 
             if (!gg.insert(static_cast<int>(g.day)).second) add(Check::CardProfileInvalid, pr.src, {chi, text_param("parola", g.column)}, 5);
     }
     // Registro: codici, ID, riferimenti.
-    std::set<Code> schede;
+    std::map<Code, const Source*> schede;
     std::map<std::string, Code> per_id;
     for (const ServiceCard& s : p.service_cards) {
-        if (!schede.insert(s.code).second)
-            add(Check::DuplicateCode, s.src, {text_param("codice", s.code), elements_param("elementi", Element::ServiceCard)});
+        if (const auto [it, nuovo] = schede.emplace(s.code, &s.src); !nuovo)
+            add(Check::DuplicateCode, s.src, {text_param("codice", s.code), elements_param("elementi", Element::ServiceCard), prima(it->second)});
         const auto [it, nuovo] = per_id.emplace(chiave_id(s.id), s.code);
         if (!nuovo) add(Check::CardRegisterInvalid, s.src, {ref_param("scheda", Element::ServiceCard, s.code), ref_param("altra", Element::ServiceCard, it->second)}, 0);
         ref(s.client, Element::Client, idx.client(s.client.code) != nullptr);

@@ -893,6 +893,10 @@
   versione senza giorni scritta) e 12 miei (sovrapposte; due scuole; nessuno che prosegue; accompagnatore contato; "a voce" non detto;
   scuola tolta dal gruppo; K-CTR-170 senza sospensioni; interruzioni non in ordine; testo di oggi cambiato; interruzioni fuori da "cosa
   cambia"; frase della variante 32 tolta; K-CTR-163 senza la sua variante).
+- 2026-11-18 - K-023 (fuzzing). Dieci minuti sui tre bersagli delle schede: in `pacchetto-schede_servizi.json`, con il seme nuovo del
+  registro, due schede con lo stesso codice davano K-CTR-009 senza "{prima}" e `kzero controlla` si fermava con un errore interno (difetto
+  dal K-021; anche due profili con lo stesso codice). Corretto come gli altri codici doppi; prova nuova (Schede.CodiciDoppiNelRegistroENeiProfili)
+  e il caso in tests/fuzz/casi/pacchetto-schede_servizi.json. Sabotaggio (la correzione tolta): presi tutti e due.
 ## Bug e limiti noti
 - (K-018) L'avviso sui nomi liberi trova solo il nome scritto come nei dati (senza maiuscole ne' accenti, parole intere):
   non i nomi scritti male, i soprannomi, le iniziali, le sigle ("S-DIS"), un nome dentro una parola piu' lunga, le parole
