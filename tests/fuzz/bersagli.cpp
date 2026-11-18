@@ -673,7 +673,7 @@ kzero::CardTables tabelle_da_testo(const std::string& t) {
         a = b + 1;
     }
     parti.resize(3);
-    return {tabella_da_testo(parti[0]), tabella_da_testo(parti[1]), tabella_da_testo(parti[2])};
+    return {tabella_da_testo(parti[0]), tabella_da_testo(parti[1]), tabella_da_testo(parti[2]), {}};
 }
 
 }  // namespace

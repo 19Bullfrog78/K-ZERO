@@ -43,7 +43,7 @@ struct Letto {
 Letto leggi(const Lettura& l, const Fogli& f, DateChoices scelte = {}, Day presa = kPresa, bool date1904 = false) {
     const Index idx(l.pacchetto);
     Letto x;
-    x.r = read_cards(CardTables{tabella(f.schede), tabella(f.fermate), tabella(f.date)}, profilo(l), idx, date1904);
+    x.r = read_cards(CardTables{tabella(f.schede), tabella(f.fermate), tabella(f.date), tabella(f.interruzioni)}, profilo(l), idx, date1904);
     EXPECT_EQ(x.r.fault, TableFault::None) << x.r.fault_title;
     x.m = merge_cards(l.pacchetto, profilo(l), "CT-SCU", presa, "mail del committente", scelte, x.r);
     x.dopo = schede::con_documenti(l, schede::documenti_dopo(l, x.m.cards, l.pacchetto.removed_cards, x.m.added, x.m.removed, x.m.cuts,
@@ -376,7 +376,7 @@ TEST(Schede, IdDiversiMaiUniti) {
     maiuscole.schede[1][1] = "5C1E2F40-0A1B-4C2D-8E3F-000000000001";
     EXPECT_EQ(leggi(v1.dopo, maiuscole, attivazione()).m.outcomes.at(0).kind, CardOutcome::Kind::Same);
     const Index i1(v1.dopo.pacchetto);
-    const CardsRead r = read_cards(CardTables{tabella(una(1).schede), tabella(una(1).fermate), {}}, profilo(v1.dopo), i1, false);
+    const CardsRead r = read_cards(CardTables{tabella(una(1).schede), tabella(una(1).fermate), {}, {}}, profilo(v1.dopo), i1, false);
     const CardsMerge m = merge_cards(v1.dopo.pacchetto, profilo(v1.dopo), "CT-ASILO", kPresa, "x", attivazione(), r);
     EXPECT_EQ(m.outcomes.at(0).fault, CardFault::OtherContract);
 }
@@ -814,4 +814,60 @@ TEST(Schede, TestiAlSingolareConUno) {
     m = messaggi(leggi(l0, f, attivazione()).dopo, leggi(l0, f, attivazione()).m.problems);
     ASSERT_FALSE(m.empty());
     EXPECT_NE(m[0].find("nel periodo della scheda da' 1 giorno: "), std::string::npos) << m[0];
+}
+
+// --- K-023 ------------------------------------------------------------------------------------------------------------------------
+
+// I formati alla versione 2 (K-023): il profilo con il foglio delle interruzioni (nome e titoli, insieme) e il registro con le interruzioni
+// nella copia della scheda. La versione 1 si legge ancora: un profilo alla 1 non ha il foglio, un registro alla 1 nessuna interruzione.
+// Il foglio senza i suoi titoli (o i titoli senza il foglio) e le interruzioni in un file alla versione 1 non rispettano lo schema.
+TEST(Schede, ProfiliERegistroAllaVersioneDue) {
+    const Lettura v1 = lettura_di_prova();
+    EXPECT_TRUE(profilo(v1).sheet_breaks.empty());
+    const Lettura v2 = leggi_pacchetto(pacchetto_k023());
+    ASSERT_TRUE(v2.forma_valida());
+    EXPECT_EQ(v2.versioni.at("profili_schede.json"), 2);
+    EXPECT_EQ(profilo(v2).sheet_breaks, "Interruzioni");
+    EXPECT_EQ(profilo(v2).break_cols.nr, "Nr");
+    EXPECT_EQ(profilo(v2).break_cols.from, "Dal");
+    EXPECT_EQ(profilo(v2).break_cols.to, "Al");
+    const CardProfile* h = Index(v2.pacchetto).card_profile("PS-CVA-H");
+    ASSERT_NE(h, nullptr);
+    EXPECT_EQ(h->service_kind, ServiceKind::Disability);
+    // Il foglio e i suoi titoli: tutti e due o nessuno.
+    for (const char* togli : {"fogli", "colonne"}) {
+        PacchettoInMemoria m = pacchetto_k023();
+        JsonDati d = JsonDati::parse(m.file.at("profili_schede.json"));
+        d.at("profili").at(0).at(togli).erase("interruzioni");
+        m.file["profili_schede.json"] = d.dump(2);
+        EXPECT_FALSE(leggi_pacchetto(m).forma_valida()) << togli;
+        d.at("profili").at(0).at(togli == std::string("fogli") ? "colonne" : "fogli").erase("interruzioni");
+        m.file["profili_schede.json"] = d.dump(2);
+        const Lettura senza = leggi_pacchetto(m);
+        EXPECT_TRUE(senza.forma_valida()) << togli;   // alla 2 senza il foglio: come alla 1
+        EXPECT_TRUE(profilo(senza).sheet_breaks.empty());
+        d["schema_versione"] = 1;
+        d.at("profili").at(0)["fogli"]["interruzioni"] = "Interruzioni";
+        d.at("profili").at(0)["colonne"]["interruzioni"] = {{"nr", "Nr"}, {"dal", "Dal"}, {"al", "Al"}};
+        m.file["profili_schede.json"] = d.dump(2);
+        EXPECT_FALSE(leggi_pacchetto(m).forma_valida()) << "il foglio in un profilo alla versione 1";
+    }
+    // Il registro: le interruzioni della copia della scheda si leggono alla versione 2, non alla 1.
+    PacchettoInMemoria m = pacchetto_con_schede();
+    JsonDati r = JsonDati::parse(m.file.at("schede_servizi.json"));
+    r["schema_versione"] = 2;
+    r.at("schede").at(0).at("versioni").at(0).at("scheda")["interruzioni"] =
+        JsonDati::array({{{"dal", "2026-12-23"}, {"al", "2027-01-06"}}, {{"dal", "2027-02-15"}, {"al", "2027-02-15"}}});
+    m.file["schede_servizi.json"] = r.dump(2);
+    const Lettura l = leggi_pacchetto(m);
+    ASSERT_TRUE(l.forma_valida());
+    const std::vector<DateRange>& b = l.pacchetto.service_cards.at(0).versions.at(0).card.breaks;
+    ASSERT_EQ(b.size(), 2u);
+    EXPECT_EQ(b[0].from, day_from_ymd(2026, 12, 23));
+    EXPECT_EQ(b[0].to, day_from_ymd(2027, 1, 6));
+    EXPECT_EQ(b[1].from, b[1].to);
+    EXPECT_TRUE(l.pacchetto.service_cards.at(1).versions.at(0).card.breaks.empty());
+    r["schema_versione"] = 1;
+    m.file["schede_servizi.json"] = r.dump(2);
+    EXPECT_FALSE(leggi_pacchetto(m).forma_valida());
 }

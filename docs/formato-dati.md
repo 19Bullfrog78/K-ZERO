@@ -1577,19 +1577,22 @@ riceve la copia una volta in un **modello Excel di K-Zero**; il **profilo delle 
 fogli, titoli delle colonne, colonne dei giorni, il segno delle caselle, i testi di verso e momento, le cadenze, la parola
 dell'accompagnatore, i separatori, e come si collegano scuole, punti di raccolta e calendari agli elementi del pacchetto. E' un
 dato: il programma conosce solo le **forme** (cadenza a giorni segnati o a date elencate), mai le parole; il modello di K-Zero e'
-il primo profilo, e se il committente mandera' le schede in Excel sara' un altro profilo. Tutti dati comuni. Schema:
-[docs/schema/profili_schede.v1.schema.json](schema/profili_schede.v1.schema.json).
+il primo profilo, e se il committente mandera' le schede in Excel sara' un altro profilo. Tutti dati comuni. Schemi:
+[docs/schema/profili_schede.v2.schema.json](schema/profili_schede.v2.schema.json) (versione attuale, K-023: il foglio delle
+interruzioni) e [docs/schema/profili_schede.v1.schema.json](schema/profili_schede.v1.schema.json) (versione 1, ancora letta: e' la 2
+senza il foglio delle interruzioni; un profilo alla 1, o alla 2 senza il foglio, legge le schede come prima del K-023).
 
 | Campo | Obbl. | Classe | Significato |
 |---|---|---|---|
 | `profili[].codice` | si' | comune | Codice del profilo (si usa con `kzero leggi-schede --profilo`) |
 | `profili[].nome` | no | comune | Nome |
 | `profili[].committente` | si' | comune | Il committente delle schede |
-| `profili[].fogli` | si' | comune | Nomi dei tre fogli: `schede`, `fermate`, `date` |
+| `profili[].fogli` | si' | comune | Nomi dei fogli: `schede`, `fermate`, `date` e, dalla versione 2, `interruzioni` (facoltativo, insieme ai suoi titoli) |
 | `profili[].codici_esterni` | si' | comune | `sistema` e i tipi: `tipo_scheda` (l'ID), `tipo_nr` (il Nr), `tipo_servizio` (il numero prima della barra), scritti sul servizio; `tipo_scuola`, `tipo_fermata`, `tipo_calendario`, con cui si cercano scuole, punti di raccolta e calendari |
 | `profili[].colonne.schede` | si' | comune | Titoli delle colonne del foglio delle schede: `nr`, `id`, `servizio` (verso e momento), `scuole`, `attivazione`, `disattivazione`, `totali_alunni`, `individualizzato`, `attrezzato`, `tot_giorni`, `tot_km_carico`, `tot_km_vuoto`, `calendario`, `cadenza`, `nuova_modifica` |
 | `profili[].colonne.fermate` | si' | comune | Titoli del foglio delle fermate: `nr`, `orario`, `punto` (punto di raccolta), `casa`, `salgono` (St. Car.), `scendono` (St. Scar.), `km_pieni`, `km_vuoti`, `accompagnatore` |
 | `profili[].colonne.date` | si' | comune | Titoli del foglio delle date: `nr`, `data` |
+| `profili[].colonne.interruzioni` | no | comune | Versione 2, solo insieme a `fogli.interruzioni`: titoli del foglio delle interruzioni: `nr`, `dal`, `al` |
 | `profili[].giorni[]` | si' | comune | `colonna` (es. "Lu") e `giorno` (`lunedi` ... `domenica`) |
 | `profili[].segno[]` | si' | comune | Le parole che segnano una casella (es. "X") |
 | `profili[].servizi[]` | si' | comune | `testo` di verso e momento (es. "Andata Mattino") e `verso` in K-Zero |
@@ -1603,7 +1606,7 @@ il primo profilo, e se il committente mandera' le schede in Excel sara' un altro
 Titoli e parole si confrontano come quelli dei profili degli elenchi (senza maiuscole, accenti, punteggiatura e spazi doppi); hanno
 la definizione `parola` e non entrano nell'avviso sui nomi liberi (K-018).
 
-**Il modello** (scelta A dell'arbitro): tre fogli, la prima riga di ognuno sono i titoli.
+**Il modello** (scelta A dell'arbitro): tre fogli (dal K-023 un quarto, facoltativo), la prima riga di ognuno sono i titoli.
 - **Schede**: una riga per scheda, con tutti i campi dell'intestazione e del piede: Nr (es. "4000123 / 3"), ID (es. un uuid), verso
   e momento, scuole (piu' di una con il separatore delle scuole: codici esterni delle scuole), attivazione e disattivazione, una X
   sotto ogni giorno, Totali alunni, le caselle "Servizio Individualizzato" e "Attrezzato" (X o vuote), Tot Giorni, Tot Km Carico,
@@ -1612,7 +1615,10 @@ la definizione `parola` e non entrano nell'avviso sui nomi liberi (K-018).
 - **Fermate**: una riga per riga della scheda, nell'ordine: Nr (quello della scheda), orario, punto di raccolta, casa, St. Car.,
   St. Scar., km pieno, km vuoto, accompagnatore.
 - **Date**: solo per le cadenze a date elencate, una riga per data: Nr, data.
-Il Nr lega le righe dei tre fogli; si confronta senza badare agli spazi intorno alla barra ("4000123/3" = "4000123 / 3"). Le
+- **Interruzioni** (K-023, solo con un profilo alla versione 2 che nomina il foglio): una riga per periodo in cui il servizio non si fa
+  (in fondo alla scheda, "Interruzioni:"): Nr, Dal, Al, i due giorni compresi (un giorno solo: Dal uguale ad Al). Il foglio puo'
+  mancare (nessuna interruzione), come quello delle date.
+Il Nr lega le righe dei fogli; si confronta senza badare agli spazi intorno alla barra ("4000123/3" = "4000123 / 3"). Le
 celle vuote di St. Car. e St. Scar. valgono 0 (sulle schede ci sono righe con la sola salita); una cella dei km vuota vuol dire
 "non scritto", **mai 0** (0,0 scritto e' zero). Date e orari si scrivono come sulla scheda: un testo (con i separatori del profilo)
 oppure come Excel li trasforma da solo (numeri di data e di orario di Excel, nel sistema del file: 1900, o 1904 se la cartella di
@@ -1638,7 +1644,9 @@ parola, e nella colonna "accompagnatore" una parola del profilo per "sale" o "sc
 (K-021) Il **registro delle schede** lette con `kzero leggi-schede`: per ogni scheda (riconosciuta dall'**ID** del committente,
 mai dal Nr) le **versioni**, ognuna con la copia della scheda letta, da quando a quando vale, la presa in carico, il riferimento,
 come e' stata scelta la data, e i codici degli elementi del pacchetto fatti da quella versione. Lo scrivono solo `kzero
-leggi-schede` e `kzero togli-scheda`. Schema: [docs/schema/schede_servizi.v1.schema.json](schema/schede_servizi.v1.schema.json).
+leggi-schede` e `kzero togli-scheda`. Schemi: [docs/schema/schede_servizi.v2.schema.json](schema/schede_servizi.v2.schema.json)
+(versione attuale, K-023: le interruzioni nella copia della scheda) e
+[docs/schema/schede_servizi.v1.schema.json](schema/schede_servizi.v1.schema.json) (versione 1, ancora letta: nessuna interruzione).
 
 | Campo | Obbl. | Classe | Significato |
 |---|---|---|---|
@@ -1652,7 +1660,7 @@ leggi-schede` e `kzero togli-scheda`. Schema: [docs/schema/schede_servizi.v1.sch
 | `schede[].versioni[].presa_in_carico`, `riferimento` | si' | comune | La data `--data` e il `--riferimento` della lettura |
 | `schede[].versioni[].scelta` | si' | comune | `modo` (`attivazione`, `presa_in_carico`, `data`) e `da` (`nessuna`, `file` = `--validita`, `scheda` = `--validita-scheda`) |
 | `schede[].versioni[].elementi` | si' | comune | Codici di `servizio`, `gruppo`, `corsa`, `calendario` fatti dalla versione |
-| `schede[].versioni[].scheda` | si' | comune | La copia letta: `nr`, `servizio` (verso e momento) e `verso`, `scuole[]`, `attivazione`, `disattivazione`, `giorni[]`, `totali_alunni`, `tot_giorni`, `tot_km_carico`, `tot_km_vuoto`, `calendario` (la parola) e `calendario_base` (il calendario del pacchetto), `cadenza` e `forma_cadenza`, `nuova_modifica`, `fermate[]` (`orario`, `luogo`, `riconosciuto`, `salgono`, `scendono`, `km_pieni`, `km_vuoti`, `accompagnatore`), `date[]` |
+| `schede[].versioni[].scheda` | si' | comune | La copia letta: `nr`, `servizio` (verso e momento) e `verso`, `scuole[]`, `attivazione`, `disattivazione`, `giorni[]`, `totali_alunni`, `tot_giorni`, `tot_km_carico`, `tot_km_vuoto`, `calendario` (la parola) e `calendario_base` (il calendario del pacchetto), `cadenza` e `forma_cadenza`, `nuova_modifica`, `fermate[]` (`orario`, `luogo`, `riconosciuto`, `salgono`, `scendono`, `km_pieni`, `km_vuoti`, `accompagnatore`), `date[]` e, dalla versione 2, `interruzioni[]` (`dal`, `al`, in ordine) |
 | `...scheda.individualizzato`, `...scheda.attrezzato` | no | particolare | Le due caselle della scheda (come la pedana obbligatoria e `individualizzato` del servizio) |
 | `tolte[]` | no | comune | Le versioni tolte con `kzero togli-scheda`: `scheda`, `id`, `versioni[]`, `riferimento`, `data`; i loro numeri non si danno piu' |
 

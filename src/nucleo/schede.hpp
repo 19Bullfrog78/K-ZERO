@@ -30,6 +30,7 @@ namespace kzero {
 
 struct CardTables {
     Table cards, stops, dates;   // i tre fogli (la prima riga di ognuno: i titoli); dates puo' essere vuoto
+    Table breaks;                // K-023: il foglio delle interruzioni (vuoto se il file o il profilo non lo hanno)
 };
 
 // Varianti di K-CTR-160 (scheda che non si legge): il motivo. Il numero e' la variante del messaggio.
