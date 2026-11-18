@@ -1,0 +1,238 @@
+{
+  "schede": [
+    {
+      "codice": "SCH-4000501-1",
+      "committente": "CVA",
+      "contratto": "CT-SCU",
+      "id": "5c1e2f40-0a1b-4c2d-8e3f-000000000501",
+      "profilo": "PS-CVA-H",
+      "versioni": [
+        {
+          "al": "2027-06-30",
+          "dal": "2026-09-14",
+          "elementi": {
+            "calendario": "CAL-4000501-1",
+            "corsa": "C-4000501-1",
+            "gruppo": "G-4000501-1",
+            "servizio": "S-4000501-1"
+          },
+          "numero": 1,
+          "presa_in_carico": "2026-11-16",
+          "riferimento": "mail del committente",
+          "scelta": {
+            "da": "file",
+            "modo": "attivazione"
+          },
+          "scheda": {
+            "attivazione": "2026-09-14",
+            "cadenza": "Sempre",
+            "calendario": "FERIALE",
+            "calendario_base": "CAL-LV-FER",
+            "disattivazione": "2027-06-30",
+            "fermate": [
+              {
+                "km_vuoti": 6.0,
+                "luogo": "PAP-201",
+                "orario": "08:00",
+                "riconosciuto": "casa",
+                "salgono": 1,
+                "scendono": 0
+              },
+              {
+                "km_pieni": 9.5,
+                "luogo": "L-CENTRO",
+                "orario": "08:25",
+                "riconosciuto": "scuola",
+                "salgono": 0,
+                "scendono": 1
+              }
+            ],
+            "forma_cadenza": "giorni_segnati",
+            "giorni": [
+              "lunedi",
+              "martedi",
+              "mercoledi",
+              "giovedi",
+              "venerdi"
+            ],
+            "interruzioni": [
+              {
+                "al": "2027-01-06",
+                "dal": "2026-12-23"
+              },
+              {
+                "al": "2027-02-19",
+                "dal": "2027-02-15"
+              },
+              {
+                "al": "2027-04-02",
+                "dal": "2027-03-29"
+              }
+            ],
+            "nr": "4000501/1",
+            "nuova_modifica": "nuova",
+            "scuole": [
+              "SC-CENTRO"
+            ],
+            "servizio": "Andata Mattino",
+            "tot_giorni": 185,
+            "tot_km_carico": 9.5,
+            "tot_km_vuoto": 6.0,
+            "totali_alunni": 1,
+            "verso": "andata"
+          }
+        }
+      ]
+    },
+    {
+      "codice": "SCH-4000502-1",
+      "committente": "CVA",
+      "contratto": "CT-SCU",
+      "id": "5c1e2f40-0a1b-4c2d-8e3f-000000000502",
+      "profilo": "PS-CVA-H",
+      "versioni": [
+        {
+          "al": "2027-06-30",
+          "dal": "2026-09-14",
+          "elementi": {
+            "calendario": "CAL-4000502-1",
+            "corsa": "C-4000502-1",
+            "gruppo": "G-4000502-1",
+            "servizio": "S-4000502-1"
+          },
+          "numero": 1,
+          "presa_in_carico": "2026-11-16",
+          "riferimento": "mail del committente",
+          "scelta": {
+            "da": "file",
+            "modo": "attivazione"
+          },
+          "scheda": {
+            "attivazione": "2026-09-14",
+            "cadenza": "Sempre",
+            "calendario": "FERIALE",
+            "calendario_base": "CAL-LV-FER",
+            "disattivazione": "2027-06-30",
+            "fermate": [
+              {
+                "km_vuoti": 4.0,
+                "luogo": "PAP-202",
+                "orario": "07:30",
+                "riconosciuto": "casa",
+                "salgono": 1,
+                "scendono": 0
+              },
+              {
+                "km_pieni": 7.2,
+                "luogo": "L-TRASB-PONTE",
+                "orario": "07:50",
+                "riconosciuto": "nome",
+                "salgono": 0,
+                "scendono": 1
+              }
+            ],
+            "forma_cadenza": "giorni_segnati",
+            "giorni": [
+              "lunedi",
+              "martedi",
+              "mercoledi",
+              "giovedi",
+              "venerdi"
+            ],
+            "nr": "4000502/1",
+            "nuova_modifica": "nuova",
+            "scuole": [
+              "SC-CENTRO"
+            ],
+            "servizio": "Andata Mattino",
+            "tot_giorni": 202,
+            "tot_km_carico": 7.2,
+            "tot_km_vuoto": 4.0,
+            "totali_alunni": 1,
+            "verso": "andata"
+          }
+        }
+      ]
+    },
+    {
+      "codice": "SCH-4000503-1",
+      "committente": "CVA",
+      "contratto": "CT-SCU",
+      "id": "5c1e2f40-0a1b-4c2d-8e3f-000000000503",
+      "profilo": "PS-CVA-H",
+      "versioni": [
+        {
+          "al": "2027-06-30",
+          "dal": "2026-09-14",
+          "elementi": {
+            "calendario": "CAL-4000503-1",
+            "corsa": "C-4000503-1",
+            "gruppo": "G-4000503-1",
+            "servizio": "S-4000503-1"
+          },
+          "numero": 1,
+          "presa_in_carico": "2026-11-16",
+          "riferimento": "mail del committente",
+          "scelta": {
+            "da": "file",
+            "modo": "attivazione"
+          },
+          "scheda": {
+            "attivazione": "2026-09-14",
+            "cadenza": "Sempre",
+            "calendario": "FERIALE",
+            "calendario_base": "CAL-LV-FER",
+            "disattivazione": "2027-06-30",
+            "fermate": [
+              {
+                "km_vuoti": 5.1,
+                "luogo": "PAP-203",
+                "orario": "07:35",
+                "riconosciuto": "casa",
+                "salgono": 1,
+                "scendono": 0
+              },
+              {
+                "km_pieni": 6.4,
+                "luogo": "L-TRASB-PONTE",
+                "orario": "07:55",
+                "riconosciuto": "nome",
+                "salgono": 1,
+                "scendono": 0
+              },
+              {
+                "km_pieni": 11.9,
+                "luogo": "L-CENTRO",
+                "orario": "08:20",
+                "riconosciuto": "scuola",
+                "salgono": 0,
+                "scendono": 2
+              }
+            ],
+            "forma_cadenza": "giorni_segnati",
+            "giorni": [
+              "lunedi",
+              "martedi",
+              "mercoledi",
+              "giovedi",
+              "venerdi"
+            ],
+            "nr": "4000503/1",
+            "nuova_modifica": "nuova",
+            "scuole": [
+              "SC-CENTRO"
+            ],
+            "servizio": "Andata Mattino",
+            "tot_giorni": 202,
+            "tot_km_carico": 18.3,
+            "tot_km_vuoto": 5.1,
+            "totali_alunni": 2,
+            "verso": "andata"
+          }
+        }
+      ]
+    }
+  ],
+  "schema": "schede_servizi",
+  "schema_versione": 2
+}
