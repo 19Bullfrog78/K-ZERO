@@ -897,6 +897,14 @@
   registro, due schede con lo stesso codice davano K-CTR-009 senza "{prima}" e `kzero controlla` si fermava con un errore interno (difetto
   dal K-021; anche due profili con lo stesso codice). Corretto come gli altri codici doppi; prova nuova (Schede.CodiciDoppiNelRegistroENeiProfili)
   e il caso in tests/fuzz/casi/pacchetto-schede_servizi.json. Sabotaggio (la correzione tolta): presi tutti e due.
+- 2026-11-22 - K-024 (programma, proposta "K-024: tipo di servizio per scheda"). Punto 0, le prove mancanti del K-023 (sabotaggi
+  dell'arbitro che nessuna prova prendeva; il codice era gia' giusto): S7, con la variante 47 (scheda ferma) gli avvisi della lettura di
+  quella scheda (K-CTR-163, K-CTR-165, K-CTR-176) sono tolti e quelli delle altre schede del file restano; S10, file con il segno "date
+  dal 1904" e il foglio delle interruzioni: le interruzioni scritte come numeri di Excel si leggono nei giorni giusti. Prove:
+  test_schede (+1), test_schede_comandi (+1). Sabotaggi, tutti presi e solo dalle prove nuove: avvisi della scheda ferma non tolti;
+  tolti anche quelli delle altre schede; interruzioni lette nel sistema del 1900 (Dal; Al). Per i punti 1-3 (tipo per scheda, numero
+  dei disabili, cosa resta nei dati comuni) prima le domande e le proposte per l'arbitro (K-024-domande-per-l-arbitro.md, consegnato
+  come file), niente codice.
 ## Bug e limiti noti
 - (K-018) L'avviso sui nomi liberi trova solo il nome scritto come nei dati (senza maiuscole ne' accenti, parole intere):
   non i nomi scritti male, i soprannomi, le iniziali, le sigle ("S-DIS"), un nome dentro una parola piu' lunga, le parole

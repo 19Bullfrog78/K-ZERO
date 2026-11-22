@@ -254,6 +254,37 @@ TEST(SchedeComandi, DateDal1904LetteDalFile) {
     EXPECT_TRUE(senza_giorni) << k.dump(2);
 }
 
+// K-024, punto 0 (S10, sabotaggio dell'arbitro sul K-023 non preso): il segno "date dal 1904" vale anche per il foglio delle interruzioni.
+// La scheda 4000123/3 con il profilo PS-CVA alla versione 2 (con il foglio delle interruzioni), attivazione e disattivazione e due delle tre
+// interruzioni scritte come numeri di Excel nel sistema del 1904 (la terza come testo): le interruzioni si leggono nei giorni giusti
+// (21/12/2026 - 08/01/2027, 15 - 19/02/2027, 03/05/2027) e il Tot Giorni 165 torna. Lette come date del 1900 le stesse cifre cadrebbero
+// nel 2022, fuori dal periodo della scheda (variante 44). Sabotaggio: le interruzioni lette sempre nel sistema del 1900.
+TEST(SchedeComandi, InterruzioniDal1904LetteDalFile) {
+    Prova p(pacchetto_k023());
+    const Fogli tutte = fogli_di_prova();
+    Fogli f;
+    f.schede = {tutte.schede[0], tutte.schede[1]};
+    f.fermate = {tutte.fermate[0], tutte.fermate[1], tutte.fermate[2], tutte.fermate[3]};
+    f.schede[1][4] = "#44817";    // 2026-09-14 nel sistema del 1904
+    f.schede[1][5] = "#45088";    // 2027-06-12
+    f.schede[1][16] = "#165";     // 175 giorni meno le interruzioni
+    f.interruzioni = {{"Nr", "Dal", "Al"},
+                      {"4000123 / 3", "#44915", "#44933"},          // 2026-12-21 - 2027-01-08
+                      {"4000123 / 3", "15/02/2027", "19/02/2027"},  // come testo: non cambia con il sistema delle date
+                      {"4000123 / 3", "#45048", "#45048"}};         // 2027-05-03
+    p.file("1904.xlsx", f, true);
+    const JsonDati j = JsonDati::parse(p.leggi("1904.xlsx", {"--validita", "attivazione", "--formato", "json"}, false).uscita);
+    const JsonDati& s = j.at("schede").at(0);
+    ASSERT_EQ(s.at("esito"), "nuova") << j.dump(2);
+    EXPECT_EQ(j.at("righe").at("interruzioni"), 3);
+    EXPECT_EQ(s.at("dal").get<std::string>() + " " + s.at("al").get<std::string>(), "2026-09-14 2027-06-12");
+    const JsonDati attese = JsonDati::array({{{"dal", "2026-12-21"}, {"al", "2027-01-08"}},
+                                             {{"dal", "2027-02-15"}, {"al", "2027-02-19"}},
+                                             {{"dal", "2027-05-03"}, {"al", "2027-05-03"}}});
+    EXPECT_EQ(s.at("interruzioni"), attese) << j.dump(2);
+    for (const JsonDati& x : j.at("problemi")) EXPECT_NE(x.at("codice"), "K-CTR-163") << j.dump(2);
+}
+
 namespace {
 
 // Il pacchetto di prova (in chiaro) con la scheda d'infanzia a due giri (km solo sull'ultima riga) e dei turni con i pezzi dati della

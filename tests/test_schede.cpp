@@ -1270,3 +1270,51 @@ TEST(Schede, CodiciDoppiNelRegistroENeiProfili) {
     const std::vector<Problem> tutti = check_package(l.pacchetto);   // e kzero controlla scrive tutti i messaggi
     EXPECT_NO_THROW(messaggi(l, tutti));
 }
+
+// K-024, punto 0 (S7, sabotaggio dell'arbitro sul K-023 non preso): con la variante 47 (la scheda si ferma) gli avvisi della lettura di
+// quella scheda si tolgono, come dice DECISIONI.md (K-023, "Una versione senza giorni non si scrive"); quelli delle altre schede del file
+// restano. La scheda 4000502/1 (profilo PS-CVA-H) da sola, con il Tot Giorni sbagliato e "Modifica" per un ID mai visto, ha tre avvisi della
+// lettura: K-CTR-163, K-CTR-176 (la coincidenza al Ponte di Sorgenta) e K-CTR-165 (variante 1). Con la data scelta dal 28/06/2027 e
+// un'interruzione dal 28 al 30/06 (la disattivazione) non ha nessun giorno: si ferma (variante 47) e dei suoi avvisi non ne resta nessuno.
+// La 4000501/1 dello stesso file, con il Tot Giorni sbagliato, tiene il suo K-CTR-163. Sabotaggi: avvisi della scheda ferma non tolti;
+// tolti anche quelli delle altre schede.
+TEST(Schede, Variante47TogliSoloGliAvvisiDiQuellaScheda) {
+    const Lettura l = lettura_k023();
+    const Fogli k = fogli_k023();
+    Fogli f;
+    f.schede = {k.schede[0], k.schede[1], k.schede[2]};
+    f.schede[1][16] = "#1";            // 4000501/1: Tot Giorni sbagliato (K-CTR-163)
+    f.schede[2][16] = "#1";            // 4000502/1: Tot Giorni sbagliato (K-CTR-163)
+    f.schede[2][21] = "Modifica";      // 4000502/1: modifica di un ID mai visto (K-CTR-165, variante 1)
+    f.fermate = {k.fermate[0], k.fermate[1], k.fermate[2], k.fermate[3], k.fermate[4]};
+    f.date = k.date;
+    f.interruzioni = k.interruzioni;
+    f.interruzioni.push_back({"4000502 / 1", "28/06/2027", "30/06/2027"});
+    const auto scelta = [](Day d) {
+        DateChoices s = attivazione();
+        s.by_nr["4000502/1"] = DateChoice{DateChoice::Kind::Date, d};
+        return s;
+    };
+    const auto della = [](const Letto& x, const std::string& nr) {
+        std::vector<std::string> out;
+        for (const Problem& p : x.m.problems)
+            for (const Param& q : p.params)
+                if (q.name == "scheda" && q.text == nr) out.push_back(definizione_controllo(p.check).codice + " v" + std::to_string(p.variant));
+        std::sort(out.begin(), out.end());
+        return out;
+    };
+    // Prima: con un giorno di servizio (dal 25/06, un venerdi') la 4000502/1 si legge, con i suoi tre avvisi.
+    const Letto con = leggi(l, f, scelta(day_from_ymd(2027, 6, 25)), kPresa, false, "PS-CVA-H");
+    ASSERT_EQ(con.m.outcomes.at(1).kind, CardOutcome::Kind::New) << ::testing::PrintToString(messaggi(con.dopo, con.m.problems));
+    EXPECT_EQ(della(con, "4000502/1"), (std::vector<std::string>{"K-CTR-163 v1", "K-CTR-165 v1", "K-CTR-176 v0"}))
+        << ::testing::PrintToString(messaggi(con.dopo, con.m.problems));
+    EXPECT_EQ(della(con, "4000501/1"), (std::vector<std::string>{"K-CTR-163 v1"}));
+    // Dal 28/06: nessun giorno, la scheda si ferma e restano solo l'errore e l'avviso dell'altra scheda.
+    const Letto senza = leggi(l, f, scelta(day_from_ymd(2027, 6, 28)), kPresa, false, "PS-CVA-H");
+    EXPECT_EQ(senza.m.outcomes.at(0).kind, CardOutcome::Kind::New);
+    ASSERT_EQ(senza.m.outcomes.at(1).kind, CardOutcome::Kind::Stopped);
+    EXPECT_EQ(senza.m.outcomes.at(1).fault, CardFault::VersionWithoutDays);
+    EXPECT_EQ(della(senza, "4000502/1"), (std::vector<std::string>{"K-CTR-160 v47"})) << ::testing::PrintToString(messaggi(senza.dopo, senza.m.problems));
+    EXPECT_EQ(della(senza, "4000501/1"), (std::vector<std::string>{"K-CTR-163 v1"}));
+    EXPECT_EQ(senza.m.problems.size(), 2u) << ::testing::PrintToString(messaggi(senza.dopo, senza.m.problems));
+}
