@@ -929,6 +929,23 @@ TEST(Api, classi_marcate_negli_schemi) {
         // K-021: le caselle della copia della scheda nel registro, come la pedana e "individualizzato" del servizio.
         "schede_servizi/schede/*/versioni/*/scheda/attrezzato",
         "schede_servizi/schede/*/versioni/*/scheda/individualizzato",
+        // K-024, versione 3: il numero dei disabili e il tipo scelto nella copia della scheda; il tipo del profilo e quello di ogni
+        // regola del tipo (D1 A: nella 1 e nella 2 erano comuni, e con il registro dicevano il tipo di ogni scheda).
+        "schede_servizi/schede/*/versioni/*/scheda/disabili",
+        "schede_servizi/schede/*/versioni/*/scheda/tipo/tipo",
+        "schede_servizi/schede/*/versioni/*/scheda/tipo/tipo_descrizione",
+        "schede_servizi/schede/*/versioni/*/scheda/tipo/tipo_gruppo",
+        "schede_servizi/schede/*/versioni/*/scheda/tipo/tipo_gruppo_descrizione",
+        "schede_servizi/schede/*/versioni/*/scheda/tipo/da",
+        "schede_servizi/schede/*/versioni/*/scheda/tipo/regola",
+        "profili_schede/profili/*/servizio/tipo",
+        "profili_schede/profili/*/servizio/tipo_descrizione",
+        "profili_schede/profili/*/servizio/tipo_gruppo",
+        "profili_schede/profili/*/servizio/tipo_gruppo_descrizione",
+        "profili_schede/profili/*/regole_tipo/*/servizio/tipo",
+        "profili_schede/profili/*/regole_tipo/*/servizio/tipo_descrizione",
+        "profili_schede/profili/*/regole_tipo/*/servizio/tipo_gruppo",
+        "profili_schede/profili/*/regole_tipo/*/servizio/tipo_gruppo_descrizione",
         "servizi/servizi/*/domanda/gruppi/*/tipo",
         "servizi/servizi/*/domanda/gruppi/*/tipo_descrizione",
         "servizi/servizi/*/domanda/gruppi/*/fermate/*/carrozzine",

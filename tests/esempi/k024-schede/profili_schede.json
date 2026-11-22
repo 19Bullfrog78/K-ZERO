@@ -1,0 +1,163 @@
+{
+  "schema": "profili_schede",
+  "schema_versione": 3,
+  "profili": [
+    {
+      "codice": "PS-CVA",
+      "nome": "Modello K-Zero delle schede dei servizi del Consorzio Valle Alta, con le regole del tipo e la colonna del numero a bordo (profilo di prova, inventato)",
+      "committente": "CVA",
+      "fogli": {
+        "schede": "Schede",
+        "fermate": "Fermate",
+        "date": "Date",
+        "interruzioni": "Interruzioni"
+      },
+      "codici_esterni": {
+        "sistema": "Consorzio Valle Alta",
+        "tipo_scheda": "scheda",
+        "tipo_nr": "nr scheda",
+        "tipo_servizio": "servizio",
+        "tipo_scuola": "scuola",
+        "tipo_fermata": "fermata",
+        "tipo_calendario": "calendario"
+      },
+      "colonne": {
+        "schede": {
+          "nr": "Nr",
+          "id": "ID",
+          "servizio": "Servizio",
+          "scuole": "Scuole",
+          "attivazione": "Attivazione",
+          "disattivazione": "Disattivazione",
+          "totali_alunni": "Totali alunni",
+          "individualizzato": "Servizio Individualizzato",
+          "attrezzato": "Attrezzato",
+          "tot_giorni": "Tot Giorni",
+          "tot_km_carico": "Tot Km Carico",
+          "tot_km_vuoto": "Tot Km Vuoto",
+          "calendario": "Calendario",
+          "cadenza": "Cadenza",
+          "nuova_modifica": "Scheda nuova / Modifica",
+          "disabili": "Disabili"
+        },
+        "fermate": {
+          "nr": "Nr",
+          "orario": "Orario",
+          "punto": "Punto di raccolta",
+          "casa": "Casa",
+          "salgono": "St. Car.",
+          "scendono": "St. Scar.",
+          "km_pieni": "Km pieno",
+          "km_vuoti": "Km vuoto",
+          "accompagnatore": "Accompagnatore"
+        },
+        "date": {
+          "nr": "Nr",
+          "data": "Data"
+        },
+        "interruzioni": {
+          "nr": "Nr",
+          "dal": "Dal",
+          "al": "Al"
+        }
+      },
+      "giorni": [
+        {
+          "colonna": "Lu",
+          "giorno": "lunedi"
+        },
+        {
+          "colonna": "Ma",
+          "giorno": "martedi"
+        },
+        {
+          "colonna": "Me",
+          "giorno": "mercoledi"
+        },
+        {
+          "colonna": "Gi",
+          "giorno": "giovedi"
+        },
+        {
+          "colonna": "Ve",
+          "giorno": "venerdi"
+        },
+        {
+          "colonna": "Sa",
+          "giorno": "sabato"
+        },
+        {
+          "colonna": "Do",
+          "giorno": "domenica"
+        }
+      ],
+      "segno": [
+        "X"
+      ],
+      "servizi": [
+        {
+          "testo": "Andata Mattino",
+          "verso": "andata"
+        },
+        {
+          "testo": "Ritorno Mezzogiorno",
+          "verso": "ritorno"
+        },
+        {
+          "testo": "Ritorno Pomeriggio",
+          "verso": "ritorno"
+        }
+      ],
+      "separatore_scuole": ";",
+      "separatore_nr": "/",
+      "separatore_data": "/",
+      "separatore_ora": ":",
+      "cadenze": [
+        {
+          "parola": "Sempre",
+          "forma": "giorni_segnati"
+        },
+        {
+          "parola": "Ogni 15 giorni",
+          "forma": "date_elencate"
+        }
+      ],
+      "accompagnatore": {
+        "parola": "ACCOMPAGNATORE",
+        "sale": [
+          "SALE"
+        ],
+        "scende": [
+          "SCENDE"
+        ]
+      },
+      "nuova": [
+        "Scheda nuova"
+      ],
+      "modifica": [
+        "Modifica"
+      ],
+      "servizio": {
+        "tipo": "scolastico",
+        "tipo_gruppo": "studenti",
+        "liberta_oraria": {
+          "tipo": "libera",
+          "soglia_da_concordare_minuti": 10
+        }
+      },
+      "regole_tipo": [
+        {
+          "codice": "RT-1",
+          "colonna": "calendario",
+          "valori": [
+            "SPECIALE-A"
+          ],
+          "servizio": {
+            "tipo": "disabili",
+            "tipo_gruppo": "disabili"
+          }
+        }
+      ]
+    }
+  ]
+}

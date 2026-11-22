@@ -2128,6 +2128,18 @@ void elenco_utenti(const JsonDati& d, Package& pk) {
 
 std::vector<std::string> parole_di(const JsonDati& o, const char* k) { return Conversione::testi(o, k); }
 
+// K-024: il tipo del profilo o di una regola (tipo del servizio e del gruppo, con le descrizioni); non noto se manca (dato particolare
+// dalla versione 3, che manca a chi non puo' leggerlo).
+std::optional<CardKind> tipo_scheda(const Conversione& c, const JsonDati& sv) {
+    if (!sv.contains("tipo") || !sv.contains("tipo_gruppo")) return std::nullopt;
+    CardKind k;
+    k.kind = valore_di(kTipiServizio, sv.at("tipo").get<std::string>());
+    k.kind_description = c.testo(sv, "tipo_descrizione");
+    k.group = valore_di(kTipiGruppo, sv.at("tipo_gruppo").get<std::string>());
+    k.group_description = c.testo(sv, "tipo_gruppo_descrizione");
+    return k;
+}
+
 void profili_schede(const JsonDati& d, Package& pk) {
     const Conversione c("profili_schede.json");
     const auto& v = d.at("profili");
@@ -2160,6 +2172,7 @@ void profili_schede(const JsonDati& d, Package& pk) {
                  {"tot_km_vuoto", &s.total_empty_km}, {"calendario", &s.calendar}, {"cadenza", &s.cadence},
                  {"nuova_modifica", &s.new_or_change}})
             *dove = k.at("schede").at(campo).get<std::string>();
+        s.disabled = c.testo(k.at("schede"), "disabili");   // K-024 (versione 3), facoltativo
         CardProfile::StopColumns& t = x.stop_cols;
         for (const auto& [campo, dove] : std::vector<std::pair<const char*, std::string*>>{
                  {"nr", &t.nr}, {"orario", &t.time}, {"punto", &t.point}, {"casa", &t.home}, {"salgono", &t.boarding},
@@ -2190,10 +2203,22 @@ void profili_schede(const JsonDati& d, Package& pk) {
         x.new_words = parole_di(o, "nuova");
         x.change_words = parole_di(o, "modifica");
         const auto& sv = o.at("servizio");
-        x.service_kind = valore_di(kTipiServizio, sv.at("tipo").get<std::string>());
-        x.service_kind_description = c.testo(sv, "tipo_descrizione");
-        x.group_type = valore_di(kTipiGruppo, sv.at("tipo_gruppo").get<std::string>());
-        x.group_type_description = c.testo(sv, "tipo_gruppo_descrizione");
+        // K-024: dalla versione 3 il tipo (del profilo e di ogni regola) e' un dato particolare: manca solo a chi non puo' leggerlo, e
+        // allora non e' noto (K-017), mai un altro tipo.
+        x.kind = tipo_scheda(c, sv);
+        const auto& regole = c.elenco(o, "regole_tipo");
+        for (std::size_t j = 0; j < regole.size(); ++j) {
+            const auto& r = regole[j];
+            CardTypeRule y;
+            y.code = r.at("codice").get<std::string>();
+            const std::string col = r.at("colonna").get<std::string>();
+            y.column = col == "servizio" ? CardRuleColumn::Service : col == "scuole" ? CardRuleColumn::Schools
+                       : col == "cadenza" ? CardRuleColumn::Cadence : CardRuleColumn::Calendar;
+            y.values = parole_di(r, "valori");
+            if (r.contains("servizio")) y.kind = tipo_scheda(c, r.at("servizio"));
+            y.src = c.src(indice(p + "/regole_tipo", j));
+            x.type_rules.push_back(std::move(y));
+        }
         const auto& lib = sv.at("liberta_oraria");
         x.freedom = lib.at("tipo").get<std::string>() == "libera" ? TimeFreedom::Free : TimeFreedom::Fixed;
         x.agree_threshold_min = c.intero(lib, "soglia_da_concordare_minuti");
@@ -2274,6 +2299,18 @@ void schede_servizi(const JsonDati& d, Package& pk) {
             }
             for (const auto& g : c.elenco(s, "date")) k.dates.push_back(c.data(g));
             for (const auto& g : c.elenco(s, "interruzioni")) k.breaks.push_back({c.data(g.at("dal")), c.data(g.at("al"))});   // versione 2
+            // K-024 (versione 3), dati particolari: il numero dei disabili e il tipo scelto (mancano a chi non puo' leggerli).
+            if (s.contains("disabili")) k.disabled = s.at("disabili").get<int>();
+            if (s.contains("tipo")) {
+                const auto& ts = s.at("tipo");
+                if (const auto kk = tipo_scheda(c, ts)) {
+                    Card::ChosenKind ck;
+                    ck.kind = *kk;
+                    ck.from_rule = ts.at("da").get<std::string>() == "regola";
+                    ck.rule = c.testo(ts, "regola");
+                    k.chosen = ck;
+                }
+            }
             y.src = c.src(pv);
             x.versions.push_back(std::move(y));
         }

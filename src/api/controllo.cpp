@@ -68,6 +68,9 @@ Resoconto controlla_lettura(Lettura lettura, const Visibilita& visibilita, const
         // K-021: gli elementi delle schede confrontati con quello che la scheda da' (servono gli elementi come documenti: nell'API).
         std::vector<kzero::Problem> schede = schede::controlla_elementi(r.lettura);
         problemi.insert(problemi.end(), schede.begin(), schede.end());
+        // K-024: i profili delle schede alla versione 1 o 2 (il tipo e' un dato comune).
+        std::vector<kzero::Problem> profili = schede::controlla_profili(r.lettura);
+        problemi.insert(problemi.end(), profili.begin(), profili.end());
         // K-014: senza i dati particolari, il perche' dei turni scoperti o senza mezzo non si dice (riservatezza.hpp).
         if (motivo_dei_turni_riservato(r.lettura.pacchetto, visibilita))
             problemi = turni_senza_motivo(std::move(problemi), r.lettura.pacchetto, !r.lettura.leggibili.particolari);

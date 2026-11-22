@@ -87,6 +87,8 @@ enum class Check {
     // K-022: la domanda di un gruppo.
     DemandSamePlaceTwice,      // lo stesso luogo due volte nella domanda di un gruppo: il confronto con le corse non e' affidabile
     CardEndsAtTransfer,        // K-023: una scheda finisce (o comincia) a un punto di trasbordo senza la riga della sua scuola
+    CardDisabledMismatch,      // K-024: il numero dei disabili di una scheda non torna con il tipo del servizio
+    CardProfileOldVersion,     // K-024: profilo delle schede alla versione 1 o 2 (il tipo e' un dato comune)
     // Turni (K-008): errori.
     ShiftPartInvalid,
     ShiftItemsOrder,
@@ -222,6 +224,8 @@ enum class Element {
     ReadingProfile, ClientList, ListUser,
     // K-021
     CardProfile, ServiceCard,
+    // K-024
+    CardTypeRule,
 };
 
 // Un valore da mettere nel messaggio, al posto di {nome}.

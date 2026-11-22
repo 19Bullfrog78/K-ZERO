@@ -72,13 +72,19 @@ std::string nome_di(const kzero::Card& k) { return k.nr + " " + k.service_text; 
 Elementi elementi(const kzero::ServiceCard& s, const kzero::CardVersion& v, const kzero::CardProfile& pr, const kzero::Index& idx) {
     const kzero::Card& k = v.card;
     Elementi e;
+    // K-024: il tipo e' quello scelto per la versione (dal profilo o da una sua regola); per le versioni scritte prima del K-024, che
+    // non lo hanno, quello del profilo. Non noto (chi non puo' leggere i dati particolari): non si scrive. Il confronto K-CTR-170 non
+    // guarda il tipo; le versioni nuove lo hanno sempre.
+    const std::optional<kzero::CardKind> tipo = k.chosen ? std::optional<kzero::CardKind>(k.chosen->kind) : pr.kind;
     const std::vector<Passaggio> pp = passaggi(k);
     const bool accompagnatore = std::any_of(k.stops.begin(), k.stops.end(), [](const kzero::CardStop& x) { return x.escort != kzero::AssistantMove::None; });
     // Il gruppo: uno solo (D3). Con una scuola sola, la sua scuola; con piu' scuole nessuna (le salite non si dividono mai).
     JsonDati g = JsonDati::object();
     g["codice"] = v.group;
-    g["tipo"] = tipo_gruppo(pr.group_type);
-    if (pr.group_type == kzero::GroupType::Other) g["tipo_descrizione"] = pr.group_type_description;
+    if (tipo) {
+        g["tipo"] = tipo_gruppo(tipo->group);
+        if (tipo->group == kzero::GroupType::Other) g["tipo_descrizione"] = tipo->group_description;
+    }
     g["verso"] = k.direction == kzero::Direction::Return ? "ritorno" : "andata";
     if (k.schools.size() == 1) g["scuola"] = k.schools.front();
     g["conteggi"] = "esatti";
@@ -112,8 +118,10 @@ Elementi elementi(const kzero::ServiceCard& s, const kzero::CardVersion& v, cons
     sv["codici_esterni"] = JsonDati::array({{{"sistema", pr.ext_system}, {"tipo", pr.ext_card}, {"codice", s.id}},
                                             {{"sistema", pr.ext_system}, {"tipo", pr.ext_nr}, {"codice", k.nr}},
                                             {{"sistema", pr.ext_system}, {"tipo", pr.ext_service}, {"codice", kzero::card_service_number(k.nr, pr)}}});
-    sv["tipo"] = tipo_servizio(pr.service_kind);
-    if (pr.service_kind == kzero::ServiceKind::Other) sv["tipo_descrizione"] = pr.service_kind_description;
+    if (tipo) {
+        sv["tipo"] = tipo_servizio(tipo->kind);
+        if (tipo->kind == kzero::ServiceKind::Other) sv["tipo_descrizione"] = tipo->kind_description;
+    }
     sv["contratto"] = s.contract.code;
     sv["calendario"] = v.calendar;
     JsonDati lib = {{"tipo", pr.freedom == kzero::TimeFreedom::Free ? "libera" : "fissa"}};
@@ -198,6 +206,16 @@ JsonDati scheda_json(const kzero::Card& k) {
     j["totali_alunni"] = k.pupils;
     if (k.individual) j["individualizzato"] = *k.individual;
     if (k.equipped) j["attrezzato"] = *k.equipped;
+    // K-024 (versione 3), dati particolari: il numero dei disabili (se scritto) e il tipo scelto.
+    if (k.disabled) j["disabili"] = *k.disabled;
+    if (k.chosen) {
+        JsonDati x = {{"tipo", tipo_servizio(k.chosen->kind.kind)}, {"tipo_gruppo", tipo_gruppo(k.chosen->kind.group)}};
+        if (!k.chosen->kind.kind_description.empty()) x["tipo_descrizione"] = k.chosen->kind.kind_description;
+        if (!k.chosen->kind.group_description.empty()) x["tipo_gruppo_descrizione"] = k.chosen->kind.group_description;
+        x["da"] = k.chosen->from_rule ? "regola" : "profilo";
+        if (k.chosen->from_rule) x["regola"] = k.chosen->rule;
+        j["tipo"] = x;
+    }
     j["tot_giorni"] = k.total_days;
     j["tot_km_carico"] = km(k.total_loaded_km);
     j["tot_km_vuoto"] = km(k.total_empty_km);
@@ -242,7 +260,7 @@ const char* da_json(kzero::ChoiceFrom f) { return f == kzero::ChoiceFrom::File ?
 }  // namespace
 
 JsonDati registro(const std::vector<kzero::ServiceCard>& schede, const std::vector<kzero::RemovedCardVersions>& tolte) {
-    JsonDati d = {{"schema", "schede_servizi"}, {"schema_versione", 2}};   // K-023: sempre la 2 (contiene la 1)
+    JsonDati d = {{"schema", "schede_servizi"}, {"schema_versione", 3}};   // K-024: sempre la 3 (contiene la 1 e la 2)
     JsonDati v = JsonDati::array();
     for (const kzero::ServiceCard& s : schede) {
         JsonDati j = {{"codice", s.code}, {"id", s.id}, {"committente", s.client.code}, {"profilo", s.profile.code}, {"contratto", s.contract.code}};
@@ -436,6 +454,16 @@ std::vector<kzero::Problem> controlla_elementi(const Lettura& l) {
             }
         }
     }
+    return out;
+}
+
+std::vector<kzero::Problem> controlla_profili(const Lettura& l) {
+    std::vector<kzero::Problem> out;
+    const auto v = l.versioni.find("profili_schede.json");
+    if (v == l.versioni.end() || v->second >= 3) return out;
+    for (const kzero::CardProfile& p : l.pacchetto.card_profiles)
+        out.push_back(kzero::Problem{kzero::Check::CardProfileOldVersion, 0, p.src,
+                                     {kzero::ref_param("profilo", kzero::Element::CardProfile, p.code), kzero::number_param("versione", v->second)}});
     return out;
 }
 
