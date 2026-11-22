@@ -405,3 +405,51 @@ Formato: data - decisione - perche'.
   K-CTR-009 senza il punto in cui il codice compare la prima volta, e il messaggio non si poteva scrivere (errore interno in `kzero
   controlla`). Il difetto c'era dal K-021: il bersaglio del registro non aveva un seme vero. Ora come tutti gli altri codici doppi; il caso
   sta in tests/fuzz/casi/pacchetto-schede_servizi.json.
+- 2026-11-22 - K-024 - **Risposte dell'arbitro alle domande prima del codice** (D1-D9, P1-P9): D1 A (il tipo del profilo e quello di ogni
+  regola particolari, profilo alla versione 3; colonna e valori delle regole comuni; nel registro alla versione 3 tipo, origine e regola
+  nella copia della scheda, particolari); D2 A (due regole con tipi diversi fermano la scheda; la stessa parola in due regole della stessa
+  colonna e' un profilo ambiguo, comune); D3 A (solo servizio, scuole, calendario, cadenza; solo il foglio Schede); D4 A; D5 A; D6 A; D7
+  come la tabella, con la variante 2 di K-CTR-177 e il controllo anche in `kzero controlla`; D8 B (non A); D9 A. P1-P9 accettate; K-CTR-137
+  sui valori delle regole resta come oggi (la definizione `parola`); nel testo senza il permesso la riga del tipo resta quella di oggi.
+- 2026-11-22 - K-024 - **Limite chiuso: il tipo delle schede si leggeva dai dati comuni** (dal K-021, trovato prima del codice del K-024 e
+  verificato dall'arbitro su main): il registro delle schede (comune) dice con quale profilo e' stata letta ogni scheda, e il profilo (tutto
+  comune nelle versioni 1 e 2) dice il tipo; chi vedeva solo i dati comuni sapeva il tipo di ogni servizio fatto da una scheda (per il K-017
+  deve restare "non noto"). Chiuso dal profilo alla versione 3: il tipo (del profilo e di ogni regola) e' particolare e va nella cassaforte;
+  chi vede solo i comuni vede la regola (colonna e valori) ma non il tipo che da'. Nascondere la parola che fa scattare la regola non sarebbe
+  bastato: la stessa informazione sta nel calendario del servizio (o nella scuola del gruppo, o nel nome del servizio), che resta comune per
+  chi pianifica. I profili alla versione 1 e 2 si leggono come prima, con il tipo comune: `kzero controlla` da' l'avviso K-CTR-178 per ognuno,
+  di qualsiasi tipo, con un testo che non dice il tipo (D8 B: i pacchetti di oggi sono solo di prova, e chi usera' un profilo vecchio con dati
+  veri deve saperlo). Il rischio che resta (chi conosce da fuori il calendario del committente) e' in docs/sicurezza.md.
+- 2026-11-22 - K-024 - **Tipo del servizio scelto per scheda**: le regole del tipo del profilo (versione 3) guardano una colonna del foglio
+  delle schede (solo i testi: verso e momento, scuole, calendario, cadenza) e scattano se la cella, tutta, e' uno dei valori (per le scuole,
+  una delle scuole della cella), confrontati come le parole del profilo e i codici esterni (senza maiuscole, accenti, punteggiatura e spazi
+  doppi). Si guardano dopo che la scheda e' stata letta tutta. Nessuna regola: il tipo del profilo, come prima. Regole con lo stesso tipo
+  (tipo, gruppo e le due descrizioni): quel tipo, origine la prima nell'ordine del profilo. Tipi diversi (o non noti con piu' regole): la
+  scheda si ferma (K-CTR-160 variante 48, con i codici delle regole, mai i tipi; particolare). La stessa parola in due regole che guardano la
+  stessa colonna: K-CTR-173 variante 6 (comune: non servono i tipi); il codice di una regola due volte nel profilo: K-CTR-009. La regola da'
+  solo il tipo (servizio e gruppo, con le descrizioni): la liberta' oraria resta quella del profilo, perche' e' un dato comune del servizio e
+  direbbe quali schede hanno fatto scattare la regola (D9). Il programma non conosce nessuna parola di un committente.
+- 2026-11-22 - K-024 - **Il tipo fa parte della versione** (D4): la stessa scheda con un altro tipo e' una versione nuova, con le regole di
+  sempre (la data la sceglie l'utente, i giorni prima non cambiano); "tipo" e' tra le cose che cambiano, particolare. Per una versione scritta
+  prima del K-024 (senza il tipo nel registro) il tipo e' quello del suo servizio e del suo gruppo nel pacchetto (`leggi-schede` ha sempre
+  tutti e due i permessi); senza il servizio, o con un tipo non noto, il tipo non si confronta. Il registro non riscrive le versioni che
+  restano: quelle di prima del K-024 restano senza il tipo. Gli elementi di una versione si fanno con il suo tipo; quelli delle versioni di
+  prima del K-024 (solo per il confronto K-CTR-170, che non guarda il tipo) con il tipo del profilo, e senza tipo se non e' noto.
+- 2026-11-22 - K-024 - **Il numero dei disabili** (D5, D6, D7): colonna facoltativa del profilo alla versione 3; solo il numero, mai nomi o
+  codici; sta solo nella copia della scheda nel registro (particolare): servizio, gruppo e corsa non cambiano, perche' la scheda non dice dove
+  salgono i disabili e un numero non si divide mai indovinando. Cella vuota = "non scritto" (nessun controllo, mai 0); il numero quando la
+  scheda ha la voce, 0 se la voce c'e' ma e' vuota (il foglio Istruzioni del modello lo aggiorna l'arbitro: non e' nel deposito). Scritto male
+  (anche una cella illeggibile: la variante 0, comune, direbbe che nella colonna c'e' qualcosa) ferma la scheda (K-CTR-160 variante 49);
+  piu' delle persone a bordo (Totali alunni comprende l'accompagnatore: meno 1 se la scheda lo ha) anche (variante 50); tutte e due
+  particolari. Avviso K-CTR-177 (particolare; richiede i dati particolari): variante 0 tipo disabili con 0; 1 disabili a bordo di un servizio
+  scolastico, di linea o NCC (promiscuo di fatto); 2 tipo disabili con a bordo anche persone che non sono disabili; niente con `altro`.
+  Nella lettura con il tipo scelto (tolto con la variante 47, come gli altri avvisi della lettura); in `kzero controlla` per ogni versione del
+  registro con il tipo del suo servizio nel pacchetto (nella domanda D7 avevo scritto "l'ultima copia": ogni versione ha il suo servizio, e
+  guardarle tutte non dice di piu' a nessuno). Versioni: due numeri scritti diversi fanno una versione nuova; "non scritto" da una parte non
+  si confronta (chi aggiunge la colonna al profilo e rilegge lo stesso file non rifa' tutte le schede).
+- 2026-11-22 - K-024 - **Uscite**: registro `schede_servizi` sempre alla versione 3 (contiene la 1 e la 2); uscita di `leggi-schede` alla
+  versione 3 (`schede` 3, la 2 tra le non piu' prodotte): nel blocco `particolari` anche `tipo_gruppo`, `da`, `regola`, `disabili`. Nel testo,
+  con i profili di oggi (senza regole e senza la colonna), la riga del tipo resta quella di prima; con le regole dice il gruppo e da dove
+  viene il tipo, con la colonna il numero. Senza `--includi-dati-particolari` nessun segno della regola: la riga del tipo non c'e' (come
+  prima), gli avvisi particolari si contano soltanto, e una scheda ferma per un motivo particolare (varianti 48-50) dice "il motivo
+  riguarda i dati particolari" invece di rimandare a un problema che non e' elencato.

@@ -93,7 +93,9 @@ Una regola sola, ricavata dalle marcature degli schemi (`x-kzero-classe`, src/ap
 - (K-021) le **schede dei servizi** lette con `kzero leggi-schede` (formato-dati.md, `schede_servizi.json`): nella cassaforte, con
   le stesse classi degli schemi e nessuna regola nuova, il tipo del servizio e del gruppo, la pedana obbligatoria, il servizio
   **individualizzato** (servizi.json versione 4), l'assistente richiesto e, nel registro delle schede, le due caselle
-  "individualizzato" e "attrezzato" della copia della scheda (riconosciute dal numero della versione, `x-kzero-chiave`). Le case
+  "individualizzato" e "attrezzato" della copia della scheda (riconosciute dal numero della versione, `x-kzero-chiave`); dal K-024
+  anche il tipo scelto e il numero dei disabili della copia (registro alla versione 3) e, nel profilo delle schede alla versione 3, il
+  tipo del profilo e quello di ogni regola del tipo (riconosciuta dal suo codice). Le case
   porta a porta che le schede creano hanno solo il codice e il tipo (nessun nome, indirizzo o posizione: niente nella
   cassaforte finche' il mandato del legame con le persone non le completa); con il porta a porta sensibile, o un giro che passa
   da un luogo sensibile, sono legate come le altre case. Scrivono nella cassaforte solo chi ha i dati personali e particolari,
