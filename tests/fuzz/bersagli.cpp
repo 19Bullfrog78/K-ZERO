@@ -31,6 +31,7 @@
 #include "schede.hpp"
 #include "schede_scrittura.hpp"
 #include "schemi_dati.hpp"
+#include "ricerca.hpp"
 #include "tempo.hpp"
 #include "uscita.hpp"
 #include "elenco.hpp"
@@ -634,9 +635,11 @@ const Lettura& lettura_schede() {
         const std::string k019 = std::string(KZERO_SORGENTI) + "/tests/esempi/k019-elenco/";
         const std::string k021 = std::string(KZERO_SORGENTI) + "/tests/esempi/k021-schede/";
         const std::string k023 = std::string(KZERO_SORGENTI) + "/tests/esempi/k023-schede/";
+        const std::string k024 = std::string(KZERO_SORGENTI) + "/tests/esempi/k024-schede/";
         const JsonDati c19 = JsonDati::parse(testo_di(k019 + "codici_esterni.json"));
         const JsonDati c21 = JsonDati::parse(testo_di(k021 + "codici_esterni.json"));
         const JsonDati c23 = JsonDati::parse(testo_di(k023 + "codici_esterni.json"));
+        const JsonDati c24 = JsonDati::parse(testo_di(k024 + "codici_esterni.json"));
         for (const auto& v : demo.voci()) {
             std::string t = demo.leggi(v.nome, kMassimoByteFile).testo;
             for (const char* f : {"scuole", "luoghi", "calendari"})
@@ -644,7 +647,7 @@ const Lettura& lettura_schede() {
                     JsonDati d = JsonDati::parse(t);
                     for (JsonDati& x : d.at(f)) {
                         const std::string c = x.at("codice").get<std::string>();
-                        for (const JsonDati* codici : {&c19, &c21, &c23}) {
+                        for (const JsonDati* codici : {&c19, &c21, &c23, &c24}) {
                             if (!codici->contains(f) || !codici->at(f).contains(c)) continue;
                             if (!x.contains("codici_esterni")) x["codici_esterni"] = JsonDati::array();
                             for (const JsonDati& e : codici->at(f).at(c)) x["codici_esterni"].push_back(e);
@@ -654,8 +657,26 @@ const Lettura& lettura_schede() {
                 }
             m.file[v.nome] = t;
         }
-        // K-023: i profili alla versione 2 (PS-CVA con il foglio delle interruzioni, PS-CVA-H per i servizi per disabili).
-        m.file["profili_schede.json"] = testo_di(k023 + "profili_schede.json");
+        // K-023: i profili alla versione 2 (PS-CVA con il foglio delle interruzioni, PS-CVA-H per i servizi per disabili). K-024: alla
+        // versione 3 (la contiene) e, in piu', il profilo del K-024 (regola del tipo sul calendario e colonna dei disabili) e uno con
+        // regole su tutte e quattro le colonne, anche con tipi diversi sulla stessa scheda (si deve fermare).
+        JsonDati pr = JsonDati::parse(testo_di(k023 + "profili_schede.json"));
+        pr["schema_versione"] = 3;
+        JsonDati p24 = JsonDati::parse(testo_di(k024 + "profili_schede.json")).at("profili").at(0);
+        p24["codice"] = "PS-CVA-T";
+        JsonDati p4 = p24;
+        p4["codice"] = "PS-CVA-R";
+        p4.at("colonne").at("schede").erase("disabili");
+        const auto regola = [](const char* c, const char* col, std::vector<std::string> v, const char* tipo, const char* gruppo) {
+            return JsonDati{{"codice", c}, {"colonna", col}, {"valori", v}, {"servizio", {{"tipo", tipo}, {"tipo_gruppo", gruppo}}}};
+        };
+        p4["regole_tipo"] = JsonDati::array({regola("RT-1", "calendario", {"SPECIALE-A", "FERIALE"}, "disabili", "disabili"),
+                                            regola("RT-2", "servizio", {"Andata Mattino"}, "linea", "utenti_linea"),
+                                            regola("RT-3", "scuole", {"Centro diurno Il Faro"}, "disabili", "disabili"),
+                                            regola("RT-4", "cadenza", {"Ogni 15 giorni"}, "ncc", "adulti_autorizzati")});
+        pr.at("profili").push_back(p24);
+        pr.at("profili").push_back(p4);
+        m.file["profili_schede.json"] = pr.dump(2);
         Lettura x = leggi_pacchetto(m);
         if (!x.forma_valida()) guasto("pacchetto di prova delle schede con errori di forma");
         return x;
@@ -685,7 +706,7 @@ void prova_schede_righe(const std::uint8_t* dati, std::size_t n) {
     const Lettura& l = lettura_schede();
     const kzero::Index idx(l.pacchetto);
     const kzero::CardTables tab = tabelle_da_testo(std::string(reinterpret_cast<const char*>(dati), n));
-    // K-023: tutti e due i profili di prova (alla versione 2, con il foglio delle interruzioni).
+    // K-023: tutti i profili di prova (con il foglio delle interruzioni); K-024: con le regole del tipo e la colonna dei disabili.
     for (const kzero::CardProfile& p : l.pacchetto.card_profiles) {
         for (const bool date1904 : {false, true}) {
             const kzero::CardsRead r = kzero::read_cards(tab, p, idx, date1904);
@@ -729,6 +750,27 @@ void prova_schede_righe(const std::uint8_t* dati, std::size_t n) {
                                       });
                     if (!riga && !(coincidenza && coincidenza->school == sc && k.schools.size() == 1))
                         guasto("scuola senza la sua riga accettata fuori dalla coincidenza");
+                }
+                // K-024: il numero dei disabili mai piu' delle persone a bordo (accompagnatore escluso); il tipo sempre scelto (il profilo
+                // lo conosce), e quello della regola che dice, o del profilo; mai due regole che scattano con tipi diversi (si ricostruisce
+                // per calendario, cadenza e verso e momento, che la scheda letta ha come parola; le scuole sono codici).
+                if (k.disabled && (*k.disabled < 0 || *k.disabled > kzero::card_passengers(k))) guasto("piu' disabili delle persone a bordo accettati");
+                if (!k.chosen) guasto("scheda letta senza il tipo");
+                const kzero::CardTypeRule* da = nullptr;
+                for (const kzero::CardTypeRule& g : p.type_rules)
+                    if (g.code == k.chosen->rule) da = &g;
+                if (k.chosen->from_rule ? (!da || !da->kind || *da->kind != k.chosen->kind) : (!p.kind || *p.kind != k.chosen->kind))
+                    guasto("tipo diverso da quello della regola o del profilo");
+                for (const kzero::CardTypeRule& g : p.type_rules) {
+                    std::string cella;
+                    if (g.column == kzero::CardRuleColumn::Calendar) cella = k.calendar_word;
+                    else if (g.column == kzero::CardRuleColumn::Cadence) cella = k.cadence_word;
+                    else if (g.column == kzero::CardRuleColumn::Service) cella = k.service_text;
+                    else continue;
+                    const bool scatta = std::any_of(g.values.begin(), g.values.end(),
+                                                    [&](const std::string& v) { return kzero::normalize_name(v) == kzero::normalize_name(cella); });
+                    if (scatta && (!g.kind || *g.kind != k.chosen->kind)) guasto("due regole con tipi diversi accettate");
+                    if (scatta && !k.chosen->from_rule) guasto("regola che scatta ignorata");
                 }
                 if (coincidenza) {
                     const kzero::CardStop& capo = coincidenza->at_start ? k.stops.front() : k.stops.back();
@@ -785,6 +827,11 @@ void scrivi_semi_schede(const std::string& cartella) {
     std::ofstream(fs::path(cartella) / "schede-righe" / "seme-k023", std::ios::binary)
         << testo_di(k023 + "schede.tsv") << "@@\n" << testo_di(k023 + "fermate.tsv") << "@@\n" << testo_di(k023 + "date.tsv") << "@@\n"
         << testo_di(k023 + "interruzioni.tsv");
+    // K-024: le quattro schede del tipo per scheda (con la colonna dei disabili).
+    const std::string k024 = std::string(KZERO_SORGENTI) + "/tests/esempi/k024-schede/";
+    std::ofstream(fs::path(cartella) / "schede-righe" / "seme-k024", std::ios::binary)
+        << testo_di(k024 + "schede.tsv") << "@@\n" << testo_di(k024 + "fermate.tsv") << "@@\n" << testo_di(k024 + "date.tsv") << "@@\n"
+        << testo_di(k024 + "interruzioni.tsv");
 }
 
 int prova_semi_schede() {
@@ -815,6 +862,15 @@ int prova_semi_schede() {
     if (q.cards.size() != 3 || q.cards[0].fault || q.cards[1].fault || q.cards[2].fault || q.cards[0].card.breaks.size() != 3 ||
         !kzero::card_transfer_end(q.cards[1].card, idx))
         guasto("il seme delle schede del K-023 non si legge come atteso");
+    // K-024: le quattro schede si leggono con il profilo del K-024 (due con il tipo della regola); con PS-CVA-R le due per disabili si
+    // fermano (RT-2 e RT-3 o RT-1 con tipi diversi).
+    const std::string k024 = std::string(KZERO_SORGENTI) + "/tests/esempi/k024-schede/";
+    const kzero::CardTables t24 = tabelle_da_testo(testo_di(k024 + "schede.tsv") + "@@\n" + testo_di(k024 + "fermate.tsv") + "@@\n" +
+                                                   testo_di(k024 + "date.tsv") + "@@\n" + testo_di(k024 + "interruzioni.tsv"));
+    const kzero::CardsRead s = kzero::read_cards(t24, *idx.card_profile("PS-CVA-T"), idx, false);
+    if (s.cards.size() != 4 || s.cards[0].fault || s.cards[1].fault || s.cards[2].fault || s.cards[3].fault || !s.cards[1].card.chosen ||
+        !s.cards[1].card.chosen->from_rule || s.cards[0].card.chosen->from_rule)
+        guasto("il seme delle schede del K-024 non si legge come atteso");
     return n;
 }
 
