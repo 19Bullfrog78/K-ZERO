@@ -189,6 +189,8 @@ struct Calcolo {
     Lettura nuova;
     std::string committente;
     bool con_interruzioni = false;   // K-023: il profilo ha il foglio delle interruzioni
+    bool con_regole = false;         // K-024: il profilo ha delle regole del tipo
+    bool con_disabili = false;       // K-024: il profilo ha la colonna dei disabili
 };
 
 Calcolo calcola(Lettura vecchia, const Parametri& par, const Tabelle& t, const std::string& cartella) {
@@ -206,6 +208,8 @@ Calcolo calcola(Lettura vecchia, const Parametri& par, const Tabelle& t, const s
     Calcolo c;
     c.committente = pr.client.code;
     c.con_interruzioni = !pr.sheet_breaks.empty();
+    c.con_regole = !pr.type_rules.empty();
+    c.con_disabili = !pr.card_cols.disabled.empty();
     c.letto = kzero::read_cards(t.t, pr, idx, t.date1904);
     if (c.letto.fault != kzero::TableFault::None)
         throw ErroreKZero(Errore::ColonnaMancante,
@@ -264,20 +268,33 @@ Json interruzioni_json(const kzero::Card& k) {
     return a;
 }
 
-// I dati particolari di una scheda letta (tipo, pedana, individualizzato, accompagnatore richiesto), dal pacchetto nuovo.
+// I dati particolari di una scheda letta (tipo, pedana, individualizzato, accompagnatore richiesto), dal pacchetto nuovo; dal K-024 anche il
+// tipo del gruppo, da dove viene il tipo (profilo o regola) e il numero dei disabili, dalla scheda letta.
 struct Particolari {
-    std::string tipo;
+    std::string tipo, tipo_gruppo;
     bool pedana = false, individualizzato = false, assistente = false;
+    bool da_regola = false;
+    std::string regola;
+    std::optional<int> disabili;
 };
-std::optional<Particolari> particolari_di(const kzero::Index& in, const kzero::Code& servizio) {
+std::optional<Particolari> particolari_di(const kzero::Index& in, const kzero::Code& servizio, const kzero::Card& letta) {
     const kzero::Service* s = in.service(servizio);
     if (!s || !s->kind.known()) return std::nullopt;
     Particolari p;
     static const char* tipi[] = {"linea", "scolastico", "disabili", "ncc", "altro"};
+    static const char* gruppi[] = {"studenti", "disabili", "utenti_linea", "adulti_autorizzati", "altro"};
     p.tipo = tipi[static_cast<int>(s->kind.value())];
     p.pedana = s->rules.ramp_required.value_or(false);
     p.individualizzato = s->individual.value_or(false);
-    for (const kzero::PassengerGroup& g : s->groups) p.assistente = p.assistente || g.assistant_required;
+    for (const kzero::PassengerGroup& g : s->groups) {
+        p.assistente = p.assistente || g.assistant_required;
+        if (p.tipo_gruppo.empty() && g.type.known()) p.tipo_gruppo = gruppi[static_cast<int>(g.type.value())];
+    }
+    if (letta.chosen) {
+        p.da_regola = letta.chosen->from_rule;
+        p.regola = letta.chosen->rule;
+    }
+    p.disabili = letta.disabled;
     return p;
 }
 
@@ -361,8 +378,14 @@ Risultato uscita_lettura(const DefinizioneComando& comando, const Parametri& par
             }
             if (riservata) cambia.push_back({{"cosa", "dati_particolari"}, {"prima", nullptr}, {"dopo", nullptr}, {"riservato", true}});
             s["cambia"] = cambia;
-            const auto pa = scritta && v.particolari ? particolari_di(in, o.service) : std::nullopt;
-            s["particolari"] = pa ? Json{{"tipo", pa->tipo}, {"pedana_obbligatoria", pa->pedana}, {"individualizzato", pa->individualizzato},
+            const auto pa = scritta && v.particolari ? particolari_di(in, o.service, c.letto.cards.at(i).card) : std::nullopt;
+            s["particolari"] = pa ? Json{{"tipo", pa->tipo},
+                                         {"tipo_gruppo", pa->tipo_gruppo},
+                                         {"da", pa->da_regola ? "regola" : "profilo"},
+                                         {"regola", pa->da_regola ? Json(pa->regola) : Json(nullptr)},
+                                         {"disabili", pa->disabili ? Json(*pa->disabili) : Json(nullptr)},
+                                         {"pedana_obbligatoria", pa->pedana},
+                                         {"individualizzato", pa->individualizzato},
                                          {"assistente_richiesto", pa->assistente}}
                                   : Json(nullptr);
             schede.push_back(s);
@@ -436,7 +459,13 @@ Risultato uscita_lettura(const DefinizioneComando& comando, const Parametri& par
             case kzero::CardOutcome::Kind::Same:
                 t += "uguale alla versione " + std::to_string(o.version) + " della scheda " + o.card_code + ": niente da fare.\n";
                 break;
-            case kzero::CardOutcome::Kind::Stopped: t += "ferma (K-CTR-160, sotto): non si legge.\n"; break;
+            case kzero::CardOutcome::Kind::Stopped:
+                // K-024: un motivo che rivela un dato particolare (varianti 48-50) senza il permesso non e' sotto: si conta soltanto.
+                t += o.fault && definizione_controllo(kzero::Check::CardUnreadable).rivela_variante(static_cast<int>(*o.fault)) == Classe::Particolare &&
+                             !v.particolari
+                         ? "ferma: non si legge (il motivo riguarda i dati particolari: --includi-dati-particolari).\n"
+                         : "ferma (K-CTR-160, sotto): non si legge.\n";
+                break;
             case kzero::CardOutcome::Kind::ChoiceMissing: t += "ferma: manca la scelta della data (K-CTR-162, sotto).\n"; break;
         }
         const bool scritta = o.kind == kzero::CardOutcome::Kind::New || o.kind == kzero::CardOutcome::Kind::NewVersion;
@@ -447,9 +476,16 @@ Risultato uscita_lettura(const DefinizioneComando& comando, const Parametri& par
             t += "     Interruzioni (il servizio non si fa): " + ii + ".\n";
         }
         if (scritta && v.particolari)
-            if (const auto pa = particolari_di(in, o.service))
-                t += std::string("     Tipo ") + pa->tipo + ", pedana obbligatoria " + (pa->pedana ? "si'" : "no") + ", servizio individualizzato " +
+            if (const auto pa = particolari_di(in, o.service, c.letto.cards.at(i).card)) {
+                // K-024: con le regole del tipo, il tipo del gruppo e da dove viene il tipo; con la colonna, il numero dei disabili. Con i
+                // profili di oggi (senza regole e senza la colonna) la riga resta quella di prima.
+                std::string tipo = pa->tipo;
+                if (c.con_regole)
+                    tipo += ", gruppo " + pa->tipo_gruppo + (pa->da_regola ? " (regola " + pa->regola + " del profilo)" : " (tipo del profilo)");
+                if (c.con_disabili) tipo += ", disabili a bordo " + (pa->disabili ? std::to_string(*pa->disabili) : std::string("non scritto"));
+                t += "     Tipo " + tipo + ", pedana obbligatoria " + (pa->pedana ? "si'" : "no") + ", servizio individualizzato " +
                      (pa->individualizzato ? "si'" : "no") + ", accompagnatore richiesto " + (pa->assistente ? "si'" : "no") + ".\n";
+            }
     }
     for (const Problema& p : problemi) t += (p.livello == "errore" ? "Errore " : "Avviso ") + p.codice + ": " + p.messaggio + "\n";
     if (riservati) t += std::to_string(riservati) + (riservati == 1 ? " problema" : " problemi") + " sui dati particolari (salute), non elencati: --includi-dati-particolari.\n";

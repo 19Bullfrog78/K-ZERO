@@ -254,6 +254,37 @@ TEST(SchedeComandi, DateDal1904LetteDalFile) {
     EXPECT_TRUE(senza_giorni) << k.dump(2);
 }
 
+// K-024, punto 0 (S10, sabotaggio dell'arbitro sul K-023 non preso): il segno "date dal 1904" vale anche per il foglio delle interruzioni.
+// La scheda 4000123/3 con il profilo PS-CVA alla versione 2 (con il foglio delle interruzioni), attivazione e disattivazione e due delle tre
+// interruzioni scritte come numeri di Excel nel sistema del 1904 (la terza come testo): le interruzioni si leggono nei giorni giusti
+// (21/12/2026 - 08/01/2027, 15 - 19/02/2027, 03/05/2027) e il Tot Giorni 165 torna. Lette come date del 1900 le stesse cifre cadrebbero
+// nel 2022, fuori dal periodo della scheda (variante 44). Sabotaggio: le interruzioni lette sempre nel sistema del 1900.
+TEST(SchedeComandi, InterruzioniDal1904LetteDalFile) {
+    Prova p(pacchetto_k023());
+    const Fogli tutte = fogli_di_prova();
+    Fogli f;
+    f.schede = {tutte.schede[0], tutte.schede[1]};
+    f.fermate = {tutte.fermate[0], tutte.fermate[1], tutte.fermate[2], tutte.fermate[3]};
+    f.schede[1][4] = "#44817";    // 2026-09-14 nel sistema del 1904
+    f.schede[1][5] = "#45088";    // 2027-06-12
+    f.schede[1][16] = "#165";     // 175 giorni meno le interruzioni
+    f.interruzioni = {{"Nr", "Dal", "Al"},
+                      {"4000123 / 3", "#44915", "#44933"},          // 2026-12-21 - 2027-01-08
+                      {"4000123 / 3", "15/02/2027", "19/02/2027"},  // come testo: non cambia con il sistema delle date
+                      {"4000123 / 3", "#45048", "#45048"}};         // 2027-05-03
+    p.file("1904.xlsx", f, true);
+    const JsonDati j = JsonDati::parse(p.leggi("1904.xlsx", {"--validita", "attivazione", "--formato", "json"}, false).uscita);
+    const JsonDati& s = j.at("schede").at(0);
+    ASSERT_EQ(s.at("esito"), "nuova") << j.dump(2);
+    EXPECT_EQ(j.at("righe").at("interruzioni"), 3);
+    EXPECT_EQ(s.at("dal").get<std::string>() + " " + s.at("al").get<std::string>(), "2026-09-14 2027-06-12");
+    const JsonDati attese = JsonDati::array({{{"dal", "2026-12-21"}, {"al", "2027-01-08"}},
+                                             {{"dal", "2027-02-15"}, {"al", "2027-02-19"}},
+                                             {{"dal", "2027-05-03"}, {"al", "2027-05-03"}}});
+    EXPECT_EQ(s.at("interruzioni"), attese) << j.dump(2);
+    for (const JsonDati& x : j.at("problemi")) EXPECT_NE(x.at("codice"), "K-CTR-163") << j.dump(2);
+}
+
 namespace {
 
 // Il pacchetto di prova (in chiaro) con la scheda d'infanzia a due giri (km solo sull'ultima riga) e dei turni con i pezzi dati della
@@ -436,13 +467,13 @@ TEST(SchedeComandi, InterruzioniNelleUscite) {
         << t.uscita;
     EXPECT_EQ(t.uscita.find("K-CTR-163"), std::string::npos) << t.uscita;
     const std::string registro = p.normale("schede_servizi.json");
-    EXPECT_NE(registro.find("\"schema_versione\": 2"), std::string::npos);
+    EXPECT_NE(registro.find("\"schema_versione\": 3"), std::string::npos);   // K-024: il registro si scrive sempre alla 3
     EXPECT_NE(registro.find("\"interruzioni\""), std::string::npos);
     EXPECT_NE(p.normale("calendari.json").find("Interruzione della scheda"), std::string::npos);
     Prova q(pacchetto_k023());
     q.file("interruzioni.xlsx", scheda_con_tre_interruzioni());
     const JsonDati j = JsonDati::parse(q.leggi("interruzioni.xlsx", {"--validita", "attivazione", "--formato", "json"}, false).uscita);
-    EXPECT_EQ(j.at("schema_versione"), 2);
+    EXPECT_EQ(j.at("schema_versione"), 3);   // K-024
     EXPECT_EQ(j.at("righe").at("interruzioni"), 3);
     ASSERT_EQ(j.at("schede").at(0).at("interruzioni").size(), 3u);
     EXPECT_EQ(j.at("schede").at(0).at("interruzioni").at(0), JsonDati({{"dal", "2026-12-21"}, {"al", "2027-01-08"}}));
@@ -453,7 +484,136 @@ TEST(SchedeComandi, InterruzioniNelleUscite) {
     EXPECT_EQ(riga_che_comincia(u.uscita, "Righe:"), "Righe: 1 scheda, 3 fermate, 0 date.");
     EXPECT_EQ(u.uscita.find("nterruzion"), std::string::npos) << u.uscita;
     const JsonDati k = JsonDati::parse(r.leggi("interruzioni.xlsx", {"--validita", "attivazione", "--formato", "json"}, false).uscita);
-    EXPECT_EQ(k.at("schema_versione"), 2);
+    EXPECT_EQ(k.at("schema_versione"), 3);   // K-024
     EXPECT_EQ(k.at("righe").at("interruzioni"), 0);
     EXPECT_EQ(k.at("schede").at(0).at("interruzioni"), JsonDati::array());
+}
+
+// --- K-024: tipo di servizio per scheda -------------------------------------------------------------------------------------------
+
+namespace {
+std::string riga_con(const std::string& testo, const std::string& pezzo) {
+    std::istringstream in(testo);
+    for (std::string r; std::getline(in, r);)
+        if (r.find(pezzo) != std::string::npos) return r;
+    return std::string();
+}
+}  // namespace
+
+// K-024, P6: le uscite di leggi-schede con le quattro schede di prova. Con --includi-dati-particolari la riga del tipo dice il tipo del
+// gruppo, da dove viene il tipo (la regola RT-1 o il profilo) e il numero dei disabili; il JSON (schede, versione 3) lo stesso nel blocco
+// "particolari". Senza il parametro la riga e' quella di oggi e nessun segno della regola: niente tipo, niente regola, niente numero, i
+// due avvisi K-CTR-177 contati soltanto. Sabotaggio: tipo scelto mostrato nell'uscita a chi non ha i dati particolari.
+TEST(SchedeComandi, TipoPerSchedaNelleUscite) {
+    Prova p(pacchetto_k024());
+    p.file("k024.xlsx", fogli_k024());
+    const Risultato con = p.leggi("k024.xlsx", {"--validita", "attivazione", "--includi-dati-particolari"}, false);
+    const Risultato senza = p.leggi("k024.xlsx", {"--validita", "attivazione"}, false);
+    std::cout << "--- con i dati particolari ---\n" << con.uscita << "--- senza ---\n" << senza.uscita;
+    EXPECT_EQ(riga_con(con.uscita, "Tipo disabili"),
+              "     Tipo disabili, gruppo disabili (regola RT-1 del profilo), disabili a bordo 1, pedana obbligatoria si', servizio "
+              "individualizzato si', accompagnatore richiesto no.");
+    EXPECT_EQ(riga_con(con.uscita, "Tipo scolastico"),
+              "     Tipo scolastico, gruppo studenti (tipo del profilo), disabili a bordo 0, pedana obbligatoria no, servizio "
+              "individualizzato no, accompagnatore richiesto no.");
+    EXPECT_NE(con.uscita.find("Avviso K-CTR-177: Scheda 4000603/1: a bordo ci sono 1 disabile su 8 persone"), std::string::npos);
+    EXPECT_NE(con.uscita.find("Avviso K-CTR-177: Scheda 4000604/1: il servizio e' per disabili, ma la scheda scrive 0"), std::string::npos);
+    for (const char* x : {"Tipo disabili", "Tipo scolastico", "RT-1", "regola", "disabili a bordo", "K-CTR-177", "gruppo disabili", "gruppo studenti"})
+        EXPECT_EQ(senza.uscita.find(x), std::string::npos) << x << "\n" << senza.uscita;
+    EXPECT_NE(senza.uscita.find("2 problemi sui dati particolari (salute), non elencati"), std::string::npos) << senza.uscita;
+    EXPECT_NE(senza.uscita.find("Tipo, pedana, servizio individualizzato e accompagnatore richiesto non mostrati"), std::string::npos);
+    const JsonDati j = JsonDati::parse(p.leggi("k024.xlsx", {"--validita", "attivazione", "--includi-dati-particolari", "--formato", "json"}, false).uscita);
+    EXPECT_EQ(j.at("schema_versione"), 3);
+    EXPECT_EQ(j.at("schede").at(1).at("particolari"),
+              JsonDati({{"tipo", "disabili"}, {"tipo_gruppo", "disabili"}, {"da", "regola"}, {"regola", "RT-1"}, {"disabili", 1},
+                        {"pedana_obbligatoria", true}, {"individualizzato", true}, {"assistente_richiesto", false}}));
+    EXPECT_EQ(j.at("schede").at(0).at("particolari").at("da"), "profilo");
+    EXPECT_TRUE(j.at("schede").at(0).at("particolari").at("regola").is_null());
+    const JsonDati k = JsonDati::parse(p.leggi("k024.xlsx", {"--validita", "attivazione", "--formato", "json"}, false).uscita);
+    for (const JsonDati& s : k.at("schede")) EXPECT_TRUE(s.at("particolari").is_null()) << s.dump();
+    EXPECT_EQ(k.at("problemi_riservati"), 2);
+    const std::string tutto = k.dump();
+    for (const char* x : {"RT-1", "regola", "K-CTR-177"}) EXPECT_EQ(tutto.find(x), std::string::npos) << x;
+}
+
+// K-024: con i profili di oggi (versione 1 e 2) l'uscita resta quella di prima: la riga del tipo senza gruppo, origine e numero; nel JSON
+// il tipo viene dal profilo, senza regola e senza numero. Sabotaggio: profilo di oggi letto in modo diverso.
+TEST(SchedeComandi, ProfiliDiOggiStessaUscita) {
+    for (const bool k023 : {false, true}) {
+        Prova p(k023 ? pacchetto_k023() : pacchetto_di_prova());
+        p.file("tre.xlsx", fogli_di_prova());
+        const Risultato t = p.leggi("tre.xlsx", {"--validita", "attivazione", "--includi-dati-particolari"}, false);
+        EXPECT_EQ(riga_con(t.uscita, "Tipo "),
+                  "     Tipo scolastico, pedana obbligatoria no, servizio individualizzato no, accompagnatore richiesto no.")
+            << t.uscita;
+        const JsonDati j = JsonDati::parse(p.leggi("tre.xlsx", {"--validita", "attivazione", "--includi-dati-particolari", "--formato", "json"}, false).uscita);
+        EXPECT_EQ(j.at("schede").at(0).at("particolari"),
+                  JsonDati({{"tipo", "scolastico"}, {"tipo_gruppo", "studenti"}, {"da", "profilo"}, {"regola", nullptr}, {"disabili", nullptr},
+                            {"pedana_obbligatoria", false}, {"individualizzato", false}, {"assistente_richiesto", false}}));
+    }
+}
+
+// K-024: una scheda ferma per due regole con tipi diversi (variante 48, particolare): senza il parametro la riga della scheda non rimanda a
+// un problema elencato; con il parametro si'. Una versione nuova per il tipo: senza il parametro "cambia anche un dato particolare", mai
+// quale.
+TEST(SchedeComandi, RegoleETipoCheCambiaSenzaIDatiParticolari) {
+    PacchettoInMemoria m = pacchetto_k024();
+    JsonDati d = JsonDati::parse(m.file.at("profili_schede.json"));
+    d.at("profili").at(0).at("regole_tipo").push_back(
+        {{"codice", "RT-2"}, {"colonna", "servizio"}, {"valori", {"Andata Mattino"}}, {"servizio", {{"tipo", "linea"}, {"tipo_gruppo", "utenti_linea"}}}});
+    m.file["profili_schede.json"] = d.dump(2);
+    Prova p(m);
+    Fogli f = fogli_k024();
+    f.schede.resize(3);
+    p.file("due.xlsx", f);
+    const Risultato senza = p.leggi("due.xlsx", {"--validita", "attivazione"}, false);
+    const Risultato con = p.leggi("due.xlsx", {"--validita", "attivazione", "--includi-dati-particolari"}, false);
+    EXPECT_NE(senza.uscita.find("4000602/1 (riga 3): ferma: non si legge (il motivo riguarda i dati particolari: --includi-dati-particolari)."),
+              std::string::npos)
+        << senza.uscita;
+    EXPECT_EQ(senza.uscita.find("RT-"), std::string::npos) << senza.uscita;
+    EXPECT_NE(con.uscita.find("4000602/1 (riga 3): ferma (K-CTR-160, sotto): non si legge."), std::string::npos) << con.uscita;
+    EXPECT_NE(con.uscita.find("le regole del tipo RT-1, RT-2 del profilo scattano tutte"), std::string::npos) << con.uscita;
+    // Il tipo che cambia: letta senza la regola RT-1, poi con.
+    PacchettoInMemoria n = pacchetto_k024();
+    JsonDati e = JsonDati::parse(n.file.at("profili_schede.json"));
+    e.at("profili").at(0).erase("regole_tipo");
+    n.file["profili_schede.json"] = e.dump(2);
+    Prova q(n);
+    q.file("k024.xlsx", fogli_k024());
+    q.leggi("k024.xlsx", {"--validita", "attivazione"});
+    // La regola nel profilo del pacchetto chiuso: il profilo e' un file normale con il tipo nella cassaforte; si rifa' con esporta/richiudi.
+    q.amb.password = {kPw};
+    comando({"esporta", q.chiuso.string(), "--utente", "A", "--scrivi", (q.lavoro / "esportato").string()});
+    std::ofstream(q.lavoro / "esportato" / "profili_schede.json", std::ios::binary) << elenco_a_mano::leggi_testo(kCartella24 + "/profili_schede.json");
+    q.amb.password = {kPw};
+    comando({"richiudi", (q.lavoro / "esportato").string(), "--utente", "A", "--scrivi", q.chiuso.string()});
+    const Risultato v_senza = q.leggi("k024.xlsx", {"--validita", "2026-11-23"}, false, "A", kPw, "2026-11-20");
+    const Risultato v_con = q.leggi("k024.xlsx", {"--validita", "2026-11-23", "--includi-dati-particolari"}, false, "A", kPw, "2026-11-20");
+    std::cout << "--- tipo che cambia, senza ---\n" << v_senza.uscita << "--- con ---\n" << v_con.uscita;
+    EXPECT_NE(v_senza.uscita.find("versione nuova 2 della scheda SCH-4000602-1"), std::string::npos) << v_senza.uscita;
+    EXPECT_NE(v_senza.uscita.find("Cambia anche un dato particolare (riservato: --includi-dati-particolari)."), std::string::npos);
+    EXPECT_EQ(v_senza.uscita.find("Cambia tipo"), std::string::npos);
+    EXPECT_NE(v_con.uscita.find("Cambia tipo: prima scolastico (gruppo studenti); dopo disabili (gruppo disabili)."), std::string::npos)
+        << v_con.uscita;
+}
+
+// K-024: kzero controlla dopo la scrittura delle quattro schede. Con tutti e due i permessi e il parametro: i due K-CTR-177 (il tipo del
+// servizio nel pacchetto) e nessun K-CTR-178 (profilo alla versione 3). L'utente B (solo dati personali) non legge il tipo: K-CTR-177 e'
+// tra i controlli non verificati, mai un avviso fatto senza i dati.
+TEST(SchedeComandi, ControllaDopoLaScrittura) {
+    Prova p(pacchetto_k024());
+    p.file("k024.xlsx", fogli_k024());
+    p.leggi("k024.xlsx", {"--validita", "attivazione"});
+    p.amb.password = {kPw};
+    const Risultato a = comando({"controlla", p.chiuso.string(), "--utente", "A", "--includi-dati-particolari"});
+    p.amb.password = {kPwB};
+    const Risultato b = comando({"controlla", p.chiuso.string(), "--utente", "B", "--includi-dati-personali"});
+    std::cout << "--- A ---\n" << a.uscita << "--- B ---\n" << b.uscita;
+    EXPECT_NE(a.uscita.find("K-CTR-177"), std::string::npos) << a.uscita;
+    EXPECT_NE(a.uscita.find("Scheda SCH-4000603-1: a bordo ci sono 1 disabile su 8 persone"), std::string::npos) << a.uscita;
+    EXPECT_EQ(a.uscita.find("K-CTR-178"), std::string::npos) << a.uscita;
+    EXPECT_EQ(riga_con(b.uscita, "K-CTR-177:"), std::string()) << b.uscita;
+    EXPECT_NE(riga_con(b.uscita, "Non verificato (servono i dati particolari").find("K-CTR-177"), std::string::npos) << b.uscita;
+    for (const char* x : {"RT-1", "disabile su"}) EXPECT_EQ(b.uscita.find(x), std::string::npos) << x;
 }

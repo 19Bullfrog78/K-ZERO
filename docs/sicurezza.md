@@ -417,6 +417,18 @@ non ha una password; non protegge da tutto. Detto onestamente:
   "Totali alunni" e i conteggi restano dati comuni (come i conteggi dei gruppi); con un servizio individualizzato un conteggio di
   1 e una casa porta a porta dicono che il giro e' per una persona: la casella e' particolare, il conteggio no (caso C9, accettato
   dall'arbitro).
+- **Il tipo delle schede** (K-024). Fino al K-023 il tipo dei servizi fatti dalle schede si leggeva dai dati comuni: il registro delle
+  schede dice con quale profilo e' stata letta ogni scheda, e il profilo (tutto comune nelle versioni 1 e 2) dice il tipo. Dal profilo alla
+  versione 3 il tipo del profilo e quello di ogni regola del tipo sono dati particolari (nella cassaforte); nel registro il tipo scelto, la
+  regola che lo ha dato e il numero dei disabili sono particolari. I profili alla versione 1 e 2 si leggono ancora, con il tipo comune:
+  `kzero controlla` da' l'avviso K-CTR-178 per ognuno (passare alla 3). **Rischio che resta**: la regola (colonna e valori) e le parole
+  copiate nel registro restano comuni, e il calendario (o la scuola, o il verso e momento) di ogni servizio deve restare comune per chi
+  pianifica. Chi conosce da fuori le parole del committente (es. sa che il calendario SPECIALE-A c'e' solo sulle schede per disabili) capisce
+  il tipo dal calendario del servizio, come nel caso C9 del K-021: il programma non lo puo' nascondere senza togliere i calendari a chi
+  pianifica. Una parola sulla salute nel testo copiato (es. un calendario chiamato con una parola degli elenchi) ha l'avviso K-CTR-137.
+  **Un profilo solo per committente**: con le regole del tipo basta un profilo per tutte le schede del committente; un profilo a parte "per
+  i disabili" dice il tipo con il suo nome o il suo codice (K-CTR-137 lo vede solo se il nome ha una parola degli elenchi): e'
+  sconsigliato.
 - **Le librerie del sistema** (libreria C e C++ del compilatore) non sono nell'elenco dei componenti: le aggiorna il
   sistema operativo.
 

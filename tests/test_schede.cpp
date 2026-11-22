@@ -4,6 +4,7 @@
 #include <gtest/gtest.h>
 
 #include <algorithm>
+#include <functional>
 #include <iostream>
 #include <set>
 #include <string>
@@ -835,7 +836,8 @@ TEST(Schede, ProfiliERegistroAllaVersioneDue) {
     EXPECT_EQ(profilo(v2).break_cols.to, "Al");
     const CardProfile* h = Index(v2.pacchetto).card_profile("PS-CVA-H");
     ASSERT_NE(h, nullptr);
-    EXPECT_EQ(h->service_kind, ServiceKind::Disability);
+    ASSERT_TRUE(h->kind.has_value());
+    EXPECT_EQ(h->kind->kind, ServiceKind::Disability);
     // Il foglio e i suoi titoli: tutti e due o nessuno.
     for (const char* togli : {"fogli", "colonne"}) {
         PacchettoInMemoria m = pacchetto_k023();
@@ -858,6 +860,8 @@ TEST(Schede, ProfiliERegistroAllaVersioneDue) {
     PacchettoInMemoria m = pacchetto_con_schede();
     JsonDati r = JsonDati::parse(m.file.at("schede_servizi.json"));
     r["schema_versione"] = 2;
+    for (JsonDati& s : r.at("schede"))   // K-024: il registro si scrive alla 3; il tipo scelto alla 2 non c'e'
+        for (JsonDati& v : s.at("versioni")) v.at("scheda").erase("tipo");
     r.at("schede").at(0).at("versioni").at(0).at("scheda")["interruzioni"] =
         JsonDati::array({{{"dal", "2026-12-23"}, {"al", "2027-01-06"}}, {{"dal", "2027-02-15"}, {"al", "2027-02-15"}}});
     m.file["schede_servizi.json"] = r.dump(2);
@@ -1269,4 +1273,510 @@ TEST(Schede, CodiciDoppiNelRegistroENeiProfili) {
     EXPECT_NE(doppi[1].find("la prima volta in schede_servizi.json /schede/0"), std::string::npos) << doppi[1];
     const std::vector<Problem> tutti = check_package(l.pacchetto);   // e kzero controlla scrive tutti i messaggi
     EXPECT_NO_THROW(messaggi(l, tutti));
+}
+
+// K-024, punto 0 (S7, sabotaggio dell'arbitro sul K-023 non preso): con la variante 47 (la scheda si ferma) gli avvisi della lettura di
+// quella scheda si tolgono, come dice DECISIONI.md (K-023, "Una versione senza giorni non si scrive"); quelli delle altre schede del file
+// restano. La scheda 4000502/1 (profilo PS-CVA-H) da sola, con il Tot Giorni sbagliato e "Modifica" per un ID mai visto, ha tre avvisi della
+// lettura: K-CTR-163, K-CTR-176 (la coincidenza al Ponte di Sorgenta) e K-CTR-165 (variante 1). Con la data scelta dal 28/06/2027 e
+// un'interruzione dal 28 al 30/06 (la disattivazione) non ha nessun giorno: si ferma (variante 47) e dei suoi avvisi non ne resta nessuno.
+// La 4000501/1 dello stesso file, con il Tot Giorni sbagliato, tiene il suo K-CTR-163. Sabotaggi: avvisi della scheda ferma non tolti;
+// tolti anche quelli delle altre schede.
+TEST(Schede, Variante47TogliSoloGliAvvisiDiQuellaScheda) {
+    const Lettura l = lettura_k023();
+    const Fogli k = fogli_k023();
+    Fogli f;
+    f.schede = {k.schede[0], k.schede[1], k.schede[2]};
+    f.schede[1][16] = "#1";            // 4000501/1: Tot Giorni sbagliato (K-CTR-163)
+    f.schede[2][16] = "#1";            // 4000502/1: Tot Giorni sbagliato (K-CTR-163)
+    f.schede[2][21] = "Modifica";      // 4000502/1: modifica di un ID mai visto (K-CTR-165, variante 1)
+    f.fermate = {k.fermate[0], k.fermate[1], k.fermate[2], k.fermate[3], k.fermate[4]};
+    f.date = k.date;
+    f.interruzioni = k.interruzioni;
+    f.interruzioni.push_back({"4000502 / 1", "28/06/2027", "30/06/2027"});
+    const auto scelta = [](Day d) {
+        DateChoices s = attivazione();
+        s.by_nr["4000502/1"] = DateChoice{DateChoice::Kind::Date, d};
+        return s;
+    };
+    const auto della = [](const Letto& x, const std::string& nr) {
+        std::vector<std::string> out;
+        for (const Problem& p : x.m.problems)
+            for (const Param& q : p.params)
+                if (q.name == "scheda" && q.text == nr) out.push_back(definizione_controllo(p.check).codice + " v" + std::to_string(p.variant));
+        std::sort(out.begin(), out.end());
+        return out;
+    };
+    // Prima: con un giorno di servizio (dal 25/06, un venerdi') la 4000502/1 si legge, con i suoi tre avvisi.
+    const Letto con = leggi(l, f, scelta(day_from_ymd(2027, 6, 25)), kPresa, false, "PS-CVA-H");
+    ASSERT_EQ(con.m.outcomes.at(1).kind, CardOutcome::Kind::New) << ::testing::PrintToString(messaggi(con.dopo, con.m.problems));
+    EXPECT_EQ(della(con, "4000502/1"), (std::vector<std::string>{"K-CTR-163 v1", "K-CTR-165 v1", "K-CTR-176 v0"}))
+        << ::testing::PrintToString(messaggi(con.dopo, con.m.problems));
+    EXPECT_EQ(della(con, "4000501/1"), (std::vector<std::string>{"K-CTR-163 v1"}));
+    // Dal 28/06: nessun giorno, la scheda si ferma e restano solo l'errore e l'avviso dell'altra scheda.
+    const Letto senza = leggi(l, f, scelta(day_from_ymd(2027, 6, 28)), kPresa, false, "PS-CVA-H");
+    EXPECT_EQ(senza.m.outcomes.at(0).kind, CardOutcome::Kind::New);
+    ASSERT_EQ(senza.m.outcomes.at(1).kind, CardOutcome::Kind::Stopped);
+    EXPECT_EQ(senza.m.outcomes.at(1).fault, CardFault::VersionWithoutDays);
+    EXPECT_EQ(della(senza, "4000502/1"), (std::vector<std::string>{"K-CTR-160 v47"})) << ::testing::PrintToString(messaggi(senza.dopo, senza.m.problems));
+    EXPECT_EQ(della(senza, "4000501/1"), (std::vector<std::string>{"K-CTR-163 v1"}));
+    EXPECT_EQ(senza.m.problems.size(), 2u) << ::testing::PrintToString(messaggi(senza.dopo, senza.m.problems));
+}
+
+// --- K-024: tipo di servizio per scheda -------------------------------------------------------------------------------------------
+
+namespace {
+Lettura lettura_k024() {
+    Lettura l = leggi_pacchetto(pacchetto_k024());
+    EXPECT_TRUE(l.forma_valida()) << ::testing::PrintToString(messaggi(l, l.problemi));
+    return l;
+}
+// Il pacchetto separato come lo chiude kzero chiudi: i file normali (manifesto con la cassaforte) e i valori tolti.
+struct Separato {
+    PacchettoInMemoria normali;
+    std::vector<Voce> voci;
+};
+Separato separato(const PacchettoInMemoria& m) {
+    const Lettura l = leggi_pacchetto(m);
+    chiusura::Separazione s = chiusura::separa(l);
+    Separato x;
+    for (auto& [file, doc] : s.normali)
+        x.normali.file[file] = chiusura::testo_file(file == "pacchetto.json" ? chiusura::manifesto_chiuso(doc, std::string(32, 'a'), 1) : doc);
+    x.normali.file["cassaforte.kzc"] = "finta";
+    for (auto* v : {&s.contenuto.personali, &s.contenuto.particolari, &s.contenuto.legati})
+        for (Voce& y : *v) x.voci.push_back(std::move(y));
+    return x;
+}
+}  // namespace
+
+// K-024 (D1 A): il profilo alla versione 3 ha le regole del tipo (codice, colonna, valori, tipo) e la colonna dei disabili, tutte e due
+// facoltative; il tipo del profilo e quello di ogni regola sono dati particolari: chiudendo il pacchetto vanno nella cassaforte, e chi
+// legge solo i file normali non li conosce (non noti, mai un altro tipo). Colonna e valori delle regole restano comuni. Il registro alla
+// versione 3 ha nella copia della scheda il tipo scelto e il numero dei disabili, particolari anche loro. Le versioni 1 e 2 non hanno i
+// campi nuovi. Sabotaggio: il tipo del profilo comune nella versione 3.
+TEST(Schede, ProfiliERegistroAllaVersioneTre) {
+    const Lettura l = lettura_k024();
+    EXPECT_EQ(l.versioni.at("profili_schede.json"), 3);
+    ASSERT_EQ(l.pacchetto.card_profiles.size(), 1u);
+    const CardProfile p = profilo(l);
+    EXPECT_EQ(p.card_cols.disabled, "Disabili");
+    ASSERT_TRUE(p.kind.has_value());
+    EXPECT_EQ(p.kind->kind, ServiceKind::School);
+    EXPECT_EQ(p.kind->group, GroupType::Students);
+    ASSERT_EQ(p.type_rules.size(), 1u);
+    EXPECT_EQ(p.type_rules[0].code, "RT-1");
+    EXPECT_EQ(p.type_rules[0].column, CardRuleColumn::Calendar);
+    EXPECT_EQ(p.type_rules[0].values, std::vector<std::string>{"SPECIALE-A"});
+    ASSERT_TRUE(p.type_rules[0].kind.has_value());
+    EXPECT_EQ(p.type_rules[0].kind->kind, ServiceKind::Disability);
+    EXPECT_EQ(p.type_rules[0].kind->group, GroupType::Disabled);
+    // I profili di oggi (versioni 1 e 2): senza regole e senza la colonna, il tipo noto e comune.
+    for (const Lettura& vecchia : {lettura_di_prova(), lettura_k023()}) {
+        const CardProfile q = profilo(vecchia);
+        EXPECT_TRUE(q.type_rules.empty());
+        EXPECT_TRUE(q.card_cols.disabled.empty());
+        ASSERT_TRUE(q.kind.has_value());
+        EXPECT_EQ(q.kind->kind, ServiceKind::School);
+    }
+    // Le regole e la colonna non si leggono alla versione 2.
+    for (const char* campo : {"regole_tipo", "disabili"}) {
+        PacchettoInMemoria m = pacchetto_k024();
+        JsonDati d = JsonDati::parse(m.file.at("profili_schede.json"));
+        d["schema_versione"] = 2;
+        if (std::string(campo) == "regole_tipo") d.at("profili").at(0).at("colonne").at("schede").erase("disabili");
+        else d.at("profili").at(0).erase("regole_tipo");
+        m.file["profili_schede.json"] = d.dump(2);
+        EXPECT_FALSE(leggi_pacchetto(m).forma_valida()) << campo;
+    }
+    // Una colonna che una regola non puo' guardare (D3: solo servizio, scuole, calendario, cadenza).
+    for (const char* colonna : {"nr", "totali_alunni", "attrezzato", "disabili"}) {
+        PacchettoInMemoria m = pacchetto_k024();
+        JsonDati d = JsonDati::parse(m.file.at("profili_schede.json"));
+        d.at("profili").at(0).at("regole_tipo").at(0)["colonna"] = colonna;
+        m.file["profili_schede.json"] = d.dump(2);
+        EXPECT_FALSE(leggi_pacchetto(m).forma_valida()) << colonna;
+    }
+    // Chiuso: il tipo del profilo e quello della regola vanno nella cassaforte; colonna, valori e liberta' oraria restano comuni.
+    const Separato s = separato(pacchetto_k024());
+    const JsonDati normale = JsonDati::parse(s.normali.file.at("profili_schede.json"));
+    const JsonDati& pn = normale.at("profili").at(0);
+    for (const char* k : {"tipo", "tipo_gruppo"}) EXPECT_FALSE(pn.at("servizio").contains(k)) << k;
+    EXPECT_TRUE(pn.at("servizio").contains("liberta_oraria"));
+    EXPECT_FALSE(pn.at("regole_tipo").at(0).contains("servizio"));
+    EXPECT_EQ(pn.at("regole_tipo").at(0).at("colonna"), "calendario");
+    EXPECT_EQ(pn.at("regole_tipo").at(0).at("valori"), JsonDati::array({"SPECIALE-A"}));
+    int nella_cassaforte = 0;
+    for (const Voce& v : s.voci)
+        if (v.file == "profili_schede.json") {
+            ++nella_cassaforte;
+            EXPECT_EQ(v.classe, Classe::Particolare) << v.campo;
+        }
+    EXPECT_EQ(nella_cassaforte, 3);   // tipo e tipo del gruppo del profilo, il tipo della regola
+    const Lettura senza = leggi_pacchetto(s.normali);
+    ASSERT_TRUE(senza.forma_valida()) << ::testing::PrintToString(messaggi(senza, senza.problemi));
+    EXPECT_FALSE(profilo(senza).kind.has_value());
+    EXPECT_FALSE(profilo(senza).type_rules.at(0).kind.has_value());
+    EXPECT_EQ(profilo(senza).type_rules.at(0).values, std::vector<std::string>{"SPECIALE-A"});
+    // Il registro alla versione 3: tipo scelto e numero dei disabili nella copia della scheda, particolari; alla 2 non si leggono.
+    PacchettoInMemoria m = pacchetto_con_schede();
+    JsonDati r = JsonDati::parse(m.file.at("schede_servizi.json"));
+    EXPECT_EQ(r.at("schema_versione"), 3);
+    JsonDati& copia = r.at("schede").at(0).at("versioni").at(0).at("scheda");
+    copia["disabili"] = 1;
+    copia["tipo"] = {{"tipo", "disabili"}, {"tipo_gruppo", "disabili"}, {"da", "regola"}, {"regola", "RT-1"}};
+    m.file["schede_servizi.json"] = r.dump(2);
+    const Lettura lr = leggi_pacchetto(m);
+    ASSERT_TRUE(lr.forma_valida()) << ::testing::PrintToString(messaggi(lr, lr.problemi));
+    const Card& k = lr.pacchetto.service_cards.at(0).versions.at(0).card;
+    ASSERT_TRUE(k.disabled.has_value());
+    EXPECT_EQ(*k.disabled, 1);
+    ASSERT_TRUE(k.chosen.has_value());
+    EXPECT_EQ(k.chosen->kind.kind, ServiceKind::Disability);
+    EXPECT_TRUE(k.chosen->from_rule);
+    EXPECT_EQ(k.chosen->rule, "RT-1");
+    const Separato sr = separato(m);
+    const JsonDati rn = JsonDati::parse(sr.normali.file.at("schede_servizi.json"));
+    for (const char* campo : {"disabili", "tipo", "individualizzato", "attrezzato"})
+        EXPECT_FALSE(rn.at("schede").at(0).at("versioni").at(0).at("scheda").contains(campo)) << campo;
+    r["schema_versione"] = 2;
+    m.file["schede_servizi.json"] = r.dump(2);
+    EXPECT_FALSE(leggi_pacchetto(m).forma_valida());
+}
+
+namespace {
+// K-024: il pacchetto del K-024 con il profilo cambiato da una funzione (sul documento JSON del profilo PS-CVA).
+Lettura lettura_k024_con(const std::function<void(JsonDati&)>& cambia) {
+    PacchettoInMemoria m = pacchetto_k024();
+    JsonDati d = JsonDati::parse(m.file.at("profili_schede.json"));
+    cambia(d.at("profili").at(0));
+    m.file["profili_schede.json"] = d.dump(2);
+    Lettura l = leggi_pacchetto(m);
+    EXPECT_TRUE(l.forma_valida()) << ::testing::PrintToString(messaggi(l, l.problemi));
+    return l;
+}
+JsonDati regola(const std::string& codice, const std::string& colonna, const std::vector<std::string>& valori, const std::string& tipo,
+                const std::string& gruppo) {
+    return {{"codice", codice}, {"colonna", colonna}, {"valori", valori}, {"servizio", {{"tipo", tipo}, {"tipo_gruppo", gruppo}}}};
+}
+// Le schede del K-024 (la colonna dei disabili e' l'ultima, 22) e le loro fermate: solo quelle date (righe del foglio delle schede).
+Fogli schede_k024(const std::vector<std::size_t>& righe) {
+    const Fogli k = fogli_k024();
+    Fogli f;
+    f.schede = {k.schede[0]};
+    f.fermate = {k.fermate[0]};
+    f.date = k.date;
+    f.interruzioni = k.interruzioni;
+    for (std::size_t i : righe) {
+        f.schede.push_back(k.schede[i]);
+        for (std::size_t j = 1; j < k.fermate.size(); ++j)
+            if (k.fermate[j][0] == k.schede[i][0]) f.fermate.push_back(k.fermate[j]);
+    }
+    return f;
+}
+// I fogli di prima del K-024 con la colonna dei disabili in fondo (vuota), per leggerli con il profilo del K-024 che la nomina.
+Fogli con_colonna_disabili(Fogli f) {
+    f.schede[0].push_back("Disabili");
+    for (std::size_t i = 1; i < f.schede.size(); ++i) f.schede[i].resize(23);
+    return f;
+}
+const ServiceCard& in_registro(const Letto& x, const std::string& codice) {
+    for (const ServiceCard& s : x.m.cards)
+        if (s.code == codice) return s;
+    throw std::logic_error("scheda che non c'e': " + codice);
+}
+std::vector<std::string> codici_di(const Letto& x, const std::string& nr) {
+    std::vector<std::string> out;
+    for (const Problem& p : x.m.problems)
+        for (const Param& q : p.params)
+            if (q.name == "scheda" && q.text == nr) out.push_back(definizione_controllo(p.check).codice + " v" + std::to_string(p.variant));
+    std::sort(out.begin(), out.end());
+    return out;
+}
+}  // namespace
+
+// K-024, punto 1: il tipo per scheda. Le quattro schede di prova (profilo PS-CVA alla versione 3 con la regola RT-1: calendario SPECIALE-A
+// = disabili): la scolastica e la promiscua prendono il tipo del profilo (scolastico, studenti), le due con SPECIALE-A quello della regola
+// (disabili, disabili). Il tipo va nel servizio e nel gruppo, e nella copia della scheda con l'origine. Il numero dei disabili sta solo
+// nella copia. K-CTR-177: variante 1 sulla promiscua (1 disabile su 8), variante 0 sulla scheda per disabili con 0. Sabotaggi: regole
+// ignorate (tutte le schede del tipo del profilo); sempre la prima regola anche se il valore non c'e'; avviso del tipo disabili con 0 che
+// manca.
+TEST(Schede, TipoPerSchedaConLaRegola) {
+    const Lettura l = lettura_k024();
+    const Letto x = leggi(l, fogli_k024(), attivazione());
+    for (const std::string& m : messaggi(x.dopo, x.m.problems)) std::cout << m << "\n";
+    ASSERT_EQ(x.m.outcomes.size(), 4u);
+    for (const CardOutcome& o : x.m.outcomes) EXPECT_EQ(o.kind, CardOutcome::Kind::New) << o.nr;
+    const Index idx(x.dopo.pacchetto);
+    const auto tipi = [&](const std::string& n) {
+        const Service* s = idx.service("S-" + n);
+        const PassengerGroup* g = idx.group("G-" + n);
+        EXPECT_TRUE(s && g) << n;
+        return std::make_pair(s ? s->kind.value() : ServiceKind::Other, g ? g->type.value() : GroupType::Other);
+    };
+    EXPECT_EQ(tipi("4000601-1"), std::make_pair(ServiceKind::School, GroupType::Students));
+    EXPECT_EQ(tipi("4000602-1"), std::make_pair(ServiceKind::Disability, GroupType::Disabled));
+    EXPECT_EQ(tipi("4000603-1"), std::make_pair(ServiceKind::School, GroupType::Students));
+    EXPECT_EQ(tipi("4000604-1"), std::make_pair(ServiceKind::Disability, GroupType::Disabled));
+    const auto copia = [&](const std::string& codice) { return in_registro(x, codice).versions.at(0).card; };
+    ASSERT_TRUE(copia("SCH-4000601-1").chosen.has_value());
+    EXPECT_FALSE(copia("SCH-4000601-1").chosen->from_rule);
+    ASSERT_TRUE(copia("SCH-4000602-1").chosen.has_value());
+    EXPECT_TRUE(copia("SCH-4000602-1").chosen->from_rule);
+    EXPECT_EQ(copia("SCH-4000602-1").chosen->rule, "RT-1");
+    EXPECT_EQ(copia("SCH-4000601-1").disabled, std::optional<int>(0));
+    EXPECT_EQ(copia("SCH-4000602-1").disabled, std::optional<int>(1));
+    EXPECT_EQ(codici_di(x, "4000601/1"), std::vector<std::string>{});
+    EXPECT_EQ(codici_di(x, "4000602/1"), std::vector<std::string>{});
+    EXPECT_EQ(codici_di(x, "4000603/1"), std::vector<std::string>{"K-CTR-177 v1"});
+    EXPECT_EQ(codici_di(x, "4000604/1"), std::vector<std::string>{"K-CTR-177 v0"});
+    EXPECT_EQ(x.m.problems.size(), 2u);
+    const std::vector<std::string> testi = messaggi(x.dopo, x.m.problems);
+    bool promiscua = false;
+    for (const std::string& t : testi)
+        promiscua = promiscua || t.find("a bordo ci sono 1 disabile su 8 persone, ma il servizio e' scolastico") != std::string::npos;
+    EXPECT_TRUE(promiscua) << ::testing::PrintToString(testi);
+    EXPECT_EQ(definizione_controllo(Check::CardDisabledMismatch).rivela_variante(0), Classe::Particolare);
+    // Il pacchetto scritto: niente errori; il registro tiene il tipo e il numero.
+    EXPECT_EQ(errori_di(x.dopo.pacchetto), 0) << ::testing::PrintToString(messaggi(x.dopo, check_package(x.dopo.pacchetto)));
+    EXPECT_TRUE(schede::controlla_elementi(x.dopo).empty());
+    // I valori si confrontano come le parole del profilo (maiuscole, punteggiatura), ma tutta la cella: "speciale a" scatta, un valore
+    // che e' solo un pezzo della cella no.
+    Fogli f = schede_k024({1});
+    f.schede[1][19] = "speciale a";
+    EXPECT_TRUE(leggi(l, f, attivazione()).r.cards.at(0).card.chosen->from_rule);
+    const Lettura pezzo = lettura_k024_con([](JsonDati& p) { p.at("regole_tipo").at(0)["valori"] = JsonDati::array({"SPECIALE"}); });
+    EXPECT_FALSE(leggi(pezzo, schede_k024({2}), attivazione()).r.cards.at(0).card.chosen->from_rule);
+    // Una regola sulle scuole: scatta se una delle scuole della cella e' uno dei valori (la 4000124/1 del K-021 ha due scuole).
+    const Lettura scuole = lettura_k024_con([](JsonDati& p) {
+        p["regole_tipo"] = JsonDati::array({regola("RT-S", "scuole", {"Scuola primaria Valfonda"}, "altro", "studenti")});
+        p.at("regole_tipo").at(0).at("servizio")["tipo_descrizione"] = "doposcuola di prova";
+    });
+    const Letto y = leggi(scuole, con_colonna_disabili(una(2)), attivazione());
+    ASSERT_FALSE(y.r.cards.at(0).fault);
+    ASSERT_TRUE(y.r.cards.at(0).card.chosen.has_value());
+    EXPECT_EQ(y.r.cards.at(0).card.chosen->rule, "RT-S");
+    EXPECT_EQ(y.r.cards.at(0).card.chosen->kind.kind, ServiceKind::Other);
+    EXPECT_EQ(y.r.cards.at(0).card.chosen->kind.kind_description, "doposcuola di prova");
+}
+
+// K-024, D2: due regole con tipi diversi sulla stessa scheda la fermano (K-CTR-160 variante 48, con i codici delle regole, mai i tipi;
+// rivela un dato particolare); due regole con lo stesso tipo no (origine: la prima nell'ordine del profilo). Nel profilo: la stessa parola
+// in due regole della stessa colonna e' K-CTR-173 variante 6 (comune); il codice di una regola due volte e' K-CTR-009. Sabotaggio: due
+// regole con tipi diversi accettate.
+TEST(Schede, DueRegoleConTipiDiversiFermanoLaScheda) {
+    const Lettura l = lettura_k024_con([](JsonDati& p) {
+        p.at("regole_tipo").push_back(regola("RT-2", "servizio", {"Andata Mattino"}, "linea", "utenti_linea"));
+        p.at("regole_tipo").push_back(regola("RT-3", "scuole", {"Centro diurno Il Faro"}, "disabili", "disabili"));
+    });
+    const Letto x = leggi(l, fogli_k024(), attivazione());
+    ASSERT_EQ(x.m.outcomes.size(), 4u);
+    EXPECT_EQ(x.m.outcomes[0].kind, CardOutcome::Kind::New);   // 4000601: Andata Mattino, solo RT-2
+    EXPECT_EQ(x.r.cards[0].card.chosen->rule, "RT-2");
+    EXPECT_EQ(x.r.cards[0].card.chosen->kind.kind, ServiceKind::Line);
+    for (std::size_t i : {1u, 3u}) {   // 4000602 e 4000604: RT-1 e RT-3 (disabili) e RT-2 (linea)
+        EXPECT_EQ(x.m.outcomes[i].kind, CardOutcome::Kind::Stopped) << i;
+        EXPECT_EQ(x.m.outcomes[i].fault, CardFault::RulesDisagree) << i;
+        EXPECT_EQ(x.r.cards[i].fault_rules, (std::vector<Code>{"RT-1", "RT-2", "RT-3"})) << i;
+    }
+    EXPECT_EQ(x.m.outcomes[2].kind, CardOutcome::Kind::New);   // 4000603: Ritorno Pomeriggio, nessuna regola
+    EXPECT_FALSE(x.r.cards[2].card.chosen->from_rule);
+    std::string testo;
+    for (const std::string& m : messaggi(x.dopo, x.m.problems))
+        if (m.find("v48") != std::string::npos) testo = m;
+    EXPECT_NE(testo.find("le regole del tipo RT-1, RT-2, RT-3 del profilo scattano tutte"), std::string::npos) << testo;
+    for (const char* tipo : {"disabili", "linea", "scolastico"}) EXPECT_EQ(testo.find(tipo), std::string::npos) << testo;
+    EXPECT_EQ(definizione_controllo(Check::CardUnreadable).rivela_variante(48), Classe::Particolare);
+    // Stesso tipo (RT-1 e RT-3 sulle schede per disabili): si legge, l'origine e' la prima regola.
+    const Lettura stesso = lettura_k024_con([](JsonDati& p) {
+        p.at("regole_tipo").push_back(regola("RT-3", "scuole", {"Centro diurno Il Faro"}, "disabili", "disabili"));
+    });
+    const Letto y = leggi(stesso, schede_k024({2}), attivazione());
+    ASSERT_EQ(y.m.outcomes.at(0).kind, CardOutcome::Kind::New);
+    EXPECT_EQ(y.r.cards.at(0).card.chosen->rule, "RT-1");
+    // Il profilo: la stessa parola in due regole della stessa colonna; lo stesso codice due volte.
+    const Lettura doppia = lettura_k024_con([](JsonDati& p) {
+        p.at("regole_tipo").push_back(regola("RT-4", "calendario", {"speciale a"}, "disabili", "disabili"));
+        p.at("regole_tipo").push_back(regola("RT-1", "cadenza", {"Ogni 15 giorni"}, "disabili", "disabili"));
+    });
+    std::vector<Problem> v;
+    check_cards(doppia.pacchetto, Index(doppia.pacchetto), v);
+    std::vector<std::string> attesi;
+    for (const std::string& m : messaggi(doppia, v))
+        if (m.rfind("K-CTR-173", 0) == 0 || m.rfind("K-CTR-009", 0) == 0) attesi.push_back(m);
+    ASSERT_EQ(attesi.size(), 2u) << ::testing::PrintToString(messaggi(doppia, v));
+    std::sort(attesi.begin(), attesi.end());
+    EXPECT_NE(attesi[0].find("K-CTR-009 v0: Il codice RT-1 compare due volte tra le regole del tipo"), std::string::npos) << attesi[0];
+    EXPECT_NE(attesi[1].find("K-CTR-173 v6"), std::string::npos) << attesi[1];
+    EXPECT_NE(attesi[1].find("\"speciale a\""), std::string::npos) << attesi[1];
+    EXPECT_EQ(definizione_controllo(Check::CardProfileInvalid).rivela_variante(6), Classe::Comune);
+}
+
+// K-024, punto 2 (D5, D7): il numero dei disabili. Cella vuota = non scritto (nessun controllo, mai 0); scritto male (decimale, negativo,
+// testo, cella con un errore di Excel) = la scheda si ferma (variante 49); piu' disabili delle persone a bordo, accompagnatore escluso
+// (Totali alunni lo comprende) = si ferma (variante 50); tipo disabili con a bordo anche persone che non sono disabili = K-CTR-177
+// variante 2. Le varianti 49 e 50 rivelano un dato particolare. Sabotaggio: numero piu' grande dei Totali accettato.
+TEST(Schede, NumeroDeiDisabili) {
+    const Lettura l = lettura_k024();
+    const auto con = [&](std::size_t riga, const std::string& disabili) {
+        Fogli f = schede_k024({riga});
+        f.schede[1][22] = disabili;
+        return leggi(l, f, attivazione());
+    };
+    const auto motivo = [](const Letto& x) { return x.r.cards.at(0).fault ? static_cast<int>(*x.r.cards.at(0).fault) : -1; };
+    for (const std::string& male : {std::string("1,5"), std::string("-1"), std::string("uno"), std::string("!")})
+        EXPECT_EQ(motivo(con(1, male)), 49) << male;
+    const Letto vuota = con(1, "");
+    EXPECT_EQ(motivo(vuota), -1);
+    EXPECT_FALSE(vuota.r.cards.at(0).card.disabled.has_value());
+    EXPECT_TRUE(vuota.m.problems.empty());
+    EXPECT_EQ(motivo(con(1, "#9")), -1);    // 9 su 9
+    EXPECT_EQ(motivo(con(1, "#10")), 50);   // 10 su 9
+    EXPECT_EQ(motivo(con(2, "#2")), 50);    // 2 su 1
+    // Con l'accompagnatore: la scheda dell'infanzia ha Totali alunni 6, accompagnatore compreso: 5 persone a bordo.
+    const Lettura k = lettura_k024_con([](JsonDati&) {});
+    Fogli inf = con_colonna_disabili(infanzia());
+    inf.schede[1][22] = "#6";
+    EXPECT_EQ(motivo(leggi(k, inf, attivazione())), 50);
+    inf.schede[1][22] = "#5";
+    EXPECT_EQ(motivo(leggi(k, inf, attivazione())), -1);
+    // Tipo disabili (RT-1) con 3 disabili su 9: a bordo anche 6 persone che non sono disabili.
+    Fogli g = schede_k024({1});
+    g.schede[1][19] = "SPECIALE-A";
+    g.schede[1][22] = "#3";
+    const Letto due = leggi(l, g, attivazione());
+    std::vector<std::string> c177;
+    for (const std::string& m : messaggi(due.dopo, due.m.problems))
+        if (m.rfind("K-CTR-177", 0) == 0) c177.push_back(m);
+    ASSERT_EQ(c177.size(), 1u) << ::testing::PrintToString(messaggi(due.dopo, due.m.problems));
+    EXPECT_NE(c177[0].find("K-CTR-177 v2"), std::string::npos) << c177[0];
+    EXPECT_NE(c177[0].find("anche 6 persone che non sono disabili (3 disabili su 9 persone"), std::string::npos) << c177[0];
+    for (int v : {49, 50}) EXPECT_EQ(definizione_controllo(Check::CardUnreadable).rivela_variante(v), Classe::Particolare) << v;
+    // Un profilo senza la colonna non la legge (anche se il file la ha): numero non scritto.
+    const Lettura senza = lettura_k024_con([](JsonDati& p) { p.at("colonne").at("schede").erase("disabili"); });
+    EXPECT_FALSE(leggi(senza, schede_k024({1}), attivazione()).r.cards.at(0).card.disabled.has_value());
+}
+
+// K-024, D4 e D6: il tipo fa parte della versione; il numero dei disabili conta solo tra due numeri scritti. Letto senza la regola (tutte
+// scolastiche), lo stesso file con la regola: le due schede per disabili diventano versioni nuove (dalla data scelta), con il tipo tra le
+// cose che cambiano (dato particolare); le altre restano uguali. Una versione di prima del K-024 (senza il tipo nel registro) ha il tipo
+// del suo servizio: con lo stesso profilo resta uguale, con la regola cambia; senza il servizio il tipo non si confronta. Numero: 1 -> 2
+// e' una versione nuova; un numero che prima non c'era (colonna aggiunta al profilo) no.
+TEST(Schede, TipoEDisabiliNelleVersioni) {
+    const Lettura senza_regola = lettura_k024_con([](JsonDati& p) { p.erase("regole_tipo"); });
+    const Letto prima = leggi(senza_regola, fogli_k024(), attivazione());
+    for (const CardOutcome& o : prima.m.outcomes) ASSERT_EQ(o.kind, CardOutcome::Kind::New) << o.nr;
+    DateChoices dal23;
+    dal23.file = DateChoice{DateChoice::Kind::Date, day_from_ymd(2026, 11, 23)};
+    // Con la regola (il registro e il pacchetto di prima, il profilo con la regola).
+    const auto con_regola = [](const Lettura& base) {
+        PacchettoInMemoria m;
+        for (const auto& [f, d] : base.documenti) m.file[f] = chiusura::testo_file(d);
+        m.file["profili_schede.json"] = kzero::prove::elenco_a_mano::leggi_testo(kCartella24 + "/profili_schede.json");
+        return leggi_pacchetto(m);
+    };
+    const Letto dopo = leggi(con_regola(prima.dopo), fogli_k024(), dal23);
+    ASSERT_EQ(dopo.m.outcomes.size(), 4u);
+    EXPECT_EQ(dopo.m.outcomes[0].kind, CardOutcome::Kind::Same);
+    EXPECT_EQ(dopo.m.outcomes[2].kind, CardOutcome::Kind::Same);
+    for (std::size_t i : {1u, 3u}) {
+        ASSERT_EQ(dopo.m.outcomes[i].kind, CardOutcome::Kind::NewVersion) << i;
+        ASSERT_EQ(dopo.m.outcomes[i].changes.size(), 1u) << i;
+        const CardChange& c = dopo.m.outcomes[i].changes[0];
+        EXPECT_EQ(c.what, "tipo");
+        EXPECT_EQ(c.before, "scolastico (gruppo studenti)");
+        EXPECT_EQ(c.after, "disabili (gruppo disabili)");
+        EXPECT_TRUE(c.particular);
+    }
+    // Il registro di prima del K-024: le copie senza il tipo.
+    const auto senza_tipo = [](const Lettura& base, bool togli_servizio) {
+        PacchettoInMemoria m;
+        for (const auto& [f, d] : base.documenti) m.file[f] = chiusura::testo_file(d);
+        JsonDati r = JsonDati::parse(m.file.at("schede_servizi.json"));
+        for (JsonDati& s : r.at("schede"))
+            for (JsonDati& v : s.at("versioni")) v.at("scheda").erase("tipo");
+        m.file["schede_servizi.json"] = r.dump(2);
+        if (togli_servizio) {
+            JsonDati sv = JsonDati::parse(m.file.at("servizi.json"));
+            JsonDati resta = JsonDati::array();
+            for (const JsonDati& x : sv.at("servizi"))
+                if (x.at("codice") != "S-4000602-1") resta.push_back(x);
+            sv["servizi"] = resta;
+            m.file["servizi.json"] = sv.dump(2);
+        }
+        return leggi_pacchetto(m);
+    };
+    const Letto vecchio = leggi(senza_tipo(prima.dopo, false), fogli_k024(), dal23, kPresa, false);
+    for (const CardOutcome& o : vecchio.m.outcomes) EXPECT_EQ(o.kind, CardOutcome::Kind::Same) << o.nr;   // senza regola: come oggi
+    const Letto vecchio_con_regola = leggi(con_regola(senza_tipo(prima.dopo, false)), fogli_k024(), dal23);
+    EXPECT_EQ(vecchio_con_regola.m.outcomes[1].kind, CardOutcome::Kind::NewVersion);
+    const Letto senza_servizio = leggi(con_regola(senza_tipo(prima.dopo, true)), fogli_k024(), dal23);
+    EXPECT_EQ(senza_servizio.m.outcomes[1].kind, CardOutcome::Kind::Same);         // senza il servizio non si confronta
+    EXPECT_EQ(senza_servizio.m.outcomes[3].kind, CardOutcome::Kind::NewVersion);
+    // Il numero dei disabili: 1 -> 2 (sulla 4000602) e' una versione nuova; vuoto da una parte no.
+    const Letto base = leggi(lettura_k024(), fogli_k024(), attivazione());
+    Fogli due = fogli_k024();
+    due.schede[2][22] = "#1";   // 4000603: 1 -> 1, uguale
+    due.schede[1][22] = "";     // 4000601: 0 -> non scritto, uguale
+    Fogli tre = due;
+    tre.schede[3][22] = "#0";   // 4000603: 1 -> 0, versione nuova
+    const Letto n1 = leggi(base.dopo, due, dal23);
+    for (const CardOutcome& o : n1.m.outcomes) EXPECT_EQ(o.kind, CardOutcome::Kind::Same) << o.nr;
+    const Letto n2 = leggi(base.dopo, tre, dal23);
+    ASSERT_EQ(n2.m.outcomes[2].kind, CardOutcome::Kind::NewVersion);
+    ASSERT_EQ(n2.m.outcomes[2].changes.size(), 1u);
+    EXPECT_EQ(n2.m.outcomes[2].changes[0].what, "disabili");
+    EXPECT_TRUE(n2.m.outcomes[2].changes[0].particular);
+    // Il profilo senza la colonna, poi con: le schede gia' lette restano uguali.
+    const Lettura senza_colonna = lettura_k024_con([](JsonDati& p) { p.at("colonne").at("schede").erase("disabili"); });
+    const Letto c1 = leggi(senza_colonna, fogli_k024(), attivazione());
+    const Letto c2 = leggi(con_regola(c1.dopo), fogli_k024(), dal23);
+    for (const CardOutcome& o : c2.m.outcomes) EXPECT_EQ(o.kind, CardOutcome::Kind::Same) << o.nr;
+}
+
+// K-024, D7: K-CTR-177 anche in kzero controlla, con il tipo del servizio nel pacchetto (non quello della lettura): la promiscua (v1) e la
+// scheda per disabili con 0 (v0); un servizio cambiato a mano in "altro" non ha l'avviso. Il controllo richiede i dati particolari.
+TEST(Schede, DisabiliControllatiSulRegistro) {
+    const Letto x = leggi(lettura_k024(), fogli_k024(), attivazione());
+    std::vector<Problem> v;
+    check_cards(x.dopo.pacchetto, Index(x.dopo.pacchetto), v);
+    std::vector<std::string> c177;
+    for (const std::string& m : messaggi(x.dopo, v))
+        if (m.rfind("K-CTR-177", 0) == 0) c177.push_back(m);
+    ASSERT_EQ(c177.size(), 2u) << ::testing::PrintToString(messaggi(x.dopo, v));
+    EXPECT_NE(c177[0].find("Scheda SCH-4000603-1"), std::string::npos) << c177[0];
+    EXPECT_NE(c177[1].find("Scheda SCH-4000604-1"), std::string::npos) << c177[1];
+    PacchettoInMemoria m;
+    for (const auto& [f, d] : x.dopo.documenti) m.file[f] = chiusura::testo_file(d);
+    JsonDati sv = JsonDati::parse(m.file.at("servizi.json"));
+    for (JsonDati& s : sv.at("servizi"))
+        if (s.at("codice") == "S-4000603-1") {
+            s["tipo"] = "altro";
+            s["tipo_descrizione"] = "navetta di prova";
+        }
+    m.file["servizi.json"] = sv.dump(2);
+    const Lettura l = leggi_pacchetto(m);
+    std::vector<Problem> w;
+    check_cards(l.pacchetto, Index(l.pacchetto), w);
+    EXPECT_EQ(std::count_if(w.begin(), w.end(), [](const Problem& p) { return p.check == Check::CardDisabledMismatch; }), 1);
+}
+
+// K-024, D8 B: K-CTR-178 per ogni profilo alla versione 1 o 2, di qualsiasi tipo (anche PS-CVA, scolastico, del K-023); il messaggio non
+// dice il tipo; nessun avviso alla versione 3. Sabotaggio: l'avviso solo per i profili con il tipo disabili.
+TEST(Schede, ProfiliAllaVersioneUnoODueAvviso) {
+    const auto avvisi = [](const Lettura& l) {
+        std::vector<std::string> out;
+        for (const std::string& m : messaggi(l, schede::controlla_profili(l))) out.push_back(m);
+        return out;
+    };
+    const std::vector<std::string> v1 = avvisi(lettura_di_prova()), v2 = avvisi(lettura_k023()), v3 = avvisi(lettura_k024());
+    ASSERT_EQ(v1.size(), 1u);
+    ASSERT_EQ(v2.size(), 2u);
+    EXPECT_TRUE(v3.empty());
+    EXPECT_NE(v1[0].find("K-CTR-178 v0: Il profilo delle schede PS-CVA e' in profili_schede.json alla versione 1"), std::string::npos) << v1[0];
+    EXPECT_NE(v2[0].find("PS-CVA e' in profili_schede.json alla versione 2"), std::string::npos) << v2[0];
+    EXPECT_NE(v2[1].find("PS-CVA-H e' in profili_schede.json alla versione 2"), std::string::npos) << v2[1];
+    for (const std::vector<std::string>* v : {&v1, &v2})
+        for (const std::string& m : *v)
+            for (const char* tipo : {"disabili", "scolastico", "studenti"}) EXPECT_EQ(m.find(tipo), std::string::npos) << m;
+    EXPECT_EQ(definizione_controllo(Check::CardProfileOldVersion).rivela_variante(0), Classe::Comune);
 }

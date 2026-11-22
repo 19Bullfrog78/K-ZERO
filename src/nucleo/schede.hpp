@@ -84,6 +84,10 @@ enum class CardFault {
     BreaksOverlap = 45,         // due interruzioni della stessa scheda si sovrappongono (anche due righe uguali)
     ListedDateInBreak = 46,     // una data elencata cade dentro un'interruzione
     VersionWithoutDays = 47,    // la versione nuova non avrebbe nessun giorno, o la versione di prima accorciata resterebbe senza
+    // K-024: il tipo per scheda e il numero dei disabili (varianti che rivelano un dato particolare).
+    RulesDisagree = 48,         // due regole del tipo del profilo scattano sulla stessa scheda e danno tipi diversi
+    BadDisabledNumber = 49,     // il numero dei disabili e' scritto male (non intero, negativo, testo, cella illeggibile)
+    TooManyDisabled = 50,       // piu' disabili dei Totali alunni, accompagnatore escluso
 };
 
 struct CardRead {
@@ -96,6 +100,7 @@ struct CardRead {
     std::string fault_sheet;     // il foglio, la riga e il titolo della colonna del motivo (mai il valore)
     int fault_row = 0;
     std::string fault_column;
+    std::vector<Code> fault_rules;   // K-024, RulesDisagree: le regole che scattano
 };
 
 struct CardsRead {
@@ -201,6 +206,17 @@ struct CardTransferEnd {
     bool verbal = false;      // autorizzato solo a voce (senza documento)
 };
 std::optional<CardTransferEnd> card_transfer_end(const Card& k, const Index& idx);
+
+// K-024: le persone a bordo di una scheda, accompagnatore escluso (Totali alunni lo comprende, K-021).
+int card_passengers(const Card& k);
+// K-024: il numero dei disabili che non torna con il tipo del servizio (K-CTR-177): variante 0, tipo disabili con 0; 1, disabili a bordo
+// di un servizio scolastico, di linea o NCC (promiscuo di fatto); 2, tipo disabili con a bordo anche persone che non sono disabili. Niente
+// se il numero non e' scritto o il tipo e' "altro".
+std::optional<int> card_disabled_mismatch(const Card& k, ServiceKind kind);
+// K-024: il tipo di un servizio in breve, per i messaggi e per "cosa cambia" (dati particolari): "disabili", "altro: ...".
+std::string card_kind_text(const CardKind& k);
+// K-024: il tipo del servizio in parole ("scolastico", "di linea", "per disabili", "NCC", "altro"), per i messaggi (dati particolari).
+std::string card_service_kind_text(ServiceKind k);
 
 // Le cose che cambiano tra due schede (a: quella di prima).
 std::vector<CardChange> card_changes(const Card& a, const Card& b);

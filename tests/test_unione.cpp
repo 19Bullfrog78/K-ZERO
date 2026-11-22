@@ -1116,6 +1116,34 @@ TEST(Unione, OgniCampoRiservatoDegliSchemiCompareNeiPacchettiDelleProve) {
         k021.file["servizi.json"] = sv.dump(2);
         pacchetti.push_back({"k021-schede", k021});
     }
+    {
+        // K-024: il profilo e il registro alla versione 3 (tipo del profilo e delle regole, tipo scelto e numero dei disabili nella copia
+        // della scheda), con le descrizioni per "altro".
+        namespace sc = kzero::prove::schede;
+        InMemoria k024;
+        k024.file = sc::con_schede(sc::pacchetto_k024(), sc::fogli_k024()).file;
+        JsonDati pr = JsonDati::parse(k024.file.at("profili_schede.json"));
+        JsonDati& p0 = pr.at("profili").at(0);
+        p0.at("servizio")["tipo"] = "altro";
+        p0.at("servizio")["tipo_descrizione"] = "servizio di prova";
+        p0.at("servizio")["tipo_gruppo"] = "altro";
+        p0.at("servizio")["tipo_gruppo_descrizione"] = "gruppo di prova";
+        p0.at("regole_tipo").at(0).at("servizio")["tipo_descrizione"] = "regola di prova";
+        p0.at("regole_tipo").at(0).at("servizio")["tipo_gruppo_descrizione"] = "gruppo della regola di prova";
+        k024.file["profili_schede.json"] = pr.dump(2);
+        JsonDati rg = JsonDati::parse(k024.file.at("schede_servizi.json"));
+        bool con_regola = false;
+        for (JsonDati& s : rg.at("schede"))
+            for (JsonDati& v : s.at("versioni")) {
+                JsonDati& tipo = v.at("scheda").at("tipo");
+                tipo["tipo_descrizione"] = "descrizione di prova";
+                tipo["tipo_gruppo_descrizione"] = "gruppo di prova";
+                con_regola = con_regola || tipo.contains("regola");
+            }
+        EXPECT_TRUE(con_regola);
+        k024.file["schede_servizi.json"] = rg.dump(2);
+        pacchetti.push_back({"k024-schede", k024});
+    }
     for (const PacchettoDiProva& p : pacchetti)
         for (const auto& [file, testo] : p.chiaro.file) {
             const FileDati* f = file_dati_per_nome(file);

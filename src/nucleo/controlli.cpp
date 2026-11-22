@@ -299,6 +299,7 @@ private:
             case Element::ListUser: return true;     // K-019: controllati in controlli_elenco (elenco.cpp)
             case Element::CardProfile: return idx_.card_profile(c) != nullptr;
             case Element::ServiceCard: return idx_.service_card(c) != nullptr;
+            case Element::CardTypeRule: return true;   // K-024: codici delle regole, controllati nel loro profilo (schede.cpp)
         }
         return false;
     }

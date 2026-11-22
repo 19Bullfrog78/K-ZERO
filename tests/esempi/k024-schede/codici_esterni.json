@@ -1,0 +1,6 @@
+{
+  "descrizione": "K-024, prove: codici esterni da aggiungere al demo (oltre a quelli di tests/esempi/k019-elenco, k021-schede e k023-schede): il calendario SPECIALE-A del committente e' il calendario dei giorni feriali; nel profilo di prova le schede con quel calendario sono per disabili (regola RT-1). Dati inventati.",
+  "calendari": {
+    "CAL-LV-FER": [{ "sistema": "Consorzio Valle Alta", "tipo": "calendario", "codice": "SPECIALE-A" }]
+  }
+}

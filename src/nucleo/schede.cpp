@@ -332,6 +332,7 @@ CardsRead read_cards(const CardTables& tab, const CardProfile& pr, const Index& 
                                               cs.equipped, cs.total_days, cs.total_loaded_km, cs.total_empty_km, cs.calendar,
                                               cs.cadence, cs.new_or_change};
     for (const CardProfileDay& g : pr.days) titoli_schede.push_back(g.column);
+    if (!cs.disabled.empty()) titoli_schede.push_back(cs.disabled);   // K-024: la colonna dei disabili, se il profilo la nomina
     const std::vector<std::string> titoli_fermate = {cf.nr, cf.time, cf.point, cf.home, cf.boarding, cf.alighting, cf.loaded_km,
                                                      cf.empty_km, cf.escort};
     const std::vector<std::string> titoli_date = {pr.date_cols.nr, pr.date_cols.date};
@@ -425,6 +426,7 @@ CardsRead read_cards(const CardTables& tab, const CardProfile& pr, const Index& 
         k.direction = sv->direction;
         const auto scuole = q.serve(cs.schools);
         if (!scuole) continue;
+        std::vector<std::string> pezzi_scuole;   // K-024: per le regole del tipo sulle scuole
         {
             const std::string s = pulito(pr.schools_sep);
             std::size_t a = 0;
@@ -432,6 +434,7 @@ CardsRead read_cards(const CardTables& tab, const CardProfile& pr, const Index& 
                 const std::size_t b = s.empty() ? std::string::npos : scuole->find(s, a);
                 const std::string t = pulito(scuole->substr(a, b == std::string::npos ? std::string::npos : b - a));
                 if (!t.empty()) {
+                    pezzi_scuole.push_back(t);
                     const std::vector<Code>* v = cerca.scuola(t);
                     if (!v) {
                         q.ferma(CardFault::SchoolUnknown, cs.schools);
@@ -495,6 +498,25 @@ CardsRead read_cards(const CardTables& tab, const CardProfile& pr, const Index& 
             continue;
         }
         k.pupils = *n_tot;
+        // K-024: il numero dei disabili (colonna facoltativa del profilo). Vuota = non scritto (mai 0); scritta male, o cella illeggibile,
+        // ferma la scheda con una variante sua (49), che rivela un dato particolare (direbbe che nella colonna c'e' qualcosa).
+        if (!cs.disabled.empty()) {
+            const TableCell* d = cella(r, ks.colonna(cs.disabled));
+            if (d) {
+                if (d->unreadable || !utf8_valido(d->text) || pulito(d->text).size() > kTestoMassimo) {
+                    q.ferma(CardFault::BadDisabledNumber, cs.disabled);
+                    continue;
+                }
+                if (!pulito(d->text).empty()) {
+                    const auto n = intero(d->text);
+                    if (!n) {
+                        q.ferma(CardFault::BadDisabledNumber, cs.disabled);
+                        continue;
+                    }
+                    k.disabled = *n;
+                }
+            }
+        }
         k.individual = casella(cs.individual);
         if (q.fermo) continue;
         k.equipped = casella(cs.equipped);
@@ -815,8 +837,88 @@ CardsRead read_cards(const CardTables& tab, const CardProfile& pr, const Index& 
         else if (scendono != k.pupils) ferma_su(CardFault::TotalsAlighting, pr.sheet_cards, x.row, cs.pupils);
         else if (!stessi_km(km_pieni, k.total_loaded_km)) ferma_su(CardFault::TotalLoadedKm, pr.sheet_cards, x.row, cs.total_loaded_km);
         else if (!stessi_km(km_vuoti, k.total_empty_km)) ferma_su(CardFault::TotalEmptyKm, pr.sheet_cards, x.row, cs.total_empty_km);
+        // K-024: piu' disabili delle persone a bordo (Totali alunni comprende l'accompagnatore).
+        else if (k.disabled && *k.disabled > card_passengers(k)) ferma_su(CardFault::TooManyDisabled, pr.sheet_cards, x.row, cs.disabled);
+        if (x.fault) continue;
+
+        // K-024: il tipo della scheda, dopo che la scheda e' stata letta tutta (P3): le regole del profilo che scattano (tutta la cella,
+        // o una delle scuole, confrontata come le parole del profilo); nessuna: il tipo del profilo; due con tipi diversi (o non noti): la
+        // scheda si ferma, il programma non sceglie (D2).
+        std::vector<const CardTypeRule*> scattano;
+        for (const CardTypeRule& g : pr.type_rules) {
+            std::vector<std::string> celle;
+            switch (g.column) {
+                case CardRuleColumn::Service: celle = {*servizio}; break;
+                case CardRuleColumn::Schools: celle = pezzi_scuole; break;
+                case CardRuleColumn::Calendar: celle = {*cal}; break;
+                case CardRuleColumn::Cadence: celle = {*cad}; break;
+            }
+            const bool scatta = std::any_of(celle.begin(), celle.end(), [&](const std::string& c) { return una_di(c, g.values); });
+            if (scatta) scattano.push_back(&g);
+        }
+        if (scattano.empty()) {
+            if (pr.kind) k.chosen = Card::ChosenKind{*pr.kind, false, Code()};
+            continue;
+        }
+        const bool d_accordo = std::all_of(scattano.begin(), scattano.end(), [&](const CardTypeRule* g) {
+            return g->kind && scattano.front()->kind && *g->kind == *scattano.front()->kind;
+        });
+        if (!d_accordo || (scattano.size() > 1 && !scattano.front()->kind)) {
+            const std::string colonna = [&](CardRuleColumn c) {
+                switch (c) {
+                    case CardRuleColumn::Service: return cs.service;
+                    case CardRuleColumn::Schools: return cs.schools;
+                    case CardRuleColumn::Calendar: return cs.calendar;
+                    case CardRuleColumn::Cadence: return cs.cadence;
+                }
+                return cs.calendar;
+            }(scattano.back()->column);
+            ferma_su(CardFault::RulesDisagree, pr.sheet_cards, x.row, colonna);
+            for (const CardTypeRule* g : scattano) x.fault_rules.push_back(g->code);
+            continue;
+        }
+        if (scattano.front()->kind) k.chosen = Card::ChosenKind{*scattano.front()->kind, true, scattano.front()->code};
     }
     return out;
+}
+
+int card_passengers(const Card& k) {
+    const bool accompagnatore =
+        std::any_of(k.stops.begin(), k.stops.end(), [](const CardStop& s) { return s.escort == AssistantMove::Boards; });
+    return k.pupils - (accompagnatore ? 1 : 0);
+}
+
+std::optional<int> card_disabled_mismatch(const Card& k, ServiceKind kind) {
+    if (!k.disabled) return std::nullopt;
+    const int d = *k.disabled, a_bordo = card_passengers(k);
+    if (kind == ServiceKind::Disability) {
+        if (d == 0) return 0;
+        if (d < a_bordo) return 2;
+        return std::nullopt;
+    }
+    if (kind == ServiceKind::Other || d == 0) return std::nullopt;
+    return 1;   // scolastico, linea, NCC con dei disabili a bordo: promiscuo di fatto
+}
+
+std::string card_service_kind_text(ServiceKind k) {
+    switch (k) {
+        case ServiceKind::Line: return "di linea";
+        case ServiceKind::School: return "scolastico";
+        case ServiceKind::Disability: return "per disabili";
+        case ServiceKind::Ncc: return "NCC";
+        case ServiceKind::Other: return "altro";
+    }
+    return "altro";
+}
+
+std::string card_kind_text(const CardKind& k) {
+    static const char* tipi[] = {"linea", "scolastico", "disabili", "ncc", "altro"};
+    static const char* gruppi[] = {"studenti", "disabili", "utenti_linea", "adulti_autorizzati", "altro"};
+    std::string t = tipi[static_cast<int>(k.kind)];
+    if (k.kind == ServiceKind::Other && !k.kind_description.empty()) t += ": " + k.kind_description;
+    t += " (gruppo " + std::string(gruppi[static_cast<int>(k.group)]);
+    if (k.group == GroupType::Other && !k.group_description.empty()) t += ": " + k.group_description;
+    return t + ")";
 }
 
 // --- Calendario e giorni ---------------------------------------------------------------------------------------------------
@@ -967,6 +1069,12 @@ std::vector<CardChange> card_changes(const Card& a, const Card& b) {
     const auto sn = [](const std::optional<bool>& v) { return !v ? std::string("non noto") : *v ? std::string("si'") : std::string("no"); };
     cambia("individualizzato", sn(a.individual), sn(b.individual), true);
     cambia("attrezzato", sn(a.equipped), sn(b.equipped), true);
+    // K-024, dati particolari: il tipo scelto (D4: fa parte della versione) e il numero dei disabili (D6: solo due numeri scritti; un
+    // lato non noto o non scritto non si confronta).
+    if (a.chosen && b.chosen && a.chosen->kind != b.chosen->kind)
+        out.push_back({"tipo", card_kind_text(a.chosen->kind), card_kind_text(b.chosen->kind), true});
+    if (a.disabled && b.disabled && *a.disabled != *b.disabled)
+        out.push_back({"disabili", std::to_string(*a.disabled), std::to_string(*b.disabled), true});
     return out;
 }
 
@@ -1032,6 +1140,11 @@ CardsMerge merge_cards(const Package& p, const CardProfile& pr, const Code& cont
         };
         if (r.fault) {
             ferma(*r.fault, r.fault_sheet, r.fault_row, r.fault_column);
+            if (*r.fault == CardFault::RulesDisagree) {   // K-024: quali regole scattano (codici, mai i tipi)
+                std::string regole;
+                for (const Code& c : r.fault_rules) regole += (regole.empty() ? "" : ", ") + c;
+                out.problems.back().params.push_back(text_param("regole", regole));
+            }
             out.outcomes.push_back(o);
             continue;
         }
@@ -1114,13 +1227,31 @@ CardsMerge merge_cards(const Package& p, const CardProfile& pr, const Code& cont
             problema(Check::CardEndsAtTransfer, (c->at_start ? 1 : 0) + (c->verbal ? 2 : 0),
                      {text_param("scheda", r.nr), ref_param("luogo", Element::Place, c->place), ref_param("scuola", Element::School, c->school)},
                      r.row);
+        // K-024: il numero dei disabili che non torna con il tipo scelto (dato particolare: il catalogo lo dice).
+        if (k.chosen)
+            if (const std::optional<int> v = card_disabled_mismatch(k, k.chosen->kind.kind))
+                problema(Check::CardDisabledMismatch, *v,
+                         {text_param("scheda", r.nr), number_param("disabili", *k.disabled), number_param("persone", card_passengers(k)),
+                          number_param("altri", card_passengers(k) - *k.disabled), text_param("tipo", card_service_kind_text(k.chosen->kind.kind))},
+                         r.row);
         if (k.to < taken) problema(Check::CardEndedBeforeTaken, 0, {text_param("scheda", r.nr), date_param("disattivazione", k.to)}, r.row);
         if (esistente && !k.is_change) problema(Check::CardNewOrChangeOdd, 0, {text_param("scheda", r.nr), ref_param("codice", Element::ServiceCard, esistente->code)}, r.row);
         if (!esistente && k.is_change) problema(Check::CardNewOrChangeOdd, 1, {text_param("scheda", r.nr)}, r.row);
 
+        // K-024 (D4): il tipo fa parte della versione. Una versione scritta prima del K-024 non ha il tipo nel registro: il suo tipo e'
+        // quello del suo servizio (e del suo gruppo) nel pacchetto; senza servizio, o con il tipo non noto, non si confronta.
+        const auto con_tipo = [&](const CardVersion& v) {
+            Card c = v.card;
+            if (c.chosen) return c;
+            const Service* sv = idx.service(v.service);
+            const PassengerGroup* g = idx.group(v.group);
+            if (sv && g && sv->kind.known() && g->type.known())
+                c.chosen = Card::ChosenKind{CardKind{sv->kind.value(), sv->kind_description, g->type.value(), g->type_description}, false, Code()};
+            return c;
+        };
         if (esistente) {
             const CardVersion& ultima = esistente->versions.back();
-            if (same_card(ultima.card, k)) {
+            if (same_card(con_tipo(ultima), k)) {
                 o.kind = CardOutcome::Kind::Same;
                 o.card_code = esistente->code;
                 o.version = ultima.number;
@@ -1201,7 +1332,7 @@ CardsMerge merge_cards(const Package& p, const CardProfile& pr, const Code& cont
         // il giorno prima. I giorni prima della data scelta non cambiano.
         o.kind = CardOutcome::Kind::NewVersion;
         o.card_code = esistente->code;
-        o.changes = card_changes(esistente->versions.back().card, k);
+        o.changes = card_changes(con_tipo(esistente->versions.back()), k);
         std::vector<CardVersion> restano;
         std::vector<CardVersion> tolte;
         for (const CardVersion& v : esistente->versions) (v.valid.from >= dal ? tolte : restano).push_back(v);
@@ -1383,6 +1514,19 @@ void check_cards(const Package& p, const Index& idx, std::vector<Problem>& out) 
         std::set<int> gg;
         for (const auto& g : pr.days)
             if (!gg.insert(static_cast<int>(g.day)).second) add(Check::CardProfileInvalid, pr.src, {chi, text_param("parola", g.column)}, 5);
+        // K-024: le regole del tipo. Il codice una volta sola nel profilo (K-CTR-009); la stessa parola in due regole della stessa colonna
+        // (o due volte in una regola) e' un profilo ambiguo (K-CTR-173 variante 6, D2): non serve conoscere i tipi, quindi e' un
+        // controllo comune.
+        std::map<Code, const Source*> regole;
+        for (const CardTypeRule& g : pr.type_rules)
+            if (const auto [it, nuovo] = regole.emplace(g.code, &g.src); !nuovo)
+                add(Check::DuplicateCode, g.src, {text_param("codice", g.code), elements_param("elementi", Element::CardTypeRule), prima(it->second)});
+        for (const CardRuleColumn c : {CardRuleColumn::Service, CardRuleColumn::Schools, CardRuleColumn::Calendar, CardRuleColumn::Cadence}) {
+            std::vector<std::vector<std::string>> gruppi;
+            for (const CardTypeRule& g : pr.type_rules)
+                if (g.column == c) gruppi.push_back(g.values);
+            doppie(gruppi, 6);
+        }
     }
     // Registro: codici, ID, riferimenti.
     std::map<Code, const Source*> schede;
@@ -1482,6 +1626,21 @@ void check_cards(const Package& p, const Index& idx, std::vector<Problem>& out) 
                     break;
                 }
             }
+        }
+
+    // K-CTR-177 (K-024): il numero dei disabili della copia di ogni versione contro il tipo del suo servizio nel pacchetto. Con il tipo
+    // non noto (chi non puo' leggere i dati particolari) niente: il controllo richiede i dati particolari, e il resoconto lo dice "non
+    // verificato" (mai un risultato sui dati che mancano).
+    for (const ServiceCard& s : p.service_cards)
+        for (const CardVersion& v : s.versions) {
+            const Service* sv = idx.service(v.service);
+            if (!sv || !sv->kind.known() || !v.card.disabled) continue;
+            if (const std::optional<int> x = card_disabled_mismatch(v.card, sv->kind.value()))
+                add(Check::CardDisabledMismatch, v.src,
+                    {ref_param("scheda", Element::ServiceCard, s.code), number_param("disabili", *v.card.disabled),
+                     number_param("persone", card_passengers(v.card)), number_param("altri", card_passengers(v.card) - *v.card.disabled),
+                     text_param("tipo", card_service_kind_text(sv->kind.value()))},
+                    *x);
         }
 
     // K-CTR-172: un turno con un pezzo di una corsa di una scheda i cui km non si sanno.

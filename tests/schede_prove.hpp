@@ -22,6 +22,7 @@ using kzero::api::PacchettoInMemoria;
 
 inline const std::string kCartella = KZERO_CARTELLA_PROVE "/esempi/k021-schede";
 inline const std::string kCartella23 = KZERO_CARTELLA_PROVE "/esempi/k023-schede";
+inline const std::string kCartella24 = KZERO_CARTELLA_PROVE "/esempi/k024-schede";
 
 using Righe = std::vector<std::vector<std::string>>;
 
@@ -54,6 +55,14 @@ inline Fogli fogli_di_prova() { return {righe_di("schede.tsv"), righe_di("fermat
 // punto di trasbordo del Ponte di Sorgenta (4000502/1 finisce li', 4000503/1 prende li' la persona). Dati inventati.
 inline Fogli fogli_k023() {
     const auto r = [](const std::string& f) { return righe_tsv(elenco_a_mano::leggi_testo(kCartella23 + "/" + f)); };
+    return {r("schede.tsv"), r("fermate.tsv"), r("date.tsv"), r("interruzioni.tsv")};
+}
+
+// K-024: le quattro schede di prova del tipo per scheda (profilo PS-CVA alla versione 3 di tests/esempi/k024-schede, con la regola RT-1
+// sul calendario SPECIALE-A e la colonna dei disabili, l'ultima del foglio): una scolastica, una per disabili riconosciuta dalla regola,
+// una scolastica con 1 disabile (promiscua), una per disabili con 0. Dati inventati.
+inline Fogli fogli_k024() {
+    const auto r = [](const std::string& f) { return righe_tsv(elenco_a_mano::leggi_testo(kCartella24 + "/" + f)); };
     return {r("schede.tsv"), r("fermate.tsv"), r("date.tsv"), r("interruzioni.tsv")};
 }
 
@@ -126,6 +135,23 @@ inline PacchettoInMemoria pacchetto_k023() {
     }
     m.file["calendari.json"] = d.dump(2);
     m.file["profili_schede.json"] = elenco_a_mano::leggi_testo(kCartella23 + "/profili_schede.json");
+    return m;
+}
+
+// K-024: il pacchetto del K-023 con i codici esterni di tests/esempi/k024-schede (il calendario SPECIALE-A) e il suo profilo alla
+// versione 3 (un profilo solo per il committente: PS-CVA, con la regola del tipo e la colonna dei disabili).
+inline PacchettoInMemoria pacchetto_k024() {
+    PacchettoInMemoria m = pacchetto_k023();
+    const JsonDati codici = JsonDati::parse(elenco_a_mano::leggi_testo(kCartella24 + "/codici_esterni.json"));
+    JsonDati d = JsonDati::parse(m.file.at("calendari.json"));
+    for (JsonDati& x : d.at("calendari")) {
+        const std::string c = x.at("codice").get<std::string>();
+        if (!codici.at("calendari").contains(c)) continue;
+        if (!x.contains("codici_esterni")) x["codici_esterni"] = JsonDati::array();
+        for (const JsonDati& e : codici.at("calendari").at(c)) x["codici_esterni"].push_back(e);
+    }
+    m.file["calendari.json"] = d.dump(2);
+    m.file["profili_schede.json"] = elenco_a_mano::leggi_testo(kCartella24 + "/profili_schede.json");
     return m;
 }
 

@@ -957,5 +957,8 @@ TEST(Controlli, catalogo_coperto) {
     EXPECT_EQ(api::definizione_controllo(Check::DemandSamePlaceTwice).codice, "K-CTR-175");
     // K-023: la coincidenza di una scheda (le prove stanno in test_schede).
     EXPECT_EQ(api::definizione_controllo(Check::CardEndsAtTransfer).codice, "K-CTR-176");
-    EXPECT_EQ(api::catalogo_controlli().size(), 176u);
+    // K-024: il numero dei disabili contro il tipo, i profili delle schede alla versione 1 o 2 (le prove stanno in test_schede).
+    EXPECT_EQ(api::definizione_controllo(Check::CardDisabledMismatch).codice, "K-CTR-177");
+    EXPECT_EQ(api::definizione_controllo(Check::CardProfileOldVersion).codice, "K-CTR-178");
+    EXPECT_EQ(api::catalogo_controlli().size(), 178u);
 }

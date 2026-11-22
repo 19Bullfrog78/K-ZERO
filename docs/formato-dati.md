@@ -1577,10 +1577,14 @@ riceve la copia una volta in un **modello Excel di K-Zero**; il **profilo delle 
 fogli, titoli delle colonne, colonne dei giorni, il segno delle caselle, i testi di verso e momento, le cadenze, la parola
 dell'accompagnatore, i separatori, e come si collegano scuole, punti di raccolta e calendari agli elementi del pacchetto. E' un
 dato: il programma conosce solo le **forme** (cadenza a giorni segnati o a date elencate), mai le parole; il modello di K-Zero e'
-il primo profilo, e se il committente mandera' le schede in Excel sara' un altro profilo. Tutti dati comuni. Schemi:
-[docs/schema/profili_schede.v2.schema.json](schema/profili_schede.v2.schema.json) (versione attuale, K-023: il foglio delle
+il primo profilo, e se il committente mandera' le schede in Excel sara' un altro profilo. Dati comuni, tranne il **tipo** dalla
+versione 3. Schemi: [docs/schema/profili_schede.v3.schema.json](schema/profili_schede.v3.schema.json) (versione attuale, K-024: le
+regole del tipo, la colonna dei disabili, il tipo tra i dati particolari),
+[docs/schema/profili_schede.v2.schema.json](schema/profili_schede.v2.schema.json) (versione 2, ancora letta, K-023: il foglio delle
 interruzioni) e [docs/schema/profili_schede.v1.schema.json](schema/profili_schede.v1.schema.json) (versione 1, ancora letta: e' la 2
-senza il foglio delle interruzioni; un profilo alla 1, o alla 2 senza il foglio, legge le schede come prima del K-023).
+senza il foglio delle interruzioni; un profilo alla 1, o alla 2 senza il foglio, legge le schede come prima del K-023). Le versioni 1 e
+2 si leggono come prima del K-024, ma il loro tipo e' un **dato comune**: `kzero controlla` da' per ogni loro profilo l'avviso K-CTR-178
+(passare alla 3: basta cambiare `"schema_versione"`; con un pacchetto chiuso, `kzero esporta` e `kzero richiudi`).
 
 | Campo | Obbl. | Classe | Significato |
 |---|---|---|---|
@@ -1590,6 +1594,7 @@ senza il foglio delle interruzioni; un profilo alla 1, o alla 2 senza il foglio,
 | `profili[].fogli` | si' | comune | Nomi dei fogli: `schede`, `fermate`, `date` e, dalla versione 2, `interruzioni` (facoltativo, insieme ai suoi titoli) |
 | `profili[].codici_esterni` | si' | comune | `sistema` e i tipi: `tipo_scheda` (l'ID), `tipo_nr` (il Nr), `tipo_servizio` (il numero prima della barra), scritti sul servizio; `tipo_scuola`, `tipo_fermata`, `tipo_calendario`, con cui si cercano scuole, punti di raccolta e calendari |
 | `profili[].colonne.schede` | si' | comune | Titoli delle colonne del foglio delle schede: `nr`, `id`, `servizio` (verso e momento), `scuole`, `attivazione`, `disattivazione`, `totali_alunni`, `individualizzato`, `attrezzato`, `tot_giorni`, `tot_km_carico`, `tot_km_vuoto`, `calendario`, `cadenza`, `nuova_modifica` |
+| `profili[].colonne.schede.disabili` | no | comune | Versione 3 (K-024): il titolo della colonna con il **numero dei disabili** a bordo (sotto). Un profilo che non lo nomina legge le schede come prima |
 | `profili[].colonne.fermate` | si' | comune | Titoli del foglio delle fermate: `nr`, `orario`, `punto` (punto di raccolta), `casa`, `salgono` (St. Car.), `scendono` (St. Scar.), `km_pieni`, `km_vuoti`, `accompagnatore` |
 | `profili[].colonne.date` | si' | comune | Titoli del foglio delle date: `nr`, `data` |
 | `profili[].colonne.interruzioni` | no | comune | Versione 2, solo insieme a `fogli.interruzioni`: titoli del foglio delle interruzioni: `nr`, `dal`, `al` |
@@ -1600,18 +1605,49 @@ senza il foglio delle interruzioni; un profilo alla 1, o alla 2 senza il foglio,
 | `profili[].cadenze[]` | si' | comune | `parola` (es. "Sempre") e `forma`: `giorni_segnati` o `date_elencate` |
 | `profili[].accompagnatore` | si' | comune | `parola` (es. "ACCOMPAGNATORE"), `sale[]` e `scende[]`: le parole della colonna dell'accompagnatore |
 | `profili[].nuova[]`, `modifica[]` | si' | comune | Le parole della colonna "Scheda nuova" / "Modifica" |
-| `profili[].servizio` | si' | comune | Come diventano i servizi: `tipo` (es. `scolastico`, con `tipo_descrizione` per `altro`), `tipo_gruppo` (es. `studenti`), `liberta_oraria` come in servizi.json. Scelte dell'utente, non parole del file |
+| `profili[].servizio` | si' | comune | Come diventano i servizi quando nessuna regola del tipo scatta: `tipo` (es. `scolastico`, con `tipo_descrizione` per `altro`), `tipo_gruppo` (es. `studenti`), `liberta_oraria` come in servizi.json. Scelte dell'utente, non parole del file |
+| `profili[].servizio.tipo`, `tipo_descrizione`, `tipo_gruppo`, `tipo_gruppo_descrizione` | si' (i due tipi) | particolare (dalla versione 3) | Il tipo del servizio e del gruppo: dato particolare dalla versione 3 (K-024, D1); nelle versioni 1 e 2 comune (K-CTR-178). La liberta' oraria resta comune |
+| `profili[].regole_tipo[]` | no | comune | Versione 3 (K-024): le **regole del tipo**, nell'ordine: `codice` (unico nel profilo: K-CTR-009), `colonna` (`servizio`, `scuole`, `calendario` o `cadenza`), `valori` (parole del committente) e `servizio` (sotto) |
+| `profili[].regole_tipo[].servizio` | si' | particolare | Il tipo che la regola da': `tipo`, `tipo_descrizione`, `tipo_gruppo`, `tipo_gruppo_descrizione` (la liberta' oraria resta quella del profilo: D9) |
 | `profili[].nota` | no | comune | Note |
 
 Titoli e parole si confrontano come quelli dei profili degli elenchi (senza maiuscole, accenti, punteggiatura e spazi doppi); hanno
 la definizione `parola` e non entrano nell'avviso sui nomi liberi (K-018).
 
+**Il tipo per scheda** (K-024, profilo alla versione 3). Un committente puo' mandare in un file solo schede di tipi diversi, e
+riconoscerle da un valore di una colonna (es. un calendario che c'e' solo sulle schede per disabili). Le **regole del tipo** del
+profilo dicono quale: una regola guarda una colonna del foglio delle schede (solo i testi: verso e momento, scuole, calendario,
+cadenza; mai il foglio delle fermate) e **scatta** se la cella, tutta (mai un pezzo: "H" non scatta su "HANDICAP"), e' uno dei suoi
+valori, confrontati come le altre parole del profilo; per le scuole, se una delle scuole della cella (divise con il separatore delle
+scuole) e' uno dei valori. Le regole si guardano dopo che la scheda e' stata letta tutta senza fermarsi:
+- nessuna regola scatta: vale il tipo del profilo (`servizio`), come prima del K-024;
+- scattano una o piu' regole con lo stesso tipo (tipo, gruppo e le due descrizioni): vale quel tipo; come origine si scrive la prima
+  regola nell'ordine del profilo;
+- scattano due regole con tipi diversi: **la scheda si ferma** (K-CTR-160 variante 48); il programma non sceglie.
+La stessa parola in due regole che guardano la stessa colonna e' un profilo ambiguo (K-CTR-173 variante 6). Il tipo scelto, e da dove
+viene (profilo o regola, con il codice), sta nella copia della scheda nel registro (dati particolari) e fa parte della versione: la stessa
+scheda con un altro tipo e' una versione nuova (sotto, "Versioni"). Il programma non conosce nessuna parola di un committente: le regole
+sono dati. **Con le regole basta un profilo solo per committente**: un profilo a parte "per i disabili" direbbe il tipo con il suo nome
+o il suo codice (docs/sicurezza.md).
+
+**Il numero dei disabili** (K-024, colonna facoltativa `colonne.schede.disabili`). Sulla scheda del committente c'e' la voce con le
+persone disabili a bordo; nel modello si copia solo il **numero**, mai nomi o codici: **il numero** quando la scheda ha la voce dei
+disabili (**0** se la voce c'e' ma e' vuota), **cella vuota** se la scheda non ha la voce. La cella vuota vuol dire "non scritto"
+(nessun controllo, mai 0). Il numero sta solo nella copia della scheda nel registro (dato particolare): servizio, gruppo e corsa non
+cambiano, perche' la scheda non dice dove salgono i disabili e il programma non divide mai un numero indovinando. Un numero scritto male
+(non intero, negativo, un testo, una cella illeggibile) ferma la scheda (K-CTR-160 variante 49); piu' disabili delle persone a bordo
+(Totali alunni, che comprende l'accompagnatore, meno 1 se la scheda ha l'accompagnatore) anche (variante 50). Con il tipo, l'avviso
+K-CTR-177: tipo disabili con 0 (variante 0); disabili a bordo di un servizio scolastico, di linea o NCC, cioe' una corsa di fatto
+promiscua (variante 1); tipo disabili con a bordo anche persone che non sono disabili (variante 2). Niente con il tipo `altro`. Le
+varianti 48-50 e K-CTR-177 rivelano un dato particolare: senza il permesso si contano soltanto.
+
 **Il modello** (scelta A dell'arbitro): tre fogli (dal K-023 un quarto, facoltativo), la prima riga di ognuno sono i titoli.
 - **Schede**: una riga per scheda, con tutti i campi dell'intestazione e del piede: Nr (es. "4000123 / 3"), ID (es. un uuid), verso
   e momento, scuole (piu' di una con il separatore delle scuole: codici esterni delle scuole), attivazione e disattivazione, una X
   sotto ogni giorno, Totali alunni, le caselle "Servizio Individualizzato" e "Attrezzato" (X o vuote), Tot Giorni, Tot Km Carico,
-  Tot Km Vuoto, Calendario (es. SCOLASTICO, MATERNA), Cadenza (es. Sempre), Scheda nuova / Modifica. La dichiarazione firmata in
-  fondo alla scheda non si copia: sono dati personali del titolare.
+  Tot Km Vuoto, Calendario (es. SCOLASTICO, MATERNA), Cadenza (es. Sempre), Scheda nuova / Modifica e, con un profilo alla versione 3
+  che la nomina, Disabili (il numero, sopra). La dichiarazione firmata in fondo alla scheda non si copia: sono dati personali del
+  titolare.
 - **Fermate**: una riga per riga della scheda, nell'ordine: Nr (quello della scheda), orario, punto di raccolta, casa, St. Car.,
   St. Scar., km pieno, km vuoto, accompagnatore.
 - **Date**: solo per le cadenze a date elencate, una riga per data: Nr, data.
@@ -1646,9 +1682,12 @@ parola, e nella colonna "accompagnatore" una parola del profilo per "sale" o "sc
 (K-021) Il **registro delle schede** lette con `kzero leggi-schede`: per ogni scheda (riconosciuta dall'**ID** del committente,
 mai dal Nr) le **versioni**, ognuna con la copia della scheda letta, da quando a quando vale, la presa in carico, il riferimento,
 come e' stata scelta la data, e i codici degli elementi del pacchetto fatti da quella versione. Lo scrivono solo `kzero
-leggi-schede` e `kzero togli-scheda`. Schemi: [docs/schema/schede_servizi.v2.schema.json](schema/schede_servizi.v2.schema.json)
-(versione attuale, K-023: le interruzioni nella copia della scheda) e
-[docs/schema/schede_servizi.v1.schema.json](schema/schede_servizi.v1.schema.json) (versione 1, ancora letta: nessuna interruzione).
+leggi-schede` e `kzero togli-scheda`, sempre all'ultima versione (contiene le altre). Schemi:
+[docs/schema/schede_servizi.v3.schema.json](schema/schede_servizi.v3.schema.json) (versione attuale, K-024: il tipo scelto e il numero
+dei disabili nella copia della scheda, dati particolari),
+[docs/schema/schede_servizi.v2.schema.json](schema/schede_servizi.v2.schema.json) (versione 2, ancora letta, K-023: le interruzioni
+nella copia della scheda) e [docs/schema/schede_servizi.v1.schema.json](schema/schede_servizi.v1.schema.json) (versione 1, ancora
+letta: nessuna interruzione). I registri alla 1 e alla 2 si leggono come prima (le versioni non hanno il tipo ne' il numero).
 
 | Campo | Obbl. | Classe | Significato |
 |---|---|---|---|
@@ -1664,14 +1703,17 @@ leggi-schede` e `kzero togli-scheda`. Schemi: [docs/schema/schede_servizi.v2.sch
 | `schede[].versioni[].elementi` | si' | comune | Codici di `servizio`, `gruppo`, `corsa`, `calendario` fatti dalla versione |
 | `schede[].versioni[].scheda` | si' | comune | La copia letta: `nr`, `servizio` (verso e momento) e `verso`, `scuole[]`, `attivazione`, `disattivazione`, `giorni[]`, `totali_alunni`, `tot_giorni`, `tot_km_carico`, `tot_km_vuoto`, `calendario` (la parola) e `calendario_base` (il calendario del pacchetto), `cadenza` e `forma_cadenza`, `nuova_modifica`, `fermate[]` (`orario`, `luogo`, `riconosciuto`, `salgono`, `scendono`, `km_pieni`, `km_vuoti`, `accompagnatore`), `date[]` e, dalla versione 2, `interruzioni[]` (`dal`, `al`, in ordine) |
 | `...scheda.individualizzato`, `...scheda.attrezzato` | no | particolare | Le due caselle della scheda (come la pedana obbligatoria e `individualizzato` del servizio) |
+| `...scheda.disabili` | no | particolare | Versione 3 (K-024): il numero dei disabili a bordo, se la scheda lo scrive (manca = non scritto) |
+| `...scheda.tipo` | no | particolare | Versione 3 (K-024): il tipo scelto per la scheda, quello che la versione ha dato al servizio e al gruppo: `tipo`, `tipo_descrizione`, `tipo_gruppo`, `tipo_gruppo_descrizione`, `da` (`profilo` o `regola`) e `regola` (il codice). Manca nelle versioni scritte prima del K-024 |
 | `tolte[]` | no | comune | Le versioni tolte con `kzero togli-scheda`: `scheda`, `id`, `versioni[]`, `riferimento`, `data`; i loro numeri non si danno piu' |
 
 **Come una scheda diventa servizio, gruppo, corsa e calendario** (una versione = un servizio, un gruppo, una corsa, un calendario):
-- **servizio**: tipo e liberta' oraria dal profilo, contratto da `--contratto`, il calendario della versione,
+- **servizio**: tipo scelto per la scheda (dal profilo o da una sua regola, K-024) e liberta' oraria dal profilo, contratto da
+  `--contratto`, il calendario della versione,
   `regole.pedana_obbligatoria: true` se Attrezzato, `individualizzato: true` se la casella e' segnata (versione 4 di
   servizi.json), nome = Nr e verso e momento; codici esterni (sistema del profilo): l'ID (tipo scheda), il Nr (tipo nr) e il
   numero prima della barra (tipo servizio);
-- **gruppo** (uno solo, D3): tipo dal profilo, verso dal testo di verso e momento, `conteggi: esatti`, le fermate con salgono e
+- **gruppo** (uno solo, D3): tipo del gruppo scelto per la scheda (come il servizio), verso dal testo di verso e momento, `conteggi: esatti`, le fermate con salgono e
   scendono come sulla scheda **meno l'accompagnatore** sulle righe dove sale o scende (lo dice la colonna, mai indovinato),
   `assistente_richiesto` se c'e' l'accompagnatore. **Un luogo una volta sola** (K-022): una scheda con due giri passa due volte dallo
   stesso luogo (es. la scuola dell'infanzia a meta', con le discese del primo giro, e alla fine); nella domanda le persone dei due
@@ -1719,12 +1761,18 @@ registro.
 giorno prima finisce il giorno prima, quelle che cominciano dalla data scelta in poi si tolgono; **i giorni prima della data scelta
 non cambiano mai**. La data scelta puo' essere anche prima della presa in carico (D4, scelta B: il committente puo' dire che una
 modifica arrivata il 15/11 vale dal 10/11), mai di base: l'uscita dice quante giornate prima della presa in carico cambiano e quali
-versioni si tolgono. Contenuto uguale all'ultima versione (la parola nuova/modifica non conta): niente da fare. **Una versione senza
+versioni si tolgono. Contenuto uguale all'ultima versione (la parola nuova/modifica non conta): niente da fare. Dal K-024 **il tipo scelto
+fa parte della versione** (D4): la stessa scheda che con le regole del profilo prende un altro tipo e' una versione nuova, con le stesse
+regole (la data la sceglie l'utente, i giorni prima non cambiano); per una versione scritta prima del K-024, che non ha il tipo nel
+registro, il tipo e' quello del suo servizio nel pacchetto, e senza il servizio non si confronta. Un profilo di oggi e lo stesso file
+danno "uguale" come prima. **Il numero dei disabili** (D6) fa una versione nuova solo se cambia tra due numeri scritti: "non scritto" da
+una parte (una versione di prima senza la colonna, o la cella vuota) non si confronta, cosi' chi aggiunge la colonna al profilo e rilegge
+lo stesso file non rifa' tutte le schede. **Una versione senza
 giorni non si scrive** (K-023): se la versione nuova non avrebbe nessun giorno di servizio dalla data scelta (calendario della scheda,
 interruzioni comprese), o se la versione di prima, accorciata al giorno prima, resterebbe senza giorni, la scheda si ferma (K-CTR-160
 variante 47) e l'utente sceglie un'altra data o toglie prima la versione di prima; il programma non toglie niente da solo. L'uscita dice cosa
 cambia: Nr, verso e momento, scuole, fermate (luoghi e ordine), orari, numeri, km, totali, date e giorni, interruzioni (K-023),
-calendario, cadenza, e le caselle (solo con i dati particolari). Mai unire schede con ID diversi.
+calendario, cadenza, e le caselle, il tipo e il numero dei disabili (K-024; solo con i dati particolari). Mai unire schede con ID diversi.
 
 **Togliere una scheda scritta per errore**: `kzero togli-scheda <pacchetto> --scheda <codice o ID> --riferimento "..." --data
 AAAA-MM-GG --utente U [--tutte] [--scrivi <pacchetto>]` toglie l'ultima versione (servizio, gruppo, corsa, calendario) e rida' alla

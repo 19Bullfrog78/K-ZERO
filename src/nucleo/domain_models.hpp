@@ -1804,6 +1804,30 @@ struct CardProfileDay {
     std::string column;   // titolo della colonna del giorno (es. "Lu")
     Weekday day = Weekday::Monday;
 };
+// K-024: il tipo che il profilo, o una sua regola, da' ai servizi fatti dalle schede: tipo del servizio e del gruppo, con le
+// descrizioni per "altro". Dati particolari (dal profilo alla versione 3): non noti a chi non puo' leggerli (K-017).
+struct CardKind {
+    ServiceKind kind = ServiceKind::School;
+    std::string kind_description;
+    GroupType group = GroupType::Students;
+    std::string group_description;
+    bool operator==(const CardKind& o) const {
+        return kind == o.kind && kind_description == o.kind_description && group == o.group && group_description == o.group_description;
+    }
+    bool operator!=(const CardKind& o) const { return !(*this == o); }
+};
+// K-024: le colonne del foglio Schede che una regola del tipo puo' guardare (solo testi: verso e momento, scuole, calendario,
+// cadenza; risposta D3 dell'arbitro).
+enum class CardRuleColumn { Service, Schools, Calendar, Cadence };   // servizio, scuole, calendario, cadenza
+// K-024: una regola del tipo del profilo: se il valore della colonna (o, per le scuole, una delle scuole) e' uno dei valori, la
+// scheda ha il tipo della regola. Colonna e valori sono parole del committente (dati comuni); il tipo e' un dato particolare.
+struct CardTypeRule {
+    Code code;
+    CardRuleColumn column = CardRuleColumn::Calendar;
+    std::vector<std::string> values;
+    std::optional<CardKind> kind;   // non noto a chi non puo' leggere i dati particolari
+    Source src;
+};
 struct CardProfile {
     Code code;
     std::string name;
@@ -1813,6 +1837,7 @@ struct CardProfile {
     struct CardColumns {
         std::string nr, id, service, schools, from, to, pupils, individual, equipped, total_days, total_loaded_km, total_empty_km,
             calendar, cadence, new_or_change;
+        std::string disabled;   // K-024 (versione 3), facoltativo: il numero dei disabili a bordo (vuoto = il modello non lo ha)
     } card_cols;
     struct StopColumns {
         std::string nr, time, point, home, boarding, alighting, loaded_km, empty_km, escort;
@@ -1833,10 +1858,10 @@ struct CardProfile {
     std::string escort_word;
     std::vector<std::string> escort_boards, escort_alights;
     std::vector<std::string> new_words, change_words;
-    ServiceKind service_kind = ServiceKind::School;
-    std::string service_kind_description;
-    GroupType group_type = GroupType::Students;
-    std::string group_type_description;
+    // Il tipo dei servizi fatti dalle schede quando nessuna regola scatta. Dato particolare dalla versione 3 (K-024): non noto a chi non
+    // puo' leggerlo; nelle versioni 1 e 2 e' un dato comune (avviso K-CTR-178).
+    std::optional<CardKind> kind = CardKind{};
+    std::vector<CardTypeRule> type_rules;   // K-024 (versione 3): le regole del tipo, nell'ordine del profilo
     TimeFreedom freedom = TimeFreedom::Free;
     std::optional<int> agree_threshold_min;
     Source src;
@@ -1873,6 +1898,17 @@ struct Card {
     std::vector<CardStop> stops;
     std::vector<Day> dates;     // con la cadenza a date elencate
     std::vector<DateRange> breaks;   // K-023: interruzioni (dal, al compresi) in ordine, senza sovrapposizioni, dentro il periodo
+    // K-024: il numero dei disabili a bordo, se la scheda lo scrive (dato particolare; vuoto = non scritto, o non noto a chi non puo'
+    // leggerlo: mai 0).
+    std::optional<int> disabled;
+    // K-024: il tipo scelto per la scheda (dato particolare): dal profilo o da una sua regola. Vuoto = non noto (versioni scritte prima
+    // del K-024, o chi non puo' leggerlo).
+    struct ChosenKind {
+        CardKind kind;
+        bool from_rule = false;
+        Code rule;   // con from_rule: il codice della regola
+    };
+    std::optional<ChosenKind> chosen;
 };
 enum class ChoiceMode { Activation, TakenInCharge, Date };   // attivazione, presa in carico, un'altra data
 enum class ChoiceFrom { None, File, Card };                   // nessuna scelta serviva, --validita, --validita-scheda

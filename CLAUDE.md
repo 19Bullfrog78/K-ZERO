@@ -90,7 +90,8 @@ Si parte da ALP (3 minibus + 1 auto) e si deve poter crescere fino a 500 mezzi e
   [--validita attivazione|presa-in-carico|AAAA-MM-GG] [--validita-scheda "NR=valore;NR=valore"] [--scrivi <pacchetto chiuso>]` (senza
   `--scrivi` anteprima); `./build/kzero togli-scheda <pacchetto chiuso> --scheda CODICE-o-ID --riferimento "..." --data AAAA-MM-GG
   --utente CODICE [--tutte] [--scrivi <pacchetto chiuso>]`. Prove con dati inventati: tests/esempi/k021-schede (profilo e testi dei
-  tre fogli, da cui le prove costruiscono il file .xlsx; `build/tests/crea_xlsx --fogli`).
+  tre fogli, da cui le prove costruiscono il file .xlsx; `build/tests/crea_xlsx --fogli`). Dal K-024 il tipo per scheda (regole del
+  profilo alla versione 3) e il numero dei disabili: prove con dati inventati in tests/esempi/k024-schede.
 - Eseguire le prove: `ctest --test-dir build --output-on-failure`
 - Controllo del deposito pubblico (K-015: i quattro nomi in nessun file, nessun file di dati ne' manifesto di un pacchetto
   fuori da tests/ ed esempi/; K-016: solo testi UTF-8 e binari ammessi, cartelle saltate uguali a quelle di .gitignore):
@@ -259,6 +260,14 @@ Si parte da ALP (3 minibus + 1 auto) e si deve poter crescere fino a 500 mezzi e
   un tratto (i totali della corsa sono il piede; un pezzo di corsa li sa solo se i suoi capi hanno dei km, `part_km`; se no, K-022, sono "non noti", mai 0, e i totali "almeno"). I numeri della
   scheda comprendono l'accompagnatore: si toglie dal gruppo solo dove lo dice la sua colonna. Mai dividere i St. Car. tra piu'
   scuole; mai scegliere la data da cui vale una scheda; mai unire schede con ID diversi.
+- Interruzioni delle schede (K-023): sono sospensioni del calendario della versione, tagliate al suo periodo; Tot Giorni le conta come
+  insieme di giorni (mai una sottrazione); un'interruzione che non torna ferma la scheda, il programma non ne corregge nessuna.
+- Coincidenza (K-023): una scuola dell'intestazione senza la sua riga solo con una scuola sola e la corsa che finisce (andata) o comincia
+  (ritorno) in un punto di trasbordo autorizzato, con qualcuno che prosegue; il gruppo tiene la sua scuola (lega la casa al luogo
+  sensibile); il legame A -> B non c'e' ancora.
+- Tipo per scheda (K-024): lo da' una regola del profilo (tutta la cella; due regole con tipi diversi fermano la scheda) o il profilo; dal
+  profilo alla versione 3 il tipo e' particolare (alla 1 e alla 2 comune: K-CTR-178); il tipo fa parte della versione; il numero dei
+  disabili sta solo nella copia della scheda (vuoto = non scritto, mai 0) e non si divide mai tra le fermate.
 - Cassaforte (K-010): un valore si lega al suo elemento per codice (o per la chiave dichiarata nello schema,
   `x-kzero-chiave`), mai per posizione; un valore senza il suo elemento e' un errore K-CTR, mai un'unione sbagliata.
   Chi ha solo i dati personali non riceve mai la chiave dei particolari, nemmeno durante il cambio delle chiavi.

@@ -44,4 +44,8 @@ std::map<std::string, JsonDati> documenti_dopo(const Lettura& vecchia, const std
 // scheda: niente tipo, pedana, nome, liberta' oraria, codici esterni, che dipendono dal profilo o sono riservati).
 std::vector<kzero::Problem> controlla_elementi(const Lettura& lettura);
 
+// K-CTR-178 (K-024, D8): ogni profilo di profili_schede.json alla versione 1 o 2, di qualsiasi tipo: il tipo che da' ai servizi e' un
+// dato comune (dalla versione 3 e' particolare). Il messaggio non dice il tipo.
+std::vector<kzero::Problem> controlla_profili(const Lettura& lettura);
+
 }  // namespace kzero::api::schede

@@ -235,7 +235,13 @@ void aggiungi_schede(std::vector<DefinizioneControllo>& c) {
                   dove + "la versione nuova non avrebbe nessun giorno di servizio (calendario della scheda, interruzioni comprese, dalla "
                          "data da cui varrebbe), oppure la versione di prima, accorciata al giorno prima, resterebbe senza giorni: la scheda "
                          "si ferma e niente e' scritto (le altre del file vanno avanti). Scegliere un'altra data (--validita-scheda), o "
-                         "togliere prima la versione di prima (kzero togli-scheda)."}});
+                         "togliere prima la versione di prima (kzero togli-scheda).",
+                  // K-024: il tipo per scheda e il numero dei disabili (dati particolari: senza il permesso si contano soltanto).
+                  dove + "le regole del tipo {regole} del profilo scattano tutte su questa scheda e danno tipi diversi: il programma non "
+                         "sceglie quale vale" + ferma + " Se la copia e' giusta, correggere le regole del profilo (profili_schede.json).",
+                  dove + "il numero dei disabili e' scritto male (un numero intero da 0 in su; la cella vuota vuol dire \"non scritto\")" + ferma,
+                  dove + "i disabili sono piu' delle persone a bordo (Totali alunni, accompagnatore escluso)" + ferma},
+                 {{48, PA}, {49, PA}, {50, PA}}});
     c.push_back({Check::CardRowWithoutCard, "K-CTR-161", E, N, "Riga senza la sua scheda",
                  {"Foglio \"{foglio}\", riga {riga}: il Nr e' vuoto o non e' il Nr di una scheda del foglio delle schede: la riga non "
                   "si legge."}});
@@ -311,7 +317,10 @@ void aggiungi_schede(std::vector<DefinizioneControllo>& c) {
                   "Nel profilo {profilo} il testo di verso e momento \"{parola}\" c'e' due volte.",
                   "Nel profilo {profilo} la cadenza \"{parola}\" c'e' due volte.",
                   "Nel profilo {profilo} la colonna del giorno \"{parola}\" c'e' due volte.",
-                  "Nel profilo {profilo} il giorno della colonna \"{parola}\" ha gia' un'altra colonna."}});
+                  "Nel profilo {profilo} il giorno della colonna \"{parola}\" ha gia' un'altra colonna.",
+                  "Nel profilo {profilo} la parola \"{parola}\" e' in due regole del tipo che guardano la stessa colonna (o due volte nella "
+                  "stessa regola): una scheda con quella parola farebbe scattare tutte e due. Se le regole danno lo stesso tipo, unirle in "
+                  "una; se no, la parola va in una sola."}});
     c.push_back({Check::CardRegisterInvalid, "K-CTR-174", E, N, "Registro delle schede incoerente",
                  {"Le schede {scheda} e {altra} del registro hanno lo stesso ID: due schede con lo stesso ID non possono esserci.",
                   "Nella scheda {scheda} la versione {versione} finisce prima di cominciare, o non viene dopo quella di prima (numero e "
@@ -332,6 +341,24 @@ void aggiungi_schede(std::vector<DefinizioneControllo>& c) {
                   "scende li' prosegue su un'altra corsa (coincidenza)." + legame + a_voce,
                   "Scheda {scheda}: la corsa comincia al punto di trasbordo {luogo} senza passare dalla scuola {scuola} dell'intestazione: chi "
                   "sale li' arriva da un'altra corsa (coincidenza)." + legame + a_voce}});
+    // K-024: il numero dei disabili contro il tipo (nella lettura, con il tipo scelto; in kzero controlla, con il tipo del servizio).
+    // Rivela un dato particolare: senza il permesso si conta soltanto.
+    c.push_back({Check::CardDisabledMismatch, "K-CTR-177", A, PA, "Numero dei disabili di una scheda che non torna con il tipo",
+                 {"Scheda {scheda}: il servizio e' per disabili, ma la scheda scrive 0 disabili a bordo: il tipo o il numero e' sbagliato "
+                  "(forse il tipo viene da una regola del profilo che per questa scheda non va bene). Controllare la scheda e il profilo.",
+                  "Scheda {scheda}: a bordo ci sono {disabili:# disabile|# disabili} su {persone:# persona|# persone}, ma il servizio e' "
+                  "{tipo}: la corsa e' di fatto promiscua. Il gruppo non si divide (la scheda non dice dove salgono i disabili), e i "
+                  "controlli che dipendono dal tipo (es. l'accompagnatore che il regolamento chiede per i disabili) non lo vedono. "
+                  "Controllare se il tipo e' giusto.",
+                  "Scheda {scheda}: il servizio e' per disabili, ma a bordo ci sono anche {altri:# persona che non e' disabile|# persone "
+                  "che non sono disabili} ({disabili} disabili su {persone:# persona|# persone}, accompagnatore escluso): la corsa e' di "
+                  "fatto promiscua. Controllare il tipo e il numero."}});
+    // K-024 (D8 B): ogni profilo alla versione 1 o 2, di qualsiasi tipo; il testo non dice il tipo (lo direbbe l'avviso stesso).
+    c.push_back({Check::CardProfileOldVersion, "K-CTR-178", A, N, "Profilo delle schede alla versione 1 o 2",
+                 {"Il profilo delle schede {profilo} e' in profili_schede.json alla versione {versione}: il tipo che da' ai servizi e' un "
+                  "dato comune, che vede anche chi non puo' leggere i dati particolari, e insieme al registro delle schede dice il tipo "
+                  "di ogni scheda. Passare alla versione 3, che lo tiene tra i dati particolari (basta cambiare \"schema_versione\"; con "
+                  "un pacchetto chiuso, kzero esporta e kzero richiudi)."}});
 }
 
 // K-019: l'elenco utenti del committente. Sui dati (kzero controlla) e sulle righe del file letto (kzero leggi-elenco).
@@ -1354,6 +1381,8 @@ const std::vector<DefinizioneControllo>& catalogo_controlli() {
             {Check::ListHomonymsInList, PQ},
             // K-021: la regola dell'assistente a bordo puo' dipendere dal tipo del servizio e del gruppo (dati particolari).
             {Check::CardEscortMissing, Q},
+            // K-024: il numero dei disabili (copia della scheda) e il tipo del servizio, tutti e due particolari.
+            {Check::CardDisabledMismatch, Q},
             {Check::PlaceWithoutCoordinates, PQ},     // le coordinate dei luoghi privati (le case legate: tutti e due i permessi)
             {Check::DwellTimesUndefined, Q},          // chi viaggia (tipi dei gruppi)
             {Check::MaxRideUndefined, Q},             // regole dei regolamenti per tipo di servizio e di gruppo
@@ -1510,6 +1539,7 @@ const char* nome_elementi(kzero::Element e) {
         case kzero::Element::ListUser: return "gli utenti degli elenchi";
         case kzero::Element::CardProfile: return "i profili delle schede dei servizi";
         case kzero::Element::ServiceCard: return "le schede dei servizi";
+        case kzero::Element::CardTypeRule: return "le regole del tipo dei profili delle schede";
     }
     return "gli elementi";
 }
@@ -1736,6 +1766,7 @@ std::string Presentatore::riferimento(kzero::Element e, const std::string& codic
         case kzero::Element::ClientList:
         case kzero::Element::CardProfile:
         case kzero::Element::ServiceCard:
+        case kzero::Element::CardTypeRule:
         case kzero::Element::ListUser: break;   // K-019: solo il codice (il nome di un utente dell'elenco non serve nei messaggi)
     }
     if (!src || nome.empty() || !dati_->versioni) return codice;

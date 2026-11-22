@@ -1777,7 +1777,7 @@ kzero_schede23(schede_interruzioni_e_coincidenze USCITA 0 FORMATO testo
                NON_CONTIENE "K-CTR-160" "K-CTR-163" "Errore"
                ARGOMENTI leggi-schede ${KZERO_K023}/k023.xlsx @PACCHETTO@ ${K023_LEGGI} --scrivi @PACCHETTO@)
 kzero_schede23(schede_interruzioni_json USCITA 0 FORMATO json SCHEMA schede
-               CONTIENE "\"schema_versione\": 2" "\"interruzioni\": 3" "\"dal\": \"2026-12-23\"" "K-CTR-176"
+               CONTIENE "\"schema_versione\": 3" "\"interruzioni\": 3" "\"dal\": \"2026-12-23\"" "K-CTR-176"
                ARGOMENTI leggi-schede ${KZERO_K023}/k023.xlsx @PACCHETTO@ ${K023_LEGGI} --formato json)
 kzero_schede23(schede23_controlla USCITA 0 FORMATO testo
                PREPARA leggi-schede ${KZERO_K023}/k023.xlsx @PACCHETTO@ ${K023_LEGGI} --scrivi @PACCHETTO@ --utente TITOLARE
@@ -1785,6 +1785,60 @@ kzero_schede23(schede23_controlla USCITA 0 FORMATO testo
                PREPARA_INGRESSO "${PW_K021}"
                NON_CONTIENE "Errore" "K-CTR-170" "K-CTR-174"
                ARGOMENTI controlla @PACCHETTO@)
+
+# --- Tipo di servizio per scheda (K-024) ---------------------------------------------------------------------------------------
+set(KZERO_K024 ${CMAKE_CURRENT_BINARY_DIR}/k024)
+add_test(NAME schede24.prepara
+         COMMAND ${CMAKE_COMMAND} -DKZERO=$<TARGET_FILE:kzero> -DPREPARA=$<TARGET_FILE:prepara_k019> -DCREA=$<TARGET_FILE:crea_xlsx>
+                 -DELENCO=${CMAKE_CURRENT_SOURCE_DIR}/esempi/k019-elenco -DSCHEDE21=${CMAKE_CURRENT_SOURCE_DIR}/esempi/k021-schede
+                 -DSORGENTI=${CMAKE_CURRENT_SOURCE_DIR}/esempi/k024-schede -DUSCITA=${KZERO_K024}
+                 -P ${CMAKE_CURRENT_SOURCE_DIR}/programma/prepara_k024.cmake)
+set_tests_properties(schede24.prepara PROPERTIES FIXTURES_SETUP k024 LABELS programma)
+set(PW_K024_PERSONALI "un'altra frase lunga per chi vede i dati personali")
+function(kzero_schede24 nome)
+  cmake_parse_arguments(E "" "UTENTE;PW" "ARGOMENTI" ${ARGN})
+  if(NOT E_UTENTE)
+    set(E_UTENTE TITOLARE)
+    set(E_PW "${PW_K021}")
+  endif()
+  kzero_prova(${nome} BASE ${KZERO_K024}/chiuso INGRESSO "${E_PW}" ${E_UNPARSED_ARGUMENTS}
+              ARGOMENTI ${E_ARGOMENTI} --utente ${E_UTENTE} --password-da-ingresso)
+  set_tests_properties(programma.${nome} PROPERTIES FIXTURES_REQUIRED k024)
+endfunction()
+set(K024_LEGGI --profilo PS-CVA --contratto CT-SCU --data 2026-11-16 --riferimento "mail del committente" --validita attivazione)
+kzero_schede24(schede_tipo_per_scheda USCITA 0 FORMATO testo
+               CONTIENE "Schede: 4 nuove"
+                        "Tipo disabili, gruppo disabili (regola RT-1 del profilo), disabili a bordo 1, pedana obbligatoria si'"
+                        "Tipo scolastico, gruppo studenti (tipo del profilo), disabili a bordo 0"
+                        "Avviso K-CTR-177: Scheda 4000603/1: a bordo ci sono 1 disabile su 8 persone, ma il servizio e' scolastico"
+                        "Avviso K-CTR-177: Scheda 4000604/1: il servizio e' per disabili, ma la scheda scrive 0 disabili a bordo"
+               NON_CONTIENE "K-CTR-160" "Errore"
+               ARGOMENTI leggi-schede ${KZERO_K024}/k024.xlsx @PACCHETTO@ ${K024_LEGGI} --includi-dati-particolari --scrivi @PACCHETTO@)
+kzero_schede24(schede_tipo_senza_particolari USCITA 0 FORMATO testo
+               CONTIENE "Schede: 4 nuove" "2 problemi sui dati particolari (salute), non elencati"
+               NON_CONTIENE "Tipo disabili" "Tipo scolastico" "RT-1" "regola" "disabili a bordo" "K-CTR-177"
+               ARGOMENTI leggi-schede ${KZERO_K024}/k024.xlsx @PACCHETTO@ ${K024_LEGGI})
+kzero_schede24(schede_tipo_json USCITA 0 FORMATO json SCHEMA schede
+               CONTIENE "\"schema_versione\": 3" "\"regola\": \"RT-1\"" "\"da\": \"regola\"" "\"disabili\": 1" "K-CTR-177"
+               ARGOMENTI leggi-schede ${KZERO_K024}/k024.xlsx @PACCHETTO@ ${K024_LEGGI} --includi-dati-particolari --formato json)
+kzero_schede24(schede24_controlla_titolare USCITA 0 FORMATO testo
+               PREPARA leggi-schede ${KZERO_K024}/k024.xlsx @PACCHETTO@ ${K024_LEGGI} --scrivi @PACCHETTO@ --utente TITOLARE
+                       --password-da-ingresso
+               PREPARA_INGRESSO "${PW_K021}"
+               CONTIENE "Avviso K-CTR-177 (schede_servizi.json, /schede/2/versioni/0): Scheda SCH-4000603-1"
+                        "Avviso K-CTR-177 (schede_servizi.json, /schede/3/versioni/0): Scheda SCH-4000604-1"
+               NON_CONTIENE "Errore" "K-CTR-170" "K-CTR-174" "K-CTR-178"
+               ARGOMENTI controlla @PACCHETTO@ --includi-dati-particolari)
+kzero_schede24(schede24_controlla_personali USCITA 0 FORMATO testo UTENTE PERSONALI PW "${PW_K024_PERSONALI}"
+               PREPARA leggi-schede ${KZERO_K024}/k024.xlsx @PACCHETTO@ ${K024_LEGGI} --scrivi @PACCHETTO@ --utente TITOLARE
+                       --password-da-ingresso
+               PREPARA_INGRESSO "${PW_K021}"
+               CONTIENE "Cassaforte aperta dall'utente PERSONALI (dati personali)" "K-CTR-171, K-CTR-177)"
+               NON_CONTIENE "Errore" "Avviso K-CTR-177" "RT-1" "disabile su"
+               ARGOMENTI controlla @PACCHETTO@ --includi-dati-personali)
+kzero_schede(schede_profilo_vecchio_avviso USCITA 0 FORMATO testo
+             CONTIENE "Avviso K-CTR-178 (profili_schede.json, /profili/0): Il profilo delle schede PS-CVA e' in profili_schede.json alla versione 1"
+             ARGOMENTI controlla @PACCHETTO@)
 
 kzero_prova(elenco_pacchetto_in_chiaro USCITA 2 FORMATO testo ERRORE K-ERR-031
             ARGOMENTI leggi-elenco ${CMAKE_CURRENT_SOURCE_DIR}/esempi/k019-elenco/prima-lettura.tsv ${KZERO_DEMO} ${K019_LEGGI} --utente A)

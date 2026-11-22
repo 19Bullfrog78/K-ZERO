@@ -897,6 +897,33 @@
   registro, due schede con lo stesso codice davano K-CTR-009 senza "{prima}" e `kzero controlla` si fermava con un errore interno (difetto
   dal K-021; anche due profili con lo stesso codice). Corretto come gli altri codici doppi; prova nuova (Schede.CodiciDoppiNelRegistroENeiProfili)
   e il caso in tests/fuzz/casi/pacchetto-schede_servizi.json. Sabotaggio (la correzione tolta): presi tutti e due.
+- 2026-11-22 - K-024 (programma, proposta "K-024: tipo di servizio per scheda"). Punto 0, le prove mancanti del K-023 (sabotaggi
+  dell'arbitro che nessuna prova prendeva; il codice era gia' giusto): S7, con la variante 47 (scheda ferma) gli avvisi della lettura di
+  quella scheda (K-CTR-163, K-CTR-165, K-CTR-176) sono tolti e quelli delle altre schede del file restano; S10, file con il segno "date
+  dal 1904" e il foglio delle interruzioni: le interruzioni scritte come numeri di Excel si leggono nei giorni giusti. Prove:
+  test_schede (+1), test_schede_comandi (+1). Sabotaggi, tutti presi e solo dalle prove nuove: avvisi della scheda ferma non tolti;
+  tolti anche quelli delle altre schede; interruzioni lette nel sistema del 1900 (Dal; Al). Per i punti 1-3 (tipo per scheda, numero
+  dei disabili, cosa resta nei dati comuni) prima le domande e le proposte per l'arbitro (K-024-domande-per-l-arbitro.md, consegnato
+  come file), niente codice.
+- 2026-11-22 - K-024 (seguito, dopo le risposte dell'arbitro: D1 A, D2 A, D3 A, D4 A, D5 A, D6 A, D7 come la tabella con la variante 2, D8 B,
+  D9 A; P1-P9 accettate). Limite chiuso (dal K-021): il tipo dei servizi delle schede si leggeva dai dati comuni (registro + profilo).
+  Profilo delle schede alla versione 3: le regole del tipo (codice, colonna tra verso e momento, scuole, calendario, cadenza; valori; tipo
+  del servizio e del gruppo) e la colonna facoltativa dei disabili; il tipo del profilo e di ogni regola sono dati particolari (nella
+  cassaforte). Una regola scatta se la cella, tutta (per le scuole una della cella), e' uno dei valori, confrontati come le parole del
+  profilo; due regole con tipi diversi fermano la scheda (K-CTR-160 variante 48); la stessa parola in due regole della stessa colonna e'
+  K-CTR-173 variante 6; codici delle regole doppi K-CTR-009. Il tipo fa parte della versione (versione nuova se cambia; per le versioni di
+  prima del K-024 il tipo del loro servizio). Il numero dei disabili solo nella copia della scheda (particolare; vuoto = non scritto):
+  scritto male o piu' delle persone a bordo fermano la scheda (varianti 49 e 50, particolari); K-CTR-177 (tipo disabili con 0, promiscua
+  di fatto, tipo disabili con altri a bordo) nella lettura e in `kzero controlla`. Registro `schede_servizi` alla versione 3 (tipo scelto,
+  origine, numero), uscita `schede` alla versione 3 (nei particolari tipo del gruppo, origine, regola, numero; con i profili di oggi il
+  testo non cambia; senza il parametro nessun segno della regola). K-CTR-178: avviso in `kzero controlla` per ogni profilo alla versione 1 o
+  2, con un testo che non dice il tipo. Dati di prova inventati in tests/esempi/k024-schede (un profilo solo per il committente, la regola
+  RT-1 sul calendario SPECIALE-A, le quattro schede chieste); `prepara_k019` accetta piu' cartelle delle schede. Prove: test_schede (+7),
+  test_schede_comandi (+4), test_controlli, test_api e test_unione (dati particolari nuovi), prove sul programma (+7, con lo schema
+  dell'uscita JSON). Fuzzing: il bersaglio delle schede con tre profili alla versione 3 (anche regole su tutte e quattro le colonne, con
+  tipi diversi) e i controlli nuovi su ogni scheda letta; semi del profilo e del registro alla versione 3. Documenti: formato-dati,
+  controlli, sicurezza (rischio del calendario conosciuto da fuori; un profilo solo per committente), cassaforte, DECISIONI, CLAUDE.md
+  (Trappole: interruzioni, coincidenza, tipo per scheda).
 ## Bug e limiti noti
 - (K-018) L'avviso sui nomi liberi trova solo il nome scritto come nei dati (senza maiuscole ne' accenti, parole intere):
   non i nomi scritti male, i soprannomi, le iniziali, le sigle ("S-DIS"), un nome dentro una parola piu' lunga, le parole
