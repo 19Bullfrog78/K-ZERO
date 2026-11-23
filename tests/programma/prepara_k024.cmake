@@ -5,7 +5,8 @@
 # disabile, una per disabili con 0) costruito dai testi dei quattro fogli (nessun .xlsx nel deposito). Le prove lavorano sempre su una
 # copia del pacchetto chiuso (BASE).
 # Uso: cmake -DKZERO=<kzero> -DPREPARA=<prepara_k019> -DCREA=<crea_xlsx> -DELENCO=<tests/esempi/k019-elenco>
-#            -DSCHEDE21=<tests/esempi/k021-schede> -DSORGENTI=<tests/esempi/k024-schede> -DUSCITA=<cartella> -P prepara_k024.cmake
+#            -DSCHEDE21=<tests/esempi/k021-schede> -DSORGENTI=<tests/esempi/k024-schede> [-DSCHEDE25=<tests/esempi/k025-schede>]
+#            -DUSCITA=<cartella> -P prepara_k024.cmake
 cmake_minimum_required(VERSION 3.25)
 file(REMOVE_RECURSE "${USCITA}")
 file(MAKE_DIRECTORY "${USCITA}")
@@ -33,4 +34,13 @@ execute_process(COMMAND "${CREA}" --fogli "${USCITA}/k024.xlsx" "Schede=${SORGEN
                 RESULT_VARIABLE r)
 if(NOT r EQUAL 0)
   message(FATAL_ERROR "crea_xlsx: ${r}")
+endif()
+# K-025: il file Excel delle quattro schede della rilettura (tests/esempi/k025-schede), per lo stesso pacchetto.
+if(SCHEDE25)
+  execute_process(COMMAND "${CREA}" --fogli "${USCITA}/k025.xlsx" "Schede=${SCHEDE25}/schede.tsv" "Fermate=${SCHEDE25}/fermate.tsv"
+                          "Date=${SCHEDE25}/date.tsv" "Interruzioni=${SCHEDE25}/interruzioni.tsv"
+                  RESULT_VARIABLE r)
+  if(NOT r EQUAL 0)
+    message(FATAL_ERROR "crea_xlsx (K-025): ${r}")
+  endif()
 endif()

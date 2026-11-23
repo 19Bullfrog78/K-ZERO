@@ -611,7 +611,7 @@ TEST(SchedeComandi, ControllaDopoLaScrittura) {
     const Risultato b = comando({"controlla", p.chiuso.string(), "--utente", "B", "--includi-dati-personali"});
     std::cout << "--- A ---\n" << a.uscita << "--- B ---\n" << b.uscita;
     EXPECT_NE(a.uscita.find("K-CTR-177"), std::string::npos) << a.uscita;
-    EXPECT_NE(a.uscita.find("Scheda SCH-4000603-1: a bordo ci sono 1 disabile su 8 persone"), std::string::npos) << a.uscita;
+    EXPECT_NE(a.uscita.find("Scheda SCH-4000603-1 (versione 1): a bordo ci sono 1 disabile su 8 persone"), std::string::npos) << a.uscita;
     EXPECT_EQ(a.uscita.find("K-CTR-178"), std::string::npos) << a.uscita;
     EXPECT_EQ(riga_con(b.uscita, "K-CTR-177:"), std::string()) << b.uscita;
     EXPECT_NE(riga_con(b.uscita, "Non verificato (servono i dati particolari").find("K-CTR-177"), std::string::npos) << b.uscita;

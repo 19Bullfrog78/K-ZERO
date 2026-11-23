@@ -1788,11 +1788,12 @@ TEST(Schede, DisabiliControllatiSuOgniVersione) {
     for (const Problem& p : v)
         if (p.check == Check::CardDisabledMismatch) c177.push_back(&p);
     ASSERT_EQ(c177.size(), 1u) << ::testing::PrintToString(messaggi(dopo.dopo, v));
-    EXPECT_EQ(c177[0]->variant, 1);
+    EXPECT_EQ(c177[0]->variant, 4);   // K-025: la variante di kzero controlla (1 nella lettura), con le versioni
     EXPECT_EQ(c177[0]->where.file, "schede_servizi.json");
     EXPECT_EQ(c177[0]->where.pointer, s->versions[0].src.pointer);
     const std::vector<std::string> testi = messaggi(dopo.dopo, {*c177[0]});
-    EXPECT_NE(testi.at(0).find("Scheda SCH-4000603-1: a bordo ci sono 1 disabile su 8 persone, ma il servizio e' scolastico"), std::string::npos)
+    EXPECT_NE(testi.at(0).find("Scheda SCH-4000603-1 (versione 1): a bordo ci sono 1 disabile su 8 persone, ma il servizio e' scolastico"),
+              std::string::npos)
         << testi.at(0);
 }
 
@@ -1950,4 +1951,165 @@ TEST(Schede, UgualeAUnaVersioneDiPrima) {
                      "scrivere.");
     EXPECT_EQ(definizione_controllo(Check::CardSameAsOlderVersion).rivela_variante(0), Classe::Comune);
     for (std::size_t i : {0u, 1u, 2u}) EXPECT_EQ(tre.m.outcomes.at(i).kind, CardOutcome::Kind::Same) << i;
+}
+
+namespace {
+// Il pacchetto dopo una lettura, con un documento cambiato da una funzione (come se l'utente lo avesse cambiato a mano).
+Lettura cambiato(const Lettura& base, const std::string& file, const std::function<void(JsonDati&)>& cambia) {
+    PacchettoInMemoria m;
+    for (const auto& [f, d] : base.documenti) m.file[f] = chiusura::testo_file(d);
+    JsonDati d = JsonDati::parse(m.file.at(file));
+    cambia(d);
+    m.file[file] = d.dump(2);
+    Lettura l = leggi_pacchetto(m);
+    EXPECT_TRUE(l.forma_valida()) << ::testing::PrintToString(messaggi(l, l.problemi));
+    return l;
+}
+// Gli avvisi delle schede che descrivono il pacchetto (K-CTR-163, 164, 176, 177) in kzero controlla: "codice vN posizione: messaggio".
+std::vector<std::string> del_pacchetto(const Lettura& l) {
+    std::vector<Problem> v;
+    check_cards(l.pacchetto, Index(l.pacchetto), v);
+    std::vector<std::string> out;
+    const Presentatore pr(&l.pacchetto, &l.versioni, Visibilita{true, true});
+    for (const Problem& p : v)
+        if (p.check == Check::CardTotalDaysDiffer || p.check == Check::CardListedDateOutside || p.check == Check::CardEndsAtTransfer ||
+            p.check == Check::CardDisabledMismatch)
+            out.push_back(definizione_controllo(p.check).codice + " v" + std::to_string(p.variant) + " " + p.where.pointer + ": " + pr.messaggio(p));
+    std::sort(out.begin(), out.end());
+    return out;
+}
+bool comincia(const std::string& x, const std::string& inizio) { return x.compare(0, inizio.size(), inizio) == 0; }
+}  // namespace
+
+// K-025, punto 2: K-CTR-163, 164 e 176 anche in kzero controlla, su ogni versione di ogni scheda, come K-CTR-177 (con le varianti di
+// controlla e la versione nel messaggio). Prima lettura: 4000703/1 con Tot Giorni sbagliato (163), 4000704/1 a date elencate con un sabato
+// (164), 4000702/1 che finisce al punto di trasbordo (176). Seconda lettura dal 23/11, con tutte e tre corrette: gli avvisi restano sulle
+// versioni 1 (scritte nel registro), nessuno sulle versioni 2. Classi: 163, 164, 176 comuni (anche la variante D8), 177 particolare.
+// Sabotaggi: K-CTR-163, 164 o 176 che mancano in controlla su una versione vecchia (solo l'ultima).
+TEST(Schede, AvvisiDelPacchettoSuOgniVersione) {
+    const Lettura l = lettura_k024();
+    Fogli f = fogli_k025();
+    f.schede[4][20] = "Ogni 15 giorni";   // 4000704/1: tre date, il 17/10/2026 e' un sabato (la scheda ha lunedi', mercoledi', venerdi')
+    f.schede[4][16] = "#3";
+    f.date = {{"Nr", "Data"}, {"4000704 / 1", "21/09/2026"}, {"4000704 / 1", "05/10/2026"}, {"4000704 / 1", "17/10/2026"}};
+    const Letto prima = leggi(l, f, attivazione());
+    for (const CardOutcome& o : prima.m.outcomes) ASSERT_EQ(o.kind, CardOutcome::Kind::New) << o.nr;
+    EXPECT_EQ(codici_di(prima, "4000704/1"), std::vector<std::string>{"K-CTR-164 v0"});
+    const std::vector<std::string> v1 = del_pacchetto(prima.dopo);
+    ASSERT_EQ(v1.size(), 3u) << ::testing::PrintToString(v1);
+    EXPECT_TRUE(comincia(v1[0], "K-CTR-163 v2 /schede/2/versioni/0: Scheda SCH-4000703-1 (versione 1): Tot Giorni e' 170, ma il calendario "
+                                  "CAL-SCUOLA (Giorni di scuola 2026/27 (da lunedi' a sabato, festivita' naz")) << v1[0];
+    EXPECT_NE(v1[0].find("il calendario del committente o quello del pacchetto (anche se cambiato dopo la lettura) e' diverso. Controllare il "
+                         "calendario."),
+              std::string::npos)
+        << v1[0];
+    EXPECT_EQ(v1[0].find("va avanti"), std::string::npos) << v1[0];
+    EXPECT_TRUE(comincia(v1[1], "K-CTR-164 v1 /schede/3/versioni/0: Scheda SCH-4000704-1 (versione 1): 1 data elencata (e' il 2026-10-17) ")) << v1[1];
+    EXPECT_TRUE(comincia(v1[2], "K-CTR-176 v4 /schede/1/versioni/0: Scheda SCH-4000702-1 (versione 1): la corsa finisce al punto di "
+                                  "trasbordo L-TRASB-PONTE (Ponte di Sorgen")) << v1[2];
+    // Le tre schede corrette, dal 23/11.
+    Fogli g = f;
+    g.schede[3][16] = "#175";   // 4000703/1
+    g.schede[4][16] = "#4";     // 4000704/1: quattro lunedi'
+    g.date = {{"Nr", "Data"}, {"4000704 / 1", "21/09/2026"}, {"4000704 / 1", "05/10/2026"}, {"4000704 / 1", "30/11/2026"},
+              {"4000704 / 1", "14/12/2026"}};
+    g.fermate[riga_fermata(g, "4000702 / 1", 1)][2] = "Centro diurno Il Faro";   // 4000702/1: arriva al centro
+    const Letto dopo = leggi(prima.dopo, g, scelta_file(DateChoice::Kind::Date, day_from_ymd(2026, 11, 23)));
+    for (std::size_t i : {1u, 2u, 3u}) ASSERT_EQ(dopo.m.outcomes.at(i).kind, CardOutcome::Kind::NewVersion) << i;
+    EXPECT_EQ(codici_di(dopo, "4000702/1"), std::vector<std::string>{"K-CTR-165 v0"});
+    const std::vector<std::string> v2 = del_pacchetto(dopo.dopo);
+    ASSERT_EQ(v2.size(), 3u) << ::testing::PrintToString(v2);
+    EXPECT_TRUE(comincia(v2[0], "K-CTR-163 v2 /schede/2/versioni/0")) << v2[0];
+    EXPECT_TRUE(comincia(v2[1], "K-CTR-164 v1 /schede/3/versioni/0")) << v2[1];
+    EXPECT_TRUE(comincia(v2[2], "K-CTR-176 v4 /schede/1/versioni/0")) << v2[2];
+    for (int v = 2; v <= 3; ++v) EXPECT_EQ(definizione_controllo(Check::CardTotalDaysDiffer).rivela_variante(v), Classe::Comune) << v;
+    EXPECT_EQ(definizione_controllo(Check::CardListedDateOutside).rivela_variante(1), Classe::Comune);
+    for (int v = 4; v <= 9; ++v) EXPECT_EQ(definizione_controllo(Check::CardEndsAtTransfer).rivela_variante(v), Classe::Comune) << v;
+    for (int v = 3; v <= 5; ++v) EXPECT_EQ(definizione_controllo(Check::CardDisabledMismatch).rivela_variante(v), Classe::Particolare) << v;
+}
+
+// K-025, D4: K-CTR-163 in controlla conta nel periodo della scheda con il calendario di base del pacchetto di oggi: un calendario cambiato a
+// mano dopo la lettura da' l'avviso (cinque giorni tolti a febbraio: 4000704/1, prima giusta, ora no) e lo toglie se lo fa tornare
+// (4000703/1: 175 - 5 = 170, come la scheda). Senza il calendario di base niente 163 ne' 164 (sarebbero falsi), senza la scuola niente 176:
+// lo dice gia' K-CTR-010. Sabotaggio: il periodo della versione al posto di quello della scheda.
+TEST(Schede, AvvisiDelPacchettoConIlCalendarioCambiato) {
+    const Letto prima = leggi(lettura_k024(), fogli_k025(), attivazione());
+    std::vector<std::string> v = del_pacchetto(prima.dopo);
+    ASSERT_EQ(v.size(), 2u) << ::testing::PrintToString(v);
+    EXPECT_TRUE(comincia(v[0], "K-CTR-163 v2 /schede/2/versioni/0")) << v[0];
+    const Lettura cal = cambiato(prima.dopo, "calendari.json", [](JsonDati& d) {
+        for (JsonDati& c : d.at("calendari"))
+            if (c.at("codice") == "CAL-SCUOLA")
+                for (const char* x : {"2027-02-15", "2027-02-16", "2027-02-17", "2027-02-18", "2027-02-19"}) c.at("date_tolte").push_back(x);
+    });
+    v = del_pacchetto(cal);
+    ASSERT_EQ(v.size(), 2u) << ::testing::PrintToString(v);
+    EXPECT_TRUE(comincia(v[0], "K-CTR-163 v2 /schede/3/versioni/0: Scheda SCH-4000704-1 (versione 1): Tot Giorni e' 105, ma il calendario "
+                                 "CAL-SCUOLA")) << v[0];
+    EXPECT_NE(v[0].find("da' 102 giorni"), std::string::npos) << v[0];
+    EXPECT_TRUE(comincia(v[1], "K-CTR-176 v4 /schede/1/versioni/0")) << v[1];
+    // Una versione con un calendario di base o una scuola che non ci sono piu': nessun avviso falso (c'e' K-CTR-010).
+    const Lettura senza = cambiato(prima.dopo, "schede_servizi.json", [](JsonDati& d) {
+        for (JsonDati& s : d.at("schede")) {
+            JsonDati& k = s.at("versioni").at(0).at("scheda");
+            if (s.at("codice") == "SCH-4000703-1") k["calendario_base"] = "CAL-NON-CE";
+            if (s.at("codice") == "SCH-4000702-1") k["scuole"] = JsonDati::array({"SC-NON-CE"});
+        }
+    });
+    EXPECT_TRUE(del_pacchetto(senza).empty()) << ::testing::PrintToString(del_pacchetto(senza));
+    std::vector<Problem> w;
+    check_cards(senza.pacchetto, Index(senza.pacchetto), w);
+    EXPECT_EQ(std::count_if(w.begin(), w.end(), [](const Problem& p) { return p.check == Check::UnknownReference; }), 2);
+}
+
+// K-025, D5 B e D5-bis: un avviso per scheda quando piu' versioni danno lo stesso risultato, sulla piu' recente, con le versioni nel
+// messaggio; risultati diversi restano separati. La 4000703/1 in tre versioni: la 1 (Tot Giorni 170), la 2 (un orario cambiato, stesso
+// risultato), la 3 (Tot Giorni 171): due avvisi, "versioni 1, 2" sulla versione 2 e "versione 3" sulla 3. Lo stesso per K-CTR-177: la
+// 4000703/1 con 1 disabile (promiscua) in tutte e tre. Sabotaggi: due versioni con lo stesso risultato che danno due avvisi; versioni con
+// risultati diversi fuse in uno.
+TEST(Schede, AvvisiDelPacchettoUnoPerSchedaConLeVersioni) {
+    Fogli f = schede_k024({});
+    const Fogli k = fogli_k025();
+    f.schede.push_back(k.schede[3]);
+    for (std::size_t i = 1; i < k.fermate.size(); ++i)
+        if (k.fermate[i][0] == "4000703 / 1") f.fermate.push_back(k.fermate[i]);
+    f.schede[1][22] = "#1";
+    const Letto uno = leggi(lettura_k024(), f, attivazione());
+    ASSERT_EQ(uno.m.outcomes.at(0).kind, CardOutcome::Kind::New);
+    Fogli g = f;
+    g.fermate[riga_fermata(g, "4000703 / 1", 0)][1] = "07:11";
+    const Letto due = leggi(uno.dopo, g, scelta_file(DateChoice::Kind::Date, day_from_ymd(2026, 11, 23)));
+    ASSERT_EQ(due.m.outcomes.at(0).kind, CardOutcome::Kind::NewVersion);
+    Fogli h = g;
+    h.schede[1][16] = "#171";
+    const Letto tre = leggi(due.dopo, h, scelta_file(DateChoice::Kind::Date, day_from_ymd(2026, 12, 21)));
+    ASSERT_EQ(tre.m.outcomes.at(0).kind, CardOutcome::Kind::NewVersion);
+    const std::vector<std::string> v = del_pacchetto(tre.dopo);
+    ASSERT_EQ(v.size(), 3u) << ::testing::PrintToString(v);
+    EXPECT_TRUE(comincia(v[0], "K-CTR-163 v2 /schede/0/versioni/1: Scheda SCH-4000703-1 (versioni 1, 2): Tot Giorni e' 170, ma il "
+                                 "calendario")) << v[0];
+    EXPECT_TRUE(comincia(v[1], "K-CTR-163 v2 /schede/0/versioni/2: Scheda SCH-4000703-1 (versione 3): Tot Giorni e' 171, ma il calendario")) << v[1];
+    EXPECT_TRUE(comincia(v[2], "K-CTR-177 v4 /schede/0/versioni/2: Scheda SCH-4000703-1 (versioni 1, 2, 3): a bordo ci sono 1 disabile su "
+                                 "9 persone")) << v[2];
+}
+
+// K-025, D8 A: il punto di trasbordo che perde l'autorizzazione dopo la lettura (il blocco "trasbordo" tolto dal luogo): in controlla
+// K-CTR-176 variante 8 (la coincidenza non vale); la rilettura del file ferma la scheda con la variante 32 (gli errori della riga vengono
+// prima dell'"uguale"). Sabotaggio: la variante nuova che manca.
+TEST(Schede, CoincidenzaCheNonValePiu) {
+    const Letto prima = leggi(lettura_k024(), fogli_k025(), attivazione());
+    const Lettura senza = cambiato(prima.dopo, "luoghi.json", [](JsonDati& d) {
+        for (JsonDati& x : d.at("luoghi"))
+            if (x.at("codice") == "L-TRASB-PONTE") x.erase("trasbordo");
+    });
+    const std::vector<std::string> v = del_pacchetto(senza);
+    ASSERT_EQ(v.size(), 2u) << ::testing::PrintToString(v);
+    EXPECT_EQ(v[1], "K-CTR-176 v8 /schede/1/versioni/0: Scheda SCH-4000702-1 (versione 1): la corsa finisce a L-TRASB-PONTE (Ponte di "
+                    "Sorgenta, piazzale), che non e' un punto di trasbordo autorizzato, senza passare dalla scuola SC-CENTRO (Centro diurno "
+                    "Il Faro) dell'intestazione: la coincidenza non vale (forse l'autorizzazione del punto e' stata tolta dopo la lettura). "
+                    "Rileggendo il file la scheda si fermerebbe.");
+    const Letto riletta = leggi(senza, fogli_k025(), {}, kMeseDopo);
+    EXPECT_EQ(riletta.m.outcomes.at(1).kind, CardOutcome::Kind::Stopped);
+    EXPECT_EQ(riletta.m.outcomes.at(1).fault, CardFault::SchoolRowMissing);
+    for (std::size_t i : {0u, 2u, 3u}) EXPECT_EQ(riletta.m.outcomes.at(i).kind, CardOutcome::Kind::Same) << i;
 }
