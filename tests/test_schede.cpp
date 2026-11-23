@@ -1760,6 +1760,42 @@ TEST(Schede, DisabiliControllatiSulRegistro) {
     EXPECT_EQ(std::count_if(w.begin(), w.end(), [](const Problem& p) { return p.check == Check::CardDisabledMismatch; }), 1);
 }
 
+// K-025, punto 0 (sabotaggio A8 dell'arbitro, che nessuna prova prendeva): in kzero controlla K-CTR-177 guarda ogni versione della scheda,
+// non solo l'ultima (DECISIONI.md, K-024). La 4000603/1 letta dall'attivazione con 1 disabile su 8 in un servizio scolastico (variante 1),
+// poi una versione nuova dal 23/11 con 0 disabili (giusta): l'avviso c'e' sulla prima versione (la sua posizione nel registro) e non sulla
+// seconda. Sabotaggio: solo l'ultima versione.
+TEST(Schede, DisabiliControllatiSuOgniVersione) {
+    const Lettura l = lettura_k024();
+    const Letto prima = leggi(l, schede_k024({3}), attivazione());
+    ASSERT_EQ(prima.m.outcomes.at(0).kind, CardOutcome::Kind::New);
+    Fogli f = schede_k024({3});
+    f.schede[1][22] = "#0";
+    DateChoices dal23;
+    dal23.file = DateChoice{DateChoice::Kind::Date, day_from_ymd(2026, 11, 23)};
+    const Letto dopo = leggi(prima.dopo, f, dal23);
+    ASSERT_EQ(dopo.m.outcomes.at(0).kind, CardOutcome::Kind::NewVersion) << ::testing::PrintToString(messaggi(dopo.dopo, dopo.m.problems));
+    ASSERT_EQ(dopo.m.outcomes.at(0).changes.size(), 1u);
+    EXPECT_EQ(dopo.m.outcomes.at(0).changes.at(0).what, "disabili");
+    const ServiceCard* s = nullptr;
+    for (const ServiceCard& x : dopo.dopo.pacchetto.service_cards)
+        if (x.code == "SCH-4000603-1") s = &x;
+    ASSERT_NE(s, nullptr);
+    ASSERT_EQ(s->versions.size(), 2u);
+    ASSERT_NE(s->versions[0].src.pointer, s->versions[1].src.pointer);
+    std::vector<Problem> v;
+    check_cards(dopo.dopo.pacchetto, Index(dopo.dopo.pacchetto), v);
+    std::vector<const Problem*> c177;
+    for (const Problem& p : v)
+        if (p.check == Check::CardDisabledMismatch) c177.push_back(&p);
+    ASSERT_EQ(c177.size(), 1u) << ::testing::PrintToString(messaggi(dopo.dopo, v));
+    EXPECT_EQ(c177[0]->variant, 1);
+    EXPECT_EQ(c177[0]->where.file, "schede_servizi.json");
+    EXPECT_EQ(c177[0]->where.pointer, s->versions[0].src.pointer);
+    const std::vector<std::string> testi = messaggi(dopo.dopo, {*c177[0]});
+    EXPECT_NE(testi.at(0).find("Scheda SCH-4000603-1: a bordo ci sono 1 disabile su 8 persone, ma il servizio e' scolastico"), std::string::npos)
+        << testi.at(0);
+}
+
 // K-024, D8 B: K-CTR-178 per ogni profilo alla versione 1 o 2, di qualsiasi tipo (anche PS-CVA, scolastico, del K-023); il messaggio non
 // dice il tipo; nessun avviso alla versione 3. Sabotaggio: l'avviso solo per i profili con il tipo disabili.
 TEST(Schede, ProfiliAllaVersioneUnoODueAvviso) {

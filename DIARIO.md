@@ -924,6 +924,12 @@
   tipi diversi) e i controlli nuovi su ogni scheda letta; semi del profilo e del registro alla versione 3. Documenti: formato-dati,
   controlli, sicurezza (rischio del calendario conosciuto da fuori; un profilo solo per committente), cassaforte, DECISIONI, CLAUDE.md
   (Trappole: interruzioni, coincidenza, tipo per scheda).
+- 2026-11-23 - K-025 (programma, proposta "K-025: rilettura delle schede"). Punto 0, la prova mancante del K-024 (sabotaggio A8
+  dell'arbitro che nessuna prova prendeva; il codice era gia' giusto): in `kzero controlla` K-CTR-177 guarda ogni versione della scheda,
+  non solo l'ultima (Schede.DisabiliControllatiSuOgniVersione: prima versione con 1 disabile in un servizio scolastico, seconda con 0;
+  l'avviso sta sulla prima). Sabotaggio "solo l'ultima versione": preso, solo dalla prova nuova. Per i punti 1 e 2 (la scheda uguale prima
+  della data, gli avvisi che descrivono il pacchetto anche in `kzero controlla`) prima le domande e le proposte per l'arbitro
+  (K-025-domande-per-l-arbitro.md, consegnato come file), niente codice.
 ## Bug e limiti noti
 - (K-018) L'avviso sui nomi liberi trova solo il nome scritto come nei dati (senza maiuscole ne' accenti, parole intere):
   non i nomi scritti male, i soprannomi, le iniziali, le sigle ("S-DIS"), un nome dentro una parola piu' lunga, le parole
