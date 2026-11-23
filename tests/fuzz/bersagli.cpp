@@ -9,6 +9,7 @@
 #include <cstdio>
 #include <map>
 #include <regex>
+#include <set>
 #include <sstream>
 #include <stdexcept>
 #include <unistd.h>
@@ -803,6 +804,28 @@ void prova_schede_righe(const std::uint8_t* dati, std::size_t n) {
                     const Lettura d = schede::con_documenti(l, schede::documenti_dopo(l, m.cards, l.pacchetto.removed_cards, m.added, m.removed,
                                                                                        m.cuts, m.new_homes));
                     if (!schede::controlla_elementi(d).empty()) guasto("elementi fatti diversi da quelli della scheda");
+                    // K-025: lo stesso file riletto subito e un mese dopo, senza nessuna scelta: ogni scheda scritta e' uguale all'ultima
+                    // versione (mai ferma per la data, mai una versione nuova), nessun avviso della lettura per lei, niente da scrivere.
+                    const kzero::Index idx2(d.pacchetto);
+                    const kzero::CardProfile* p2 = idx2.card_profile(p.code);
+                    if (!p2) guasto("profilo perso nella scrittura");
+                    const kzero::CardsRead r2 = kzero::read_cards(tab, *p2, idx2, date1904);
+                    if (r2.fault != kzero::TableFault::None || r2.cards.size() != r.cards.size()) guasto("rilettura diversa dalla lettura");
+                    for (const kzero::Day presa : {kzero::day_from_ymd(2026, 11, 16), kzero::day_from_ymd(2026, 12, 16)}) {
+                        const kzero::CardsMerge m2 = kzero::merge_cards(d.pacchetto, *p2, "CT-SCU", presa, "prova", {}, r2);
+                        if (m2.outcomes.size() != m.outcomes.size()) guasto("schede perse o inventate nella rilettura");
+                        std::set<std::string> uguali;
+                        for (std::size_t i = 0; i < m.outcomes.size(); ++i) {
+                            if (m.outcomes[i].kind != kzero::CardOutcome::Kind::New) continue;
+                            if (m2.outcomes[i].kind != kzero::CardOutcome::Kind::Same) guasto("scheda scritta che riletta non e' uguale");
+                            uguali.insert(m2.outcomes[i].nr);
+                        }
+                        if (!m2.added.empty() || !m2.removed.empty() || !m2.cuts.empty()) guasto("rilettura che scrive qualcosa");
+                        for (const kzero::Problem& x : m2.problems)
+                            for (const kzero::Param& q : x.params)
+                                if (q.name == "scheda" && q.kind == kzero::Param::Kind::Text && uguali.count(q.text))
+                                    guasto("avviso della lettura su una scheda uguale");
+                    }
                     // K-023: le sospensioni (interruzioni) dentro il periodo del calendario (fuori sarebbe K-CTR-013).
                     for (const kzero::Calendar& c : d.pacchetto.calendars)
                         for (const kzero::Suspension& x : c.suspensions)
@@ -832,6 +855,11 @@ void scrivi_semi_schede(const std::string& cartella) {
     std::ofstream(fs::path(cartella) / "schede-righe" / "seme-k024", std::ios::binary)
         << testo_di(k024 + "schede.tsv") << "@@\n" << testo_di(k024 + "fermate.tsv") << "@@\n" << testo_di(k024 + "date.tsv") << "@@\n"
         << testo_di(k024 + "interruzioni.tsv");
+    // K-025: le quattro schede della rilettura (una gia' finita alla seconda lettura, una in coincidenza, una con Tot Giorni sbagliato).
+    const std::string k025 = std::string(KZERO_SORGENTI) + "/tests/esempi/k025-schede/";
+    std::ofstream(fs::path(cartella) / "schede-righe" / "seme-k025", std::ios::binary)
+        << testo_di(k025 + "schede.tsv") << "@@\n" << testo_di(k025 + "fermate.tsv") << "@@\n" << testo_di(k025 + "date.tsv") << "@@\n"
+        << testo_di(k025 + "interruzioni.tsv");
 }
 
 int prova_semi_schede() {
