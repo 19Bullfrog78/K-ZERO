@@ -1693,7 +1693,7 @@ letta: nessuna interruzione). I registri alla 1 e alla 2 si leggono come prima (
 |---|---|---|---|
 | `schede[].codice` | si' | comune | Codice K-Zero della scheda, dal Nr della prima versione (es. `SCH-4000123-3`) |
 | `schede[].id` | si' | comune | L'ID della scheda del committente: due schede con ID diversi non si uniscono mai |
-| `schede[].committente`, `profilo`, `contratto` | si' | comune | Il committente, il profilo dell'ultima lettura, il contratto dei servizi |
+| `schede[].committente`, `profilo`, `contratto` | si' | comune | Il committente, il profilo della prima lettura (K-025: non cambia con le versioni dopo), il contratto dei servizi |
 | `schede[].versioni[].numero` | si' | comune | 1, 2, ... (riconosce la versione anche nella cassaforte) |
 | `schede[].versioni[].dal`, `al` | si' | comune | Dove la versione vale in K-Zero: dalla data scelta alla disattivazione, o al giorno prima della versione dopo |
 | `schede[].versioni[].al_prima` | no | comune | Se questa versione ha accorciato quella di prima: la fine che aveva (per `kzero togli-scheda`) |
@@ -1755,13 +1755,27 @@ fino ad allora va visto a mano (DECISIONI.md, K-023).
 `presa-in-carico`, o una data). La scelta si scrive nei parametri, non nel file: `--validita` per tutte le schede del file che ne
 hanno bisogno (la prima volta, con le schede da settembre, `--validita attivazione` una volta sola) e `--validita-scheda
 "NR=valore"` per una scheda (vince su `--validita`). Una data scritta prima dell'attivazione ferma la scheda. La scelta resta nel
-registro.
+registro. Dal K-025 una voce di `--validita-scheda` con un Nr che non e' nel foglio delle schede del file e' un errore (K-ERR-056, prima
+della password: niente letto), perche' una scelta con il Nr scritto male non si perda in silenzio; per una scheda uguale all'ultima
+versione la scelta non serve (sotto, "Versioni"), e l'uscita lo dice.
+
+**Rileggere il file intero** (K-025). Il committente manda ogni volta il file intero, con le schede cambiate e quelle uguali: rileggerlo
+e' normale. Per ogni scheda, nell'ordine: 1. gli errori della riga (la scheda si ferma, come sempre: anche una scheda uguale, se oggi non
+si legge piu', es. un punto di trasbordo che non e' piu' autorizzato); 2. lo stesso ID con un altro contratto o committente (si ferma); 3.
+**lo stesso ID con il contenuto uguale all'ultima versione** (come sotto: la parola nuova/modifica non conta, il tipo e il numero dei
+disabili si', K-024) = **uguale, prima di tutto quello che dipende dalla data**: nessuna scelta della data serve (niente K-CTR-162, mai
+ferma perche' gia' finita o per la data scelta), nessun avviso della lettura (K-CTR-163, 164, 165, 166, 176, 177: quelli che descrivono il
+pacchetto li da' `kzero controlla`, su ogni versione), niente scritto; una scelta `--validita-scheda` per lei non serve e l'uscita lo dice;
+4. solo per le schede nuove e per quelle cambiate, tutto il resto (scelta della data, avvisi, versione nuova). Il riepilogo dice quante
+sono le uguali e dove guardare i loro avvisi. Una scheda uguale a una **versione di prima, non all'ultima**, non e' uguale: tornare
+com'era e' un cambio vero (versione nuova), con l'avviso K-CTR-179 (forse il file e' vecchio: rileggere quello giusto prima di scrivere).
 
 **Versioni.** Lo stesso ID gia' nel registro = **versione nuova** della stessa scheda: vale dalla data scelta; la versione che vale il
 giorno prima finisce il giorno prima, quelle che cominciano dalla data scelta in poi si tolgono; **i giorni prima della data scelta
 non cambiano mai**. La data scelta puo' essere anche prima della presa in carico (D4, scelta B: il committente puo' dire che una
 modifica arrivata il 15/11 vale dal 10/11), mai di base: l'uscita dice quante giornate prima della presa in carico cambiano e quali
-versioni si tolgono. Contenuto uguale all'ultima versione (la parola nuova/modifica non conta): niente da fare. Dal K-024 **il tipo scelto
+versioni si tolgono. Contenuto uguale all'ultima versione (la parola nuova/modifica non conta): niente da fare, prima di ogni scelta
+della data (K-025, sopra). Dal K-024 **il tipo scelto
 fa parte della versione** (D4): la stessa scheda che con le regole del profilo prende un altro tipo e' una versione nuova, con le stesse
 regole (la data la sceglie l'utente, i giorni prima non cambiano); per una versione scritta prima del K-024, che non ha il tipo nel
 registro, il tipo e' quello del suo servizio nel pacchetto, e senza il servizio non si confronta. Un profilo di oggi e lo stesso file

@@ -268,6 +268,9 @@ Si parte da ALP (3 minibus + 1 auto) e si deve poter crescere fino a 500 mezzi e
 - Tipo per scheda (K-024): lo da' una regola del profilo (tutta la cella; due regole con tipi diversi fermano la scheda) o il profilo; dal
   profilo alla versione 3 il tipo e' particolare (alla 1 e alla 2 comune: K-CTR-178); il tipo fa parte della versione; il numero dei
   disabili sta solo nella copia della scheda (vuoto = non scritto, mai 0) e non si divide mai tra le fermate.
+- Rilettura delle schede (K-025): rileggere il file intero del committente e' normale. Una scheda uguale all'ultima versione e' "uguale" prima
+  di tutto quello che dipende dalla data (niente scelta, niente fermata per la data, nessun avviso della lettura): gli avvisi che
+  descrivono il pacchetto li da' kzero controlla, su ogni versione, uno per scheda quando piu' versioni danno lo stesso risultato.
 - Cassaforte (K-010): un valore si lega al suo elemento per codice (o per la chiave dichiarata nello schema,
   `x-kzero-chiave`), mai per posizione; un valore senza il suo elemento e' un errore K-CTR, mai un'unione sbagliata.
   Chi ha solo i dati personali non riceve mai la chiave dei particolari, nemmeno durante il cambio delle chiavi.
