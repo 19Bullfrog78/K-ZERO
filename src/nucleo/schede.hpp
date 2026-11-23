@@ -118,6 +118,10 @@ std::string card_nr_key(const std::string& nr, const CardProfile& p);
 // Il numero del servizio: la parte del Nr prima del separatore ("4000123").
 std::string card_service_number(const std::string& nr, const CardProfile& p);
 
+// K-025: i Nr del foglio delle schede (chiavi di card_nr_key, celle che si leggono), per confrontarli con --validita-scheda prima della
+// password. nullopt se il foglio non ha la riga dei titoli o la colonna del Nr (manca o c'e' due volte): lo dira' read_cards.
+std::optional<std::set<std::string>> card_nr_keys(const Table& cards, const CardProfile& profile);
+
 // Legge le tre tabelle con il profilo. date1904: la cartella di lavoro usa il sistema delle date del 1904 (le date che Excel ha
 // trasformato in numeri).
 CardsRead read_cards(const CardTables& tables, const CardProfile& profile, const Index& idx, bool date1904);
@@ -165,6 +169,7 @@ struct CardOutcome {
     std::vector<Code> new_homes;
     std::optional<CardFault> fault;
     Code service, group, trip, calendar;
+    bool choice_unused = false;           // K-025: Same con una scelta --validita-scheda per lei (non serve: la scheda non cambia)
 };
 
 struct CardsMerge {

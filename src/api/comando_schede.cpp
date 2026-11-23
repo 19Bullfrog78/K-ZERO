@@ -180,6 +180,24 @@ kzero::DateChoices scelte_di(const Parametri& par, const kzero::CardProfile& pr)
     return out;
 }
 
+// K-025 (D1-bis): ogni scheda di --validita-scheda deve essere nel foglio delle schede del file: una scelta con il Nr scritto male non si
+// perde in silenzio (una scheda che non ha bisogno della scelta varrebbe dall'attivazione). Si dice prima della password; con la riga dei
+// titoli sbagliata lo dira' la lettura (K-ERR della colonna).
+void scelte_nel_file(const kzero::DateChoices& scelte, const kzero::CardTables& t, const kzero::CardProfile& pr) {
+    const std::optional<std::set<std::string>> nel_file = kzero::card_nr_keys(t.cards, pr);
+    if (!nel_file) return;
+    std::vector<std::string> mancano;
+    for (const auto& [nr, scelta] : scelte.by_nr)
+        if (!nel_file->count(nr)) mancano.push_back(nr);
+    if (mancano.empty()) return;
+    std::string elenco;
+    for (const std::string& nr : mancano) elenco += (elenco.empty() ? "" : ", ") + nr;
+    throw ErroreKZero(Errore::SchedaDellaSceltaNonNelFile,
+                      std::string("--validita-scheda nomina ") + (mancano.size() == 1 ? "la scheda " : "le schede ") + elenco + ", che " +
+                          (mancano.size() == 1 ? "non e'" : "non sono") + " nel foglio \"" + pr.sheet_cards +
+                          "\" del file: forse il Nr e' scritto male. Niente e' stato letto.");
+}
+
 // --- Calcolo -------------------------------------------------------------------------------------------------------------
 
 struct Calcolo {
@@ -315,10 +333,12 @@ Risultato uscita_lettura(const DefinizioneComando& comando, const Parametri& par
     };
     for (const kzero::Problem& p : c.letto.problems) mostra(p);
     for (const kzero::Problem& p : c.confronto.problems) mostra(p);
-    // Gli avvisi sul registro nuovo per le schede di questo file (sovrapposizioni, accompagnatore che manca).
+    // Gli avvisi sul registro nuovo per le schede scritte da questa lettura (sovrapposizioni, accompagnatore che manca). K-025 (D3): non
+    // per le schede uguali, che non cambiano (li ripeterebbe a ogni lettura del file intero): restano in kzero controlla. Una
+    // sovrapposizione tra una scheda scritta e una uguale si vede (la scheda scritta e' nell'avviso).
     std::set<std::string> toccate;
     for (const kzero::CardOutcome& o : c.confronto.outcomes)
-        if (!o.card_code.empty()) toccate.insert(o.card_code);
+        if (o.kind == kzero::CardOutcome::Kind::New || o.kind == kzero::CardOutcome::Kind::NewVersion) toccate.insert(o.card_code);
     std::vector<kzero::Problem> sul_registro;
     kzero::check_cards(c.nuova.pacchetto, in, sul_registro);
     for (const kzero::Problem& p : sul_registro) {
@@ -361,6 +381,7 @@ Risultato uscita_lettura(const DefinizioneComando& comando, const Parametri& par
             s["scelta"] = scritta ? Json{{"modo", nome_modo(o.mode)}, {"da", nome_da(o.from)}} : Json(nullptr);
             s["elementi"] = scritta ? Json{{"servizio", o.service}, {"gruppo", o.group}, {"corsa", o.trip}, {"calendario", o.calendar}} : Json(nullptr);
             s["case_nuove"] = o.new_homes;
+            s["scelta_scheda_non_usata"] = o.choice_unused;   // K-025: uguale, con una scelta --validita-scheda che non serve
             s["interruzioni"] = con_date ? interruzioni_json(c.letto.cards.at(i).card) : Json(nullptr);   // K-023
             s["versione_accorciata"] = o.cut_version ? Json{{"versione", *o.cut_version}, {"al", kzero::text_from_day(o.cut_to)}} : Json(nullptr);
             s["versioni_tolte"] = o.removed_versions;
@@ -415,6 +436,11 @@ Risultato uscita_lettura(const DefinizioneComando& comando, const Parametri& par
     t += "Schede: " + n(conto("nuova"), "nuova", "nuove") + ", " + n(conto("versione_nuova"), "versione nuova", "versioni nuove") + ", " +
          n(conto("uguale"), "uguale", "uguali") + " (niente da fare), " + n(conto("ferma"), "ferma", "ferme") + ", " +
          n(conto("senza_scelta"), "senza", "senza") + " la scelta della data.\n";
+    // K-025: le schede uguali non fanno niente e non fanno rumore; i loro avvisi stanno in kzero controlla.
+    if (conto("uguale"))
+        t += "Schede uguali all'ultima versione: " + std::to_string(conto("uguale")) +
+             ". Niente da fare, e i loro avvisi non si ripetono a ogni lettura: quelli che descrivono il pacchetto (Tot Giorni, date "
+             "elencate, coincidenze, numero dei disabili) li da' kzero controlla.\n";
     for (std::size_t i = 0; i < c.confronto.outcomes.size(); ++i) {
         const kzero::CardOutcome& o = c.confronto.outcomes[i];
         t += "  " + (o.nr.empty() ? std::string("(senza Nr)") : o.nr) + " (riga " + std::to_string(o.row) + "): ";
@@ -457,7 +483,8 @@ Risultato uscita_lettura(const DefinizioneComando& comando, const Parametri& par
                 break;
             }
             case kzero::CardOutcome::Kind::Same:
-                t += "uguale alla versione " + std::to_string(o.version) + " della scheda " + o.card_code + ": niente da fare.\n";
+                t += "uguale alla versione " + std::to_string(o.version) + " della scheda " + o.card_code + ": niente da fare" +
+                     (o.choice_unused ? " (la scelta --validita-scheda non serve: la scheda non e' cambiata).\n" : ".\n");
                 break;
             case kzero::CardOutcome::Kind::Stopped:
                 // K-024: un motivo che rivela un dato particolare (varianti 48-50) senza il permesso non e' sotto: si conta soltanto.
@@ -522,7 +549,8 @@ Risultato esegui_leggi_schede(const DefinizioneComando& comando, const Parametri
     pacchetto_valido(senza_valori, cartella.string(), par.utente);
     const kzero::CardProfile& profilo = profilo_di(senza_valori, par.profilo);
     const Tabelle tabelle = tabelle_da(file, profilo);
-    (void)scelte_di(par, profilo);   // una scelta scritta male si dice prima della password
+    // Una scelta scritta male si dice prima della password; K-025: anche una scelta per una scheda che non e' nel file.
+    scelte_nel_file(scelte_di(par, profilo), tabelle.t, profilo);
 
     const auto in = accesso::ingresso(par);
     const cripto::Segreto password = accesso::chiedi_password(*in, par.utente);

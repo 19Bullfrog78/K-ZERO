@@ -321,6 +321,20 @@ std::string card_service_number(const std::string& nr, const CardProfile& p) {
     return i == std::string::npos ? k : k.substr(0, i);
 }
 
+std::optional<std::set<std::string>> card_nr_keys(const Table& cards, const CardProfile& pr) {
+    const Colonne k = colonne_di(cards, {pr.card_cols.nr});
+    if (k.fault != TableFault::None) return std::nullopt;
+    std::set<std::string> out;
+    for (std::size_t i = 1; i < cards.rows.size(); ++i) {
+        const TableCell* n = cella(cards.rows[i], k.colonna(pr.card_cols.nr));
+        if (n && !n->unreadable && utf8_valido(n->text) && pulito(n->text).size() <= kTestoMassimo) {
+            const std::string nr = card_nr_key(n->text, pr);
+            if (!nr.empty()) out.insert(nr);
+        }
+    }
+    return out;
+}
+
 // --- Lettura ------------------------------------------------------------------------------------------------------------
 
 CardsRead read_cards(const CardTables& tab, const CardProfile& pr, const Index& idx, bool date1904) {
@@ -1158,7 +1172,31 @@ CardsMerge merge_cards(const Package& p, const CardProfile& pr, const Code& cont
             out.outcomes.push_back(o);
             continue;
         }
-        // La data da cui vale.
+        // K-024 (D4): il tipo fa parte della versione. Una versione scritta prima del K-024 non ha il tipo nel registro: il suo tipo e'
+        // quello del suo servizio (e del suo gruppo) nel pacchetto; senza servizio, o con il tipo non noto, non si confronta.
+        const auto con_tipo = [&](const CardVersion& v) {
+            Card c = v.card;
+            if (c.chosen) return c;
+            const Service* sv = idx.service(v.service);
+            const PassengerGroup* g = idx.group(v.group);
+            if (sv && g && sv->kind.known() && g->type.known())
+                c.chosen = Card::ChosenKind{CardKind{sv->kind.value(), sv->kind_description, g->type.value(), g->type_description}, false, Code()};
+            return c;
+        };
+        // K-025: una scheda uguale all'ultima versione e' "uguale" prima di tutto quello che dipende dalla data (il committente manda ogni
+        // volta il file intero): niente scelta della data, niente fermata per la data, nessun avviso della lettura (quelli che descrivono
+        // il pacchetto li da' kzero controlla, su ogni versione). Una scelta --validita-scheda per lei non serve: l'uscita lo dice.
+        if (esistente && same_card(con_tipo(esistente->versions.back()), k)) {
+            const CardVersion& ultima = esistente->versions.back();
+            o.kind = CardOutcome::Kind::Same;
+            o.card_code = esistente->code;
+            o.version = ultima.number;
+            o.valid = ultima.valid;
+            o.choice_unused = choices.by_nr.count(r.nr) > 0;
+            out.outcomes.push_back(o);
+            continue;
+        }
+        // La data da cui vale (solo per le schede nuove e per quelle cambiate).
         const bool serve_scelta = k.from < taken;
         const auto it = choices.by_nr.find(r.nr);
         DateChoice scelta;
@@ -1235,30 +1273,21 @@ CardsMerge merge_cards(const Package& p, const CardProfile& pr, const Code& cont
                           number_param("altri", card_passengers(k) - *k.disabled), text_param("tipo", card_service_kind_text(k.chosen->kind.kind))},
                          r.row);
         if (k.to < taken) problema(Check::CardEndedBeforeTaken, 0, {text_param("scheda", r.nr), date_param("disattivazione", k.to)}, r.row);
+        // K-CTR-165 solo qui (K-025): la scheda diventa davvero una versione nuova (o una scheda nuova).
         if (esistente && !k.is_change) problema(Check::CardNewOrChangeOdd, 0, {text_param("scheda", r.nr), ref_param("codice", Element::ServiceCard, esistente->code)}, r.row);
         if (!esistente && k.is_change) problema(Check::CardNewOrChangeOdd, 1, {text_param("scheda", r.nr)}, r.row);
-
-        // K-024 (D4): il tipo fa parte della versione. Una versione scritta prima del K-024 non ha il tipo nel registro: il suo tipo e'
-        // quello del suo servizio (e del suo gruppo) nel pacchetto; senza servizio, o con il tipo non noto, non si confronta.
-        const auto con_tipo = [&](const CardVersion& v) {
-            Card c = v.card;
-            if (c.chosen) return c;
-            const Service* sv = idx.service(v.service);
-            const PassengerGroup* g = idx.group(v.group);
-            if (sv && g && sv->kind.known() && g->type.known())
-                c.chosen = Card::ChosenKind{CardKind{sv->kind.value(), sv->kind_description, g->type.value(), g->type_description}, false, Code()};
-            return c;
-        };
         if (esistente) {
             const CardVersion& ultima = esistente->versions.back();
-            if (same_card(con_tipo(ultima), k)) {
-                o.kind = CardOutcome::Kind::Same;
-                o.card_code = esistente->code;
-                o.version = ultima.number;
-                o.valid = ultima.valid;
-                out.outcomes.push_back(o);
-                continue;
-            }
+            // K-025 (D2 B): uguale a una versione di prima, non all'ultima: e' un cambio vero (si legge come versione nuova), ma forse il
+            // file e' vecchio. La versione di prima piu' recente con lo stesso contenuto.
+            for (auto v = esistente->versions.rbegin() + 1; v != esistente->versions.rend(); ++v)
+                if (same_card(con_tipo(*v), k)) {
+                    problema(Check::CardSameAsOlderVersion, 0,
+                             {text_param("scheda", r.nr), number_param("versione", v->number), number_param("ultima", ultima.number),
+                              ref_param("codice", Element::ServiceCard, esistente->code)},
+                             r.row);
+                    break;
+                }
             if (ultima.card.nr != k.nr)
                 problema(Check::CardNrChanged, 0, {text_param("scheda", r.nr), text_param("prima", ultima.card.nr),
                                                    ref_param("codice", Element::ServiceCard, esistente->code)}, r.row);

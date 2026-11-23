@@ -359,6 +359,10 @@ void aggiungi_schede(std::vector<DefinizioneControllo>& c) {
                   "dato comune, che vede anche chi non puo' leggere i dati particolari, e insieme al registro delle schede dice il tipo "
                   "di ogni scheda. Passare alla versione 3, che lo tiene tra i dati particolari (basta cambiare \"schema_versione\"; con "
                   "un pacchetto chiuso, kzero esporta e kzero richiudi)."}});
+    // K-025 (D2 B): solo nella lettura. Tornare com'era e' un cambio vero (versione nuova), ma forse il file e' vecchio.
+    c.push_back({Check::CardSameAsOlderVersion, "K-CTR-179", A, N, "Scheda uguale a una versione di prima, non all'ultima",
+                 {"Scheda {scheda}: e' uguale alla versione {versione} della scheda {codice}, non all'ultima (la {ultima}): si legge come "
+                  "versione nuova (tornare com'era e' un cambio vero). Se il file e' vecchio, rileggere quello giusto prima di scrivere."}});
 }
 
 // K-019: l'elenco utenti del committente. Sui dati (kzero controlla) e sulle righe del file letto (kzero leggi-elenco).

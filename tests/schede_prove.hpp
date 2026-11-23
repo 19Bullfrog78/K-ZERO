@@ -23,6 +23,7 @@ using kzero::api::PacchettoInMemoria;
 inline const std::string kCartella = KZERO_CARTELLA_PROVE "/esempi/k021-schede";
 inline const std::string kCartella23 = KZERO_CARTELLA_PROVE "/esempi/k023-schede";
 inline const std::string kCartella24 = KZERO_CARTELLA_PROVE "/esempi/k024-schede";
+inline const std::string kCartella25 = KZERO_CARTELLA_PROVE "/esempi/k025-schede";
 
 using Righe = std::vector<std::vector<std::string>>;
 
@@ -63,6 +64,15 @@ inline Fogli fogli_k023() {
 // una scolastica con 1 disabile (promiscua), una per disabili con 0. Dati inventati.
 inline Fogli fogli_k024() {
     const auto r = [](const std::string& f) { return righe_tsv(elenco_a_mano::leggi_testo(kCartella24 + "/" + f)); };
+    return {r("schede.tsv"), r("fermate.tsv"), r("date.tsv"), r("interruzioni.tsv")};
+}
+
+// K-025: le quattro schede della rilettura del file intero (profilo PS-CVA alla versione 3 del K-024, con la colonna dei disabili; pacchetto
+// pacchetto_k024): 4000701/1 finisce il 20/11/2026 (gia' finita alla seconda lettura), 4000702/1 per disabili (regola RT-1) che finisce
+// al punto di trasbordo del Ponte di Sorgenta (coincidenza, K-CTR-176), 4000703/1 con Tot Giorni 170 contro i 175 del calendario
+// (K-CTR-163), 4000704/1 normale. Dati inventati.
+inline Fogli fogli_k025() {
+    const auto r = [](const std::string& f) { return righe_tsv(elenco_a_mano::leggi_testo(kCartella25 + "/" + f)); };
     return {r("schede.tsv"), r("fermate.tsv"), r("date.tsv"), r("interruzioni.tsv")};
 }
 

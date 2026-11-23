@@ -1816,3 +1816,138 @@ TEST(Schede, ProfiliAllaVersioneUnoODueAvviso) {
             for (const char* tipo : {"disabili", "scolastico", "studenti"}) EXPECT_EQ(m.find(tipo), std::string::npos) << m;
     EXPECT_EQ(definizione_controllo(Check::CardProfileOldVersion).rivela_variante(0), Classe::Comune);
 }
+
+// --- K-025: rilettura delle schede -----------------------------------------------------------------------------------------------
+
+namespace {
+DateChoices scelta_file(DateChoice::Kind k, Day d = 0) {
+    DateChoices s;
+    s.file = DateChoice{k, d};
+    return s;
+}
+const Day kMeseDopo = day_from_ymd(2026, 12, 16);
+// Il Nr di una riga del foglio delle fermate (per cambiare una riga di una scheda).
+std::size_t riga_fermata(const Fogli& f, const std::string& nr, std::size_t n) {
+    std::size_t visti = 0;
+    for (std::size_t i = 1; i < f.fermate.size(); ++i)
+        if (f.fermate[i][0] == nr && visti++ == n) return i;
+    throw std::logic_error("riga che non c'e'");
+}
+}  // namespace
+
+// K-025, punto 1: il committente manda ogni volta il file intero. Le quattro schede lette dall'attivazione il 16/11 (con i loro avvisi:
+// K-CTR-163 sulla 4000703/1, K-CTR-176 sulla 4000702/1), poi lo stesso file riletto lo stesso giorno e un mese dopo, senza scelta, con
+// --validita attivazione e con --validita presa-in-carico: sempre quattro "uguali", nessun problema (niente K-CTR-162, niente fermata per
+// la data, nessun avviso della lettura, niente K-CTR-165), niente scritto. Sabotaggi: la scelta della data prima del confronto (le uguali
+// di nuovo ferme per K-CTR-162); la scheda gia' finita fermata (variante 39 con presa-in-carico); avvisi della lettura ripetuti sulle
+// uguali; K-CTR-165 su una uguale.
+TEST(Schede, RiletturaDelFileInteroUguale) {
+    const Letto prima = leggi(lettura_k024(), fogli_k025(), attivazione());
+    ASSERT_EQ(prima.m.outcomes.size(), 4u);
+    for (const CardOutcome& o : prima.m.outcomes) ASSERT_EQ(o.kind, CardOutcome::Kind::New) << o.nr;
+    EXPECT_EQ(codici_di(prima, "4000701/1"), std::vector<std::string>{});
+    EXPECT_EQ(codici_di(prima, "4000702/1"), std::vector<std::string>{"K-CTR-176 v0"});
+    EXPECT_EQ(codici_di(prima, "4000703/1"), std::vector<std::string>{"K-CTR-163 v0"});
+    EXPECT_EQ(codici_di(prima, "4000704/1"), std::vector<std::string>{});
+    for (const Day presa : {kPresa, kMeseDopo})
+        for (const DateChoices& s : {DateChoices{}, attivazione(), scelta_file(DateChoice::Kind::TakenInCharge)}) {
+            const Letto x = leggi(prima.dopo, fogli_k025(), s, presa);
+            const std::string caso = text_from_day(presa) + " scelta " + std::to_string(static_cast<int>(s.file.kind));
+            ASSERT_EQ(x.m.outcomes.size(), 4u) << caso;
+            for (std::size_t i = 0; i < 4; ++i) {
+                const CardOutcome& o = x.m.outcomes[i];
+                EXPECT_EQ(o.kind, CardOutcome::Kind::Same) << caso << " " << o.nr;
+                EXPECT_EQ(o.version, 1) << caso << " " << o.nr;
+                EXPECT_FALSE(o.choice_unused) << caso << " " << o.nr;
+                EXPECT_EQ(o.valid.from, prima.m.outcomes[i].valid.from) << caso << " " << o.nr;
+                EXPECT_EQ(o.valid.to, prima.m.outcomes[i].valid.to) << caso << " " << o.nr;
+            }
+            EXPECT_TRUE(x.m.problems.empty()) << caso << ::testing::PrintToString(messaggi(x.dopo, x.m.problems));
+            EXPECT_TRUE(x.m.added.empty() && x.m.removed.empty() && x.m.cuts.empty() && x.m.new_homes.empty()) << caso;
+            EXPECT_EQ(x.dopo.documenti.at("schede_servizi.json"), prima.dopo.documenti.at("schede_servizi.json")) << caso;
+        }
+}
+
+// K-025, D1 A: una scelta --validita-scheda per una scheda uguale non fa niente (anche una data prima dell'attivazione, che per una scheda
+// cambiata la fermerebbe con la variante 38), e l'uscita lo dice (choice_unused, solo per le schede nominate). Sabotaggio: la scelta
+// guardata prima del confronto.
+TEST(Schede, SceltaPerUnaSchedaUguale) {
+    const Letto prima = leggi(lettura_k024(), fogli_k025(), attivazione());
+    DateChoices s = scelta_file(DateChoice::Kind::TakenInCharge);
+    s.by_nr["4000703/1"] = DateChoice{DateChoice::Kind::Date, day_from_ymd(2027, 1, 11)};
+    s.by_nr["4000701/1"] = DateChoice{DateChoice::Kind::Date, day_from_ymd(2026, 1, 1)};
+    const Letto x = leggi(prima.dopo, fogli_k025(), s, kMeseDopo);
+    ASSERT_EQ(x.m.outcomes.size(), 4u);
+    for (const CardOutcome& o : x.m.outcomes) {
+        EXPECT_EQ(o.kind, CardOutcome::Kind::Same) << o.nr;
+        EXPECT_EQ(o.choice_unused, o.nr == "4000703/1" || o.nr == "4000701/1") << o.nr;
+    }
+    EXPECT_TRUE(x.m.problems.empty()) << ::testing::PrintToString(messaggi(x.dopo, x.m.problems));
+}
+
+// K-025: le schede cambiate si leggono come oggi. Un orario cambiato sulla 4000704/1: senza scelta si ferma (K-CTR-162), con la scelta
+// e' una versione nuova con K-CTR-165 (segnata "scheda nuova": ora e' davvero una versione nuova). Il numero dei disabili cambiato sulla
+// 4000703/1 (0 -> 1): versione nuova, con gli avvisi della lettura di una scheda scritta (K-CTR-163, K-CTR-165, K-CTR-177). La 4000701/1
+// gia' finita e cambiata, con presa-in-carico: ferma per la variante 39, come oggi (una versione nuova non avrebbe giorni). Le altre:
+// uguali, senza avvisi. Sabotaggio: una scheda cambiata (orario, numero dei disabili) letta come uguale.
+TEST(Schede, SchedaCambiataSiLeggeComeOggi) {
+    const Letto prima = leggi(lettura_k024(), fogli_k025(), attivazione());
+    Fogli f = fogli_k025();
+    f.fermate[riga_fermata(f, "4000704 / 1", 0)][1] = "16:12";
+    const Letto senza = leggi(prima.dopo, f, {}, kMeseDopo);
+    EXPECT_EQ(senza.m.outcomes.at(3).kind, CardOutcome::Kind::ChoiceMissing);
+    for (std::size_t i : {0u, 1u, 2u}) EXPECT_EQ(senza.m.outcomes.at(i).kind, CardOutcome::Kind::Same) << i;
+    EXPECT_EQ(codici_di(senza, "4000704/1"), std::vector<std::string>{"K-CTR-162 v0"});
+    EXPECT_EQ(senza.m.problems.size(), 1u) << ::testing::PrintToString(messaggi(senza.dopo, senza.m.problems));
+    f.schede[3][22] = "#1";   // 4000703/1: 0 -> 1 disabile, in un servizio scolastico
+    f.fermate[riga_fermata(f, "4000701 / 1", 0)][1] = "07:21";
+    DateChoices s = scelta_file(DateChoice::Kind::TakenInCharge);
+    s.by_nr["4000704/1"] = DateChoice{DateChoice::Kind::Date, day_from_ymd(2026, 12, 21)};
+    const Letto x = leggi(prima.dopo, f, s, kMeseDopo);
+    ASSERT_EQ(x.m.outcomes.size(), 4u);
+    EXPECT_EQ(x.m.outcomes[0].kind, CardOutcome::Kind::Stopped);
+    EXPECT_EQ(x.m.outcomes[0].fault, CardFault::ChoiceAfterEnd);
+    EXPECT_EQ(x.m.outcomes[1].kind, CardOutcome::Kind::Same);
+    for (std::size_t i : {2u, 3u}) {
+        ASSERT_EQ(x.m.outcomes[i].kind, CardOutcome::Kind::NewVersion) << i;
+        EXPECT_EQ(x.m.outcomes[i].version, 2) << i;
+        ASSERT_EQ(x.m.outcomes[i].changes.size(), 1u) << i;
+    }
+    EXPECT_EQ(x.m.outcomes[2].changes[0].what, "disabili");
+    EXPECT_EQ(x.m.outcomes[2].valid.from, kMeseDopo);
+    EXPECT_EQ(x.m.outcomes[3].changes[0].what, "orari");
+    EXPECT_EQ(x.m.outcomes[3].valid.from, day_from_ymd(2026, 12, 21));
+    EXPECT_FALSE(x.m.outcomes[3].choice_unused);
+    EXPECT_EQ(codici_di(x, "4000701/1"), std::vector<std::string>{"K-CTR-160 v39"});
+    EXPECT_EQ(codici_di(x, "4000702/1"), std::vector<std::string>{});
+    EXPECT_EQ(codici_di(x, "4000703/1"), (std::vector<std::string>{"K-CTR-163 v0", "K-CTR-165 v0", "K-CTR-177 v1"}));
+    EXPECT_EQ(codici_di(x, "4000704/1"), std::vector<std::string>{"K-CTR-165 v0"});
+}
+
+// K-025, D2 B: una scheda uguale a una versione di prima, non all'ultima, si legge come versione nuova (tornare com'era e' un cambio vero),
+// con l'avviso K-CTR-179 (forse il file e' vecchio) solo nella lettura. La 4000704/1 con un orario cambiato dal 21/12 (versione 2), poi il
+// file di prima riletto con la scelta dall'11/01: versione 3, uguale alla versione 1. Sabotaggio: l'avviso che manca.
+TEST(Schede, UgualeAUnaVersioneDiPrima) {
+    const Letto prima = leggi(lettura_k024(), fogli_k025(), attivazione());
+    Fogli f = fogli_k025();
+    f.fermate[riga_fermata(f, "4000704 / 1", 0)][1] = "16:12";
+    DateChoices s21;
+    s21.by_nr["4000704/1"] = DateChoice{DateChoice::Kind::Date, day_from_ymd(2026, 12, 21)};
+    const Letto due = leggi(prima.dopo, f, s21, kMeseDopo);
+    ASSERT_EQ(due.m.outcomes.at(3).kind, CardOutcome::Kind::NewVersion);
+    EXPECT_EQ(codici_di(due, "4000704/1"), std::vector<std::string>{"K-CTR-165 v0"});   // non e' uguale a una versione di prima
+    DateChoices s11;
+    s11.by_nr["4000704/1"] = DateChoice{DateChoice::Kind::Date, day_from_ymd(2027, 1, 11)};
+    const Letto tre = leggi(due.dopo, fogli_k025(), s11, day_from_ymd(2027, 1, 11));
+    ASSERT_EQ(tre.m.outcomes.at(3).kind, CardOutcome::Kind::NewVersion);
+    EXPECT_EQ(tre.m.outcomes.at(3).version, 3);
+    EXPECT_EQ(codici_di(tre, "4000704/1"), (std::vector<std::string>{"K-CTR-165 v0", "K-CTR-179 v0"}));
+    std::string testo;
+    for (const std::string& m : messaggi(tre.dopo, tre.m.problems))
+        if (m.rfind("K-CTR-179", 0) == 0) testo = m;
+    EXPECT_EQ(testo, "K-CTR-179 v0: Scheda 4000704/1: e' uguale alla versione 1 della scheda SCH-4000704-1, non all'ultima (la 2): si legge "
+                     "come versione nuova (tornare com'era e' un cambio vero). Se il file e' vecchio, rileggere quello giusto prima di "
+                     "scrivere.");
+    EXPECT_EQ(definizione_controllo(Check::CardSameAsOlderVersion).rivela_variante(0), Classe::Comune);
+    for (std::size_t i : {0u, 1u, 2u}) EXPECT_EQ(tre.m.outcomes.at(i).kind, CardOutcome::Kind::Same) << i;
+}

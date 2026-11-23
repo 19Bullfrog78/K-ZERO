@@ -960,5 +960,7 @@ TEST(Controlli, catalogo_coperto) {
     // K-024: il numero dei disabili contro il tipo, i profili delle schede alla versione 1 o 2 (le prove stanno in test_schede).
     EXPECT_EQ(api::definizione_controllo(Check::CardDisabledMismatch).codice, "K-CTR-177");
     EXPECT_EQ(api::definizione_controllo(Check::CardProfileOldVersion).codice, "K-CTR-178");
-    EXPECT_EQ(api::catalogo_controlli().size(), 178u);
+    // K-025: la scheda uguale a una versione di prima (le prove stanno in test_schede).
+    EXPECT_EQ(api::definizione_controllo(Check::CardSameAsOlderVersion).codice, "K-CTR-179");
+    EXPECT_EQ(api::catalogo_controlli().size(), 179u);
 }

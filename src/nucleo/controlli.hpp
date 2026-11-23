@@ -89,6 +89,7 @@ enum class Check {
     CardEndsAtTransfer,        // K-023: una scheda finisce (o comincia) a un punto di trasbordo senza la riga della sua scuola
     CardDisabledMismatch,      // K-024: il numero dei disabili di una scheda non torna con il tipo del servizio
     CardProfileOldVersion,     // K-024: profilo delle schede alla versione 1 o 2 (il tipo e' un dato comune)
+    CardSameAsOlderVersion,    // K-025: scheda uguale a una versione di prima, non all'ultima (solo kzero leggi-schede)
     // Turni (K-008): errori.
     ShiftPartInvalid,
     ShiftItemsOrder,
