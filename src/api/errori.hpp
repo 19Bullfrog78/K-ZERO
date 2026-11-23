@@ -87,6 +87,7 @@ enum class Errore {
     ValiditaScrittaMale,   // K-021: --validita o --validita-scheda scritti male
     SchedaNonTrovata,      // K-021: --scheda che non c'e' nel registro
     ToglimentoNonAmmesso,  // K-021: kzero togli-scheda non si puo' fare
+    SchedaDellaSceltaNonNelFile,   // K-025: --validita-scheda nomina un Nr che non e' nel foglio delle schede
 };
 
 struct DefinizioneErrore {

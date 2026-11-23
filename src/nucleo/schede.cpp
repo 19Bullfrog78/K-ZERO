@@ -321,6 +321,20 @@ std::string card_service_number(const std::string& nr, const CardProfile& p) {
     return i == std::string::npos ? k : k.substr(0, i);
 }
 
+std::optional<std::set<std::string>> card_nr_keys(const Table& cards, const CardProfile& pr) {
+    const Colonne k = colonne_di(cards, {pr.card_cols.nr});
+    if (k.fault != TableFault::None) return std::nullopt;
+    std::set<std::string> out;
+    for (std::size_t i = 1; i < cards.rows.size(); ++i) {
+        const TableCell* n = cella(cards.rows[i], k.colonna(pr.card_cols.nr));
+        if (n && !n->unreadable && utf8_valido(n->text) && pulito(n->text).size() <= kTestoMassimo) {
+            const std::string nr = card_nr_key(n->text, pr);
+            if (!nr.empty()) out.insert(nr);
+        }
+    }
+    return out;
+}
+
 // --- Lettura ------------------------------------------------------------------------------------------------------------
 
 CardsRead read_cards(const CardTables& tab, const CardProfile& pr, const Index& idx, bool date1904) {
@@ -948,20 +962,34 @@ int card_days(const Card& c, const Index& idx) {
     return n;
 }
 
+CardDatesOutside card_listed_dates_outside(const Card& k, const Index& idx) {
+    CardDatesOutside out;
+    if (k.cadence_form != CadenceForm::ListedDates) return out;
+    for (Day d : k.dates) {
+        Calendar solo_base;
+        solo_base.base = Ref{k.base_calendar, {}};
+        solo_base.range = {d, d};
+        solo_base.days.add(weekday_of(d));
+        const bool ok = k.days.has(weekday_of(d)) && calendar_active(solo_base, d, idx);
+        if (!ok && !out.count++) out.first = d;
+    }
+    return out;
+}
+
 // --- Coincidenze (K-023) --------------------------------------------------------------------------------------------------
 
-std::optional<CardTransferEnd> card_transfer_end(const Card& k, const Index& idx) {
+std::optional<CardTransferEnd> card_end_without_school(const Card& k, const Index& idx) {
     if (k.schools.size() != 1 || k.stops.empty()) return std::nullopt;   // a. una scuola sola
     const School* s = idx.school(k.schools.front());
     if (!s) return std::nullopt;
     for (const CardStop& f : k.stops)
         if (f.match == CardStopMatch::School && f.place == s->place.code) return std::nullopt;   // la scuola ha la sua riga
-    // b. la corsa finisce (andata) o comincia (ritorno) in un punto di trasbordo autorizzato: il primo o l'ultimo passaggio (le righe
-    // di fila nello stesso luogo alla stessa ora sono un passaggio solo).
+    // b. la corsa finisce (andata) o comincia (ritorno) in quel luogo: il primo o l'ultimo passaggio (le righe di fila nello stesso luogo
+    // alla stessa ora sono un passaggio solo).
     const bool ritorno = k.direction == Direction::Return;
     const CardStop& capo = ritorno ? k.stops.front() : k.stops.back();
     const Place* l = idx.place(capo.place);
-    if (!l || l->is_private || !l->transfer) return std::nullopt;
+    if (!l) return std::nullopt;
     // c. li' scende (andata) o sale (ritorno) almeno una persona, accompagnatore escluso.
     int persone = 0;
     const auto conta = [&](const CardStop& f) {
@@ -977,7 +1005,17 @@ std::optional<CardTransferEnd> card_transfer_end(const Card& k, const Index& idx
         }
     }
     if (persone <= 0) return std::nullopt;
-    return CardTransferEnd{s->code, l->code, ritorno, l->transfer->verbal && l->transfer->document.empty()};
+    // Il punto di trasbordo autorizzato: un luogo pubblico con il blocco "trasbordo" (lo stesso criterio di K-CTR-023). K-025 (D8): un luogo
+    // pubblico senza il blocco (riconosciuto per codice esterno o per nome, mai una scuola o una casa) e' la coincidenza che non vale.
+    const bool autorizzato = !l->is_private && l->transfer.has_value();
+    if (!autorizzato && (l->is_private || capo.match == CardStopMatch::School || capo.match == CardStopMatch::Home)) return std::nullopt;
+    return CardTransferEnd{s->code, l->code, ritorno, autorizzato && l->transfer->verbal && l->transfer->document.empty(), autorizzato};
+}
+
+std::optional<CardTransferEnd> card_transfer_end(const Card& k, const Index& idx) {
+    std::optional<CardTransferEnd> e = card_end_without_school(k, idx);
+    if (e && !e->authorized) return std::nullopt;
+    return e;
 }
 
 // --- Differenze ------------------------------------------------------------------------------------------------------------
@@ -1158,7 +1196,31 @@ CardsMerge merge_cards(const Package& p, const CardProfile& pr, const Code& cont
             out.outcomes.push_back(o);
             continue;
         }
-        // La data da cui vale.
+        // K-024 (D4): il tipo fa parte della versione. Una versione scritta prima del K-024 non ha il tipo nel registro: il suo tipo e'
+        // quello del suo servizio (e del suo gruppo) nel pacchetto; senza servizio, o con il tipo non noto, non si confronta.
+        const auto con_tipo = [&](const CardVersion& v) {
+            Card c = v.card;
+            if (c.chosen) return c;
+            const Service* sv = idx.service(v.service);
+            const PassengerGroup* g = idx.group(v.group);
+            if (sv && g && sv->kind.known() && g->type.known())
+                c.chosen = Card::ChosenKind{CardKind{sv->kind.value(), sv->kind_description, g->type.value(), g->type_description}, false, Code()};
+            return c;
+        };
+        // K-025: una scheda uguale all'ultima versione e' "uguale" prima di tutto quello che dipende dalla data (il committente manda ogni
+        // volta il file intero): niente scelta della data, niente fermata per la data, nessun avviso della lettura (quelli che descrivono
+        // il pacchetto li da' kzero controlla, su ogni versione). Una scelta --validita-scheda per lei non serve: l'uscita lo dice.
+        if (esistente && same_card(con_tipo(esistente->versions.back()), k)) {
+            const CardVersion& ultima = esistente->versions.back();
+            o.kind = CardOutcome::Kind::Same;
+            o.card_code = esistente->code;
+            o.version = ultima.number;
+            o.valid = ultima.valid;
+            o.choice_unused = choices.by_nr.count(r.nr) > 0;
+            out.outcomes.push_back(o);
+            continue;
+        }
+        // La data da cui vale (solo per le schede nuove e per quelle cambiate).
         const bool serve_scelta = k.from < taken;
         const auto it = choices.by_nr.find(r.nr);
         DateChoice scelta;
@@ -1206,23 +1268,11 @@ CardsMerge merge_cards(const Package& p, const CardProfile& pr, const Code& cont
                      {text_param("scheda", r.nr), number_param("tot_giorni", k.total_days), number_param("giorni", giorni),
                       ref_param("calendario", Element::Calendar, k.base_calendar)},
                      r.row);
-        if (k.cadence_form == CadenceForm::ListedDates) {
-            int fuori = 0;
-            Day prima = 0;
-            for (Day d : k.dates) {
-                Calendar solo_base;
-                solo_base.base = Ref{k.base_calendar, {}};
-                solo_base.range = {d, d};
-                solo_base.days.add(weekday_of(d));
-                const bool ok = k.days.has(weekday_of(d)) && calendar_active(solo_base, d, idx);
-                if (!ok && !fuori++) prima = d;
-            }
-            if (fuori)
-                problema(Check::CardListedDateOutside, 0,
-                         {text_param("scheda", r.nr), number_param("quante", fuori), date_param("prima", prima),
-                          ref_param("calendario", Element::Calendar, k.base_calendar)},
-                         r.row);
-        }
+        if (const CardDatesOutside f = card_listed_dates_outside(k, idx); f.count)
+            problema(Check::CardListedDateOutside, 0,
+                     {text_param("scheda", r.nr), number_param("quante", f.count), date_param("prima", f.first),
+                      ref_param("calendario", Element::Calendar, k.base_calendar)},
+                     r.row);
         if (const std::optional<CardTransferEnd> c = card_transfer_end(k, idx))   // K-023: la coincidenza (varianti: ritorno, a voce)
             problema(Check::CardEndsAtTransfer, (c->at_start ? 1 : 0) + (c->verbal ? 2 : 0),
                      {text_param("scheda", r.nr), ref_param("luogo", Element::Place, c->place), ref_param("scuola", Element::School, c->school)},
@@ -1235,30 +1285,21 @@ CardsMerge merge_cards(const Package& p, const CardProfile& pr, const Code& cont
                           number_param("altri", card_passengers(k) - *k.disabled), text_param("tipo", card_service_kind_text(k.chosen->kind.kind))},
                          r.row);
         if (k.to < taken) problema(Check::CardEndedBeforeTaken, 0, {text_param("scheda", r.nr), date_param("disattivazione", k.to)}, r.row);
+        // K-CTR-165 solo qui (K-025): la scheda diventa davvero una versione nuova (o una scheda nuova).
         if (esistente && !k.is_change) problema(Check::CardNewOrChangeOdd, 0, {text_param("scheda", r.nr), ref_param("codice", Element::ServiceCard, esistente->code)}, r.row);
         if (!esistente && k.is_change) problema(Check::CardNewOrChangeOdd, 1, {text_param("scheda", r.nr)}, r.row);
-
-        // K-024 (D4): il tipo fa parte della versione. Una versione scritta prima del K-024 non ha il tipo nel registro: il suo tipo e'
-        // quello del suo servizio (e del suo gruppo) nel pacchetto; senza servizio, o con il tipo non noto, non si confronta.
-        const auto con_tipo = [&](const CardVersion& v) {
-            Card c = v.card;
-            if (c.chosen) return c;
-            const Service* sv = idx.service(v.service);
-            const PassengerGroup* g = idx.group(v.group);
-            if (sv && g && sv->kind.known() && g->type.known())
-                c.chosen = Card::ChosenKind{CardKind{sv->kind.value(), sv->kind_description, g->type.value(), g->type_description}, false, Code()};
-            return c;
-        };
         if (esistente) {
             const CardVersion& ultima = esistente->versions.back();
-            if (same_card(con_tipo(ultima), k)) {
-                o.kind = CardOutcome::Kind::Same;
-                o.card_code = esistente->code;
-                o.version = ultima.number;
-                o.valid = ultima.valid;
-                out.outcomes.push_back(o);
-                continue;
-            }
+            // K-025 (D2 B): uguale a una versione di prima, non all'ultima: e' un cambio vero (si legge come versione nuova), ma forse il
+            // file e' vecchio. La versione di prima piu' recente con lo stesso contenuto.
+            for (auto v = esistente->versions.rbegin() + 1; v != esistente->versions.rend(); ++v)
+                if (same_card(con_tipo(*v), k)) {
+                    problema(Check::CardSameAsOlderVersion, 0,
+                             {text_param("scheda", r.nr), number_param("versione", v->number), number_param("ultima", ultima.number),
+                              ref_param("codice", Element::ServiceCard, esistente->code)},
+                             r.row);
+                    break;
+                }
             if (ultima.card.nr != k.nr)
                 problema(Check::CardNrChanged, 0, {text_param("scheda", r.nr), text_param("prima", ultima.card.nr),
                                                    ref_param("codice", Element::ServiceCard, esistente->code)}, r.row);
@@ -1628,20 +1669,71 @@ void check_cards(const Package& p, const Index& idx, std::vector<Problem>& out) 
             }
         }
 
-    // K-CTR-177 (K-024): il numero dei disabili della copia di ogni versione contro il tipo del suo servizio nel pacchetto. Con il tipo
-    // non noto (chi non puo' leggere i dati particolari) niente: il controllo richiede i dati particolari, e il resoconto lo dice "non
-    // verificato" (mai un risultato sui dati che mancano).
-    for (const ServiceCard& s : p.service_cards)
+    // K-025 (punto 2): gli avvisi che descrivono il pacchetto, su ogni versione di ogni scheda del registro, con le varianti di kzero
+    // controlla (il testo della lettura parla del file): K-CTR-163 (Tot Giorni nel periodo della scheda, attivazione-disattivazione, con il
+    // calendario di base del pacchetto di oggi: un calendario cambiato dopo la lettura da' l'avviso, o lo toglie), K-CTR-164 (date
+    // elencate), K-CTR-176 (coincidenza; D8: anche quella che non vale piu', il punto non e' piu' un punto di trasbordo autorizzato) e
+    // K-CTR-177 (K-024: il numero dei disabili con il tipo del suo servizio nel pacchetto; con il tipo non noto niente: il controllo
+    // richiede i dati particolari, e il resoconto lo dice "non verificato"). Senza il calendario di base niente 163 e 164, senza la scuola
+    // o il punto niente 176 (lo dice gia' K-CTR-010: sarebbero falsi). D5: un avviso per scheda quando piu' versioni danno lo stesso
+    // risultato (stesso controllo, variante e numeri), sulla piu' recente, con le versioni nel messaggio; risultati diversi restano separati.
+    for (const ServiceCard& s : p.service_cards) {
+        struct Avviso {
+            Check check;
+            int variant;
+            std::vector<Param> params;
+            const CardVersion* latest;
+            std::vector<int> versions;
+        };
+        std::vector<Avviso> avvisi;
+        const auto stessi = [](const std::vector<Param>& a, const std::vector<Param>& b) {
+            if (a.size() != b.size()) return false;
+            for (std::size_t i = 0; i < a.size(); ++i)
+                if (a[i].name != b[i].name || a[i].kind != b[i].kind || a[i].text != b[i].text || a[i].number != b[i].number ||
+                    a[i].element != b[i].element)
+                    return false;
+            return true;
+        };
+        const auto avviso = [&](const CardVersion& v, Check c, int variante, std::vector<Param> par) {
+            for (Avviso& a : avvisi)
+                if (a.check == c && a.variant == variante && stessi(a.params, par)) {
+                    a.latest = &v;
+                    a.versions.push_back(v.number);
+                    return;
+                }
+            avvisi.push_back({c, variante, std::move(par), &v, {v.number}});
+        };
+        const Param scheda = ref_param("scheda", Element::ServiceCard, s.code);
         for (const CardVersion& v : s.versions) {
+            const Card& k = v.card;
+            if (idx.calendar(k.base_calendar)) {
+                if (const int giorni = card_days(k, idx); giorni != k.total_days)
+                    avviso(v, Check::CardTotalDaysDiffer, k.breaks.empty() ? 2 : 3,
+                           {scheda, number_param("tot_giorni", k.total_days), number_param("giorni", giorni),
+                            ref_param("calendario", Element::Calendar, k.base_calendar)});
+                if (const CardDatesOutside f = card_listed_dates_outside(k, idx); f.count)
+                    avviso(v, Check::CardListedDateOutside, 1,
+                           {scheda, number_param("quante", f.count), date_param("prima", f.first),
+                            ref_param("calendario", Element::Calendar, k.base_calendar)});
+            }
+            if (const std::optional<CardTransferEnd> c = card_end_without_school(k, idx))
+                avviso(v, Check::CardEndsAtTransfer, c->authorized ? 4 + (c->at_start ? 1 : 0) + (c->verbal ? 2 : 0) : 8 + (c->at_start ? 1 : 0),
+                       {scheda, ref_param("luogo", Element::Place, c->place), ref_param("scuola", Element::School, c->school)});
             const Service* sv = idx.service(v.service);
-            if (!sv || !sv->kind.known() || !v.card.disabled) continue;
-            if (const std::optional<int> x = card_disabled_mismatch(v.card, sv->kind.value()))
-                add(Check::CardDisabledMismatch, v.src,
-                    {ref_param("scheda", Element::ServiceCard, s.code), number_param("disabili", *v.card.disabled),
-                     number_param("persone", card_passengers(v.card)), number_param("altri", card_passengers(v.card) - *v.card.disabled),
-                     text_param("tipo", card_service_kind_text(sv->kind.value()))},
-                    *x);
+            if (sv && sv->kind.known() && k.disabled)
+                if (const std::optional<int> x = card_disabled_mismatch(k, sv->kind.value()))
+                    avviso(v, Check::CardDisabledMismatch, 3 + *x,
+                           {scheda, number_param("disabili", *k.disabled), number_param("persone", card_passengers(k)),
+                            number_param("altri", card_passengers(k) - *k.disabled), text_param("tipo", card_service_kind_text(sv->kind.value()))});
         }
+        for (Avviso& a : avvisi) {
+            std::string versioni;
+            for (int n : a.versions) versioni += (versioni.empty() ? "" : ", ") + std::to_string(n);
+            a.params.push_back(text_param("versioni", versioni));
+            a.params.push_back(number_param("quante_versioni", static_cast<int>(a.versions.size())));
+            add(a.check, a.latest->src, std::move(a.params), a.variant);
+        }
+    }
 
     // K-CTR-172: un turno con un pezzo di una corsa di una scheda i cui km non si sanno.
     const std::set<Code> da_schede = card_trips(p);

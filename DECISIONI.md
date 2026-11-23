@@ -453,3 +453,47 @@ Formato: data - decisione - perche'.
   viene il tipo, con la colonna il numero. Senza `--includi-dati-particolari` nessun segno della regola: la riga del tipo non c'e' (come
   prima), gli avvisi particolari si contano soltanto, e una scheda ferma per un motivo particolare (varianti 48-50) dice "il motivo
   riguarda i dati particolari" invece di rimandare a un problema che non e' elencato.
+- 2026-11-23 - K-025 - **Risposte dell'arbitro alle domande prima del codice** (D1-D9): ordine nuovo della lettura approvato (errori della
+  riga, altro contratto, uguale all'ultima versione, poi tutto il resto solo per le nuove e le cambiate) con la riga nuova del riepilogo;
+  D1 A (la scelta per una scheda uguale non fa niente e l'uscita lo dice); D1-bis A (K-ERR-056 prima della password); D2 B (K-CTR-179 solo
+  nella lettura, "rileggere quello giusto prima di scrivere"); D3 A; D4 come proposto; D5 B con D5-bis (anche K-CTR-177); D6 come
+  proposto; D7 solo `scelta_scheda_non_usata` (niente oggetto con valori fissi: il conto e' gia' in `conteggi.uguali`); D8 A; D9 A.
+- 2026-11-23 - K-025 - **Rileggere il file intero e' normale: la scheda uguale prima della data**. Il committente manda ogni volta il file
+  intero; la prova dell'arbitro su un pacchetto vero (29 schede rilette subito dopo la prima lettura) dava 25 schede ferme per K-CTR-162
+  senza `--validita`, e con `--validita presa-in-carico` 5 ferme (data scelta dopo la disattivazione) e 24 K-CTR-165, perche' la scelta
+  della data e gli avvisi della lettura venivano prima del confronto con l'ultima versione. Ora, per ogni scheda: 1. gli errori della riga
+  (anche su una scheda uguale: una scheda che oggi non si legge si ferma, es. un punto di trasbordo non piu' autorizzato, variante 32); 2.
+  lo stesso ID con un altro contratto o committente (variante 40); 3. contenuto uguale all'ultima versione (`same_card` del K-024, tipo e
+  disabili compresi) = uguale, senza scelta della data, senza avvisi della lettura (K-CTR-163, 164, 165, 166, 176, 177), niente scritto;
+  4. solo per le nuove e le cambiate, tutto come prima. Le schede cambiate si leggono come prima (una scheda cambiata e gia' finita, con
+  `--validita presa-in-carico`, si ferma ancora con la variante 39: una versione nuova non avrebbe giorni). K-CTR-165 solo quando la scheda
+  diventa davvero nuova o una versione nuova. Nell'uscita della lettura anche K-CTR-169 e 171 solo per le schede scritte (D3).
+- 2026-11-23 - K-025 - **Una scelta che non serve o che non trova la sua scheda**: una voce di `--validita-scheda` per una scheda uguale non
+  fa niente e l'uscita lo dice (testo; JSON `scelta_scheda_non_usata`, uscita `schede` 4, la 3 tra le non piu' prodotte); una voce con un
+  Nr che non e' nel foglio delle schede e' l'errore K-ERR-056, prima della password (si confrontano i Nr del file come le chiavi del Nr,
+  senza aprire la cassaforte): prima si perdeva in silenzio, e una scheda che non aveva bisogno della scelta valeva dall'attivazione.
+- 2026-11-23 - K-025 - **Uguale a una versione di prima** (D2 B): non e' uguale (tornare com'era e' un cambio vero: versione nuova, con le
+  regole di sempre), con l'avviso K-CTR-179 solo nella lettura (la versione di prima piu' recente con lo stesso contenuto): forse il file
+  e' vecchio, e chi rilegge ogni mese con `--validita presa-in-carico` scriverebbe in silenzio una versione "all'indietro" per ogni scheda
+  cambiata nel frattempo. Comune: dice solo che il contenuto e' uguale a quello di un'altra versione.
+- 2026-11-23 - K-025 - **Gli avvisi che descrivono il pacchetto anche in `kzero controlla`**: K-CTR-163, 164 e 176, come K-CTR-177, su ogni
+  versione di ogni scheda del registro, con varianti proprie (il testo della lettura parla del file: "la scheda va avanti"; `{scheda}` e'
+  il Nr nella lettura, il codice nel registro) e la versione nel messaggio. K-CTR-163 conta nel periodo della scheda (attivazione,
+  disattivazione), come nella lettura: Tot Giorni e' il conto del committente per tutta la scheda, e con il periodo di una versione
+  accorciata sarebbe sempre falso; con il calendario di base del pacchetto di oggi (un calendario cambiato a mano dopo la lettura da' l'avviso,
+  o lo toglie: e' un'informazione vera sul pacchetto). Niente 163 e 164 senza il calendario di base, niente 176 senza la scuola o il punto
+  (c'e' K-CTR-010; sarebbero falsi). Una regola sola per la lettura e per controlla (`card_listed_dates_outside`, `card_days`,
+  `card_end_without_school`).
+- 2026-11-23 - K-025 - **Un avviso per scheda quando piu' versioni danno lo stesso risultato** (D5 B, anche K-CTR-177): una versione nata
+  per un orario cambiato copia Tot Giorni, calendario, date e trasbordo, e con un avviso per versione ogni cambio aggiungerebbe un doppione
+  dello stesso fatto. Stesso controllo, stessa variante e stessi numeri = un avviso, sulla piu' recente di quelle versioni, con le versioni
+  nel messaggio ("versioni 1, 2"); risultati diversi restano separati. Cambia il testo di K-CTR-177 in `controlla` (varianti 3-5), non nella
+  lettura.
+- 2026-11-23 - K-025 - **La coincidenza che non vale piu'** (D8 A): se dopo la lettura un punto di trasbordo perde l'autorizzazione (il blocco
+  `trasbordo` tolto), la rilettura del file ferma la scheda (variante 32: gli errori della riga vengono prima dell'"uguale"), e `kzero
+  controlla` lo dice con K-CTR-176 varianti 8 e 9 (la corsa finisce o comincia in un luogo pubblico che non e' un punto di trasbordo
+  autorizzato, senza passare dalla scuola: la coincidenza non vale). Mai su una scuola o una casa (sarebbe un altro caso, non una
+  coincidenza).
+- 2026-11-23 - K-025 - **Il profilo nel registro** (D9 A, trovato prima del codice): `schede[].profilo` e' il profilo della prima lettura e
+  non cambia con le versioni dopo (il documento diceva "dell'ultima lettura"); il programma non cambia. Effetto quasi nullo: K-CTR-170 non
+  guarda i campi che dipendono dal profilo, e il profilo conta solo per il separatore del Nr in K-CTR-169.

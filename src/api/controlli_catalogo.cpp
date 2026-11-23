@@ -250,6 +250,8 @@ void aggiungi_schede(std::vector<DefinizioneControllo>& c) {
                   "sceglie da quando vale: la scheda si ferma. Scelte: --validita attivazione (vale dal {attivazione}), --validita "
                   "presa-in-carico (dal {presa_in_carico}), oppure una data (--validita AAAA-MM-GG); per questa scheda sola "
                   "--validita-scheda con il Nr, un uguale e la scelta."}});
+    // K-025: le versioni di una scheda nei messaggi di kzero controlla ("versione 2", "versioni 1, 2").
+    const std::string versioni = "{quante_versioni:versione|versioni} {versioni}";
     c.push_back({Check::CardTotalDaysDiffer, "K-CTR-163", A, N, "Tot Giorni diverso dai giorni del calendario",
                  {"Scheda {scheda}: Tot Giorni e' {tot_giorni}, ma il calendario {calendario} con i giorni segnati nel periodo della "
                   "scheda da' {giorni:# giorno|# giorni}: il calendario del committente o quello del pacchetto e' diverso. La scheda va avanti; "
@@ -257,11 +259,23 @@ void aggiungi_schede(std::vector<DefinizioneControllo>& c) {
                   // K-023: la scheda ha delle interruzioni (contate come insieme di giorni).
                   "Scheda {scheda}: Tot Giorni e' {tot_giorni}, ma il calendario {calendario} con i giorni segnati e le interruzioni della "
                   "scheda nel periodo della scheda da' {giorni:# giorno|# giorni}: il calendario del committente o quello del pacchetto, "
-                  "o un'interruzione, e' diverso. La scheda va avanti; controllare il calendario e le interruzioni."}});
+                  "o un'interruzione, e' diverso. La scheda va avanti; controllare il calendario e le interruzioni.",
+                  // K-025: in kzero controlla, ogni versione del registro (con le versioni che danno lo stesso risultato).
+                  "Scheda {scheda} (" + versioni + "): Tot Giorni e' {tot_giorni}, ma il calendario {calendario} con i giorni segnati nel "
+                  "periodo della scheda da' {giorni:# giorno|# giorni}: il calendario del committente o quello del pacchetto (anche se "
+                  "cambiato dopo la lettura) e' diverso. Controllare il calendario.",
+                  "Scheda {scheda} (" + versioni + "): Tot Giorni e' {tot_giorni}, ma il calendario {calendario} con i giorni segnati e le "
+                  "interruzioni della scheda nel periodo della scheda da' {giorni:# giorno|# giorni}: il calendario del committente o quello "
+                  "del pacchetto (anche se cambiato dopo la lettura), o un'interruzione, e' diverso. Controllare il calendario e le "
+                  "interruzioni."}});
     c.push_back({Check::CardListedDateOutside, "K-CTR-164", A, N, "Date della scheda fuori dai giorni segnati o dal calendario",
                  {"Scheda {scheda}: {quante:# data elencata|# date elencate} ({quante:e' il|la prima:} {prima}) {quante:non cade|non cadono} in "
                   "un giorno con la X o non {quante:e' un giorno|sono giorni} del calendario {calendario}: il programma non sceglie quale "
-                  "sia giusto. Valgono le date; controllare la copia."}});
+                  "sia giusto. Valgono le date; controllare la copia.",
+                  // K-025: in kzero controlla.
+                  "Scheda {scheda} (" + versioni + "): {quante:# data elencata|# date elencate} ({quante:e' il|la prima:} {prima}) "
+                  "{quante:non cade|non cadono} in un giorno con la X o non {quante:e' un giorno|sono giorni} del calendario {calendario}: il "
+                  "programma non sceglie quale sia giusto. Valgono le date; controllare la copia."}});
     c.push_back({Check::CardNewOrChangeOdd, "K-CTR-165", A, N, "Scheda nuova o modifica che non torna con il registro",
                  {"Scheda {scheda}: e' segnata \"scheda nuova\", ma il suo ID c'e' gia' nel registro ({codice}): si legge come versione "
                   "nuova di quella scheda.",
@@ -340,7 +354,22 @@ void aggiungi_schede(std::vector<DefinizioneControllo>& c) {
                   "Scheda {scheda}: la corsa finisce al punto di trasbordo {luogo} senza passare dalla scuola {scuola} dell'intestazione: chi "
                   "scende li' prosegue su un'altra corsa (coincidenza)." + legame + a_voce,
                   "Scheda {scheda}: la corsa comincia al punto di trasbordo {luogo} senza passare dalla scuola {scuola} dell'intestazione: chi "
-                  "sale li' arriva da un'altra corsa (coincidenza)." + legame + a_voce}});
+                  "sale li' arriva da un'altra corsa (coincidenza)." + legame + a_voce,
+                  // K-025: in kzero controlla (4-7 come 0-3), e la coincidenza che non vale piu' (8 andata, 9 ritorno, D8).
+                  "Scheda {scheda} (" + versioni + "): la corsa finisce al punto di trasbordo {luogo} senza passare dalla scuola {scuola} "
+                  "dell'intestazione: chi scende li' prosegue su un'altra corsa (coincidenza)." + legame,
+                  "Scheda {scheda} (" + versioni + "): la corsa comincia al punto di trasbordo {luogo} senza passare dalla scuola {scuola} "
+                  "dell'intestazione: chi sale li' arriva da un'altra corsa (coincidenza)." + legame,
+                  "Scheda {scheda} (" + versioni + "): la corsa finisce al punto di trasbordo {luogo} senza passare dalla scuola {scuola} "
+                  "dell'intestazione: chi scende li' prosegue su un'altra corsa (coincidenza)." + legame + a_voce,
+                  "Scheda {scheda} (" + versioni + "): la corsa comincia al punto di trasbordo {luogo} senza passare dalla scuola {scuola} "
+                  "dell'intestazione: chi sale li' arriva da un'altra corsa (coincidenza)." + legame + a_voce,
+                  "Scheda {scheda} (" + versioni + "): la corsa finisce a {luogo}, che non e' un punto di trasbordo autorizzato, senza "
+                  "passare dalla scuola {scuola} dell'intestazione: la coincidenza non vale (forse l'autorizzazione del punto e' stata tolta "
+                  "dopo la lettura). Rileggendo il file la scheda si fermerebbe.",
+                  "Scheda {scheda} (" + versioni + "): la corsa comincia a {luogo}, che non e' un punto di trasbordo autorizzato, senza "
+                  "passare dalla scuola {scuola} dell'intestazione: la coincidenza non vale (forse l'autorizzazione del punto e' stata tolta "
+                  "dopo la lettura). Rileggendo il file la scheda si fermerebbe."}});
     // K-024: il numero dei disabili contro il tipo (nella lettura, con il tipo scelto; in kzero controlla, con il tipo del servizio).
     // Rivela un dato particolare: senza il permesso si conta soltanto.
     c.push_back({Check::CardDisabledMismatch, "K-CTR-177", A, PA, "Numero dei disabili di una scheda che non torna con il tipo",
@@ -352,13 +381,28 @@ void aggiungi_schede(std::vector<DefinizioneControllo>& c) {
                   "Controllare se il tipo e' giusto.",
                   "Scheda {scheda}: il servizio e' per disabili, ma a bordo ci sono anche {altri:# persona che non e' disabile|# persone "
                   "che non sono disabili} ({disabili} disabili su {persone:# persona|# persone}, accompagnatore escluso): la corsa e' di "
-                  "fatto promiscua. Controllare il tipo e il numero."}});
+                  "fatto promiscua. Controllare il tipo e il numero.",
+                  // K-025 (D5-bis): in kzero controlla (3-5 come 0-2), con le versioni.
+                  "Scheda {scheda} (" + versioni + "): il servizio e' per disabili, ma la scheda scrive 0 disabili a bordo: il tipo o il "
+                  "numero e' sbagliato (forse il tipo viene da una regola del profilo che per questa scheda non va bene). Controllare la "
+                  "scheda e il profilo.",
+                  "Scheda {scheda} (" + versioni + "): a bordo ci sono {disabili:# disabile|# disabili} su {persone:# persona|# persone}, ma "
+                  "il servizio e' {tipo}: la corsa e' di fatto promiscua. Il gruppo non si divide (la scheda non dice dove salgono i "
+                  "disabili), e i controlli che dipendono dal tipo (es. l'accompagnatore che il regolamento chiede per i disabili) non lo "
+                  "vedono. Controllare se il tipo e' giusto.",
+                  "Scheda {scheda} (" + versioni + "): il servizio e' per disabili, ma a bordo ci sono anche {altri:# persona che non e' "
+                  "disabile|# persone che non sono disabili} ({disabili} disabili su {persone:# persona|# persone}, accompagnatore "
+                  "escluso): la corsa e' di fatto promiscua. Controllare il tipo e il numero."}});
     // K-024 (D8 B): ogni profilo alla versione 1 o 2, di qualsiasi tipo; il testo non dice il tipo (lo direbbe l'avviso stesso).
     c.push_back({Check::CardProfileOldVersion, "K-CTR-178", A, N, "Profilo delle schede alla versione 1 o 2",
                  {"Il profilo delle schede {profilo} e' in profili_schede.json alla versione {versione}: il tipo che da' ai servizi e' un "
                   "dato comune, che vede anche chi non puo' leggere i dati particolari, e insieme al registro delle schede dice il tipo "
                   "di ogni scheda. Passare alla versione 3, che lo tiene tra i dati particolari (basta cambiare \"schema_versione\"; con "
                   "un pacchetto chiuso, kzero esporta e kzero richiudi)."}});
+    // K-025 (D2 B): solo nella lettura. Tornare com'era e' un cambio vero (versione nuova), ma forse il file e' vecchio.
+    c.push_back({Check::CardSameAsOlderVersion, "K-CTR-179", A, N, "Scheda uguale a una versione di prima, non all'ultima",
+                 {"Scheda {scheda}: e' uguale alla versione {versione} della scheda {codice}, non all'ultima (la {ultima}): si legge come "
+                  "versione nuova (tornare com'era e' un cambio vero). Se il file e' vecchio, rileggere quello giusto prima di scrivere."}});
 }
 
 // K-019: l'elenco utenti del committente. Sui dati (kzero controlla) e sulle righe del file letto (kzero leggi-elenco).

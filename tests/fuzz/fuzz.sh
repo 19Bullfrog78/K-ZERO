@@ -9,7 +9,8 @@
 # costruiti a ogni giro dai testi di tests/esempi/k019-elenco (nessun file binario nel deposito); dal K-021 le righe delle schede dei
 # servizi (dal K-023 con il quarto foglio, le interruzioni, e i due profili alla versione 2 di tests/esempi/k023-schede; dal K-024 alla
 # versione 3, con il profilo di tests/esempi/k024-schede e uno con regole del tipo su tutte e quattro le colonne, e le quattro schede del
-# tipo per scheda con la colonna dei disabili).
+# tipo per scheda con la colonna dei disabili; dal K-025 ogni scheda scritta si rilegge, subito e un mese dopo senza scelta, e deve
+# risultare uguale e senza avvisi, con il seme delle quattro schede di tests/esempi/k025-schede).
 # Un guasto (memoria, comportamento non definito, risultato incoerente, attesa oltre 10 secondi) ferma il bersaglio:
 # il file che lo provoca resta in <lavoro>/guasti/<bersaglio>/ e lo script esce con 1. Il file va corretto e messo in
 # tests/fuzz/casi/<bersaglio>/ (diventa una prova normale, fuzz.casi.<bersaglio>).

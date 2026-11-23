@@ -1777,7 +1777,7 @@ kzero_schede23(schede_interruzioni_e_coincidenze USCITA 0 FORMATO testo
                NON_CONTIENE "K-CTR-160" "K-CTR-163" "Errore"
                ARGOMENTI leggi-schede ${KZERO_K023}/k023.xlsx @PACCHETTO@ ${K023_LEGGI} --scrivi @PACCHETTO@)
 kzero_schede23(schede_interruzioni_json USCITA 0 FORMATO json SCHEMA schede
-               CONTIENE "\"schema_versione\": 3" "\"interruzioni\": 3" "\"dal\": \"2026-12-23\"" "K-CTR-176"
+               CONTIENE "\"schema_versione\": 4" "\"scelta_scheda_non_usata\": false" "\"interruzioni\": 3" "\"dal\": \"2026-12-23\"" "K-CTR-176"
                ARGOMENTI leggi-schede ${KZERO_K023}/k023.xlsx @PACCHETTO@ ${K023_LEGGI} --formato json)
 kzero_schede23(schede23_controlla USCITA 0 FORMATO testo
                PREPARA leggi-schede ${KZERO_K023}/k023.xlsx @PACCHETTO@ ${K023_LEGGI} --scrivi @PACCHETTO@ --utente TITOLARE
@@ -1791,8 +1791,8 @@ set(KZERO_K024 ${CMAKE_CURRENT_BINARY_DIR}/k024)
 add_test(NAME schede24.prepara
          COMMAND ${CMAKE_COMMAND} -DKZERO=$<TARGET_FILE:kzero> -DPREPARA=$<TARGET_FILE:prepara_k019> -DCREA=$<TARGET_FILE:crea_xlsx>
                  -DELENCO=${CMAKE_CURRENT_SOURCE_DIR}/esempi/k019-elenco -DSCHEDE21=${CMAKE_CURRENT_SOURCE_DIR}/esempi/k021-schede
-                 -DSORGENTI=${CMAKE_CURRENT_SOURCE_DIR}/esempi/k024-schede -DUSCITA=${KZERO_K024}
-                 -P ${CMAKE_CURRENT_SOURCE_DIR}/programma/prepara_k024.cmake)
+                 -DSORGENTI=${CMAKE_CURRENT_SOURCE_DIR}/esempi/k024-schede -DSCHEDE25=${CMAKE_CURRENT_SOURCE_DIR}/esempi/k025-schede
+                 -DUSCITA=${KZERO_K024} -P ${CMAKE_CURRENT_SOURCE_DIR}/programma/prepara_k024.cmake)
 set_tests_properties(schede24.prepara PROPERTIES FIXTURES_SETUP k024 LABELS programma)
 set(PW_K024_PERSONALI "un'altra frase lunga per chi vede i dati personali")
 function(kzero_schede24 nome)
@@ -1819,7 +1819,7 @@ kzero_schede24(schede_tipo_senza_particolari USCITA 0 FORMATO testo
                NON_CONTIENE "Tipo disabili" "Tipo scolastico" "RT-1" "regola" "disabili a bordo" "K-CTR-177"
                ARGOMENTI leggi-schede ${KZERO_K024}/k024.xlsx @PACCHETTO@ ${K024_LEGGI})
 kzero_schede24(schede_tipo_json USCITA 0 FORMATO json SCHEMA schede
-               CONTIENE "\"schema_versione\": 3" "\"regola\": \"RT-1\"" "\"da\": \"regola\"" "\"disabili\": 1" "K-CTR-177"
+               CONTIENE "\"schema_versione\": 4" "\"regola\": \"RT-1\"" "\"da\": \"regola\"" "\"disabili\": 1" "K-CTR-177"
                ARGOMENTI leggi-schede ${KZERO_K024}/k024.xlsx @PACCHETTO@ ${K024_LEGGI} --includi-dati-particolari --formato json)
 kzero_schede24(schede24_controlla_titolare USCITA 0 FORMATO testo
                PREPARA leggi-schede ${KZERO_K024}/k024.xlsx @PACCHETTO@ ${K024_LEGGI} --scrivi @PACCHETTO@ --utente TITOLARE
@@ -1836,6 +1836,33 @@ kzero_schede24(schede24_controlla_personali USCITA 0 FORMATO testo UTENTE PERSON
                CONTIENE "Cassaforte aperta dall'utente PERSONALI (dati personali)" "K-CTR-171, K-CTR-177)"
                NON_CONTIENE "Errore" "Avviso K-CTR-177" "RT-1" "disabile su"
                ARGOMENTI controlla @PACCHETTO@ --includi-dati-personali)
+# --- Rilettura delle schede (K-025): lo stesso pacchetto del K-024, il file delle quattro schede di tests/esempi/k025-schede -------------
+set(K025_PRIMA leggi-schede ${KZERO_K024}/k025.xlsx @PACCHETTO@ ${K024_LEGGI} --scrivi @PACCHETTO@ --utente TITOLARE --password-da-ingresso)
+set(K025_RILEGGI leggi-schede ${KZERO_K024}/k025.xlsx @PACCHETTO@ --profilo PS-CVA --contratto CT-SCU --data 2026-12-16
+                 --riferimento "file intero di dicembre")
+kzero_schede24(schede25_rilettura USCITA 0 FORMATO testo
+               PREPARA ${K025_PRIMA}
+               PREPARA_INGRESSO "${PW_K021}"
+               CONTIENE "Schede: 0 nuove, 0 versioni nuove, 4 uguali (niente da fare), 0 ferme, 0 senza la scelta della data."
+                        "Schede uguali all'ultima versione: 4. Niente da fare, e i loro avvisi non si ripetono a ogni lettura"
+                        "4000703/1 (riga 4): uguale alla versione 1 della scheda SCH-4000703-1: niente da fare (la scelta --validita-scheda"
+               NON_CONTIENE "Avviso K-CTR" "Errore" "K-CTR-162" "K-CTR-165"
+               ARGOMENTI ${K025_RILEGGI} --validita-scheda "4000703/1=2027-01-11" --scrivi @PACCHETTO@)
+kzero_schede24(schede25_rilettura_json USCITA 0 FORMATO json SCHEMA schede
+               PREPARA ${K025_PRIMA}
+               PREPARA_INGRESSO "${PW_K021}"
+               CONTIENE "\"schema_versione\": 4" "\"uguali\": 4" "\"scelta_scheda_non_usata\": true" "\"problemi\": []"
+               ARGOMENTI ${K025_RILEGGI} --validita-scheda "4000703/1=2027-01-11" --formato json)
+kzero_schede24(schede25_scelta_non_nel_file USCITA 2 FORMATO testo ERRORE K-ERR-056
+               ARGOMENTI ${K025_RILEGGI} --validita-scheda "4000730/1=2027-01-11")
+kzero_schede24(schede25_controlla USCITA 0 FORMATO testo
+               PREPARA ${K025_PRIMA}
+               PREPARA_INGRESSO "${PW_K021}"
+               CONTIENE "Avviso K-CTR-163 (schede_servizi.json, /schede/2/versioni/0): Scheda SCH-4000703-1 (versione 1): Tot Giorni e' 170"
+                        "Avviso K-CTR-176 (schede_servizi.json, /schede/1/versioni/0): Scheda SCH-4000702-1 (versione 1): la corsa finisce al punto di trasbordo"
+               NON_CONTIENE "Errore" "K-CTR-170" "K-CTR-174" "K-CTR-177"
+               ARGOMENTI controlla @PACCHETTO@ --includi-dati-particolari)
+
 kzero_schede(schede_profilo_vecchio_avviso USCITA 0 FORMATO testo
              CONTIENE "Avviso K-CTR-178 (profili_schede.json, /profili/0): Il profilo delle schede PS-CVA e' in profili_schede.json alla versione 1"
              ARGOMENTI controlla @PACCHETTO@)

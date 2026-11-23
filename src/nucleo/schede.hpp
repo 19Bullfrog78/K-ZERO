@@ -118,6 +118,10 @@ std::string card_nr_key(const std::string& nr, const CardProfile& p);
 // Il numero del servizio: la parte del Nr prima del separatore ("4000123").
 std::string card_service_number(const std::string& nr, const CardProfile& p);
 
+// K-025: i Nr del foglio delle schede (chiavi di card_nr_key, celle che si leggono), per confrontarli con --validita-scheda prima della
+// password. nullopt se il foglio non ha la riga dei titoli o la colonna del Nr (manca o c'e' due volte): lo dira' read_cards.
+std::optional<std::set<std::string>> card_nr_keys(const Table& cards, const CardProfile& profile);
+
 // Legge le tre tabelle con il profilo. date1904: la cartella di lavoro usa il sistema delle date del 1904 (le date che Excel ha
 // trasformato in numeri).
 CardsRead read_cards(const CardTables& tables, const CardProfile& profile, const Index& idx, bool date1904);
@@ -165,6 +169,7 @@ struct CardOutcome {
     std::vector<Code> new_homes;
     std::optional<CardFault> fault;
     Code service, group, trip, calendar;
+    bool choice_unused = false;           // K-025: Same con una scelta --validita-scheda per lei (non serve: la scheda non cambia)
 };
 
 struct CardsMerge {
@@ -193,6 +198,13 @@ Calendar card_calendar(const Card& c, const Code& code, DateRange valid);
 // Quanti giorni conta la scheda (Tot Giorni): dall'attivazione alla disattivazione, interruzioni comprese (un insieme di giorni: un
 // giorno di interruzione che non e' un giorno di servizio non si toglie due volte).
 int card_days(const Card& c, const Index& idx);
+// K-CTR-164: le date elencate di una scheda (cadenza a date elencate) che non cadono in un giorno con la X o non sono giorni del calendario
+// di base: quante, e la prima. Una regola sola per la lettura e per kzero controlla (K-025).
+struct CardDatesOutside {
+    int count = 0;
+    Day first = 0;
+};
+CardDatesOutside card_listed_dates_outside(const Card& k, const Index& idx);
 
 // K-023: la coincidenza di una scheda. Una scheda con una scuola sola nell'intestazione e senza la riga di quella scuola e' ammessa solo
 // se la corsa finisce (andata) o comincia (ritorno) in un punto di trasbordo autorizzato (un luogo pubblico con il blocco "trasbordo",
@@ -204,8 +216,12 @@ struct CardTransferEnd {
     Code place;               // il punto di trasbordo
     bool at_start = false;    // ritorno: la corsa comincia li'
     bool verbal = false;      // autorizzato solo a voce (senza documento)
+    bool authorized = true;   // K-025 (D8, solo card_end_without_school): il luogo e' un punto di trasbordo autorizzato
 };
 std::optional<CardTransferEnd> card_transfer_end(const Card& k, const Index& idx);
+// K-025 (D8): come card_transfer_end, ma anche quando il luogo dove la corsa finisce (o comincia) e' un luogo pubblico che non e' (piu') un
+// punto di trasbordo autorizzato (authorized falso): in kzero controlla, una versione scritta quando lo era. Mai una scuola o una casa.
+std::optional<CardTransferEnd> card_end_without_school(const Card& k, const Index& idx);
 
 // K-024: le persone a bordo di una scheda, accompagnatore escluso (Totali alunni lo comprende, K-021).
 int card_passengers(const Card& k);

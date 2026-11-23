@@ -92,6 +92,7 @@ const std::vector<DefinizioneErrore>& catalogo_errori() {
             {Errore::ValiditaScrittaMale, "K-ERR-053", CodiceUscita::ErroreParametri, "Scelta della validita' scritta male"},
             {Errore::SchedaNonTrovata, "K-ERR-054", CodiceUscita::ErroreParametri, "Scheda non presente nel registro"},
             {Errore::ToglimentoNonAmmesso, "K-ERR-055", CodiceUscita::ErroreParametri, "Scheda da togliere non ammessa"},
+            {Errore::SchedaDellaSceltaNonNelFile, "K-ERR-056", CodiceUscita::ErroreParametri, "Scheda della scelta non presente nel file"},
         };
         std::sort(c.begin(), c.end(), [](const DefinizioneErrore& a, const DefinizioneErrore& b) {
             return a.codice < b.codice;

@@ -924,6 +924,33 @@
   tipi diversi) e i controlli nuovi su ogni scheda letta; semi del profilo e del registro alla versione 3. Documenti: formato-dati,
   controlli, sicurezza (rischio del calendario conosciuto da fuori; un profilo solo per committente), cassaforte, DECISIONI, CLAUDE.md
   (Trappole: interruzioni, coincidenza, tipo per scheda).
+- 2026-11-23 - K-025 (programma, proposta "K-025: rilettura delle schede"). Punto 0, la prova mancante del K-024 (sabotaggio A8
+  dell'arbitro che nessuna prova prendeva; il codice era gia' giusto): in `kzero controlla` K-CTR-177 guarda ogni versione della scheda,
+  non solo l'ultima (Schede.DisabiliControllatiSuOgniVersione: prima versione con 1 disabile in un servizio scolastico, seconda con 0;
+  l'avviso sta sulla prima). Sabotaggio "solo l'ultima versione": preso, solo dalla prova nuova. Per i punti 1 e 2 (la scheda uguale prima
+  della data, gli avvisi che descrivono il pacchetto anche in `kzero controlla`) prima le domande e le proposte per l'arbitro
+  (K-025-domande-per-l-arbitro.md, consegnato come file), niente codice.
+- 2026-11-23 - K-025 (seguito, dopo le risposte dell'arbitro: ordine nuovo approvato; D1 A, D1-bis A, D2 B, D3 A, D4, D5 B con D5-bis, D6,
+  D7 solo `scelta_scheda_non_usata`, D8 A, D9 A). Lettura: una scheda con l'ID nel registro e il contenuto uguale all'ultima versione e'
+  "uguale" subito dopo gli errori della riga e l'altro contratto, prima della scelta della data: niente K-CTR-162, niente varianti 38, 39 e
+  47, nessun avviso della lettura (163, 164, 165, 166, 176, 177), niente scritto; K-CTR-165 solo sulle schede che diventano nuove o versioni
+  nuove; K-CTR-179 (uguale a una versione di prima, non all'ultima); K-ERR-056 (Nr di `--validita-scheda` che non e' nel file, prima della
+  password); uscita `schede` 4 (`scelta_scheda_non_usata`) e riga nuova del riepilogo; K-CTR-169 e 171 solo per le schede scritte.
+  Controlla: K-CTR-163, 164 e 176 su ogni versione di ogni scheda, come K-CTR-177, con varianti proprie e la versione nel messaggio; un
+  avviso per scheda quando piu' versioni danno lo stesso risultato (anche 177); K-CTR-176 varianti 8 e 9 (punto non piu' autorizzato).
+  Documento: `schede[].profilo` e' quello della prima lettura (D9). Dati di prova inventati in tests/esempi/k025-schede (quattro schede: una
+  che finisce il 20/11, una in coincidenza, una con Tot Giorni sbagliato, una normale). Prove: test_schede (+8), test_schede_comandi (+3,
+  tre cambiate), test_controlli, prove sul programma (+4, due cambiate). Fuzzing: nel bersaglio delle schede ogni scheda scritta, riletta
+  subito e un mese dopo senza scelta, deve risultare uguale, senza avvisi e senza niente da scrivere. Documenti: formato-dati (rileggere il
+  file intero, validita', profilo), controlli, errori, schema `schede` 4, DECISIONI, CLAUDE.md (Trappole). Sabotaggi sul codice finale, 23,
+  tutti presi: quelli del mandato (scelta della data prima del confronto; scheda uguale gia' finita fermata; avvisi della lettura ripetuti
+  sulle uguali; K-CTR-165 su una uguale; scheda cambiata letta come uguale, per il numero dei disabili, il tipo, un orario; K-CTR-163, 164 e
+  176 che mancano in controlla su una versione vecchia; la variante 47 che toglie gli avvisi delle altre schede), A8 del punto 0, i sei
+  dell'arbitro (K-ERR-056 che non scatta; K-CTR-179 che manca; K-CTR-169/171 ripetuti sulle uguali; due versioni con lo stesso risultato
+  che danno due avvisi; risultati diversi fusi in uno; la variante D8 che manca) e cinque miei (periodo della versione per il 163; 163 e 164
+  senza il calendario di base; scelta non usata non segnata; riga del riepilogo che manca; K-CTR-165 tolto anche dalle versioni nuove).
+  Fuzzing: i 39 bersagli per 20 secondi e, per 20 minuti, `schede-righe` (con la rilettura) e `pacchetto-schede_servizi.json`: nessun
+  guasto.
 ## Bug e limiti noti
 - (K-018) L'avviso sui nomi liberi trova solo il nome scritto come nei dati (senza maiuscole ne' accenti, parole intere):
   non i nomi scritti male, i soprannomi, le iniziali, le sigle ("S-DIS"), un nome dentro una parola piu' lunga, le parole

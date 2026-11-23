@@ -473,7 +473,7 @@ TEST(SchedeComandi, InterruzioniNelleUscite) {
     Prova q(pacchetto_k023());
     q.file("interruzioni.xlsx", scheda_con_tre_interruzioni());
     const JsonDati j = JsonDati::parse(q.leggi("interruzioni.xlsx", {"--validita", "attivazione", "--formato", "json"}, false).uscita);
-    EXPECT_EQ(j.at("schema_versione"), 3);   // K-024
+    EXPECT_EQ(j.at("schema_versione"), 4);   // K-025
     EXPECT_EQ(j.at("righe").at("interruzioni"), 3);
     ASSERT_EQ(j.at("schede").at(0).at("interruzioni").size(), 3u);
     EXPECT_EQ(j.at("schede").at(0).at("interruzioni").at(0), JsonDati({{"dal", "2026-12-21"}, {"al", "2027-01-08"}}));
@@ -484,7 +484,7 @@ TEST(SchedeComandi, InterruzioniNelleUscite) {
     EXPECT_EQ(riga_che_comincia(u.uscita, "Righe:"), "Righe: 1 scheda, 3 fermate, 0 date.");
     EXPECT_EQ(u.uscita.find("nterruzion"), std::string::npos) << u.uscita;
     const JsonDati k = JsonDati::parse(r.leggi("interruzioni.xlsx", {"--validita", "attivazione", "--formato", "json"}, false).uscita);
-    EXPECT_EQ(k.at("schema_versione"), 3);   // K-024
+    EXPECT_EQ(k.at("schema_versione"), 4);   // K-025
     EXPECT_EQ(k.at("righe").at("interruzioni"), 0);
     EXPECT_EQ(k.at("schede").at(0).at("interruzioni"), JsonDati::array());
 }
@@ -523,7 +523,7 @@ TEST(SchedeComandi, TipoPerSchedaNelleUscite) {
     EXPECT_NE(senza.uscita.find("2 problemi sui dati particolari (salute), non elencati"), std::string::npos) << senza.uscita;
     EXPECT_NE(senza.uscita.find("Tipo, pedana, servizio individualizzato e accompagnatore richiesto non mostrati"), std::string::npos);
     const JsonDati j = JsonDati::parse(p.leggi("k024.xlsx", {"--validita", "attivazione", "--includi-dati-particolari", "--formato", "json"}, false).uscita);
-    EXPECT_EQ(j.at("schema_versione"), 3);
+    EXPECT_EQ(j.at("schema_versione"), 4);   // K-025
     EXPECT_EQ(j.at("schede").at(1).at("particolari"),
               JsonDati({{"tipo", "disabili"}, {"tipo_gruppo", "disabili"}, {"da", "regola"}, {"regola", "RT-1"}, {"disabili", 1},
                         {"pedana_obbligatoria", true}, {"individualizzato", true}, {"assistente_richiesto", false}}));
@@ -611,9 +611,120 @@ TEST(SchedeComandi, ControllaDopoLaScrittura) {
     const Risultato b = comando({"controlla", p.chiuso.string(), "--utente", "B", "--includi-dati-personali"});
     std::cout << "--- A ---\n" << a.uscita << "--- B ---\n" << b.uscita;
     EXPECT_NE(a.uscita.find("K-CTR-177"), std::string::npos) << a.uscita;
-    EXPECT_NE(a.uscita.find("Scheda SCH-4000603-1: a bordo ci sono 1 disabile su 8 persone"), std::string::npos) << a.uscita;
+    EXPECT_NE(a.uscita.find("Scheda SCH-4000603-1 (versione 1): a bordo ci sono 1 disabile su 8 persone"), std::string::npos) << a.uscita;
     EXPECT_EQ(a.uscita.find("K-CTR-178"), std::string::npos) << a.uscita;
     EXPECT_EQ(riga_con(b.uscita, "K-CTR-177:"), std::string()) << b.uscita;
     EXPECT_NE(riga_con(b.uscita, "Non verificato (servono i dati particolari").find("K-CTR-177"), std::string::npos) << b.uscita;
     for (const char* x : {"RT-1", "disabile su"}) EXPECT_EQ(b.uscita.find(x), std::string::npos) << x;
+}
+
+// --- K-025: rilettura delle schede -----------------------------------------------------------------------------------------------
+
+// K-025, punto 1: lo stesso file riletto un mese dopo, senza --validita: quattro uguali, nessun problema, la riga nuova del riepilogo; JSON
+// alla versione 4 con scelta_scheda_non_usata (falso). Con --validita-scheda per una scheda uguale: la riga della scheda lo dice, e nel
+// JSON il campo e' vero solo per lei (D1 A). Sabotaggi: avvisi ripetuti sulle uguali; la riga del riepilogo che manca.
+TEST(SchedeComandi, RiletturaSenzaRumore) {
+    Prova p(pacchetto_k024());
+    p.file("k025.xlsx", fogli_k025());
+    const Risultato prima = p.leggi("k025.xlsx", {"--validita", "attivazione"});
+    EXPECT_NE(prima.uscita.find("Avviso K-CTR-163: Scheda 4000703/1"), std::string::npos) << prima.uscita;
+    EXPECT_NE(prima.uscita.find("Avviso K-CTR-176: Scheda 4000702/1"), std::string::npos) << prima.uscita;
+    EXPECT_EQ(prima.uscita.find("Schede uguali all'ultima versione"), std::string::npos) << prima.uscita;
+    const std::string registro = p.normale("schede_servizi.json");
+    const Risultato dopo = p.leggi("k025.xlsx", {}, true, "A", kPw, "2026-12-16");
+    std::cout << dopo.uscita;
+    EXPECT_NE(dopo.uscita.find("Schede: 0 nuove, 0 versioni nuove, 4 uguali (niente da fare), 0 ferme, 0 senza la scelta della data.\n"
+                               "Schede uguali all'ultima versione: 4. Niente da fare, e i loro avvisi non si ripetono a ogni lettura: quelli "
+                               "che descrivono il pacchetto (Tot Giorni, date elencate, coincidenze, numero dei disabili) li da' kzero "
+                               "controlla.\n"),
+              std::string::npos)
+        << dopo.uscita;
+    EXPECT_NE(dopo.uscita.find("4000701/1 (riga 2): uguale alla versione 1 della scheda SCH-4000701-1: niente da fare.\n"), std::string::npos)
+        << dopo.uscita;
+    for (const char* x : {"Avviso K-CTR", "Errore K-CTR", "problema"}) EXPECT_EQ(dopo.uscita.find(x), std::string::npos) << x;
+    EXPECT_EQ(p.normale("schede_servizi.json"), registro);
+    const Risultato j = p.leggi("k025.xlsx", {"--validita-scheda", "4000703 / 1=2027-01-11", "--formato", "json"}, false, "A", kPw, "2026-12-16");
+    const JsonDati d = JsonDati::parse(j.uscita);
+    EXPECT_EQ(d.at("schema_versione"), 4);
+    EXPECT_EQ(d.at("conteggi").at("uguali"), 4);
+    EXPECT_TRUE(d.at("problemi").empty());
+    EXPECT_FALSE(d.contains("uguali"));   // D7: niente oggetto con valori fissi
+    for (const JsonDati& s : d.at("schede")) EXPECT_EQ(s.at("scelta_scheda_non_usata"), s.at("nr") == "4000703/1") << s.at("nr");
+    const Risultato t = p.leggi("k025.xlsx", {"--validita-scheda", "4000703/1=2027-01-11"}, false, "A", kPw, "2026-12-16");
+    EXPECT_NE(t.uscita.find("4000703/1 (riga 4): uguale alla versione 1 della scheda SCH-4000703-1: niente da fare (la scelta "
+                            "--validita-scheda non serve: la scheda non e' cambiata).\n"),
+              std::string::npos)
+        << t.uscita;
+}
+
+// K-025, D1-bis A: --validita-scheda con un Nr che non e' nel file: K-ERR-056, niente letto e niente scritto, prima della password (il
+// comando non ha nessuna password da dare). Una voce giusta e una sbagliata nello stesso comando: il messaggio dice solo quella sbagliata.
+// Con le voci giuste il comando va. Sabotaggio: il Nr sbagliato perso in silenzio.
+TEST(SchedeComandi, SceltaPerUnaSchedaCheNonCe) {
+    Prova p(pacchetto_k024());
+    p.file("k025.xlsx", fogli_k025());
+    const std::string servizi = p.normale("servizi.json");
+    p.amb.password = {};
+    std::string messaggio;
+    try {
+        comando({"leggi-schede", (p.lavoro / "k025.xlsx").string(), p.chiuso.string(), "--profilo", "PS-CVA", "--contratto", "CT-SCU", "--data",
+                 "2026-11-16", "--riferimento", "x", "--utente", "A", "--validita", "attivazione", "--validita-scheda",
+                 "4000703/1=2026-11-23;4000730/1=2026-11-23", "--scrivi", p.chiuso.string()});
+    } catch (const ErroreKZero& e) {
+        EXPECT_EQ(e.definizione().codice, "K-ERR-056");
+        messaggio = e.what();
+    }
+    EXPECT_EQ(messaggio, "--validita-scheda nomina la scheda 4000730/1, che non e' nel foglio \"Schede\" del file: forse il Nr e' scritto "
+                         "male. Niente e' stato letto.");
+    EXPECT_EQ(p.normale("servizi.json"), servizi);
+    EXPECT_EQ(errore_di([&] { p.leggi("k025.xlsx", {"--validita-scheda", "4000731/1=attivazione;4000730/1=attivazione"}); }), "K-ERR-056");
+    EXPECT_EQ(p.normale("servizi.json"), servizi);
+    EXPECT_EQ(errore_di([&] { p.leggi("k025.xlsx", {"--validita", "attivazione", "--validita-scheda", "4000703 / 1=2026-11-23"}); }), "nessuno");
+}
+
+// K-025, D3 A: gli avvisi sul registro (K-CTR-169 sovrapposizione, K-CTR-171 accompagnatore) solo per le schede scritte nella lettura, non
+// per le uguali; una sovrapposizione con una scheda scritta si vede ancora. Tutti restano in kzero controlla. Sabotaggio: 169/171 ripetuti
+// sulle uguali.
+TEST(SchedeComandi, AvvisiDelRegistroSoloPerLeSchedeScritte) {
+    Prova p;
+    Fogli f = fogli_di_prova();
+    f.schede.resize(2);   // 4000123/3
+    f.fermate.resize(4);
+    // Una seconda scheda dello stesso servizio (4000123), con un altro ID, negli stessi giorni: K-CTR-169.
+    std::vector<std::string> altra = f.schede[1];
+    altra[0] = "4000123 / 4";
+    altra[1] = "5c1e2f40-0a1b-4c2d-8e3f-000000000004";
+    f.schede.push_back(altra);
+    for (std::size_t i = 1; i < 4; ++i) {
+        std::vector<std::string> r = f.fermate[i];
+        r[0] = "4000123 / 4";
+        f.fermate.push_back(r);
+    }
+    // Una scheda dell'infanzia con i bambini a bordo prima dell'accompagnatore: K-CTR-171 (variante 1, dipende dal mezzo).
+    const std::vector<std::vector<std::string>> inf = {
+        {"4000200 / 1", "5c1e2f40-0a1b-4c2d-8e3f-000000000200", "Andata Mattino", "Scuola infanzia Lagobello", "14/09/2026", "30/06/2027",
+         "X", "X", "X", "X", "X", "", "", "#6", "", "", "#0", "9", "2", "MATERNA", "Sempre", "Scheda nuova"}};
+    f.schede.push_back(inf[0]);
+    f.fermate.push_back({"4000200/1", "07:40", "Lagobello, Lago", "", "#2", "", "3", "2", ""});
+    f.fermate.push_back({"4000200/1", "07:50", "PRADELLO PIAZZA", "", "#4", "", "", "", "SALE"});
+    f.fermate.push_back({"4000200/1", "08:05", "Scuola infanzia Lagobello", "", "", "#6", "6", "", "SCENDE"});
+    p.file("f.xlsx", f);
+    const Risultato prima = p.leggi("f.xlsx", {"--validita", "attivazione"});
+    EXPECT_NE(prima.uscita.find("Avviso K-CTR-169"), std::string::npos) << prima.uscita;
+    EXPECT_NE(prima.uscita.find("Avviso K-CTR-171"), std::string::npos) << prima.uscita;
+    const Risultato uguale = p.leggi("f.xlsx", {"--validita", "attivazione"}, false);
+    EXPECT_NE(uguale.uscita.find("3 uguali"), std::string::npos) << uguale.uscita;
+    for (const char* x : {"K-CTR-169", "K-CTR-171"}) EXPECT_EQ(uguale.uscita.find(x), std::string::npos) << x << "\n" << uguale.uscita;
+    // La 4000123/4 cambiata (un orario): versione nuova, e la sovrapposizione con la 4000123/3 (uguale) si vede ancora.
+    Fogli g = f;
+    for (std::vector<std::string>& r : g.fermate)
+        if (r[0] == "4000123 / 4" && r[1] == "07:20") r[1] = "07:21";
+    p.file("g.xlsx", g);
+    const Risultato cambiata = p.leggi("g.xlsx", {"--validita-scheda", "4000123/4=2026-11-23"}, false);
+    EXPECT_NE(cambiata.uscita.find("versione nuova 2 della scheda SCH-4000123-4"), std::string::npos) << cambiata.uscita;
+    EXPECT_NE(cambiata.uscita.find("Avviso K-CTR-169"), std::string::npos) << cambiata.uscita;
+    EXPECT_EQ(cambiata.uscita.find("K-CTR-171"), std::string::npos) << cambiata.uscita;
+    p.amb.password = {kPw};
+    const Risultato c = comando({"controlla", p.chiuso.string(), "--utente", "A", "--includi-dati-particolari"});
+    for (const char* x : {"K-CTR-169", "K-CTR-171"}) EXPECT_NE(c.uscita.find(x), std::string::npos) << x;
 }
