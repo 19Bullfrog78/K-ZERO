@@ -2113,3 +2113,67 @@ TEST(Schede, CoincidenzaCheNonValePiu) {
     EXPECT_EQ(riletta.m.outcomes.at(1).fault, CardFault::SchoolRowMissing);
     for (std::size_t i : {0u, 2u, 3u}) EXPECT_EQ(riletta.m.outcomes.at(i).kind, CardOutcome::Kind::Same) << i;
 }
+
+// --- K-026: mezzo della scheda ---------------------------------------------------------------------------------------------------
+
+// K-026, punto 0 (S4 dell'arbitro, sul K-025): in kzero controlla K-CTR-163 di una scheda con le interruzioni e il Tot Giorni sbagliato usa
+// la variante 3 (quella con le interruzioni), non la 2. La 4000123/3 con le tre interruzioni (165 giorni) e Tot Giorni 175: nella lettura la
+// variante 1, in controlla la 3, con le interruzioni nel messaggio. Sabotaggio: in controlla sempre la variante 2.
+TEST(Schede, TotGiorniConLeInterruzioniInControlla) {
+    const Letto x = leggi(lettura_k023(), con_interruzioni(kTreInterruzioni, "#175"), attivazione());
+    ASSERT_EQ(x.m.outcomes.at(0).kind, CardOutcome::Kind::New);
+    EXPECT_EQ(codici_di(x, "4000123/3"), std::vector<std::string>{"K-CTR-163 v1"});
+    const std::vector<std::string> v = del_pacchetto(x.dopo);
+    ASSERT_EQ(v.size(), 1u) << ::testing::PrintToString(v);
+    EXPECT_TRUE(comincia(v[0], "K-CTR-163 v3 /schede/0/versioni/0: Scheda SCH-4000123-3 (versione 1): Tot Giorni e' 175, ma il calendario "))
+        << v[0];
+    EXPECT_NE(v[0].find("con i giorni segnati e le interruzioni della scheda nel periodo della scheda da' 165 giorni"), std::string::npos) << v[0];
+    EXPECT_NE(v[0].find("o un'interruzione, e' diverso. Controllare il calendario e le interruzioni."), std::string::npos) << v[0];
+    // La stessa scheda senza interruzioni (175 giorni, Tot Giorni 170): la variante 2.
+    const Letto y = leggi(lettura_k023(), con_interruzioni({}, "#170"), attivazione());
+    const std::vector<std::string> w = del_pacchetto(y.dopo);
+    ASSERT_EQ(w.size(), 1u) << ::testing::PrintToString(w);
+    EXPECT_TRUE(comincia(w[0], "K-CTR-163 v2 /schede/0/versioni/0: Scheda SCH-4000123-3 (versione 1): Tot Giorni e' 170")) << w[0];
+}
+
+// K-026, punto 0 (S6 dell'arbitro, sul K-025): K-CTR-179 dice la versione di prima piu' recente con lo stesso contenuto. La 4000704/1 in
+// quattro versioni: la 1 (il file di prima), la 2 (un orario cambiato, dal 21/12), la 3 (di nuovo il file di prima, dall'11/01: uguale alla
+// 1, l'avviso dice la 1), la 4 (un altro orario, dal 01/02); poi il file di prima dal 01/03: versione 5, uguale alla 1 e alla 3, diversa dalla
+// 4, e l'avviso dice la 3, non la 1. Sabotaggio: la versione di prima piu' vecchia.
+TEST(Schede, UgualeAllaVersioneDiPrimaPiuRecente) {
+    const auto con_orario = [](const std::string& ora) {
+        Fogli f = fogli_k025();
+        f.fermate[riga_fermata(f, "4000704 / 1", 0)][1] = ora;
+        return f;
+    };
+    const auto dal = [](Day d) {
+        DateChoices s;
+        s.by_nr["4000704/1"] = DateChoice{DateChoice::Kind::Date, d};
+        return s;
+    };
+    const Letto uno = leggi(lettura_k024(), fogli_k025(), attivazione());
+    const Letto due = leggi(uno.dopo, con_orario("16:12"), dal(day_from_ymd(2026, 12, 21)), kMeseDopo);
+    const Letto tre = leggi(due.dopo, fogli_k025(), dal(day_from_ymd(2027, 1, 11)), day_from_ymd(2027, 1, 11));
+    const Letto quattro = leggi(tre.dopo, con_orario("16:14"), dal(day_from_ymd(2027, 2, 1)), day_from_ymd(2027, 2, 1));
+    const Letto cinque = leggi(quattro.dopo, fogli_k025(), dal(day_from_ymd(2027, 3, 1)), day_from_ymd(2027, 3, 1));
+    int numero = 2;
+    for (const Letto* x : {&due, &tre, &quattro, &cinque}) {
+        ASSERT_EQ(x->m.outcomes.at(3).kind, CardOutcome::Kind::NewVersion) << numero;
+        EXPECT_EQ(x->m.outcomes.at(3).version, numero++);
+    }
+    const auto avviso_179 = [](const Letto& x) {
+        std::string testo;
+        for (const std::string& m : messaggi(x.dopo, x.m.problems))
+            if (comincia(m, "K-CTR-179")) testo = m;
+        return testo;
+    };
+    EXPECT_EQ(avviso_179(due), "");
+    EXPECT_EQ(avviso_179(quattro), "");
+    EXPECT_EQ(avviso_179(tre), "K-CTR-179 v0: Scheda 4000704/1: e' uguale alla versione 1 della scheda SCH-4000704-1, non all'ultima (la 2): si "
+                               "legge come versione nuova (tornare com'era e' un cambio vero). Se il file e' vecchio, rileggere quello giusto "
+                               "prima di scrivere.");
+    EXPECT_EQ(avviso_179(cinque), "K-CTR-179 v0: Scheda 4000704/1: e' uguale alla versione 3 della scheda SCH-4000704-1, non all'ultima (la 4): "
+                                  "si legge come versione nuova (tornare com'era e' un cambio vero). Se il file e' vecchio, rileggere quello "
+                                  "giusto prima di scrivere.");
+    EXPECT_EQ(codici_di(cinque, "4000704/1"), (std::vector<std::string>{"K-CTR-165 v0", "K-CTR-179 v0"}));
+}

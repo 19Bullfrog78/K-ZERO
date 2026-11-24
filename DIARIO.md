@@ -951,6 +951,13 @@
   senza il calendario di base; scelta non usata non segnata; riga del riepilogo che manca; K-CTR-165 tolto anche dalle versioni nuove).
   Fuzzing: i 39 bersagli per 20 secondi e, per 20 minuti, `schede-righe` (con la rilettura) e `pacchetto-schede_servizi.json`: nessun
   guasto.
+- 2026-11-24 - K-026 (programma, proposta "K-026: mezzo della scheda"). Punto 0, le prove mancanti del K-025 (sabotaggi dell'arbitro che
+  nessuna prova prendeva; il codice era gia' giusto): S4, in `kzero controlla` K-CTR-163 di una scheda con le interruzioni e il Tot Giorni
+  sbagliato usa la variante 3 (Schede.TotGiorniConLeInterruzioniInControlla: tre interruzioni, 165 giorni contro 175; senza interruzioni la
+  variante 2); S6, K-CTR-179 dice la versione di prima piu' recente con lo stesso contenuto (Schede.UgualeAllaVersioneDiPrimaPiuRecente:
+  cinque versioni, la 5 uguale alla 1 e alla 3, l'avviso dice la 3). Prove: test_schede (+2). Sabotaggi, tutti e due presi e solo dalle
+  prove nuove: in controlla sempre la variante 2; la versione di prima piu' vecchia. Per i punti 1 e 2 (il mezzo della scheda, K-CTR-171 con
+  i posti del mezzo) prima le domande e le proposte per l'arbitro (K-026-domande-per-l-arbitro.md, consegnato come file), niente codice.
 ## Bug e limiti noti
 - (K-018) L'avviso sui nomi liberi trova solo il nome scritto come nei dati (senza maiuscole ne' accenti, parole intere):
   non i nomi scritti male, i soprannomi, le iniziali, le sigle ("S-DIS"), un nome dentro una parola piu' lunga, le parole
