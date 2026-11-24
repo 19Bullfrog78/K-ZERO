@@ -2623,3 +2623,62 @@ TEST(Schede, ProfiloERegistroAllaVersioneQuattro) {
         EXPECT_FALSE(o.vehicle) << o.nr;
     }
 }
+
+namespace {
+// K-027, punto 0: il pacchetto del K-026 con una terza azienda, GAMMA, nel manifesto, e i mezzi cambiati da una funzione.
+Lettura lettura_k026_con_gamma(const std::function<void(JsonDati&)>& mezzi) {
+    PacchettoInMemoria m = pacchetto_k026();
+    JsonDati p = JsonDati::parse(m.file.at("pacchetto.json"));
+    p.at("aziende").push_back({{"codice", "GAMMA"}, {"nome", "Noleggi Gamma"}});
+    m.file["pacchetto.json"] = p.dump(2);
+    JsonDati d = JsonDati::parse(m.file.at("mezzi.json"));
+    mezzi(d);
+    m.file["mezzi.json"] = d.dump(2);
+    Lettura l = leggi_pacchetto(m);
+    EXPECT_TRUE(l.forma_valida()) << ::testing::PrintToString(messaggi(l, l.problemi));
+    return l;
+}
+// I prestiti di un mezzo: a GAMMA tutto l'anno (senza date) e all'azienda ALFA del contratto dal "dal" all'"al".
+void prestiti_gamma_e_alfa(JsonDati& d, const std::string& mezzo, const std::string& dal, const std::string& al) {
+    mezzo_di(d, mezzo)["prestiti"] = JsonDati::array({JsonDati{{"azienda", "GAMMA"}, {"accordo", "noleggio di prova"}},
+                                                      JsonDati{{"azienda", "ALFA"}, {"accordo", "subaffidamento di prova"}, {"dal", dal},
+                                                               {"al", al}}});
+}
+}  // namespace
+
+// K-027, punto 0 (sabotaggio dell'arbitro sul K-026 che nessuna prova prendeva; il codice era gia' giusto): un giorno di servizio conta come
+// coperto solo da un prestito all'azienda del contratto, mai da un prestito a un'altra azienda (card_vehicle_loan). La 4000801/1 (giorni di
+// servizio dal 21/09/2026 al 12/06/2027) con la targa di BETA-01, che e' in prestito tutto l'anno a GAMMA, una terza azienda:
+// - in prestito anche ad ALFA, l'azienda del contratto, solo fino al 31/01/2027: riconosciuto con la variante 3 (il primo giorno non coperto e'
+//   il 01/02/2027, anche se quel giorno il mezzo e' in prestito a GAMMA); in `kzero controlla` la variante 9;
+// - in prestito ad ALFA solo in giorni che non sono di servizio (l'estate prima): non riconosciuto, variante 1; in `kzero controlla`, con lo
+//   stesso prestito scritto dopo una lettura con un prestito valido, la variante 8.
+// Sabotaggio: "giorno coperto da un prestito a qualsiasi azienda" (il mezzo riconosciuto senza avvisi, in tutti e due i casi).
+TEST(Schede, PrestitoAUnaTerzaAziendaNonCopreIGiorni) {
+    const Fogli f = con_mezzo(fogli_k026(), 1, "BB 201 BB");
+    const Letto parte = leggi(lettura_k026_con_gamma([](JsonDati& d) { prestiti_gamma_e_alfa(d, "BETA-01", "2026-09-21", "2027-01-31"); }), f,
+                              attivazione());
+    EXPECT_EQ(copia_di(parte, "SCH-4000801-1").vehicle->code, codice("BETA-01"));
+    EXPECT_EQ(codici_di(parte, "4000801/1"), std::vector<std::string>{"K-CTR-180 v3"});
+    const std::string m3 = messaggio_di(parte, "K-CTR-180");
+    EXPECT_NE(m3.find("giorni di servizio della versione (il primo e' il 2027-02-01): il mezzo e' riconosciuto"), std::string::npos) << m3;
+    std::vector<std::string> v = sul_registro(parte.dopo, Check::CardVehicleNotRecognized);
+    ASSERT_EQ(v.size(), 2u) << ::testing::PrintToString(v);   // [0] e' la variante 5 della 4000802/1
+    EXPECT_TRUE(comincia(v[1], "K-CTR-180 v9 /schede/0/versioni/0: Scheda SCH-4000801-1 (versione 1): il mezzo scritto \"BB 201 BB\" e' BETA-01")) << v[1];
+    EXPECT_NE(v[1].find("(il primo e' il 2027-02-01)"), std::string::npos) << v[1];
+
+    const Letto estate = leggi(lettura_k026_con_gamma([](JsonDati& d) { prestiti_gamma_e_alfa(d, "BETA-01", "2026-06-01", "2026-09-20"); }), f,
+                               attivazione());
+    EXPECT_FALSE(copia_di(estate, "SCH-4000801-1").vehicle->code);
+    EXPECT_EQ(codici_di(estate, "4000801/1"), std::vector<std::string>{"K-CTR-180 v1"});
+    const Letto valido = leggi(lettura_k026_con_gamma([](JsonDati& d) { prestiti_gamma_e_alfa(d, "BETA-01", "2026-09-01", "2027-08-31"); }), f,
+                               attivazione());
+    EXPECT_EQ(copia_di(valido, "SCH-4000801-1").vehicle->code, codice("BETA-01"));
+    EXPECT_EQ(codici_di(valido, "4000801/1"), std::vector<std::string>{});
+    const Lettura poi_estate =
+        cambiato(valido.dopo, "mezzi.json", [](JsonDati& d) { prestiti_gamma_e_alfa(d, "BETA-01", "2026-06-01", "2026-09-20"); });
+    v = sul_registro(poi_estate, Check::CardVehicleNotRecognized);
+    ASSERT_EQ(v.size(), 2u) << ::testing::PrintToString(v);
+    EXPECT_TRUE(comincia(v[1], "K-CTR-180 v8 /schede/0/versioni/0: Scheda SCH-4000801-1 (versione 1): il mezzo scritto \"BB 201 BB\" e' BETA-01 (BB "
+                               "201 BB), dell'azienda BETA (Trasporti Beta), e oggi nei giorni di servizio della versione non e' in prestito")) << v[1];
+}
