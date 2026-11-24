@@ -1417,10 +1417,11 @@ TEST(Schede, ProfiliERegistroAllaVersioneTre) {
     EXPECT_FALSE(profilo(senza).kind.has_value());
     EXPECT_FALSE(profilo(senza).type_rules.at(0).kind.has_value());
     EXPECT_EQ(profilo(senza).type_rules.at(0).values, std::vector<std::string>{"SPECIALE-A"});
-    // Il registro alla versione 3: tipo scelto e numero dei disabili nella copia della scheda, particolari; alla 2 non si leggono.
+    // Il registro alla versione 3: tipo scelto e numero dei disabili nella copia della scheda, particolari; alla 2 non si leggono. (K-026:
+    // il registro si scrive alla 4, che contiene la 3.)
     PacchettoInMemoria m = pacchetto_con_schede();
     JsonDati r = JsonDati::parse(m.file.at("schede_servizi.json"));
-    EXPECT_EQ(r.at("schema_versione"), 3);
+    EXPECT_EQ(r.at("schema_versione"), 4);
     JsonDati& copia = r.at("schede").at(0).at("versioni").at(0).at("scheda");
     copia["disabili"] = 1;
     copia["tipo"] = {{"tipo", "disabili"}, {"tipo_gruppo", "disabili"}, {"da", "regola"}, {"regola", "RT-1"}};

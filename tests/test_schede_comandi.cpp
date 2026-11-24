@@ -467,13 +467,13 @@ TEST(SchedeComandi, InterruzioniNelleUscite) {
         << t.uscita;
     EXPECT_EQ(t.uscita.find("K-CTR-163"), std::string::npos) << t.uscita;
     const std::string registro = p.normale("schede_servizi.json");
-    EXPECT_NE(registro.find("\"schema_versione\": 3"), std::string::npos);   // K-024: il registro si scrive sempre alla 3
+    EXPECT_NE(registro.find("\"schema_versione\": 4"), std::string::npos);   // K-026: il registro si scrive sempre alla 4
     EXPECT_NE(registro.find("\"interruzioni\""), std::string::npos);
     EXPECT_NE(p.normale("calendari.json").find("Interruzione della scheda"), std::string::npos);
     Prova q(pacchetto_k023());
     q.file("interruzioni.xlsx", scheda_con_tre_interruzioni());
     const JsonDati j = JsonDati::parse(q.leggi("interruzioni.xlsx", {"--validita", "attivazione", "--formato", "json"}, false).uscita);
-    EXPECT_EQ(j.at("schema_versione"), 4);   // K-025
+    EXPECT_EQ(j.at("schema_versione"), 5);   // K-026
     EXPECT_EQ(j.at("righe").at("interruzioni"), 3);
     ASSERT_EQ(j.at("schede").at(0).at("interruzioni").size(), 3u);
     EXPECT_EQ(j.at("schede").at(0).at("interruzioni").at(0), JsonDati({{"dal", "2026-12-21"}, {"al", "2027-01-08"}}));
@@ -484,7 +484,7 @@ TEST(SchedeComandi, InterruzioniNelleUscite) {
     EXPECT_EQ(riga_che_comincia(u.uscita, "Righe:"), "Righe: 1 scheda, 3 fermate, 0 date.");
     EXPECT_EQ(u.uscita.find("nterruzion"), std::string::npos) << u.uscita;
     const JsonDati k = JsonDati::parse(r.leggi("interruzioni.xlsx", {"--validita", "attivazione", "--formato", "json"}, false).uscita);
-    EXPECT_EQ(k.at("schema_versione"), 4);   // K-025
+    EXPECT_EQ(k.at("schema_versione"), 5);   // K-026
     EXPECT_EQ(k.at("righe").at("interruzioni"), 0);
     EXPECT_EQ(k.at("schede").at(0).at("interruzioni"), JsonDati::array());
 }
@@ -523,7 +523,7 @@ TEST(SchedeComandi, TipoPerSchedaNelleUscite) {
     EXPECT_NE(senza.uscita.find("2 problemi sui dati particolari (salute), non elencati"), std::string::npos) << senza.uscita;
     EXPECT_NE(senza.uscita.find("Tipo, pedana, servizio individualizzato e accompagnatore richiesto non mostrati"), std::string::npos);
     const JsonDati j = JsonDati::parse(p.leggi("k024.xlsx", {"--validita", "attivazione", "--includi-dati-particolari", "--formato", "json"}, false).uscita);
-    EXPECT_EQ(j.at("schema_versione"), 4);   // K-025
+    EXPECT_EQ(j.at("schema_versione"), 5);   // K-026
     EXPECT_EQ(j.at("schede").at(1).at("particolari"),
               JsonDati({{"tipo", "disabili"}, {"tipo_gruppo", "disabili"}, {"da", "regola"}, {"regola", "RT-1"}, {"disabili", 1},
                         {"pedana_obbligatoria", true}, {"individualizzato", true}, {"assistente_richiesto", false}}));
@@ -645,7 +645,7 @@ TEST(SchedeComandi, RiletturaSenzaRumore) {
     EXPECT_EQ(p.normale("schede_servizi.json"), registro);
     const Risultato j = p.leggi("k025.xlsx", {"--validita-scheda", "4000703 / 1=2027-01-11", "--formato", "json"}, false, "A", kPw, "2026-12-16");
     const JsonDati d = JsonDati::parse(j.uscita);
-    EXPECT_EQ(d.at("schema_versione"), 4);
+    EXPECT_EQ(d.at("schema_versione"), 5);   // K-026
     EXPECT_EQ(d.at("conteggi").at("uguali"), 4);
     EXPECT_TRUE(d.at("problemi").empty());
     EXPECT_FALSE(d.contains("uguali"));   // D7: niente oggetto con valori fissi

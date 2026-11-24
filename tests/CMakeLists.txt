@@ -1777,7 +1777,7 @@ kzero_schede23(schede_interruzioni_e_coincidenze USCITA 0 FORMATO testo
                NON_CONTIENE "K-CTR-160" "K-CTR-163" "Errore"
                ARGOMENTI leggi-schede ${KZERO_K023}/k023.xlsx @PACCHETTO@ ${K023_LEGGI} --scrivi @PACCHETTO@)
 kzero_schede23(schede_interruzioni_json USCITA 0 FORMATO json SCHEMA schede
-               CONTIENE "\"schema_versione\": 4" "\"scelta_scheda_non_usata\": false" "\"interruzioni\": 3" "\"dal\": \"2026-12-23\"" "K-CTR-176"
+               CONTIENE "\"schema_versione\": 5" "\"scelta_scheda_non_usata\": false" "\"interruzioni\": 3" "\"dal\": \"2026-12-23\"" "K-CTR-176"
                ARGOMENTI leggi-schede ${KZERO_K023}/k023.xlsx @PACCHETTO@ ${K023_LEGGI} --formato json)
 kzero_schede23(schede23_controlla USCITA 0 FORMATO testo
                PREPARA leggi-schede ${KZERO_K023}/k023.xlsx @PACCHETTO@ ${K023_LEGGI} --scrivi @PACCHETTO@ --utente TITOLARE
@@ -1819,7 +1819,7 @@ kzero_schede24(schede_tipo_senza_particolari USCITA 0 FORMATO testo
                NON_CONTIENE "Tipo disabili" "Tipo scolastico" "RT-1" "regola" "disabili a bordo" "K-CTR-177"
                ARGOMENTI leggi-schede ${KZERO_K024}/k024.xlsx @PACCHETTO@ ${K024_LEGGI})
 kzero_schede24(schede_tipo_json USCITA 0 FORMATO json SCHEMA schede
-               CONTIENE "\"schema_versione\": 4" "\"regola\": \"RT-1\"" "\"da\": \"regola\"" "\"disabili\": 1" "K-CTR-177"
+               CONTIENE "\"schema_versione\": 5" "\"regola\": \"RT-1\"" "\"da\": \"regola\"" "\"disabili\": 1" "K-CTR-177"
                ARGOMENTI leggi-schede ${KZERO_K024}/k024.xlsx @PACCHETTO@ ${K024_LEGGI} --includi-dati-particolari --formato json)
 kzero_schede24(schede24_controlla_titolare USCITA 0 FORMATO testo
                PREPARA leggi-schede ${KZERO_K024}/k024.xlsx @PACCHETTO@ ${K024_LEGGI} --scrivi @PACCHETTO@ --utente TITOLARE
@@ -1851,7 +1851,7 @@ kzero_schede24(schede25_rilettura USCITA 0 FORMATO testo
 kzero_schede24(schede25_rilettura_json USCITA 0 FORMATO json SCHEMA schede
                PREPARA ${K025_PRIMA}
                PREPARA_INGRESSO "${PW_K021}"
-               CONTIENE "\"schema_versione\": 4" "\"uguali\": 4" "\"scelta_scheda_non_usata\": true" "\"problemi\": []"
+               CONTIENE "\"schema_versione\": 5" "\"uguali\": 4" "\"scelta_scheda_non_usata\": true" "\"problemi\": []"
                ARGOMENTI ${K025_RILEGGI} --validita-scheda "4000703/1=2027-01-11" --formato json)
 kzero_schede24(schede25_scelta_non_nel_file USCITA 2 FORMATO testo ERRORE K-ERR-056
                ARGOMENTI ${K025_RILEGGI} --validita-scheda "4000730/1=2027-01-11")

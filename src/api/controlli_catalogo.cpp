@@ -315,8 +315,23 @@ void aggiungi_schede(std::vector<DefinizioneControllo>& c) {
                   "l'accompagnatore: controllare la scheda.",
                   "Corsa {corsa} (scheda {scheda}): dal passaggio {da} (alle {orario}) a {a} c'e' qualcuno a bordo senza "
                   "l'accompagnatore; il regolamento {regolamento} lo chiede se il mezzo ha piu' di {posti:# posto|# posti} per i passeggeri "
-                  "({fonte}): dipende dal mezzo, che la scheda non dice."},
-                 {{2, PA}, {3, PA}}});
+                  "({fonte}): dipende dal mezzo, che la scheda non dice.",
+                  // K-026: con i posti del mezzo della scheda (4 e 5) e con il mezzo scritto ma non riconosciuto (6 e 7).
+                  "Corsa {corsa} (scheda {scheda}): dal passaggio {da} (alle {orario}) a {a} c'e' qualcuno a bordo senza "
+                  "l'accompagnatore, e il regolamento {regolamento} lo chiede se il mezzo ha piu' di {posti:# posto|# posti} per i "
+                  "passeggeri ({fonte}): il mezzo della scheda, {mezzo}, ne ha {posti_mezzo}. Il servizio va fatto comunque con "
+                  "l'accompagnatore: controllare la scheda.",
+                  "Corsa {corsa} (scheda {scheda}): dal passaggio {da} (alle {orario}) a {a} c'e' qualcuno a bordo senza "
+                  "l'accompagnatore, e il regolamento {regolamento} lo chiede se il mezzo ha piu' di {posti:# posto|# posti} per i "
+                  "passeggeri ({fonte}): il mezzo della scheda, {mezzo}, ne ha {posti_mezzo}. Il servizio va fatto comunque con "
+                  "l'accompagnatore: controllare la scheda.",
+                  "Corsa {corsa} (scheda {scheda}): dal passaggio {da} (alle {orario}) a {a} c'e' qualcuno a bordo senza "
+                  "l'accompagnatore; il regolamento {regolamento} lo chiede se il mezzo ha piu' di {posti:# posto|# posti} per i passeggeri "
+                  "({fonte}): dipende dal mezzo, e quello scritto sulla scheda non e' riconosciuto (K-CTR-180).",
+                  "Corsa {corsa} (scheda {scheda}): dal passaggio {da} (alle {orario}) a {a} c'e' qualcuno a bordo senza "
+                  "l'accompagnatore; il regolamento {regolamento} lo chiede se il mezzo ha piu' di {posti:# posto|# posti} per i passeggeri "
+                  "({fonte}): dipende dal mezzo, e quello scritto sulla scheda non e' riconosciuto (K-CTR-180)."},
+                 {{2, PA}, {3, PA}, {5, PA}, {7, PA}}});
     c.push_back({Check::CardTripPartKmUnknown, "K-CTR-172", A, N, "Pezzo di una corsa di una scheda con i km non noti",
                  {"Nel turno {turno} c'e' un pezzo della corsa {corsa}, fatta da una scheda: sulla scheda i km di una riga coprono il "
                   "tratto dalla riga prima che ha dei km, e un capo del pezzo non ne ha: i km del pezzo non si sanno (nella giornata "
@@ -403,6 +418,39 @@ void aggiungi_schede(std::vector<DefinizioneControllo>& c) {
     c.push_back({Check::CardSameAsOlderVersion, "K-CTR-179", A, N, "Scheda uguale a una versione di prima, non all'ultima",
                  {"Scheda {scheda}: e' uguale alla versione {versione} della scheda {codice}, non all'ultima (la {ultima}): si legge come "
                   "versione nuova (tornare com'era e' un cambio vero). Se il file e' vecchio, rileggere quello giusto prima di scrivere."}});
+    // K-026: il mezzo della scheda (la targa scritta dal committente). Nella lettura (0-4, schede scritte o completate) e in kzero controlla
+    // (5-9, ogni versione, con le versioni). Comune: targhe, mezzi, aziende e prestiti sono dati comuni.
+    const std::string rileggere = " Rileggendo il file il mezzo si aggiunge alla copia dell'ultima versione, senza una versione nuova.";
+    c.push_back({Check::CardVehicleNotRecognized, "K-CTR-180", A, N, "Mezzo della scheda non riconosciuto, o in prestito solo per una parte dei giorni",
+                 {"Scheda {scheda}: il mezzo scritto \"{targa}\" non e' la targa di nessun mezzo dell'azienda {azienda} del contratto ne' di un "
+                  "mezzo in prestito a lei: il mezzo della scheda non e' riconosciuto (il programma non indovina). Controllare la targa sulla "
+                  "scheda, o aggiungere il mezzo al pacchetto (mezzi.json)." + rileggere,
+                  "Scheda {scheda}: la targa \"{targa}\" e' del mezzo {mezzo} dell'azienda {azienda_mezzo}, che nei giorni di servizio della "
+                  "versione non e' in prestito all'azienda {azienda} del contratto: il mezzo della scheda non e' riconosciuto. Se il mezzo lavora "
+                  "per l'azienda del contratto, scrivere il prestito (mezzi.json)." + rileggere,
+                  "Scheda {scheda}: la targa \"{targa}\" e' su piu' mezzi del pacchetto ({mezzi}): il mezzo della scheda non e' riconosciuto, il "
+                  "programma non sceglie. Una targa vera e' unica: correggere i mezzi (mezzi.json)." + rileggere,
+                  "Scheda {scheda}: il mezzo scritto \"{targa}\" e' {mezzo}, dell'azienda {azienda_mezzo}, e il prestito all'azienda {azienda} del "
+                  "contratto non copre {giorni:# giorno|# giorni} di servizio della versione (il primo e' il {primo}): il mezzo e' riconosciuto, "
+                  "ma in quei giorni l'azienda non lo puo' usare. Controllare il prestito (mezzi.json).",
+                  "Scheda {scheda}: la cella del mezzo \"{targa}\" comincia con la targa del mezzo {mezzo} ma ha altro dopo: nel modello si "
+                  "scrive solo la targa, senza la descrizione. Il mezzo della scheda non e' riconosciuto (il programma non indovina): correggere "
+                  "la copia e rileggere il file.",
+                  // In kzero controlla, con le versioni (K-025).
+                  "Scheda {scheda} (" + versioni + "): il mezzo scritto \"{targa}\" non e' riconosciuto (alla lettura non era la targa di un "
+                  "mezzo dell'azienda {azienda} del contratto o in prestito a lei, o era su piu' mezzi). Controllare la targa e i mezzi del "
+                  "pacchetto (mezzi.json).",
+                  "Scheda {scheda} (" + versioni + "): il mezzo scritto \"{targa}\" non era riconosciuto alla lettura, ma oggi e' il mezzo "
+                  "{mezzo}." + rileggere,
+                  "Scheda {scheda} (" + versioni + "): il mezzo scritto \"{targa}\" era {mezzo} alla lettura, e non c'e' piu' nel "
+                  "pacchetto. Rimetterlo (mezzi.json), oppure rileggere il file: se la targa e' di un altro mezzo dell'azienda {azienda} del "
+                  "contratto (o in prestito a lei), si aggiunge alla copia dell'ultima versione.",
+                  "Scheda {scheda} (" + versioni + "): il mezzo scritto \"{targa}\" e' {mezzo}, dell'azienda {azienda_mezzo}, e oggi nei giorni "
+                  "di servizio della versione non e' in prestito all'azienda {azienda} del contratto (forse il prestito e' stato tolto o "
+                  "cambiato dopo la lettura). Controllare il prestito (mezzi.json).",
+                  "Scheda {scheda} (" + versioni + "): il mezzo scritto \"{targa}\" e' {mezzo}, dell'azienda {azienda_mezzo}, e oggi il prestito "
+                  "all'azienda {azienda} del contratto non copre {giorni:# giorno|# giorni} di servizio della versione (il primo e' il "
+                  "{primo}). Controllare il prestito (mezzi.json)."}});
 }
 
 // K-019: l'elenco utenti del committente. Sui dati (kzero controlla) e sulle righe del file letto (kzero leggi-elenco).

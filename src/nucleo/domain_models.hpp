@@ -1838,6 +1838,7 @@ struct CardProfile {
         std::string nr, id, service, schools, from, to, pupils, individual, equipped, total_days, total_loaded_km, total_empty_km,
             calendar, cadence, new_or_change;
         std::string disabled;   // K-024 (versione 3), facoltativo: il numero dei disabili a bordo (vuoto = il modello non lo ha)
+        std::string vehicle;    // K-026 (versione 4), facoltativo: il mezzo della scheda, la targa (vuoto = il modello non lo ha)
     } card_cols;
     struct StopColumns {
         std::string nr, time, point, home, boarding, alighting, loaded_km, empty_km, escort;
@@ -1878,6 +1879,23 @@ struct CardStop {
     int row = 0;                                  // riga del foglio delle fermate (0 se la scheda viene dal registro)
     Source src;
 };
+// K-026: una lettura che ha completato il mezzo della copia dell'ultima versione di una scheda uguale (D1 dell'arbitro): la copia non
+// aveva il testo, o lo aveva senza un mezzo riconosciuto (o con un mezzo che non c'e' piu'), e il file ora lo da'. Mai un testo diverso
+// (quello e' una versione nuova).
+struct CardVehicleAddition {
+    Day date = 0;                        // la presa in carico (--data) della lettura
+    std::string reference;               // il --riferimento della lettura
+    bool text = false;                   // ha aggiunto il testo scritto (la copia non lo aveva)
+    bool code = false;                   // ha aggiunto il codice del mezzo riconosciuto
+    std::optional<Code> previous_code;   // il codice che c'era, di un mezzo che non era piu' nel pacchetto
+};
+// K-026: il mezzo della scheda, come lo scrive il committente (la targa). Dato comune. Non e' il mezzo del turno: corse e turni non lo
+// usano.
+struct CardVehicle {
+    std::string written;                       // la cella come sul file (spazi esterni tolti)
+    std::optional<Code> code;                  // il mezzo riconosciuto dalla targa (vuoto = non riconosciuto)
+    std::vector<CardVehicleAddition> additions;
+};
 // Una scheda come e' stata letta (la copia nel registro).
 struct Card {
     std::string nr;
@@ -1909,6 +1927,8 @@ struct Card {
         Code rule;   // con from_rule: il codice della regola
     };
     std::optional<ChosenKind> chosen;
+    // K-026: il mezzo della scheda (vuoto = non scritto: cella vuota, profilo senza la colonna, versione di prima del K-026).
+    std::optional<CardVehicle> vehicle;
 };
 enum class ChoiceMode { Activation, TakenInCharge, Date };   // attivazione, presa in carico, un'altra data
 enum class ChoiceFrom { None, File, Card };                   // nessuna scelta serviva, --validita, --validita-scheda

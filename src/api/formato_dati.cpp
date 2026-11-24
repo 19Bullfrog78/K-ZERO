@@ -51,14 +51,15 @@ const std::vector<FileDati>& file_dati() {
         {"elenco_utenti.json", "elenco_utenti", {1, 2}, false,
          "Elenco utenti dei committenti come lo mandano (K-019): casa, scuola, stato, fermata indicata, ditta e orari di ogni "
          "tratta, sblocchi. Solo nel livello completo."},
-        {"profili_schede.json", "profili_schede", {1, 2, 3}, false,
+        {"profili_schede.json", "profili_schede", {1, 2, 3, 4}, false,
          "Profili di lettura delle schede dei servizi di un committente (K-021): fogli, titoli, parole, cadenze e separatori del "
          "modello in cui si copiano le schede; dalla versione 2 il foglio delle interruzioni; dalla versione 3 le regole del tipo, la "
-         "colonna dei disabili e il tipo tra i dati particolari."},
-        {"schede_servizi.json", "schede_servizi", {1, 2, 3}, false,
+         "colonna dei disabili e il tipo tra i dati particolari; dalla versione 4 la colonna del mezzo della scheda (la targa)."},
+        {"schede_servizi.json", "schede_servizi", {1, 2, 3, 4}, false,
          "Registro delle schede dei servizi lette (K-021): per ogni scheda le versioni, con la copia letta, da quando a quando "
          "valgono e gli elementi del pacchetto fatti dalla scheda; dalla versione 2 le interruzioni della scheda; dalla versione 3 il "
-         "tipo scelto e il numero dei disabili (dati particolari)."},
+         "tipo scelto e il numero dei disabili (dati particolari); dalla versione 4 il mezzo della scheda (la targa scritta, il mezzo "
+         "riconosciuto e le letture che l'hanno aggiunto)."},
     };
     return elenco;
 }

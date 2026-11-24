@@ -1578,7 +1578,9 @@ fogli, titoli delle colonne, colonne dei giorni, il segno delle caselle, i testi
 dell'accompagnatore, i separatori, e come si collegano scuole, punti di raccolta e calendari agli elementi del pacchetto. E' un
 dato: il programma conosce solo le **forme** (cadenza a giorni segnati o a date elencate), mai le parole; il modello di K-Zero e'
 il primo profilo, e se il committente mandera' le schede in Excel sara' un altro profilo. Dati comuni, tranne il **tipo** dalla
-versione 3. Schemi: [docs/schema/profili_schede.v3.schema.json](schema/profili_schede.v3.schema.json) (versione attuale, K-024: le
+versione 3. Schemi: [docs/schema/profili_schede.v4.schema.json](schema/profili_schede.v4.schema.json) (versione attuale, K-026: la
+colonna del mezzo della scheda; per passare alla 4 si cambia solo `"schema_versione"`),
+[docs/schema/profili_schede.v3.schema.json](schema/profili_schede.v3.schema.json) (versione 3, ancora letta, K-024: le
 regole del tipo, la colonna dei disabili, il tipo tra i dati particolari),
 [docs/schema/profili_schede.v2.schema.json](schema/profili_schede.v2.schema.json) (versione 2, ancora letta, K-023: il foglio delle
 interruzioni) e [docs/schema/profili_schede.v1.schema.json](schema/profili_schede.v1.schema.json) (versione 1, ancora letta: e' la 2
@@ -1595,6 +1597,7 @@ senza il foglio delle interruzioni; un profilo alla 1, o alla 2 senza il foglio,
 | `profili[].codici_esterni` | si' | comune | `sistema` e i tipi: `tipo_scheda` (l'ID), `tipo_nr` (il Nr), `tipo_servizio` (il numero prima della barra), scritti sul servizio; `tipo_scuola`, `tipo_fermata`, `tipo_calendario`, con cui si cercano scuole, punti di raccolta e calendari |
 | `profili[].colonne.schede` | si' | comune | Titoli delle colonne del foglio delle schede: `nr`, `id`, `servizio` (verso e momento), `scuole`, `attivazione`, `disattivazione`, `totali_alunni`, `individualizzato`, `attrezzato`, `tot_giorni`, `tot_km_carico`, `tot_km_vuoto`, `calendario`, `cadenza`, `nuova_modifica` |
 | `profili[].colonne.schede.disabili` | no | comune | Versione 3 (K-024): il titolo della colonna con il **numero dei disabili** a bordo (sotto). Un profilo che non lo nomina legge le schede come prima |
+| `profili[].colonne.schede.mezzo` | no | comune | Versione 4 (K-026): il titolo della colonna con il **mezzo della scheda**, la targa (sotto). Un profilo che non lo nomina legge le schede come prima |
 | `profili[].colonne.fermate` | si' | comune | Titoli del foglio delle fermate: `nr`, `orario`, `punto` (punto di raccolta), `casa`, `salgono` (St. Car.), `scendono` (St. Scar.), `km_pieni`, `km_vuoti`, `accompagnatore` |
 | `profili[].colonne.date` | si' | comune | Titoli del foglio delle date: `nr`, `data` |
 | `profili[].colonne.interruzioni` | no | comune | Versione 2, solo insieme a `fogli.interruzioni`: titoli del foglio delle interruzioni: `nr`, `dal`, `al` |
@@ -1641,12 +1644,28 @@ K-CTR-177: tipo disabili con 0 (variante 0); disabili a bordo di un servizio sco
 promiscua (variante 1); tipo disabili con a bordo anche persone che non sono disabili (variante 2). Niente con il tipo `altro`. Le
 varianti 48-50 e K-CTR-177 rivelano un dato particolare: senza il permesso si contano soltanto.
 
+**Il mezzo della scheda** (K-026, colonna facoltativa `colonne.schede.mezzo`). Sulla scheda del committente la riga "Mezzo" ha la targa e
+una descrizione (es. inventato: "XY 123 ZW - MARCA 00"); nel modello si copia **solo la targa** (D3 dell'arbitro), la descrizione no.
+**Cella vuota** = "non scritto" (nessun avviso); una cella senza lettere ne' cifre (es. "-") vale come vuota; una cella illeggibile (errore
+di Excel, troppo lunga) ferma la scheda con la variante 0 di K-CTR-160, come ogni colonna. La targa si confronta con `mezzi[].targa`
+**senza badare a spazi, trattini, punteggiatura e maiuscole** (restano le lettere e le cifre, confrontate come le parole del profilo: D4),
+e si riconosce **solo tra i mezzi dell'azienda del contratto** (`contratti[].azienda`) **e quelli di altre aziende in prestito a lei**
+(`mezzi[].prestiti[]`) nei **giorni di servizio della versione** (il calendario della scheda nel periodo della versione, interruzioni
+comprese: un prestito che finisce con le lezioni non e' un problema; D5). Mai i mezzi ipotetici (`ipotetico`, non ancora in flotta). Mai
+indovinato: una targa che e' su piu' mezzi del pacchetto non si riconosce (una targa vera e' unica: uno dei due dati e' sbagliato, D6). Il
+mezzo riconosciuto (il suo codice) va nella copia della scheda nel registro, insieme al testo scritto; non trovato, di un'altra azienda
+senza prestito, su piu' mezzi, o una cella che comincia con una targa e ha altro dopo: l'avviso K-CTR-180 e la scheda si legge con il mezzo
+"non riconosciuto". Un prestito che copre solo una parte dei giorni di servizio: il mezzo si riconosce, con l'avviso (variante 3). Il mezzo
+non ferma mai una scheda. **Non e' il mezzo del turno**: servizio, gruppo, corsa e calendario non cambiano, e nemmeno i turni; lo usa
+K-CTR-171 (le condizioni con i posti, sotto e in controlli.md) e lo useranno i posti liberi (K-028). Dato comune, come la targa in
+mezzi.json.
+
 **Il modello** (scelta A dell'arbitro): tre fogli (dal K-023 un quarto, facoltativo), la prima riga di ognuno sono i titoli.
 - **Schede**: una riga per scheda, con tutti i campi dell'intestazione e del piede: Nr (es. "4000123 / 3"), ID (es. un uuid), verso
   e momento, scuole (piu' di una con il separatore delle scuole: codici esterni delle scuole), attivazione e disattivazione, una X
   sotto ogni giorno, Totali alunni, le caselle "Servizio Individualizzato" e "Attrezzato" (X o vuote), Tot Giorni, Tot Km Carico,
   Tot Km Vuoto, Calendario (es. SCOLASTICO, MATERNA), Cadenza (es. Sempre), Scheda nuova / Modifica e, con un profilo alla versione 3
-  che la nomina, Disabili (il numero, sopra). La dichiarazione firmata in fondo alla scheda non si copia: sono dati personali del
+  che la nomina, Disabili (il numero, sopra); con un profilo alla versione 4 che la nomina, Mezzo (solo la targa, sopra). La dichiarazione firmata in fondo alla scheda non si copia: sono dati personali del
   titolare.
 - **Fermate**: una riga per riga della scheda, nell'ordine: Nr (quello della scheda), orario, punto di raccolta, casa, St. Car.,
   St. Scar., km pieno, km vuoto, accompagnatore.
@@ -1683,11 +1702,14 @@ parola, e nella colonna "accompagnatore" una parola del profilo per "sale" o "sc
 mai dal Nr) le **versioni**, ognuna con la copia della scheda letta, da quando a quando vale, la presa in carico, il riferimento,
 come e' stata scelta la data, e i codici degli elementi del pacchetto fatti da quella versione. Lo scrivono solo `kzero
 leggi-schede` e `kzero togli-scheda`, sempre all'ultima versione (contiene le altre). Schemi:
-[docs/schema/schede_servizi.v3.schema.json](schema/schede_servizi.v3.schema.json) (versione attuale, K-024: il tipo scelto e il numero
-dei disabili nella copia della scheda, dati particolari),
+[docs/schema/schede_servizi.v4.schema.json](schema/schede_servizi.v4.schema.json) (versione attuale, K-026: il mezzo della scheda nella
+copia, dato comune),
+[docs/schema/schede_servizi.v3.schema.json](schema/schede_servizi.v3.schema.json) (versione 3, ancora letta, K-024: il tipo scelto e il
+numero dei disabili nella copia della scheda, dati particolari),
 [docs/schema/schede_servizi.v2.schema.json](schema/schede_servizi.v2.schema.json) (versione 2, ancora letta, K-023: le interruzioni
 nella copia della scheda) e [docs/schema/schede_servizi.v1.schema.json](schema/schede_servizi.v1.schema.json) (versione 1, ancora
-letta: nessuna interruzione). I registri alla 1 e alla 2 si leggono come prima (le versioni non hanno il tipo ne' il numero).
+letta: nessuna interruzione). I registri alla 1 e alla 2 si leggono come prima (le versioni non hanno il tipo ne' il numero); quelli
+fino alla 3 non hanno il mezzo (non scritto).
 
 | Campo | Obbl. | Classe | Significato |
 |---|---|---|---|
@@ -1705,6 +1727,7 @@ letta: nessuna interruzione). I registri alla 1 e alla 2 si leggono come prima (
 | `...scheda.individualizzato`, `...scheda.attrezzato` | no | particolare | Le due caselle della scheda (come la pedana obbligatoria e `individualizzato` del servizio) |
 | `...scheda.disabili` | no | particolare | Versione 3 (K-024): il numero dei disabili a bordo, se la scheda lo scrive (manca = non scritto) |
 | `...scheda.tipo` | no | particolare | Versione 3 (K-024): il tipo scelto per la scheda, quello che la versione ha dato al servizio e al gruppo: `tipo`, `tipo_descrizione`, `tipo_gruppo`, `tipo_gruppo_descrizione`, `da` (`profilo` o `regola`) e `regola` (il codice). Manca nelle versioni scritte prima del K-024 |
+| `...scheda.mezzo` | no | comune | Versione 4 (K-026): il mezzo della scheda: `scritto` (la cella come sul file, la targa), `codice` (il mezzo riconosciuto; manca = non riconosciuto) e `aggiunte[]` (le letture che l'hanno aggiunto alla copia di una scheda uguale: `data`, `riferimento`, `cosa` = `testo`, `codice` o `testo_e_codice`, e `codice_prima`, il mezzo di prima che non c'era piu' nel pacchetto). Manca = non scritto |
 | `tolte[]` | no | comune | Le versioni tolte con `kzero togli-scheda`: `scheda`, `id`, `versioni[]`, `riferimento`, `data`; i loro numeri non si danno piu' |
 
 **Come una scheda diventa servizio, gruppo, corsa e calendario** (una versione = un servizio, un gruppo, una corsa, un calendario):
@@ -1763,12 +1786,25 @@ versione la scelta non serve (sotto, "Versioni"), e l'uscita lo dice.
 e' normale. Per ogni scheda, nell'ordine: 1. gli errori della riga (la scheda si ferma, come sempre: anche una scheda uguale, se oggi non
 si legge piu', es. un punto di trasbordo che non e' piu' autorizzato); 2. lo stesso ID con un altro contratto o committente (si ferma); 3.
 **lo stesso ID con il contenuto uguale all'ultima versione** (come sotto: la parola nuova/modifica non conta, il tipo e il numero dei
-disabili si', K-024) = **uguale, prima di tutto quello che dipende dalla data**: nessuna scelta della data serve (niente K-CTR-162, mai
-ferma perche' gia' finita o per la data scelta), nessun avviso della lettura (K-CTR-163, 164, 165, 166, 176, 177: quelli che descrivono il
-pacchetto li da' `kzero controlla`, su ogni versione), niente scritto; una scelta `--validita-scheda` per lei non serve e l'uscita lo dice;
+disabili si', K-024; il mezzo si', K-026) = **uguale, prima di tutto quello che dipende dalla data**: nessuna scelta della data serve
+(niente K-CTR-162, mai ferma perche' gia' finita o per la data scelta), nessun avviso della lettura (K-CTR-163, 164, 165, 166, 176, 177,
+180: quelli che descrivono il pacchetto li da' `kzero controlla`, su ogni versione), niente scritto, tranne il mezzo della scheda che
+manca alla copia (sotto); una scelta `--validita-scheda` per lei non serve e l'uscita lo dice;
 4. solo per le schede nuove e per quelle cambiate, tutto il resto (scelta della data, avvisi, versione nuova). Il riepilogo dice quante
 sono le uguali e dove guardare i loro avvisi. Una scheda uguale a una **versione di prima, non all'ultima**, non e' uguale: tornare
 com'era e' un cambio vero (versione nuova), con l'avviso K-CTR-179 (forse il file e' vecchio: rileggere quello giusto prima di scrivere).
+
+**Il mezzo aggiunto a una scheda uguale** (K-026, D1 dell'arbitro). Senza questa regola il mezzo non entrerebbe mai nelle schede gia'
+lette: chi aggiunge la colonna al profilo e rilegge lo stesso file avrebbe solo schede "uguali" (il mezzo "non scritto" da una parte non si
+confronta), e lo stesso con un mezzo aggiunto al pacchetto dopo la lettura. Per questo una scheda uguale all'ultima versione la cui copia
+**non ha il mezzo** (non scritto) **o lo ha senza un mezzo riconosciuto** (o con un mezzo che non c'e' piu' nel pacchetto), e che nel file
+ha una targa, resta "uguale" (niente versione nuova, niente scelta della data, nessun elemento rifatto), ma con `--scrivi` la copia
+dell'**ultima versione** (solo quella: il file descrive solo l'ultima) prende **quello che le manca**: il testo scritto, se non lo aveva, e
+il codice del mezzo, se ora si riconosce (con il periodo di quella versione). **Mai un testo scritto diverso** da quello della copia:
+quello non e' uguale, e' una versione nuova. Il completamento resta scritto nella copia (`mezzo.aggiunte[]`: la data `--data` e il
+`--riferimento` della lettura, e cosa ha aggiunto). L'uscita lo dice (la scheda "uguale" con il mezzo aggiunto, e quante sono), e per
+queste schede da' gli avvisi del mezzo (K-CTR-180) e K-CTR-171 (il mezzo nuovo puo' cambiarlo). Lo stesso file riletto una seconda volta
+con lo stesso pacchetto non aggiunge piu' niente.
 
 **Versioni.** Lo stesso ID gia' nel registro = **versione nuova** della stessa scheda: vale dalla data scelta; la versione che vale il
 giorno prima finisce il giorno prima, quelle che cominciano dalla data scelta in poi si tolgono; **i giorni prima della data scelta
@@ -1781,12 +1817,17 @@ regole (la data la sceglie l'utente, i giorni prima non cambiano); per una versi
 registro, il tipo e' quello del suo servizio nel pacchetto, e senza il servizio non si confronta. Un profilo di oggi e lo stesso file
 danno "uguale" come prima. **Il numero dei disabili** (D6) fa una versione nuova solo se cambia tra due numeri scritti: "non scritto" da
 una parte (una versione di prima senza la colonna, o la cella vuota) non si confronta, cosi' chi aggiunge la colonna al profilo e rilegge
-lo stesso file non rifa' tutte le schede. **Una versione senza
+lo stesso file non rifa' tutte le schede. **Il mezzo della scheda** (K-026, D2) fa una versione nuova solo se cambia il testo
+normalizzato (la targa senza spazi, trattini, punteggiatura e maiuscole) tra due celle scritte: "non scritto" da una parte non si confronta
+(chi aggiunge la colonna e rilegge lo stesso file non rifa' le schede: il mezzo si aggiunge alla copia, sopra), e un mezzo aggiunto al
+pacchetto dopo non fa una versione nuova. Una cella svuotata dopo non toglie il mezzo dalla copia; una versione nuova fatta per altro con la
+cella vuota ha la copia senza il mezzo (come il numero dei disabili). **Una versione senza
 giorni non si scrive** (K-023): se la versione nuova non avrebbe nessun giorno di servizio dalla data scelta (calendario della scheda,
 interruzioni comprese), o se la versione di prima, accorciata al giorno prima, resterebbe senza giorni, la scheda si ferma (K-CTR-160
 variante 47) e l'utente sceglie un'altra data o toglie prima la versione di prima; il programma non toglie niente da solo. L'uscita dice cosa
 cambia: Nr, verso e momento, scuole, fermate (luoghi e ordine), orari, numeri, km, totali, date e giorni, interruzioni (K-023),
-calendario, cadenza, e le caselle, il tipo e il numero dei disabili (K-024; solo con i dati particolari). Mai unire schede con ID diversi.
+calendario, cadenza, il mezzo (K-026: il testo scritto, con il mezzo riconosciuto) e le caselle, il tipo e il numero dei disabili (K-024;
+solo con i dati particolari). Mai unire schede con ID diversi.
 
 **Togliere una scheda scritta per errore**: `kzero togli-scheda <pacchetto> --scheda <codice o ID> --riferimento "..." --data
 AAAA-MM-GG --utente U [--tutte] [--scrivi <pacchetto>]` toglie l'ultima versione (servizio, gruppo, corsa, calendario) e rida' alla

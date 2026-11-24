@@ -209,6 +209,7 @@ struct Calcolo {
     bool con_interruzioni = false;   // K-023: il profilo ha il foglio delle interruzioni
     bool con_regole = false;         // K-024: il profilo ha delle regole del tipo
     bool con_disabili = false;       // K-024: il profilo ha la colonna dei disabili
+    bool con_mezzo = false;          // K-026: il profilo ha la colonna del mezzo
 };
 
 Calcolo calcola(Lettura vecchia, const Parametri& par, const Tabelle& t, const std::string& cartella) {
@@ -228,6 +229,7 @@ Calcolo calcola(Lettura vecchia, const Parametri& par, const Tabelle& t, const s
     c.con_interruzioni = !pr.sheet_breaks.empty();
     c.con_regole = !pr.type_rules.empty();
     c.con_disabili = !pr.card_cols.disabled.empty();
+    c.con_mezzo = !pr.card_cols.vehicle.empty();
     c.letto = kzero::read_cards(t.t, pr, idx, t.date1904);
     if (c.letto.fault != kzero::TableFault::None)
         throw ErroreKZero(Errore::ColonnaMancante,
@@ -336,9 +338,11 @@ Risultato uscita_lettura(const DefinizioneComando& comando, const Parametri& par
     // Gli avvisi sul registro nuovo per le schede scritte da questa lettura (sovrapposizioni, accompagnatore che manca). K-025 (D3): non
     // per le schede uguali, che non cambiano (li ripeterebbe a ogni lettura del file intero): restano in kzero controlla. Una
     // sovrapposizione tra una scheda scritta e una uguale si vede (la scheda scritta e' nell'avviso).
+    // K-026: anche le schede uguali a cui la lettura ha aggiunto il mezzo (il mezzo nuovo puo' cambiare K-CTR-171).
     std::set<std::string> toccate;
     for (const kzero::CardOutcome& o : c.confronto.outcomes)
-        if (o.kind == kzero::CardOutcome::Kind::New || o.kind == kzero::CardOutcome::Kind::NewVersion) toccate.insert(o.card_code);
+        if (o.kind == kzero::CardOutcome::Kind::New || o.kind == kzero::CardOutcome::Kind::NewVersion || o.vehicle_added)
+            toccate.insert(o.card_code);
     std::vector<kzero::Problem> sul_registro;
     kzero::check_cards(c.nuova.pacchetto, in, sul_registro);
     for (const kzero::Problem& p : sul_registro) {
@@ -350,7 +354,21 @@ Risultato uscita_lettura(const DefinizioneComando& comando, const Parametri& par
     std::map<std::string, int> conti;
     for (const kzero::CardOutcome& o : c.confronto.outcomes) ++conti[nome_esito(o.kind)];
     const auto conto = [&](const char* k) { return conti.count(k) ? conti.at(k) : 0; };
+    const int aggiunti = static_cast<int>(c.confronto.completed.size());   // K-026
     const std::string presa = kzero::text_from_day(*par.data_sblocco);
+    // K-026: il mezzo della versione nel JSON (null se non scritto, o per le schede ferme) e in una riga del testo.
+    const auto mezzo_json = [](const kzero::CardOutcome& o) -> Json {
+        if (!o.vehicle) return nullptr;
+        return {{"scritto", o.vehicle->written}, {"codice", o.vehicle->code ? Json(*o.vehicle->code) : Json(nullptr)},
+                {"riconosciuto", o.vehicle->code.has_value()}, {"aggiunto", o.vehicle_added}};
+    };
+    const auto mezzo_testo = [&](const kzero::CardOutcome& o) -> std::string {
+        if (!o.vehicle) return "non scritto";
+        std::string t = "\"" + o.vehicle->written + "\"";
+        if (!o.vehicle->code) return t + ", non riconosciuto (K-CTR-180, sotto)";
+        const kzero::Vehicle* m = in.vehicle(*o.vehicle->code);
+        return t + " = " + *o.vehicle->code + (m ? " (" + m->plate + ", " + std::to_string(m->seats) + (m->seats == 1 ? " posto" : " posti") + ")" : "");
+    };
     if (par.formato == Formato::Json) {
         Json j = documento(comando.schema);
         j["comando"] = comando.nome;
@@ -366,7 +384,7 @@ Risultato uscita_lettura(const DefinizioneComando& comando, const Parametri& par
         j["righe"] = {{"schede", c.letto.card_rows}, {"fermate", c.letto.stop_rows}, {"date", c.letto.date_rows},
                       {"interruzioni", c.letto.break_rows}};
         j["conteggi"] = {{"nuove", conto("nuova")}, {"versioni_nuove", conto("versione_nuova")}, {"uguali", conto("uguale")},
-                         {"ferme", conto("ferma")}, {"senza_scelta", conto("senza_scelta")}};
+                         {"ferme", conto("ferma")}, {"senza_scelta", conto("senza_scelta")}, {"mezzi_aggiunti", aggiunti}};
         Json schede = Json::array();
         for (std::size_t i = 0; i < c.confronto.outcomes.size(); ++i) {
             const kzero::CardOutcome& o = c.confronto.outcomes[i];
@@ -383,6 +401,7 @@ Risultato uscita_lettura(const DefinizioneComando& comando, const Parametri& par
             s["case_nuove"] = o.new_homes;
             s["scelta_scheda_non_usata"] = o.choice_unused;   // K-025: uguale, con una scelta --validita-scheda che non serve
             s["interruzioni"] = con_date ? interruzioni_json(c.letto.cards.at(i).card) : Json(nullptr);   // K-023
+            s["mezzo"] = con_date ? mezzo_json(o) : Json(nullptr);                                          // K-026
             s["versione_accorciata"] = o.cut_version ? Json{{"versione", *o.cut_version}, {"al", kzero::text_from_day(o.cut_to)}} : Json(nullptr);
             s["versioni_tolte"] = o.removed_versions;
             s["giornate_prima_della_presa_in_carico"] =
@@ -440,7 +459,11 @@ Risultato uscita_lettura(const DefinizioneComando& comando, const Parametri& par
     if (conto("uguale"))
         t += "Schede uguali all'ultima versione: " + std::to_string(conto("uguale")) +
              ". Niente da fare, e i loro avvisi non si ripetono a ogni lettura: quelli che descrivono il pacchetto (Tot Giorni, date "
-             "elencate, coincidenze, numero dei disabili) li da' kzero controlla.\n";
+             "elencate, coincidenze, numero dei disabili" + std::string(c.con_mezzo ? ", mezzo della scheda" : "") + ") li da' kzero controlla.\n";
+    // K-026 (D1): le uguali a cui questa lettura aggiunge il mezzo alla copia dell'ultima versione.
+    if (aggiunti)
+        t += "Schede uguali con il mezzo aggiunto alla copia dell'ultima versione (senza una versione nuova, con la data e il riferimento "
+             "di questa lettura): " + std::to_string(aggiunti) + ".\n";
     for (std::size_t i = 0; i < c.confronto.outcomes.size(); ++i) {
         const kzero::CardOutcome& o = c.confronto.outcomes[i];
         t += "  " + (o.nr.empty() ? std::string("(senza Nr)") : o.nr) + " (riga " + std::to_string(o.row) + "): ";
@@ -483,6 +506,15 @@ Risultato uscita_lettura(const DefinizioneComando& comando, const Parametri& par
                 break;
             }
             case kzero::CardOutcome::Kind::Same:
+                if (o.vehicle_added) {   // K-026 (D1): il mezzo aggiunto alla copia, niente altro
+                    const kzero::CardVehicleAddition& a = o.vehicle->additions.back();
+                    t += "uguale alla versione " + std::to_string(o.version) + " della scheda " + o.card_code + ": aggiunto alla copia " +
+                         (a.text && a.code ? "il mezzo della scheda, riconosciuto" : a.text ? "il mezzo della scheda (il testo)"
+                                                                                       : "il mezzo riconosciuto") +
+                         ", niente altro" + (o.choice_unused ? " (la scelta --validita-scheda non serve: la scheda non e' cambiata).\n" : ".\n");
+                    t += "     Mezzo della scheda: " + mezzo_testo(o) + ".\n";
+                    break;
+                }
                 t += "uguale alla versione " + std::to_string(o.version) + " della scheda " + o.card_code + ": niente da fare" +
                      (o.choice_unused ? " (la scelta --validita-scheda non serve: la scheda non e' cambiata).\n" : ".\n");
                 break;
@@ -496,6 +528,8 @@ Risultato uscita_lettura(const DefinizioneComando& comando, const Parametri& par
             case kzero::CardOutcome::Kind::ChoiceMissing: t += "ferma: manca la scelta della data (K-CTR-162, sotto).\n"; break;
         }
         const bool scritta = o.kind == kzero::CardOutcome::Kind::New || o.kind == kzero::CardOutcome::Kind::NewVersion;
+        // K-026: il mezzo della scheda, se il profilo ha la colonna (con i profili di oggi il testo non cambia).
+        if (scritta && (c.con_mezzo || o.vehicle)) t += "     Mezzo della scheda: " + mezzo_testo(o) + ".\n";
         if (scritta && !c.letto.cards.at(i).card.breaks.empty()) {   // K-023
             std::string ii;
             for (const kzero::DateRange& b : c.letto.cards.at(i).card.breaks)
@@ -528,6 +562,7 @@ std::string nota_registro(const Calcolo& c) {
     for (const kzero::CardOutcome& o : c.confronto.outcomes) ++conti[nome_esito(o.kind)];
     std::string numeri;
     for (const auto& [k, n] : conti) numeri += (numeri.empty() ? "" : ", ") + k + " " + std::to_string(n);
+    if (!c.confronto.completed.empty()) numeri += ", mezzi aggiunti " + std::to_string(c.confronto.completed.size());   // K-026
     return numeri.empty() ? std::string("nessuna scheda") : numeri;
 }
 

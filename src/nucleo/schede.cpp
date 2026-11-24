@@ -347,6 +347,7 @@ CardsRead read_cards(const CardTables& tab, const CardProfile& pr, const Index& 
                                               cs.cadence, cs.new_or_change};
     for (const CardProfileDay& g : pr.days) titoli_schede.push_back(g.column);
     if (!cs.disabled.empty()) titoli_schede.push_back(cs.disabled);   // K-024: la colonna dei disabili, se il profilo la nomina
+    if (!cs.vehicle.empty()) titoli_schede.push_back(cs.vehicle);     // K-026: la colonna del mezzo, se il profilo la nomina
     const std::vector<std::string> titoli_fermate = {cf.nr, cf.time, cf.point, cf.home, cf.boarding, cf.alighting, cf.loaded_km,
                                                      cf.empty_km, cf.escort};
     const std::vector<std::string> titoli_date = {pr.date_cols.nr, pr.date_cols.date};
@@ -530,6 +531,14 @@ CardsRead read_cards(const CardTables& tab, const CardProfile& pr, const Index& 
                     k.disabled = *n;
                 }
             }
+        }
+        // K-026: il mezzo della scheda (colonna facoltativa del profilo alla versione 4), la targa come la scrive il committente. Vuota, o
+        // senza lettere ne' cifre (es. "-"), = non scritto; illeggibile ferma la scheda (variante 0, come ogni colonna). Si riconosce nel
+        // confronto con il registro, che sa il contratto e il periodo della versione.
+        if (!cs.vehicle.empty()) {
+            const auto t = q.testo(cs.vehicle);
+            if (!t) continue;
+            if (!plate_key(*t).empty()) k.vehicle = CardVehicle{*t, std::nullopt, {}};
         }
         k.individual = casella(cs.individual);
         if (q.fermo) continue;
@@ -1018,6 +1027,86 @@ std::optional<CardTransferEnd> card_transfer_end(const Card& k, const Index& idx
     return e;
 }
 
+// --- Il mezzo della scheda (K-026) ------------------------------------------------------------------------------------------
+
+std::string plate_key(const std::string& text) {
+    std::string out;
+    for (char c : normalize_name(text))
+        if (c != ' ') out += c;
+    return out;
+}
+
+CardLoanCover card_vehicle_loan(const Vehicle& v, const Code& company, const Card& k, DateRange period, const Index& idx) {
+    CardLoanCover out;
+    for (const Loan& l : v.loans) out.any_loan = out.any_loan || l.company.code == company;
+    if (!out.any_loan || period.to < period.from) return out;
+    // I giorni di servizio della versione (D5 dell'arbitro): un prestito che finisce con le lezioni non e' un problema.
+    const Calendar cal = card_calendar(k, "", period);
+    std::vector<Day> giorni;
+    for (Day d = period.from; d <= period.to; ++d)
+        if (calendar_active(cal, d, idx)) giorni.push_back(d);
+    if (giorni.empty())
+        for (Day d = period.from; d <= period.to; ++d) giorni.push_back(d);
+    out.days = static_cast<int>(giorni.size());
+    bool primo = false;
+    for (Day d : giorni) {
+        const bool coperto =
+            std::any_of(v.loans.begin(), v.loans.end(), [&](const Loan& l) { return l.company.code == company && l.covers(d); });
+        if (coperto) ++out.covered;
+        else if (!primo) {
+            primo = true;
+            out.first_uncovered = d;
+        }
+    }
+    return out;
+}
+
+CardVehicleMatch match_card_vehicle(const std::string& written, const Code& company, const Card& k, DateRange period, const Index& idx) {
+    CardVehicleMatch out;
+    const std::string key = plate_key(written);
+    if (key.empty()) return out;
+    // I mezzi con la stessa targa in tutto il pacchetto (D6: una targa vera e' unica; su due mezzi uno dei due dati e' sbagliato e il
+    // programma non sa quale), mai gli ipotetici (non ancora in flotta). Con nessuno, l'aiuto: la cella che comincia con una targa.
+    std::vector<const Vehicle*> uguali, all_inizio;
+    for (const Vehicle& v : idx.package().vehicles) {
+        if (v.hypothetical) continue;
+        const std::string t = plate_key(v.plate);
+        if (t.empty()) continue;
+        if (t == key) uguali.push_back(&v);
+        else if (key.size() > t.size() && key.compare(0, t.size(), t) == 0) all_inizio.push_back(&v);
+    }
+    if (uguali.size() > 1) {
+        out.outcome = CardVehicleMatch::Outcome::Ambiguous;
+        for (const Vehicle* v : uguali) out.candidates.push_back(v->code);
+        return out;
+    }
+    if (uguali.empty()) {
+        if (all_inizio.size() == 1) {
+            out.outcome = CardVehicleMatch::Outcome::Prefix;
+            out.vehicle = all_inizio.front()->code;
+        }
+        return out;
+    }
+    const Vehicle& v = *uguali.front();
+    out.vehicle = v.code;
+    if (v.company.code == company) {
+        out.outcome = CardVehicleMatch::Outcome::Recognized;
+        return out;
+    }
+    // Un mezzo di un'altra azienda: solo se in prestito all'azienda del contratto nei giorni di servizio della versione (D5: anche solo
+    // in una parte, con l'avviso; in nessun giorno, non riconosciuto).
+    out.vehicle_company = v.company.code;
+    const CardLoanCover c = card_vehicle_loan(v, company, k, period, idx);
+    if (!c.any_loan || c.covered == 0) {
+        out.outcome = CardVehicleMatch::Outcome::OtherCompany;
+        return out;
+    }
+    out.outcome = CardVehicleMatch::Outcome::Recognized;
+    out.uncovered_days = c.days - c.covered;
+    out.first_uncovered = c.first_uncovered;
+    return out;
+}
+
 // --- Differenze ------------------------------------------------------------------------------------------------------------
 
 namespace {
@@ -1113,6 +1202,11 @@ std::vector<CardChange> card_changes(const Card& a, const Card& b) {
         out.push_back({"tipo", card_kind_text(a.chosen->kind), card_kind_text(b.chosen->kind), true});
     if (a.disabled && b.disabled && *a.disabled != *b.disabled)
         out.push_back({"disabili", std::to_string(*a.disabled), std::to_string(*b.disabled), true});
+    // K-026 (D2): il mezzo, con il testo normalizzato (la targa senza spazi, trattini, maiuscole), solo tra due celle scritte: "non scritto"
+    // da una parte non si confronta (chi aggiunge la colonna e rilegge lo stesso file non rifa' le schede). Dato comune.
+    const auto mezzo = [](const CardVehicle& v) { return v.written + (v.code ? " (" + *v.code + ")" : std::string(" (non riconosciuto)")); };
+    if (a.vehicle && b.vehicle && plate_key(a.vehicle->written) != plate_key(b.vehicle->written))
+        out.push_back({"mezzo", mezzo(*a.vehicle), mezzo(*b.vehicle), false});
     return out;
 }
 
@@ -1157,11 +1251,43 @@ CardsMerge merge_cards(const Package& p, const CardProfile& pr, const Code& cont
             for (const Code& c : {v.service, v.group, v.trip, v.calendar}) usati.insert(c);
     const Contract* ct = idx.contract(contract);
     const std::string committente = ct ? ct->client.code : pr.client.code;
+    const Code azienda = ct ? ct->company.code : Code();   // K-026: i mezzi della scheda si riconoscono tra i suoi e quelli in prestito
     std::set<Code> case_messe;
     const auto problema = [&](Check c, int variante, std::vector<Param> par, int riga) {
         Problem x{c, variante, Source{}, std::move(par)};
         x.where.line = riga;
         out.problems.push_back(std::move(x));
+    };
+    // K-026: l'avviso della lettura sul mezzo della scheda (K-CTR-180, varianti 0-4), solo per le schede scritte o completate.
+    const auto avviso_mezzo = [&](const CardRead& r, const std::string& targa, const CardVehicleMatch& m) {
+        std::vector<Param> par = {text_param("scheda", r.nr), text_param("targa", targa), ref_param("azienda", Element::Company, azienda)};
+        switch (m.outcome) {
+            case CardVehicleMatch::Outcome::NotFound: problema(Check::CardVehicleNotRecognized, 0, par, r.row); break;
+            case CardVehicleMatch::Outcome::OtherCompany:
+                par.push_back(ref_param("mezzo", Element::Vehicle, m.vehicle));
+                par.push_back(ref_param("azienda_mezzo", Element::Company, m.vehicle_company));
+                problema(Check::CardVehicleNotRecognized, 1, par, r.row);
+                break;
+            case CardVehicleMatch::Outcome::Ambiguous: {
+                std::string mezzi;
+                for (const Code& c : m.candidates) mezzi += (mezzi.empty() ? "" : ", ") + c;
+                par.push_back(text_param("mezzi", mezzi));
+                problema(Check::CardVehicleNotRecognized, 2, par, r.row);
+                break;
+            }
+            case CardVehicleMatch::Outcome::Recognized:
+                if (!m.uncovered_days) break;
+                par.push_back(ref_param("mezzo", Element::Vehicle, m.vehicle));
+                par.push_back(ref_param("azienda_mezzo", Element::Company, m.vehicle_company));
+                par.push_back(number_param("giorni", m.uncovered_days));
+                par.push_back(date_param("primo", m.first_uncovered));
+                problema(Check::CardVehicleNotRecognized, 3, par, r.row);
+                break;
+            case CardVehicleMatch::Outcome::Prefix:
+                par.push_back(ref_param("mezzo", Element::Vehicle, m.vehicle));
+                problema(Check::CardVehicleNotRecognized, 4, par, r.row);
+                break;
+        }
     };
     for (const CardRead& r : read.cards) {
         CardOutcome o;
@@ -1211,12 +1337,41 @@ CardsMerge merge_cards(const Package& p, const CardProfile& pr, const Code& cont
         // volta il file intero): niente scelta della data, niente fermata per la data, nessun avviso della lettura (quelli che descrivono
         // il pacchetto li da' kzero controlla, su ogni versione). Una scelta --validita-scheda per lei non serve: l'uscita lo dice.
         if (esistente && same_card(con_tipo(esistente->versions.back()), k)) {
-            const CardVersion& ultima = esistente->versions.back();
+            CardVersion& ultima = esistente->versions.back();
             o.kind = CardOutcome::Kind::Same;
             o.card_code = esistente->code;
             o.version = ultima.number;
             o.valid = ultima.valid;
             o.choice_unused = choices.by_nr.count(r.nr) > 0;
+            // K-026 (D1 dell'arbitro): la scheda uguale "completata". Se la copia dell'ultima versione non ha il mezzo (non scritto: la colonna
+            // aggiunta al profilo dopo) o lo ha senza un mezzo riconosciuto (o con un mezzo che non c'e' piu' nel pacchetto), e il file lo
+            // scrive, la copia prende quello che le manca: il testo e, se ora si riconosce (con il periodo di quella versione), il codice. Solo
+            // l'ultima versione (il file descrive solo quella); mai un testo scritto diverso (non sarebbe uguale: e' una versione nuova, D2);
+            // tracciato con la data e il riferimento della lettura. Niente versione nuova, niente scelta della data, nessun elemento rifatto;
+            // gli avvisi della lettura solo sul mezzo appena aggiunto (K-CTR-180).
+            if (k.vehicle) {
+                std::optional<CardVehicle>& c = ultima.card.vehicle;
+                const bool manca = !c.has_value();
+                if (manca || !c->code || !idx.vehicle(*c->code)) {
+                    const CardVehicleMatch m = match_card_vehicle(k.vehicle->written, azienda, ultima.card, ultima.valid, idx);
+                    const bool riconosciuto = m.outcome == CardVehicleMatch::Outcome::Recognized;
+                    if (manca || riconosciuto) {
+                        CardVehicleAddition a;
+                        a.date = taken;
+                        a.reference = reference;
+                        a.text = manca;
+                        a.code = riconosciuto;
+                        if (!manca && c->code) a.previous_code = c->code;
+                        if (manca) c = CardVehicle{k.vehicle->written, std::nullopt, {}};
+                        if (riconosciuto) c->code = m.vehicle;
+                        c->additions.push_back(a);
+                        o.vehicle_added = true;
+                        out.completed.push_back({esistente->code, ultima.number});
+                        avviso_mezzo(r, c->written, m);
+                    }
+                }
+            }
+            o.vehicle = ultima.card.vehicle;
             out.outcomes.push_back(o);
             continue;
         }
@@ -1284,6 +1439,15 @@ CardsMerge merge_cards(const Package& p, const CardProfile& pr, const Code& cont
                          {text_param("scheda", r.nr), number_param("disabili", *k.disabled), number_param("persone", card_passengers(k)),
                           number_param("altri", card_passengers(k) - *k.disabled), text_param("tipo", card_service_kind_text(k.chosen->kind.kind))},
                          r.row);
+        // K-026: il mezzo della scheda, riconosciuto con il periodo della versione (i prestiti nei suoi giorni di servizio); gli avvisi della
+        // lettura K-CTR-180, varianti 0-4. Il mezzo non ferma mai la scheda.
+        Card scritta = k;
+        if (scritta.vehicle) {
+            const CardVehicleMatch m = match_card_vehicle(scritta.vehicle->written, azienda, k, o.valid, idx);
+            if (m.outcome == CardVehicleMatch::Outcome::Recognized) scritta.vehicle->code = m.vehicle;
+            avviso_mezzo(r, scritta.vehicle->written, m);
+        }
+        o.vehicle = scritta.vehicle;
         if (k.to < taken) problema(Check::CardEndedBeforeTaken, 0, {text_param("scheda", r.nr), date_param("disattivazione", k.to)}, r.row);
         // K-CTR-165 solo qui (K-025): la scheda diventa davvero una versione nuova (o una scheda nuova).
         if (esistente && !k.is_change) problema(Check::CardNewOrChangeOdd, 0, {text_param("scheda", r.nr), ref_param("codice", Element::ServiceCard, esistente->code)}, r.row);
@@ -1342,7 +1506,7 @@ CardsMerge merge_cards(const Package& p, const CardProfile& pr, const Code& cont
         nv.group = libero("G-" + base, usati);
         nv.trip = libero("C-" + base, usati);
         nv.calendar = libero("CAL-" + base, usati);
-        nv.card = k;
+        nv.card = scritta;
         for (CardStop& s : nv.card.stops) s.row = 0;
         o.service = nv.service;
         o.group = nv.group;
@@ -1373,7 +1537,7 @@ CardsMerge merge_cards(const Package& p, const CardProfile& pr, const Code& cont
         // il giorno prima. I giorni prima della data scelta non cambiano.
         o.kind = CardOutcome::Kind::NewVersion;
         o.card_code = esistente->code;
-        o.changes = card_changes(con_tipo(esistente->versions.back()), k);
+        o.changes = card_changes(con_tipo(esistente->versions.back()), scritta);
         std::vector<CardVersion> restano;
         std::vector<CardVersion> tolte;
         for (const CardVersion& v : esistente->versions) (v.valid.from >= dal ? tolte : restano).push_back(v);
@@ -1631,13 +1795,16 @@ void check_cards(const Package& p, const Index& idx, std::vector<Problem>& out) 
             const bool tipi_noti = sv->kind.known() && g->type.known();
             if (sv->kind.known()) b.service_kinds.push_back(sv->kind.value());
             if (g->type.known()) b.group_types.push_back(g->type.value());
-            // La condizione che vale (con i posti, se la dice: allora dipende dal mezzo, che la scheda non ha).
+            // K-026: il mezzo della scheda, riconosciuto e ancora nel pacchetto: le condizioni con i posti si decidono con i suoi posti (D8).
+            // Senza (non scritto, non riconosciuto, non piu' nel pacchetto) dipendono dal mezzo, come prima del K-026.
+            const Vehicle* mezzo = v.card.vehicle && v.card.vehicle->code ? idx.vehicle(*v.card.vehicle->code) : nullptr;
+            // La condizione che vale (con i posti, se la dice: senza il mezzo della scheda dipende dal mezzo).
             const PassengerCondition* certa = nullptr;
             const PassengerCondition* con_posti = nullptr;
             for (const PassengerCondition& c : reg->assistant->conditions) {
                 const bool usa_tipi = !c.group_types.empty() || !c.service_kinds.empty();
                 if (usa_tipi && !tipi_noti) continue;   // non verificabile: il controllo vuole i dati particolari
-                if (!condition_holds(c, b, 1000000)) continue;
+                if (!condition_holds(c, b, mezzo ? mezzo->seats : 1000000)) continue;
                 if (c.seats_over) {
                     if (!con_posti) con_posti = &c;
                 } else if (!certa) {
@@ -1656,13 +1823,23 @@ void check_cards(const Package& p, const Index& idx, std::vector<Problem>& out) 
                 if (ps.assistant == AssistantMove::Alights) assistente = false;
                 if (a_bordo > 0 && !assistente) {
                     const bool particolare = !c->group_types.empty() || !c->service_kinds.empty() || !c->needs.empty() || !c->center_types.empty();
-                    const int variante = (c->seats_over ? 1 : 0) + (particolare ? 2 : 0);
+                    // Varianti: 0 e 2 senza i posti; 1 e 3 con i posti e il mezzo non scritto (come prima del K-026); K-026: 4 e 5 con i posti del
+                    // mezzo della scheda; 6 e 7 con il mezzo scritto ma non riconosciuto (o non piu' nel pacchetto). Le dispari (dopo la 1) e la 2
+                    // sono quelle con una condizione particolare.
+                    const int variante = !c->seats_over ? (particolare ? 2 : 0)
+                                         : mezzo        ? 4 + (particolare ? 1 : 0)
+                                         : v.card.vehicle ? 6 + (particolare ? 1 : 0)
+                                                          : 1 + (particolare ? 2 : 0);
                     std::vector<Param> par = {ref_param("corsa", Element::Trip, t->code), ref_param("scheda", Element::ServiceCard, s.code),
                                               ref_param("da", Element::Place, ps.place.code),
                                               ref_param("a", Element::Place, t->passages[i + 1].place.code),
                                               time_param("orario", ps.leaves()), ref_param("regolamento", Element::Regulation, reg->code),
                                               text_param("fonte", fonte(*reg))};
                     if (c->seats_over) par.push_back(number_param("posti", *c->seats_over));
+                    if (c->seats_over && mezzo) {
+                        par.push_back(ref_param("mezzo", Element::Vehicle, mezzo->code));
+                        par.push_back(number_param("posti_mezzo", mezzo->seats));
+                    }
                     add(Check::CardEscortMissing, t->src, par, variante);
                     break;
                 }
@@ -1725,6 +1902,35 @@ void check_cards(const Package& p, const Index& idx, std::vector<Problem>& out) 
                     avviso(v, Check::CardDisabledMismatch, 3 + *x,
                            {scheda, number_param("disabili", *k.disabled), number_param("persone", card_passengers(k)),
                             number_param("altri", card_passengers(k) - *k.disabled), text_param("tipo", card_service_kind_text(sv->kind.value()))});
+            // K-026: il mezzo della scheda (K-CTR-180, varianti 5-9), con il pacchetto di oggi e il periodo di oggi della versione (dopo i
+            // tagli): 5 scritto e non riconosciuto alla lettura; 6 come 5 sull'ultima versione, ma oggi la targa si riconosce (rileggendo il
+            // file si aggiunge alla copia, D1); 7 riconosciuto e non piu' nel pacchetto; 8 di un'altra azienda e oggi senza prestito
+            // all'azienda del contratto nei giorni di servizio della versione; 9 con un prestito che oggi ne copre solo una parte. Senza il
+            // contratto niente (c'e' K-CTR-010).
+            const Contract* ct = idx.contract(s.contract.code);
+            if (ct && k.vehicle) {
+                const CardVehicle& m = *k.vehicle;
+                const Code& azienda = ct->company.code;
+                std::vector<Param> par = {scheda, text_param("targa", m.written), ref_param("azienda", Element::Company, azienda)};
+                if (!m.code) {
+                    const CardVehicleMatch x = &v == &s.versions.back() ? match_card_vehicle(m.written, azienda, k, v.valid, idx) : CardVehicleMatch{};
+                    if (x.outcome == CardVehicleMatch::Outcome::Recognized) par.push_back(ref_param("mezzo", Element::Vehicle, x.vehicle));
+                    avviso(v, Check::CardVehicleNotRecognized, x.outcome == CardVehicleMatch::Outcome::Recognized ? 6 : 5, par);
+                } else if (const Vehicle* x = idx.vehicle(*m.code); !x) {
+                    par.push_back(text_param("mezzo", *m.code));
+                    avviso(v, Check::CardVehicleNotRecognized, 7, par);
+                } else if (x->company.code != azienda) {
+                    par.push_back(ref_param("mezzo", Element::Vehicle, x->code));
+                    par.push_back(ref_param("azienda_mezzo", Element::Company, x->company.code));
+                    const CardLoanCover c = card_vehicle_loan(*x, azienda, k, v.valid, idx);
+                    if (!c.any_loan || c.covered == 0) avviso(v, Check::CardVehicleNotRecognized, 8, par);
+                    else if (c.covered < c.days) {
+                        par.push_back(number_param("giorni", c.days - c.covered));
+                        par.push_back(date_param("primo", c.first_uncovered));
+                        avviso(v, Check::CardVehicleNotRecognized, 9, par);
+                    }
+                }
+            }
         }
         for (Avviso& a : avvisi) {
             std::string versioni;
