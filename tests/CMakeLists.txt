@@ -1863,6 +1863,68 @@ kzero_schede24(schede25_controlla USCITA 0 FORMATO testo
                NON_CONTIENE "Errore" "K-CTR-170" "K-CTR-174" "K-CTR-177"
                ARGOMENTI controlla @PACCHETTO@ --includi-dati-particolari)
 
+# --- Mezzo della scheda (K-026): il pacchetto con i profili alla versione 4 di tests/esempi/k026-schede e le tre schede di prova -------------
+set(KZERO_K026 ${CMAKE_CURRENT_BINARY_DIR}/k026)
+add_test(NAME schede26.prepara
+         COMMAND ${CMAKE_COMMAND} -DKZERO=$<TARGET_FILE:kzero> -DPREPARA=$<TARGET_FILE:prepara_k019> -DCREA=$<TARGET_FILE:crea_xlsx>
+                 -DELENCO=${CMAKE_CURRENT_SOURCE_DIR}/esempi/k019-elenco -DESEMPI=${CMAKE_CURRENT_SOURCE_DIR}/esempi
+                 -DUSCITA=${KZERO_K026} -P ${CMAKE_CURRENT_SOURCE_DIR}/programma/prepara_k026.cmake)
+set_tests_properties(schede26.prepara PROPERTIES FIXTURES_SETUP k026 LABELS programma)
+function(kzero_schede26 nome)
+  cmake_parse_arguments(E "" "" "ARGOMENTI" ${ARGN})
+  kzero_prova(${nome} BASE ${KZERO_K026}/chiuso INGRESSO "${PW_K021}" ${E_UNPARSED_ARGUMENTS}
+              ARGOMENTI ${E_ARGOMENTI} --utente TITOLARE --password-da-ingresso)
+  set_tests_properties(programma.${nome} PROPERTIES FIXTURES_REQUIRED k026)
+endfunction()
+set(K026_LEGGI --contratto CT-SCU --data 2026-11-16 --riferimento "mail del committente")
+set(K026_PRIMA leggi-schede ${KZERO_K026}/k026.xlsx @PACCHETTO@ --profilo PS-CVA ${K026_LEGGI} --validita attivazione --scrivi @PACCHETTO@
+               --utente TITOLARE --password-da-ingresso)
+kzero_schede26(schede26_mezzo USCITA 0 FORMATO testo
+               CONTIENE "Schede: 3 nuove"
+                        "     Mezzo della scheda: \"AA 101-AA\" = ALFA-01 (AA 101 AA, 16 posti)."
+                        "     Mezzo della scheda: \"ZZ 999 ZZ\", non riconosciuto (K-CTR-180, sotto)."
+                        "     Mezzo della scheda: non scritto."
+                        "Avviso K-CTR-180: Scheda 4000802/1: il mezzo scritto \"ZZ 999 ZZ\" non e' la targa di nessun mezzo"
+                        "il mezzo della scheda, ALFA-01 (AA 101 AA), ne ha 16"
+               NON_CONTIENE "K-CTR-160" "Errore"
+               ARGOMENTI leggi-schede ${KZERO_K026}/k026.xlsx @PACCHETTO@ --profilo PS-CVA ${K026_LEGGI} --validita attivazione
+                         --scrivi @PACCHETTO@)
+kzero_schede26(schede26_mezzo_json USCITA 0 FORMATO json SCHEMA schede
+               CONTIENE "\"schema_versione\": 5" "\"mezzi_aggiunti\": 0" "\"scritto\": \"AA 101-AA\"" "\"codice\": \"ALFA-01\"" "K-CTR-180"
+               ARGOMENTI leggi-schede ${KZERO_K026}/k026.xlsx @PACCHETTO@ --profilo PS-CVA ${K026_LEGGI} --validita attivazione
+                         --formato json)
+kzero_schede26(schede26_senza_colonna USCITA 0 FORMATO testo
+               PREPARA ${K026_PRIMA}
+               PREPARA_INGRESSO "${PW_K021}"
+               CONTIENE "Schede: 0 nuove, 0 versioni nuove, 3 uguali (niente da fare), 0 ferme, 0 senza la scelta della data."
+               NON_CONTIENE "aggiunto" "Avviso K-CTR" "Errore" "Mezzo della scheda:"
+               ARGOMENTI leggi-schede ${KZERO_K026}/k026.xlsx @PACCHETTO@ --profilo PS-CVA-SM --contratto CT-SCU --data 2026-12-16
+                         --riferimento "file intero di dicembre" --scrivi @PACCHETTO@)
+kzero_schede26(schede26_colonna_aggiunta_json USCITA 0 FORMATO json SCHEMA schede
+               PREPARA leggi-schede ${KZERO_K026}/k026.xlsx @PACCHETTO@ --profilo PS-CVA-SM ${K026_LEGGI} --validita attivazione
+                       --scrivi @PACCHETTO@ --utente TITOLARE --password-da-ingresso
+               PREPARA_INGRESSO "${PW_K021}"
+               CONTIENE "\"uguali\": 3" "\"mezzi_aggiunti\": 2" "\"aggiunto\": true" "K-CTR-180" "K-CTR-171"
+               ARGOMENTI leggi-schede ${KZERO_K026}/k026.xlsx @PACCHETTO@ --profilo PS-CVA --contratto CT-SCU --data 2026-12-16
+                         --riferimento "file intero di dicembre" --formato json)
+kzero_schede26(schede26_mezzo_cambiato USCITA 0 FORMATO testo
+               PREPARA ${K026_PRIMA}
+               PREPARA_INGRESSO "${PW_K021}"
+               CONTIENE "4000801/1 (riga 2): versione nuova 2 della scheda SCH-4000801-1, vale dal 2026-12-01 al 2027-06-30"
+                        "     Cambia mezzo: prima AA 101-AA (ALFA-01); dopo AA 104 AA (ALFA-04)."
+                        "     Mezzo della scheda: \"AA 104 AA\" = ALFA-04 (AA 104 AA, 4 posti)."
+                        "Avviso K-CTR-171: Corsa C-4000801-1 (4000801/1 Andata Mattino)"
+               NON_CONTIENE "Corsa C-4000801-1-V2" "Errore"
+               ARGOMENTI leggi-schede ${KZERO_K026}/k026-cambiato.xlsx @PACCHETTO@ --profilo PS-CVA --contratto CT-SCU --data 2026-11-30
+                         --riferimento "mail del committente del 30/11" --validita-scheda "4000801/1=2026-12-01" --scrivi @PACCHETTO@)
+kzero_schede26(schede26_controlla USCITA 0 FORMATO testo
+               PREPARA ${K026_PRIMA}
+               PREPARA_INGRESSO "${PW_K021}"
+               CONTIENE "Avviso K-CTR-180 (schede_servizi.json, /schede/1/versioni/0): Scheda SCH-4000802-1 (versione 1): il mezzo scritto \"ZZ 999 ZZ\" non e' riconosciuto"
+                        "il mezzo della scheda, ALFA-01 (AA 101 AA), ne ha 16"
+               NON_CONTIENE "Errore" "K-CTR-170" "K-CTR-174" "K-CTR-178"
+               ARGOMENTI controlla @PACCHETTO@)
+
 kzero_schede(schede_profilo_vecchio_avviso USCITA 0 FORMATO testo
              CONTIENE "Avviso K-CTR-178 (profili_schede.json, /profili/0): Il profilo delle schede PS-CVA e' in profili_schede.json alla versione 1"
              ARGOMENTI controlla @PACCHETTO@)

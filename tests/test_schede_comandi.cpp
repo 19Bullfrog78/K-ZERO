@@ -27,6 +27,7 @@ struct Prova {
     CartellaDiLavoro lavoro;
     AmbienteDiProva amb;
     fs::path chiuso;
+    std::string profilo = "PS-CVA";   // K-026: il profilo di leggi() (PS-CVA-SM: senza la colonna del mezzo)
     explicit Prova(PacchettoInMemoria m = pacchetto_di_prova()) {
         fs::create_directories(lavoro / "chiaro");
         for (const auto& [f, t] : m.file) std::ofstream(lavoro / "chiaro" / f, std::ios::binary) << t;
@@ -42,7 +43,7 @@ struct Prova {
     Risultato leggi(const std::string& nome, std::vector<std::string> altri, bool scrivere = true, const std::string& utente = "A",
                     const std::string& pw = kPw, const std::string& data = "2026-11-16") {
         amb.password = {pw};
-        std::vector<std::string> a = {"leggi-schede", (lavoro / nome).string(), chiuso.string(), "--profilo", "PS-CVA", "--contratto", "CT-SCU",
+        std::vector<std::string> a = {"leggi-schede", (lavoro / nome).string(), chiuso.string(), "--profilo", profilo, "--contratto", "CT-SCU",
                                       "--data", data, "--riferimento", "mail del committente", "--utente", utente};
         if (scrivere) a.insert(a.end(), {"--scrivi", chiuso.string()});
         a.insert(a.end(), altri.begin(), altri.end());
@@ -727,4 +728,90 @@ TEST(SchedeComandi, AvvisiDelRegistroSoloPerLeSchedeScritte) {
     p.amb.password = {kPw};
     const Risultato c = comando({"controlla", p.chiuso.string(), "--utente", "A", "--includi-dati-particolari"});
     for (const char* x : {"K-CTR-169", "K-CTR-171"}) EXPECT_NE(c.uscita.find(x), std::string::npos) << x;
+}
+
+// --- K-026: mezzo della scheda ---------------------------------------------------------------------------------------------------
+
+namespace {
+std::string riga_che_ha(const std::string& t, const std::string& pezzo) {
+    std::istringstream in(t);
+    for (std::string r; std::getline(in, r);)
+        if (r.find(pezzo) != std::string::npos) return r;
+    return "";
+}
+}  // namespace
+
+// K-026, P4: il mezzo nelle uscite di leggi-schede. Le tre schede del K-026 (profilo con la colonna "Mezzo"): nel testo una riga per scheda
+// scritta (riconosciuto, con i posti; non riconosciuto, con K-CTR-180 sotto; non scritto), K-CTR-171 con i posti del mezzo; nel JSON (versione
+// 5) il mezzo per scheda e i mezzi aggiunti (0). Sabotaggio: la riga del mezzo che manca.
+TEST(SchedeComandi, MezzoNelleUscite) {
+    Prova p(pacchetto_k026());
+    p.file("k026.xlsx", fogli_k026());
+    const Risultato t = p.leggi("k026.xlsx", {"--validita", "attivazione"});
+    std::cout << t.uscita;
+    EXPECT_NE(t.uscita.find("Schede: 3 nuove"), std::string::npos) << t.uscita;
+    EXPECT_NE(t.uscita.find("     Mezzo della scheda: \"AA 101-AA\" = ALFA-01 (AA 101 AA, 16 posti).\n"), std::string::npos) << t.uscita;
+    EXPECT_NE(t.uscita.find("     Mezzo della scheda: \"ZZ 999 ZZ\", non riconosciuto (K-CTR-180, sotto).\n"), std::string::npos) << t.uscita;
+    EXPECT_NE(t.uscita.find("     Mezzo della scheda: non scritto.\n"), std::string::npos) << t.uscita;
+    EXPECT_NE(riga_che_ha(t.uscita, "Avviso K-CTR-180: Scheda 4000802/1: il mezzo scritto \"ZZ 999 ZZ\""), "") << t.uscita;
+    EXPECT_NE(riga_che_ha(t.uscita, "Avviso K-CTR-171: Corsa C-4000801-1").find("il mezzo della scheda, ALFA-01 (AA 101 AA), ne ha 16"),
+              std::string::npos)
+        << t.uscita;
+    const JsonDati j = JsonDati::parse(p.leggi("k026.xlsx", {"--validita", "attivazione", "--formato", "json"}, false).uscita);
+    EXPECT_EQ(j.at("schema_versione"), 5);
+    EXPECT_EQ(j.at("conteggi").at("uguali"), 3);
+    EXPECT_EQ(j.at("conteggi").at("mezzi_aggiunti"), 0);
+    EXPECT_EQ(j.at("schede").at(0).at("mezzo"),
+              JsonDati({{"scritto", "AA 101-AA"}, {"codice", "ALFA-01"}, {"riconosciuto", true}, {"aggiunto", false}}));
+    EXPECT_EQ(j.at("schede").at(1).at("mezzo"),
+              JsonDati({{"scritto", "ZZ 999 ZZ"}, {"codice", nullptr}, {"riconosciuto", false}, {"aggiunto", false}}));
+    EXPECT_TRUE(j.at("schede").at(2).at("mezzo").is_null());
+}
+
+// K-026, D1: la colonna aggiunta dopo, con i comandi. Le schede lette con il profilo senza la colonna (PS-CVA-SM), poi con la colonna:
+// "uguali" con il mezzo aggiunto alla copia (la riga della scheda, la riga del riepilogo, K-CTR-180 e K-CTR-171 per quelle schede); nel JSON
+// "aggiunto" e "mezzi_aggiunti"; solo il registro cambia. Riletto ancora: niente da aggiungere, niente scritto (il registro resta uguale).
+TEST(SchedeComandi, MezzoAggiuntoAllaCopia) {
+    Prova p(pacchetto_k026());
+    p.file("k026.xlsx", fogli_k026());
+    p.profilo = "PS-CVA-SM";
+    p.leggi("k026.xlsx", {"--validita", "attivazione"});
+    const std::string servizi = p.normale("servizi.json"), corse = p.normale("corse.json"), registro = p.normale("schede_servizi.json");
+    p.profilo = "PS-CVA";
+    const JsonDati j = JsonDati::parse(p.leggi("k026.xlsx", {"--formato", "json"}, false, "A", kPw, "2026-12-16").uscita);
+    EXPECT_EQ(j.at("conteggi").at("uguali"), 3);
+    EXPECT_EQ(j.at("conteggi").at("mezzi_aggiunti"), 2);
+    EXPECT_EQ(j.at("schede").at(0).at("mezzo").at("aggiunto"), true);
+    EXPECT_EQ(j.at("schede").at(2).at("mezzo"), nullptr);
+    const Risultato t = p.leggi("k026.xlsx", {}, true, "A", kPw, "2026-12-16");
+    std::cout << t.uscita;
+    EXPECT_NE(t.uscita.find("Schede: 0 nuove, 0 versioni nuove, 3 uguali (niente da fare), 0 ferme, 0 senza la scelta della data.\n"),
+              std::string::npos)
+        << t.uscita;
+    EXPECT_NE(t.uscita.find("Schede uguali con il mezzo aggiunto alla copia dell'ultima versione (senza una versione nuova, con la data e il "
+                            "riferimento di questa lettura): 2.\n"),
+              std::string::npos)
+        << t.uscita;
+    EXPECT_NE(t.uscita.find("4000801/1 (riga 2): uguale alla versione 1 della scheda SCH-4000801-1: aggiunto alla copia il mezzo della scheda, "
+                            "riconosciuto, niente altro.\n     Mezzo della scheda: \"AA 101-AA\" = ALFA-01 (AA 101 AA, 16 posti).\n"),
+              std::string::npos)
+        << t.uscita;
+    EXPECT_NE(t.uscita.find("4000802/1 (riga 3): uguale alla versione 1 della scheda SCH-4000802-1: aggiunto alla copia il mezzo della scheda (il "
+                            "testo), niente altro.\n"),
+              std::string::npos)
+        << t.uscita;
+    EXPECT_NE(t.uscita.find("4000803/1 (riga 4): uguale alla versione 1 della scheda SCH-4000803-1: niente da fare.\n"), std::string::npos) << t.uscita;
+    EXPECT_NE(riga_che_ha(t.uscita, "Avviso K-CTR-180: Scheda 4000802/1"), "") << t.uscita;
+    EXPECT_NE(riga_che_ha(t.uscita, "Avviso K-CTR-171: Corsa C-4000801-1"), "") << t.uscita;
+    EXPECT_EQ(p.normale("servizi.json"), servizi);
+    EXPECT_EQ(p.normale("corse.json"), corse);
+    const std::string dopo = p.normale("schede_servizi.json");
+    EXPECT_NE(dopo, registro);
+    EXPECT_NE(dopo.find("\"riferimento\": \"mail del committente\""), std::string::npos);
+    EXPECT_NE(dopo.find("\"data\": \"2026-12-16\""), std::string::npos);
+    // Ancora: niente da aggiungere.
+    const Risultato ancora = p.leggi("k026.xlsx", {}, true, "A", kPw, "2027-01-18");
+    EXPECT_EQ(ancora.uscita.find("aggiunto"), std::string::npos) << ancora.uscita;
+    EXPECT_EQ(ancora.uscita.find("Avviso K-CTR"), std::string::npos) << ancora.uscita;
+    EXPECT_EQ(p.normale("schede_servizi.json"), dopo);
 }

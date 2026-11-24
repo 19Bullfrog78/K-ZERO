@@ -24,6 +24,7 @@ inline const std::string kCartella = KZERO_CARTELLA_PROVE "/esempi/k021-schede";
 inline const std::string kCartella23 = KZERO_CARTELLA_PROVE "/esempi/k023-schede";
 inline const std::string kCartella24 = KZERO_CARTELLA_PROVE "/esempi/k024-schede";
 inline const std::string kCartella25 = KZERO_CARTELLA_PROVE "/esempi/k025-schede";
+inline const std::string kCartella26 = KZERO_CARTELLA_PROVE "/esempi/k026-schede";
 
 using Righe = std::vector<std::vector<std::string>>;
 
@@ -73,6 +74,14 @@ inline Fogli fogli_k024() {
 // (K-CTR-163), 4000704/1 normale. Dati inventati.
 inline Fogli fogli_k025() {
     const auto r = [](const std::string& f) { return righe_tsv(elenco_a_mano::leggi_testo(kCartella25 + "/" + f)); };
+    return {r("schede.tsv"), r("fermate.tsv"), r("date.tsv"), r("interruzioni.tsv")};
+}
+
+// K-026: le tre schede del mezzo della scheda (profilo PS-CVA alla versione 4 di tests/esempi/k026-schede, con la colonna "Mezzo", l'ultima del
+// foglio, 23): 4000801/1 dell'infanzia senza accompagnatore con la targa scritta con gli spazi e il trattino ("AA 101-AA", il mezzo ALFA-01
+// del demo, 16 posti), 4000802/1 con una targa che non c'e' ("ZZ 999 ZZ"), 4000803/1 con la cella vuota. Dati inventati.
+inline Fogli fogli_k026() {
+    const auto r = [](const std::string& f) { return righe_tsv(elenco_a_mano::leggi_testo(kCartella26 + "/" + f)); };
     return {r("schede.tsv"), r("fermate.tsv"), r("date.tsv"), r("interruzioni.tsv")};
 }
 
@@ -162,6 +171,14 @@ inline PacchettoInMemoria pacchetto_k024() {
     }
     m.file["calendari.json"] = d.dump(2);
     m.file["profili_schede.json"] = elenco_a_mano::leggi_testo(kCartella24 + "/profili_schede.json");
+    return m;
+}
+
+// K-026: il pacchetto del K-024 con i profili alla versione 4 di tests/esempi/k026-schede: PS-CVA (con la colonna del mezzo) e PS-CVA-SM
+// (lo stesso senza la colonna, per la colonna aggiunta dopo).
+inline PacchettoInMemoria pacchetto_k026() {
+    PacchettoInMemoria m = pacchetto_k024();
+    m.file["profili_schede.json"] = elenco_a_mano::leggi_testo(kCartella26 + "/profili_schede.json");
     return m;
 }
 

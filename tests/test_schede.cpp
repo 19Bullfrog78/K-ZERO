@@ -2178,3 +2178,448 @@ TEST(Schede, UgualeAllaVersioneDiPrimaPiuRecente) {
                                   "giusto prima di scrivere.");
     EXPECT_EQ(codici_di(cinque, "4000704/1"), (std::vector<std::string>{"K-CTR-165 v0", "K-CTR-179 v0"}));
 }
+
+namespace {
+// K-026: il pacchetto del K-024 con i profili di tests/esempi/k026-schede (PS-CVA alla versione 4 con la colonna del mezzo, PS-CVA-SM senza) e
+// i mezzi del demo cambiati da una funzione (sul documento di mezzi.json).
+Lettura lettura_k026(const std::function<void(JsonDati&)>& mezzi = {}) {
+    PacchettoInMemoria m = pacchetto_k026();
+    if (mezzi) {
+        JsonDati d = JsonDati::parse(m.file.at("mezzi.json"));
+        mezzi(d);
+        m.file["mezzi.json"] = d.dump(2);
+    }
+    Lettura l = leggi_pacchetto(m);
+    EXPECT_TRUE(l.forma_valida()) << ::testing::PrintToString(messaggi(l, l.problemi));
+    return l;
+}
+JsonDati& mezzo_di(JsonDati& d, const std::string& codice) {
+    for (JsonDati& x : d.at("mezzi"))
+        if (x.at("codice") == codice) return x;
+    throw std::logic_error("mezzo che non c'e': " + codice);
+}
+// Un mezzo nuovo (copia di uno del demo) con il codice, l'azienda e la targa dati.
+void aggiungi_mezzo(JsonDati& d, const std::string& da, const std::string& codice, const std::string& azienda, const std::string& targa) {
+    JsonDati x = mezzo_di(d, da);
+    x["codice"] = codice;
+    x["azienda"] = azienda;
+    x["targa"] = targa;
+    d.at("mezzi").push_back(x);
+}
+// Il prestito del mezzo all'azienda ALFA (il contratto CT-SCU e' di ALFA), con le date (vuote = senza date).
+void prestito(JsonDati& d, const std::string& mezzo, const std::string& dal, const std::string& al) {
+    JsonDati l = {{"azienda", "ALFA"}, {"accordo", "subaffidamento di prova"}};
+    if (!dal.empty()) l["dal"] = dal;
+    if (!al.empty()) l["al"] = al;
+    mezzo_di(d, mezzo)["prestiti"] = JsonDati::array({l});
+}
+// Le schede del K-026 con la cella del mezzo (colonna 23) di una riga del foglio cambiata.
+Fogli con_mezzo(Fogli f, std::size_t riga, const std::string& mezzo) {
+    f.schede.at(riga).at(23) = mezzo;
+    return f;
+}
+Card copia_di(const Letto& x, const std::string& scheda, std::size_t versione = 0) { return in_registro(x, scheda).versions.at(versione).card; }
+std::string messaggio_di(const Letto& x, const std::string& codice) {
+    for (const std::string& m : messaggi(x.dopo, x.m.problems))
+        if (comincia(m, codice)) return m;
+    return "";
+}
+// Gli avvisi di un controllo sul registro (kzero controlla), "codice vN posizione: messaggio", in ordine.
+std::vector<std::string> sul_registro(const Lettura& l, Check c) {
+    std::vector<Problem> v;
+    check_cards(l.pacchetto, Index(l.pacchetto), v);
+    std::vector<std::string> out;
+    const Presentatore pr(&l.pacchetto, &l.versioni, Visibilita{true, true});
+    for (const Problem& p : v)
+        if (p.check == c) out.push_back(definizione_controllo(p.check).codice + " v" + std::to_string(p.variant) + " " + p.where.pointer + ": " + pr.messaggio(p));
+    std::sort(out.begin(), out.end());
+    return out;
+}
+std::optional<Code> codice(const std::string& c) { return c; }
+}  // namespace
+
+// K-026, punto 1: il mezzo della scheda. Le tre schede del K-026: "AA 101-AA" (spazi e trattino) e' il mezzo ALFA-01 dell'azienda del
+// contratto; "ZZ 999 ZZ" non c'e' (K-CTR-180 variante 0, non riconosciuto); la cella vuota e' "non scritto", senza avviso. Nella copia della
+// scheda il testo come sul file e il codice. La stessa targa scritta in altri modi (minuscole, spazio non separabile, trattino lungo, punti) e'
+// lo stesso mezzo; una cella senza lettere ne' cifre vale come vuota; una cella illeggibile ferma la scheda (variante 0). Sabotaggio: la
+// targa con gli spazi non riconosciuta.
+TEST(Schede, MezzoRiconosciutoDallaTarga) {
+    const Lettura l = lettura_k026();
+    const Letto x = leggi(l, fogli_k026(), attivazione());
+    for (const CardOutcome& o : x.m.outcomes) ASSERT_EQ(o.kind, CardOutcome::Kind::New) << o.nr;
+    const Card& a = copia_di(x, "SCH-4000801-1");
+    ASSERT_TRUE(a.vehicle);
+    EXPECT_EQ(a.vehicle->written, "AA 101-AA");
+    EXPECT_EQ(a.vehicle->code, codice("ALFA-01"));
+    EXPECT_TRUE(a.vehicle->additions.empty());
+    const Card& b = copia_di(x, "SCH-4000802-1");
+    ASSERT_TRUE(b.vehicle);
+    EXPECT_EQ(b.vehicle->written, "ZZ 999 ZZ");
+    EXPECT_FALSE(b.vehicle->code);
+    EXPECT_FALSE(copia_di(x, "SCH-4000803-1").vehicle);
+    EXPECT_EQ(x.m.outcomes[0].vehicle->code, codice("ALFA-01"));
+    EXPECT_FALSE(x.m.outcomes[2].vehicle);
+    EXPECT_EQ(codici_di(x, "4000801/1"), std::vector<std::string>{});
+    EXPECT_EQ(codici_di(x, "4000802/1"), std::vector<std::string>{"K-CTR-180 v0"});
+    EXPECT_EQ(codici_di(x, "4000803/1"), std::vector<std::string>{});
+    EXPECT_EQ(messaggio_di(x, "K-CTR-180"),
+              "K-CTR-180 v0: Scheda 4000802/1: il mezzo scritto \"ZZ 999 ZZ\" non e' la targa di nessun mezzo dell'azienda ALFA (Autoservizi "
+              "Alfa) del contratto ne' di un mezzo in prestito a lei: il mezzo della scheda non e' riconosciuto (il programma non indovina). "
+              "Controllare la targa sulla scheda, o aggiungere il mezzo al pacchetto (mezzi.json). Rileggendo il file il mezzo si aggiunge "
+              "alla copia dell'ultima versione, senza una versione nuova.");
+    for (int v = 0; v <= 9; ++v) EXPECT_EQ(definizione_controllo(Check::CardVehicleNotRecognized).rivela_variante(v), Classe::Comune) << v;
+    EXPECT_EQ(definizione_controllo(Check::CardVehicleNotRecognized).livello, Livello::Avviso);
+    // Altri modi di scrivere la stessa targa.
+    for (const std::string& t : {std::string("aa101aa"), std::string("AA 101–AA"), std::string(" AA.101.AA "), std::string("AA - 101 - AA")}) {
+        const Letto y = leggi(l, con_mezzo(fogli_k026(), 1, t), attivazione());
+        ASSERT_EQ(y.m.outcomes.at(0).kind, CardOutcome::Kind::New) << t;
+        EXPECT_EQ(copia_di(y, "SCH-4000801-1").vehicle->code, codice("ALFA-01")) << t;
+        EXPECT_EQ(codici_di(y, "4000801/1"), std::vector<std::string>{}) << t;
+    }
+    // Celle senza lettere ne' cifre: non scritto.
+    for (const std::string& t : {std::string("-"), std::string(" — "), std::string(".")}) {
+        const Letto y = leggi(l, con_mezzo(fogli_k026(), 1, t), attivazione());
+        ASSERT_EQ(y.m.outcomes.at(0).kind, CardOutcome::Kind::New) << t;
+        EXPECT_FALSE(copia_di(y, "SCH-4000801-1").vehicle) << t;
+        EXPECT_EQ(codici_di(y, "4000801/1"), std::vector<std::string>{}) << t;
+    }
+    // Una cella illeggibile (un errore di Excel) ferma la scheda, come in ogni colonna.
+    const Letto z = leggi(l, con_mezzo(fogli_k026(), 1, "!"), attivazione());
+    EXPECT_EQ(z.m.outcomes.at(0).kind, CardOutcome::Kind::Stopped);
+    EXPECT_EQ(z.m.outcomes.at(0).fault, CardFault::UnreadableCell);
+    EXPECT_EQ(z.r.cards.at(0).fault_column, "Mezzo");
+    EXPECT_EQ(z.m.outcomes.at(1).kind, CardOutcome::Kind::New);
+}
+
+// K-026, D5: un mezzo di un'altra azienda si riconosce solo se e' in prestito all'azienda del contratto nei giorni di servizio della versione.
+// La 4000801/1 (infanzia: la scheda vale dal 14/09/2026 al 30/06/2027, il calendario MATERNA ha i giorni dal 21/09/2026 al 12/06/2027) con
+// la targa di BETA-01: senza prestito, K-CTR-180 variante 1 (non riconosciuto); con un prestito dal 21/09/2026 al 12/06/2027 riconosciuto
+// senza avvisi (i giorni di servizio, non tutti i giorni del periodo); senza date riconosciuto; fino al 31/01/2027 riconosciuto con la variante
+// 3 (dal 01/02/2027 i giorni non coperti); un prestito tutto prima dei giorni di servizio come senza prestito. Sabotaggi: la targa di
+// un'altra azienda senza prestito riconosciuta; il mezzo in prestito valido non riconosciuto.
+TEST(Schede, MezzoDiUnAltraAziendaEPrestiti) {
+    const Fogli f = con_mezzo(fogli_k026(), 1, "BB 201 BB");
+    const auto prova = [&](const std::function<void(JsonDati&)>& mezzi) { return leggi(lettura_k026(mezzi), f, attivazione()); };
+    const Letto senza = prova({});
+    EXPECT_FALSE(copia_di(senza, "SCH-4000801-1").vehicle->code);
+    EXPECT_EQ(codici_di(senza, "4000801/1"), std::vector<std::string>{"K-CTR-180 v1"});
+    EXPECT_EQ(messaggio_di(senza, "K-CTR-180"),
+              "K-CTR-180 v1: Scheda 4000801/1: la targa \"BB 201 BB\" e' del mezzo BETA-01 (BB 201 BB) dell'azienda BETA (Trasporti Beta), "
+              "che nei giorni di servizio della versione non e' in prestito all'azienda ALFA (Autoservizi Alfa) del contratto: il mezzo della "
+              "scheda non e' riconosciuto. Se il mezzo lavora per l'azienda del contratto, scrivere il prestito (mezzi.json). Rileggendo il "
+              "file il mezzo si aggiunge alla copia dell'ultima versione, senza una versione nuova.");
+    const Letto pieno = prova([](JsonDati& d) { prestito(d, "BETA-01", "2026-09-21", "2027-06-12"); });
+    EXPECT_EQ(copia_di(pieno, "SCH-4000801-1").vehicle->code, codice("BETA-01"));
+    EXPECT_EQ(codici_di(pieno, "4000801/1"), std::vector<std::string>{});
+    const Letto senza_date = prova([](JsonDati& d) { prestito(d, "BETA-01", "", ""); });
+    EXPECT_EQ(copia_di(senza_date, "SCH-4000801-1").vehicle->code, codice("BETA-01"));
+    EXPECT_EQ(codici_di(senza_date, "4000801/1"), std::vector<std::string>{});
+    const Letto parte = prova([](JsonDati& d) { prestito(d, "BETA-01", "2026-09-21", "2027-01-31"); });
+    EXPECT_EQ(copia_di(parte, "SCH-4000801-1").vehicle->code, codice("BETA-01"));
+    EXPECT_EQ(codici_di(parte, "4000801/1"), std::vector<std::string>{"K-CTR-180 v3"});
+    const std::string m3 = messaggio_di(parte, "K-CTR-180");
+    EXPECT_TRUE(comincia(m3, "K-CTR-180 v3: Scheda 4000801/1: il mezzo scritto \"BB 201 BB\" e' BETA-01 (BB 201 BB), dell'azienda BETA (Trasporti "
+                             "Beta), e il prestito all'azienda ALFA (Autoservizi Alfa) del contratto non copre ")) << m3;
+    EXPECT_NE(m3.find("giorni di servizio della versione (il primo e' il 2027-02-01): il mezzo e' riconosciuto"), std::string::npos) << m3;
+    const Letto prima = prova([](JsonDati& d) { prestito(d, "BETA-01", "2026-06-01", "2026-09-20"); });
+    EXPECT_FALSE(copia_di(prima, "SCH-4000801-1").vehicle->code);
+    EXPECT_EQ(codici_di(prima, "4000801/1"), std::vector<std::string>{"K-CTR-180 v1"});
+}
+
+// K-026, D6: una targa su piu' mezzi del pacchetto non si riconosce (variante 2), anche se uno solo e' dell'azienda del contratto; i mezzi
+// ipotetici non si riconoscono (la targa "NON IMMATRICOLATO" del demo: variante 0) e non contano per i doppi. Una cella con la targa e la
+// descrizione: variante 4 (l'aiuto), non riconosciuto. Sabotaggio: due mezzi con la stessa targa, uno scelto.
+TEST(Schede, StessaTargaSuPiuMezzi) {
+    const Lettura l = lettura_k026([](JsonDati& d) {
+        aggiungi_mezzo(d, "BETA-02", "BETA-03", "BETA", "AA 102 AA");
+        JsonDati x = mezzo_di(d, "ALFA-X30");
+        x["codice"] = "ALFA-X31";
+        x["targa"] = "AA 101 AA";
+        d.at("mezzi").push_back(x);
+    });
+    const Letto doppia = leggi(l, con_mezzo(fogli_k026(), 1, "AA 102 AA"), attivazione());
+    EXPECT_FALSE(copia_di(doppia, "SCH-4000801-1").vehicle->code);
+    EXPECT_EQ(codici_di(doppia, "4000801/1"), std::vector<std::string>{"K-CTR-180 v2"});
+    EXPECT_EQ(messaggio_di(doppia, "K-CTR-180"),
+              "K-CTR-180 v2: Scheda 4000801/1: la targa \"AA 102 AA\" e' su piu' mezzi del pacchetto (ALFA-02, BETA-03): il mezzo della scheda "
+              "non e' riconosciuto, il programma non sceglie. Una targa vera e' unica: correggere i mezzi (mezzi.json). Rileggendo il file il "
+              "mezzo si aggiunge alla copia dell'ultima versione, senza una versione nuova.");
+    // L'ipotetico con la stessa targa di ALFA-01 non conta; quello con "NON IMMATRICOLATO" non si riconosce.
+    const Letto uno = leggi(l, fogli_k026(), attivazione());
+    EXPECT_EQ(copia_di(uno, "SCH-4000801-1").vehicle->code, codice("ALFA-01"));
+    const Letto ipotetico = leggi(l, con_mezzo(fogli_k026(), 1, "NON IMMATRICOLATO"), attivazione());
+    EXPECT_FALSE(copia_di(ipotetico, "SCH-4000801-1").vehicle->code);
+    EXPECT_EQ(codici_di(ipotetico, "4000801/1"), std::vector<std::string>{"K-CTR-180 v0"});
+    // La targa con la descrizione del committente.
+    const Letto descrizione = leggi(l, con_mezzo(fogli_k026(), 1, "AA 101 AA - MARCA 00"), attivazione());
+    EXPECT_FALSE(copia_di(descrizione, "SCH-4000801-1").vehicle->code);
+    EXPECT_EQ(copia_di(descrizione, "SCH-4000801-1").vehicle->written, "AA 101 AA - MARCA 00");
+    EXPECT_EQ(messaggio_di(descrizione, "K-CTR-180"),
+              "K-CTR-180 v4: Scheda 4000801/1: la cella del mezzo \"AA 101 AA - MARCA 00\" comincia con la targa del mezzo ALFA-01 (AA 101 AA) "
+              "ma ha altro dopo: nel modello si scrive solo la targa, senza la descrizione. Il mezzo della scheda non e' riconosciuto (il "
+              "programma non indovina): correggere la copia e rileggere il file.");
+}
+
+// K-026, D2: il mezzo cambiato tra due celle scritte e' una versione nuova (cosa cambia: "mezzo", prima e dopo il testo con il mezzo
+// riconosciuto); la stessa targa scritta in un altro modo, o la cella svuotata, no (uguale). Sabotaggio: il mezzo cambiato che non fa una
+// versione nuova.
+TEST(Schede, MezzoCambiatoVersioneNuova) {
+    const Letto prima = leggi(lettura_k026(), fogli_k026(), attivazione());
+    DateChoices s;
+    s.by_nr["4000801/1"] = DateChoice{DateChoice::Kind::Date, day_from_ymd(2026, 12, 1)};
+    const Letto cambiato_ = leggi(prima.dopo, con_mezzo(fogli_k026(), 1, "AA 104 AA"), s);
+    ASSERT_EQ(cambiato_.m.outcomes.at(0).kind, CardOutcome::Kind::NewVersion);
+    ASSERT_EQ(cambiato_.m.outcomes.at(0).changes.size(), 1u);
+    const CardChange& c = cambiato_.m.outcomes.at(0).changes.at(0);
+    EXPECT_EQ(c.what, "mezzo");
+    EXPECT_EQ(c.before, "AA 101-AA (ALFA-01)");
+    EXPECT_EQ(c.after, "AA 104 AA (ALFA-04)");
+    EXPECT_FALSE(c.particular);
+    EXPECT_EQ(copia_di(cambiato_, "SCH-4000801-1", 1).vehicle->code, codice("ALFA-04"));
+    EXPECT_EQ(copia_di(cambiato_, "SCH-4000801-1", 0).vehicle->code, codice("ALFA-01"));
+    for (std::size_t i : {1u, 2u}) EXPECT_EQ(cambiato_.m.outcomes.at(i).kind, CardOutcome::Kind::Same) << i;
+    // Un mezzo cambiato non riconosciuto anche lui: versione nuova (il testo conta, D2).
+    const Letto ignoto = leggi(prima.dopo, con_mezzo(fogli_k026(), 2, "ZZ 998 ZZ"), scelta_file(DateChoice::Kind::Date, day_from_ymd(2026, 12, 1)));
+    ASSERT_EQ(ignoto.m.outcomes.at(1).kind, CardOutcome::Kind::NewVersion);
+    EXPECT_EQ(ignoto.m.outcomes.at(1).changes.at(0).before, "ZZ 999 ZZ (non riconosciuto)");
+    // La stessa targa in un altro modo, o la cella svuotata: uguale, niente da scrivere.
+    for (const std::string& t : {std::string("aa-101-aa"), std::string("")}) {
+        const Letto y = leggi(prima.dopo, con_mezzo(fogli_k026(), 1, t), {}, kMeseDopo);
+        EXPECT_EQ(y.m.outcomes.at(0).kind, CardOutcome::Kind::Same) << t;
+        EXPECT_FALSE(y.m.outcomes.at(0).vehicle_added) << t;
+        EXPECT_TRUE(y.m.added.empty() && y.m.completed.empty()) << t;
+        EXPECT_EQ(y.dopo.documenti.at("schede_servizi.json"), prima.dopo.documenti.at("schede_servizi.json")) << t;
+    }
+}
+
+// K-026, D1 (con le due condizioni dell'arbitro): la colonna aggiunta dopo. Le tre schede lette con il profilo senza la colonna (PS-CVA-SM),
+// poi lo stesso file riletto un mese dopo con la colonna (PS-CVA), senza scelta: tutte "uguali", nessuna versione nuova, nessun elemento
+// rifatto; alla copia della 4000801/1 si aggiungono il testo e il mezzo (riconosciuto), alla 4000802/1 solo il testo (non riconosciuto, con
+// K-CTR-180), alla 4000803/1 niente (cella vuota). Ogni aggiunta ha la data e il riferimento della lettura. Riletto una seconda volta: niente
+// da aggiungere, niente da scrivere. Sabotaggi: la colonna aggiunta che rifa' tutte le schede; il completamento senza data e riferimento; lo
+// stesso file riletto una seconda volta che scrive ancora.
+TEST(Schede, ColonnaAggiuntaIlMezzoNellaCopia) {
+    const Lettura l = lettura_k026();
+    const Letto senza = leggi(l, fogli_k026(), attivazione(), kPresa, false, "PS-CVA-SM");
+    for (const CardOutcome& o : senza.m.outcomes) ASSERT_EQ(o.kind, CardOutcome::Kind::New) << o.nr;
+    for (const char* c : {"SCH-4000801-1", "SCH-4000802-1", "SCH-4000803-1"}) EXPECT_FALSE(copia_di(senza, c).vehicle) << c;
+    const Letto con = leggi(senza.dopo, fogli_k026(), {}, kMeseDopo);
+    for (const CardOutcome& o : con.m.outcomes) ASSERT_EQ(o.kind, CardOutcome::Kind::Same) << o.nr;
+    EXPECT_TRUE(con.m.added.empty() && con.m.removed.empty() && con.m.cuts.empty());
+    EXPECT_EQ(con.m.completed, (std::vector<std::pair<Code, int>>{{"SCH-4000801-1", 1}, {"SCH-4000802-1", 1}}));
+    EXPECT_TRUE(con.m.outcomes[0].vehicle_added);
+    EXPECT_TRUE(con.m.outcomes[1].vehicle_added);
+    EXPECT_FALSE(con.m.outcomes[2].vehicle_added);
+    const Card& a = copia_di(con, "SCH-4000801-1");
+    ASSERT_TRUE(a.vehicle);
+    EXPECT_EQ(a.vehicle->written, "AA 101-AA");
+    EXPECT_EQ(a.vehicle->code, codice("ALFA-01"));
+    ASSERT_EQ(a.vehicle->additions.size(), 1u);
+    EXPECT_EQ(a.vehicle->additions[0].date, kMeseDopo);
+    EXPECT_EQ(a.vehicle->additions[0].reference, "mail del committente");
+    EXPECT_TRUE(a.vehicle->additions[0].text && a.vehicle->additions[0].code);
+    EXPECT_FALSE(a.vehicle->additions[0].previous_code);
+    const Card& b = copia_di(con, "SCH-4000802-1");
+    ASSERT_TRUE(b.vehicle);
+    EXPECT_FALSE(b.vehicle->code);
+    ASSERT_EQ(b.vehicle->additions.size(), 1u);
+    EXPECT_TRUE(b.vehicle->additions[0].text);
+    EXPECT_FALSE(b.vehicle->additions[0].code);
+    EXPECT_FALSE(copia_di(con, "SCH-4000803-1").vehicle);
+    EXPECT_EQ(codici_di(con, "4000801/1"), std::vector<std::string>{});
+    EXPECT_EQ(codici_di(con, "4000802/1"), std::vector<std::string>{"K-CTR-180 v0"});
+    EXPECT_EQ(con.m.problems.size(), 1u) << ::testing::PrintToString(messaggi(con.dopo, con.m.problems));
+    // Gli elementi del pacchetto non cambiano: cambia solo il registro.
+    for (const auto& [file, doc] : senza.dopo.documenti) {
+        if (file == "schede_servizi.json") continue;
+        EXPECT_EQ(con.dopo.documenti.at(file), doc) << file;
+    }
+    const std::string registro = chiusura::testo_file(con.dopo.documenti.at("schede_servizi.json"));
+    EXPECT_NE(registro.find("\"aggiunte\""), std::string::npos);
+    EXPECT_NE(registro.find("\"cosa\": \"testo_e_codice\""), std::string::npos);
+    EXPECT_NE(registro.find("\"data\": \"2026-12-16\""), std::string::npos);
+    // Una seconda volta: niente da aggiungere.
+    const Letto ancora = leggi(con.dopo, fogli_k026(), {}, day_from_ymd(2027, 1, 18));
+    for (const CardOutcome& o : ancora.m.outcomes) {
+        EXPECT_EQ(o.kind, CardOutcome::Kind::Same) << o.nr;
+        EXPECT_FALSE(o.vehicle_added) << o.nr;
+    }
+    EXPECT_TRUE(ancora.m.completed.empty());
+    EXPECT_TRUE(ancora.m.problems.empty()) << ::testing::PrintToString(messaggi(ancora.dopo, ancora.m.problems));
+    EXPECT_EQ(ancora.dopo.documenti.at("schede_servizi.json"), con.dopo.documenti.at("schede_servizi.json"));
+}
+
+// K-026, D1: si completa solo cio' che manca. Il mezzo scritto e non riconosciuto ("ZZ 999 ZZ") che dopo entra nel pacchetto (ALFA-09): la
+// rilettura aggiunge solo il codice. Un mezzo riconosciuto che non c'e' piu' (ALFA-99): la rilettura mette quello di oggi, con il codice di
+// prima. Un testo scritto diverso da quello della copia non si completa mai: e' una versione nuova, e la copia di prima resta com'era. Solo
+// l'ultima versione: la 4000803/1 in due versioni senza il mezzo, riletta con la colonna: il mezzo va solo nella versione 2. Sabotaggi: il
+// completamento che sovrascrive un testo scritto diverso; il completamento di una versione che non e' l'ultima.
+TEST(Schede, CompletamentoSoloDiQuelloCheManca) {
+    const Letto prima = leggi(lettura_k026(), fogli_k026(), attivazione());
+    // Il mezzo entra nel pacchetto dopo.
+    const Lettura con_zz = cambiato(prima.dopo, "mezzi.json", [](JsonDati& d) { aggiungi_mezzo(d, "ALFA-02", "ALFA-09", "ALFA", "ZZ 999 ZZ"); });
+    const Letto codice_dopo = leggi(con_zz, fogli_k026(), {}, kMeseDopo);
+    ASSERT_EQ(codice_dopo.m.outcomes.at(1).kind, CardOutcome::Kind::Same);
+    EXPECT_TRUE(codice_dopo.m.outcomes.at(1).vehicle_added);
+    const Card& b = copia_di(codice_dopo, "SCH-4000802-1");
+    EXPECT_EQ(b.vehicle->written, "ZZ 999 ZZ");
+    EXPECT_EQ(b.vehicle->code, codice("ALFA-09"));
+    ASSERT_EQ(b.vehicle->additions.size(), 1u);
+    EXPECT_FALSE(b.vehicle->additions[0].text);
+    EXPECT_TRUE(b.vehicle->additions[0].code);
+    EXPECT_EQ(codice_dopo.m.completed, (std::vector<std::pair<Code, int>>{{"SCH-4000802-1", 1}}));
+    EXPECT_TRUE(codice_dopo.m.problems.empty()) << ::testing::PrintToString(messaggi(codice_dopo.dopo, codice_dopo.m.problems));
+    // Il mezzo riconosciuto che non c'e' piu' nel pacchetto (il codice cambiato nel registro, come se il mezzo fosse stato tolto).
+    const Lettura tolto = cambiato(prima.dopo, "schede_servizi.json", [](JsonDati& d) {
+        for (JsonDati& s : d.at("schede"))
+            if (s.at("codice") == "SCH-4000801-1") s.at("versioni").at(0).at("scheda").at("mezzo")["codice"] = "ALFA-99";
+    });
+    const Letto di_nuovo = leggi(tolto, fogli_k026(), {}, kMeseDopo);
+    ASSERT_EQ(di_nuovo.m.outcomes.at(0).kind, CardOutcome::Kind::Same);
+    const Card& a = copia_di(di_nuovo, "SCH-4000801-1");
+    EXPECT_EQ(a.vehicle->code, codice("ALFA-01"));
+    ASSERT_EQ(a.vehicle->additions.size(), 1u);
+    EXPECT_EQ(a.vehicle->additions[0].previous_code, codice("ALFA-99"));
+    EXPECT_FALSE(a.vehicle->additions[0].text);
+    // Un testo diverso (anche se la copia non ha il mezzo riconosciuto): versione nuova, la copia di prima resta com'era.
+    const Letto diverso = leggi(prima.dopo, con_mezzo(fogli_k026(), 2, "AA 105 AA"), scelta_file(DateChoice::Kind::Date, day_from_ymd(2026, 12, 21)),
+                                kMeseDopo);
+    ASSERT_EQ(diverso.m.outcomes.at(1).kind, CardOutcome::Kind::NewVersion);
+    EXPECT_FALSE(diverso.m.outcomes.at(1).vehicle_added);
+    EXPECT_TRUE(diverso.m.completed.empty());
+    EXPECT_EQ(copia_di(diverso, "SCH-4000802-1", 0).vehicle->written, "ZZ 999 ZZ");
+    EXPECT_FALSE(copia_di(diverso, "SCH-4000802-1", 0).vehicle->code);
+    EXPECT_TRUE(copia_di(diverso, "SCH-4000802-1", 0).vehicle->additions.empty());
+    EXPECT_EQ(copia_di(diverso, "SCH-4000802-1", 1).vehicle->code, codice("ALFA-05"));
+    // Solo l'ultima versione.
+    const Fogli h = con_mezzo(fogli_k026(), 3, "AA 103 AA");
+    const Letto v1 = leggi(lettura_k026(), h, attivazione(), kPresa, false, "PS-CVA-SM");
+    Fogli h2 = h;
+    h2.fermate[riga_fermata(h2, "4000803 / 1", 0)][1] = "07:21";
+    const Letto v2 = leggi(v1.dopo, h2, scelta_file(DateChoice::Kind::Date, day_from_ymd(2026, 12, 21)), kMeseDopo, false, "PS-CVA-SM");
+    ASSERT_EQ(v2.m.outcomes.at(2).kind, CardOutcome::Kind::NewVersion);
+    const Letto v3 = leggi(v2.dopo, h2, {}, day_from_ymd(2027, 1, 18));
+    ASSERT_EQ(v3.m.outcomes.at(2).kind, CardOutcome::Kind::Same);
+    EXPECT_EQ(v3.m.outcomes.at(2).version, 2);
+    EXPECT_FALSE(copia_di(v3, "SCH-4000803-1", 0).vehicle);
+    ASSERT_TRUE(copia_di(v3, "SCH-4000803-1", 1).vehicle);
+    EXPECT_EQ(copia_di(v3, "SCH-4000803-1", 1).vehicle->code, codice("ALFA-03"));
+    EXPECT_EQ(v3.m.completed, (std::vector<std::pair<Code, int>>{{"SCH-4000801-1", 1}, {"SCH-4000802-1", 1}, {"SCH-4000803-1", 2}}));
+}
+
+// K-026, punto 2 (D8): K-CTR-171 con i posti del mezzo della scheda. La 4000801/1 (infanzia, senza accompagnatore; R-TN: l'accompagnatore sui
+// mezzi con piu' di 8 posti): con ALFA-01 (16 posti) la variante 4, con i posti del mezzo; con ALFA-04 (4 posti) nessun avviso; senza il
+// mezzo la variante 1, come prima del K-026; con il mezzo scritto e non riconosciuto la variante 6. Nella lettura (schede scritte) e in
+// kzero controlla. Sabotaggio: K-CTR-171 che ignora i posti del mezzo riconosciuto.
+TEST(Schede, AccompagnatoreConIPostiDelMezzo) {
+    const Lettura l = lettura_k026();
+    const auto prova = [&](const std::string& mezzo) { return sul_registro(leggi(l, con_mezzo(fogli_k026(), 1, mezzo), attivazione()).dopo, Check::CardEscortMissing); };
+    const std::vector<std::string> sedici = prova("AA 101-AA");
+    ASSERT_EQ(sedici.size(), 1u) << ::testing::PrintToString(sedici);
+    EXPECT_TRUE(comincia(sedici[0], "K-CTR-171 v4 ")) << sedici[0];
+    EXPECT_NE(sedici[0].find("e il regolamento R-TN (Testo unico del trasporto scolastico (regole pubbliche, esempio)) lo chiede se il mezzo ha piu' "
+                             "di 8 posti per i passeggeri ("), std::string::npos) << sedici[0];
+    EXPECT_NE(sedici[0].find("il mezzo della scheda, ALFA-01 (AA 101 AA), ne ha 16. Il servizio va fatto comunque con l'accompagnatore"),
+              std::string::npos)
+        << sedici[0];
+    EXPECT_TRUE(prova("AA 104 AA").empty()) << ::testing::PrintToString(prova("AA 104 AA"));
+    const std::vector<std::string> senza = prova("");
+    ASSERT_EQ(senza.size(), 1u);
+    EXPECT_TRUE(comincia(senza[0], "K-CTR-171 v1 ")) << senza[0];
+    EXPECT_NE(senza[0].find("dipende dal mezzo, che la scheda non dice."), std::string::npos) << senza[0];
+    const std::vector<std::string> ignoto = prova("ZZ 999 ZZ");
+    ASSERT_EQ(ignoto.size(), 1u);
+    EXPECT_TRUE(comincia(ignoto[0], "K-CTR-171 v6 ")) << ignoto[0];
+    EXPECT_NE(ignoto[0].find("dipende dal mezzo, e quello scritto sulla scheda non e' riconosciuto (K-CTR-180)."), std::string::npos) << ignoto[0];
+    for (int v : {4, 6}) EXPECT_EQ(definizione_controllo(Check::CardEscortMissing).rivela_variante(v), Classe::Comune) << v;
+    for (int v : {5, 7}) EXPECT_EQ(definizione_controllo(Check::CardEscortMissing).rivela_variante(v), Classe::Particolare) << v;
+}
+
+// K-026, punto 2: K-CTR-180 in kzero controlla, su ogni versione, con il pacchetto di oggi. La 4000802/1: versione 1 con "ZZ 999 ZZ" (non
+// riconosciuto), versione 2 dal 21/12 con "AA 105 AA" (ALFA-05): la variante 5 sulla versione 1. L'ultima versione non riconosciuta che oggi si
+// riconoscerebbe: variante 6. Il mezzo che non c'e' piu': variante 7. Un mezzo di un'altra azienda riconosciuto con il prestito, poi il
+// prestito tolto: variante 8; accorciato: variante 9. Due versioni con lo stesso testo non riconosciuto: un avviso solo. Sabotaggio: K-CTR-180
+// che manca in controlla su una versione vecchia.
+TEST(Schede, MezzoInControllaSuOgniVersione) {
+    const Letto prima = leggi(lettura_k026(), fogli_k026(), attivazione());
+    std::vector<std::string> v = sul_registro(prima.dopo, Check::CardVehicleNotRecognized);
+    ASSERT_EQ(v.size(), 1u) << ::testing::PrintToString(v);
+    EXPECT_EQ(v[0], "K-CTR-180 v5 /schede/1/versioni/0: Scheda SCH-4000802-1 (versione 1): il mezzo scritto \"ZZ 999 ZZ\" non e' riconosciuto "
+                    "(alla lettura non era la targa di un mezzo dell'azienda ALFA (Autoservizi Alfa) del contratto o in prestito a lei, o era su "
+                    "piu' mezzi). Controllare la targa e i mezzi del pacchetto (mezzi.json).");
+    const Letto due = leggi(prima.dopo, con_mezzo(fogli_k026(), 2, "AA 105 AA"), scelta_file(DateChoice::Kind::Date, day_from_ymd(2026, 12, 21)),
+                            kMeseDopo);
+    ASSERT_EQ(due.m.outcomes.at(1).kind, CardOutcome::Kind::NewVersion);
+    v = sul_registro(due.dopo, Check::CardVehicleNotRecognized);
+    ASSERT_EQ(v.size(), 1u) << ::testing::PrintToString(v);
+    EXPECT_TRUE(comincia(v[0], "K-CTR-180 v5 /schede/1/versioni/0: Scheda SCH-4000802-1 (versione 1): il mezzo scritto \"ZZ 999 ZZ\"")) << v[0];
+    // Oggi si riconoscerebbe (sull'ultima versione).
+    const Lettura con_zz = cambiato(prima.dopo, "mezzi.json", [](JsonDati& d) { aggiungi_mezzo(d, "ALFA-02", "ALFA-09", "ALFA", "ZZ 999 ZZ"); });
+    v = sul_registro(con_zz, Check::CardVehicleNotRecognized);
+    ASSERT_EQ(v.size(), 1u) << ::testing::PrintToString(v);
+    EXPECT_EQ(v[0], "K-CTR-180 v6 /schede/1/versioni/0: Scheda SCH-4000802-1 (versione 1): il mezzo scritto \"ZZ 999 ZZ\" non era riconosciuto "
+                    "alla lettura, ma oggi e' il mezzo ALFA-09 (ZZ 999 ZZ). Rileggendo il file il mezzo si aggiunge alla copia dell'ultima "
+                    "versione, senza una versione nuova.");
+    // Il mezzo che non c'e' piu'.
+    const Lettura tolto = cambiato(prima.dopo, "schede_servizi.json", [](JsonDati& d) {
+        for (JsonDati& s : d.at("schede"))
+            if (s.at("codice") == "SCH-4000801-1") s.at("versioni").at(0).at("scheda").at("mezzo")["codice"] = "ALFA-99";
+    });
+    v = sul_registro(tolto, Check::CardVehicleNotRecognized);
+    ASSERT_EQ(v.size(), 2u) << ::testing::PrintToString(v);   // [0] e' la variante 5 della 4000802/1
+    EXPECT_EQ(v[1], "K-CTR-180 v7 /schede/0/versioni/0: Scheda SCH-4000801-1 (versione 1): il mezzo scritto \"AA 101-AA\" era ALFA-99 alla "
+                    "lettura, e non c'e' piu' nel pacchetto. Rimetterlo (mezzi.json), oppure rileggere il file: se la targa e' di un altro "
+                    "mezzo dell'azienda ALFA (Autoservizi Alfa) del contratto (o in prestito a lei), si aggiunge alla copia dell'ultima versione.");
+    // Il prestito tolto o accorciato dopo la lettura.
+    const Letto con_prestito = leggi(lettura_k026([](JsonDati& d) { prestito(d, "BETA-01", "", ""); }), con_mezzo(fogli_k026(), 1, "BB 201 BB"),
+                                     attivazione());
+    EXPECT_EQ(copia_di(con_prestito, "SCH-4000801-1").vehicle->code, codice("BETA-01"));
+    const Lettura senza_prestito = cambiato(con_prestito.dopo, "mezzi.json", [](JsonDati& d) { mezzo_di(d, "BETA-01").erase("prestiti"); });
+    v = sul_registro(senza_prestito, Check::CardVehicleNotRecognized);
+    ASSERT_EQ(v.size(), 2u) << ::testing::PrintToString(v);
+    EXPECT_TRUE(comincia(v[1], "K-CTR-180 v8 /schede/0/versioni/0: Scheda SCH-4000801-1 (versione 1): il mezzo scritto \"BB 201 BB\" e' BETA-01 (BB "
+                               "201 BB), dell'azienda BETA (Trasporti Beta), e oggi nei giorni di servizio della versione non e' in prestito")) << v[1];
+    const Lettura corto = cambiato(con_prestito.dopo, "mezzi.json", [](JsonDati& d) { prestito(d, "BETA-01", "2026-09-01", "2027-03-31"); });
+    v = sul_registro(corto, Check::CardVehicleNotRecognized);
+    ASSERT_EQ(v.size(), 2u) << ::testing::PrintToString(v);
+    EXPECT_TRUE(comincia(v[1], "K-CTR-180 v9 /schede/0/versioni/0: Scheda SCH-4000801-1 (versione 1): il mezzo scritto \"BB 201 BB\" e' BETA-01")) << v[1];
+    EXPECT_NE(v[1].find("(il primo e' il 2027-04-01)"), std::string::npos) << v[1];
+    // Due versioni con lo stesso testo non riconosciuto: un avviso solo, con le versioni.
+    Fogli g = fogli_k026();
+    g.fermate[riga_fermata(g, "4000802 / 1", 0)][1] = "16:12";
+    const Letto stesso = leggi(prima.dopo, g, scelta_file(DateChoice::Kind::Date, day_from_ymd(2026, 12, 21)), kMeseDopo);
+    ASSERT_EQ(stesso.m.outcomes.at(1).kind, CardOutcome::Kind::NewVersion);
+    v = sul_registro(stesso.dopo, Check::CardVehicleNotRecognized);
+    ASSERT_EQ(v.size(), 1u) << ::testing::PrintToString(v);
+    EXPECT_TRUE(comincia(v[0], "K-CTR-180 v5 /schede/1/versioni/1: Scheda SCH-4000802-1 (versioni 1, 2): il mezzo scritto \"ZZ 999 ZZ\"")) << v[0];
+}
+
+// K-026, P1 e P2: il profilo alla versione 4 e il registro alla versione 4 (il mezzo nella copia, dato comune: resta nei file normali quando
+// il pacchetto si chiude); il registro alla versione 3 con il mezzo non e' valido; i profili alla versione 3 (K-024) leggono come prima.
+TEST(Schede, ProfiloERegistroAllaVersioneQuattro) {
+    const Letto x = leggi(lettura_k026(), fogli_k026(), attivazione());
+    const auto it = x.dopo.versioni.find("schede_servizi.json");
+    ASSERT_NE(it, x.dopo.versioni.end());
+    EXPECT_EQ(it->second, 4);
+    EXPECT_EQ(x.dopo.versioni.at("profili_schede.json"), 4);
+    const Separato s = separato([&] {
+        PacchettoInMemoria m;
+        for (const auto& [f, d] : x.dopo.documenti) m.file[f] = chiusura::testo_file(d);
+        return m;
+    }());
+    EXPECT_NE(s.normali.file.at("schede_servizi.json").find("\"scritto\": \"AA 101-AA\""), std::string::npos);
+    EXPECT_NE(s.normali.file.at("schede_servizi.json").find("\"codice\": \"ALFA-01\""), std::string::npos);
+    // Alla versione 3 il mezzo non c'e'.
+    PacchettoInMemoria m;
+    for (const auto& [f, d] : x.dopo.documenti) m.file[f] = chiusura::testo_file(d);
+    JsonDati r = JsonDati::parse(m.file.at("schede_servizi.json"));
+    r["schema_versione"] = 3;
+    m.file["schede_servizi.json"] = r.dump(2);
+    EXPECT_FALSE(leggi_pacchetto(m).forma_valida());
+    // Il profilo del K-024 (versione 3) legge le schede del K-024 come prima, senza il mezzo.
+    const Letto y = leggi(lettura_k024(), fogli_k024(), attivazione());
+    for (const CardOutcome& o : y.m.outcomes) {
+        EXPECT_EQ(o.kind, CardOutcome::Kind::New) << o.nr;
+        EXPECT_FALSE(o.vehicle) << o.nr;
+    }
+}
