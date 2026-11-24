@@ -986,6 +986,14 @@
   (gcc, clang con i sanitizer, clang del fuzzing); tutte le prove 1228 su 1228; con i sanitizer 1226 su 1226 (le due in meno sono solo della
   costruzione normale); il primo commit del codice da solo compila e passa 1208 prove su 1208; fuzzing: i 39 bersagli per 20 secondi e, per
   20 minuti, `schede-righe`, `pacchetto-schede_servizi.json` e `pacchetto-profili_schede.json`: nessun guasto.
+- 2026-11-24 - K-027 (programma, proposta "K-027: alunni ai punti di raccolta"). Punto 0, la prova mancante del K-026 (sabotaggio
+  dell'arbitro che nessuna prova prendeva; il codice era gia' giusto): in `card_vehicle_loan` un giorno di servizio conta come coperto solo da
+  un prestito all'azienda del contratto (Schede.PrestitoAUnaTerzaAziendaNonCopreIGiorni: una terza azienda, GAMMA, nel manifesto; BETA-01 in
+  prestito tutto l'anno a GAMMA e ad ALFA solo fino al 31/01/2027: variante 3 nella lettura e 9 in `kzero controlla`; ad ALFA solo in estate:
+  variante 1, e 8 in controlla dopo una lettura con un prestito valido). Sabotaggio "giorno coperto da un prestito a qualsiasi azienda":
+  preso, solo dalla prova nuova. Per i punti 1-6 (punti di raccolta degli utenti, proposta e conferma, sblocchi per giorni, confronto con le
+  schede, testo al singolare, documenti) prima le domande e le proposte per l'arbitro (K-027-domande-per-l-arbitro.md, consegnato come
+  file), niente codice.
 ## Bug e limiti noti
 - (K-018) L'avviso sui nomi liberi trova solo il nome scritto come nei dati (senza maiuscole ne' accenti, parole intere):
   non i nomi scritti male, i soprannomi, le iniziali, le sigle ("S-DIS"), un nome dentro una parola piu' lunga, le parole
