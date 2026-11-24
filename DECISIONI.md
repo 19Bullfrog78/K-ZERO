@@ -497,3 +497,53 @@ Formato: data - decisione - perche'.
 - 2026-11-23 - K-025 - **Il profilo nel registro** (D9 A, trovato prima del codice): `schede[].profilo` e' il profilo della prima lettura e
   non cambia con le versioni dopo (il documento diceva "dell'ultima lettura"); il programma non cambia. Effetto quasi nullo: K-CTR-170 non
   guarda i campi che dipendono dal profilo, e il profilo conta solo per il separatore del Nr in K-CTR-169.
+- 2026-11-24 - K-026 - **Risposte dell'arbitro alle domande prima del codice** (D1-D9, P1-P10): D1 A con due condizioni (si completa solo
+  cio' che manca, mai un testo scritto diverso, che e' una versione nuova; il completamento resta tracciato nella copia dell'ultima versione
+  con la data e il riferimento della lettura); D2 A, D3 A, D4 A, D5 A (i giorni di servizio della versione), D6 A (e i mezzi ipotetici
+  esclusi), D7 A, D8 A, D9 tutte le varianti (0-9). P1-P10 accettate; di P10 niente in questo mandato (Totali alunni contro i posti: K-028;
+  Attrezzato contro la pedana, targhe doppie in mezzi.json, mezzo della scheda contro mezzo del turno: mandati futuri). Nei mandati solo
+  targhe inventate.
+- 2026-11-24 - K-026 - **Il mezzo della scheda**: la riga "Mezzo" della scheda del committente; nel modello una colonna facoltativa del
+  profilo alla versione 4 (`colonne.schede.mezzo`) con **solo la targa** (D3: la descrizione accanto non si copia; una cella con la targa e
+  altro dopo non si riconosce, con un avviso che lo dice). Cella vuota, o senza lettere ne' cifre, = non scritto (D7); illeggibile ferma la
+  scheda (variante 0, come ogni colonna). La targa si confronta con `mezzi[].targa` tenendo solo lettere e cifre, come le parole del profilo
+  (D4: spazi, anche quelli speciali dei PDF, trattini di ogni tipo, punteggiatura e maiuscole non contano). Si riconosce solo tra i mezzi
+  dell'azienda del contratto e quelli di altre aziende in prestito a lei nei **giorni di servizio** della versione (D5: il calendario della
+  scheda nel periodo, interruzioni comprese; un prestito che copre una parte dei giorni: riconosciuto con l'avviso; nessun giorno: non
+  riconosciuto); mai i mezzi ipotetici; mai una targa che e' su piu' mezzi del pacchetto (D6: una targa vera e' unica). Il riconoscimento
+  si fa nel confronto con il registro (serve il periodo della versione), una regola sola per la lettura, `kzero controlla` e K-CTR-171
+  (`match_card_vehicle` nel nucleo). Il mezzo non ferma mai una scheda. Il codice del mezzo riconosciuto e il testo scritto vanno nella copia
+  della scheda (registro alla versione 4), dato comune. **Non e' il mezzo del turno**: servizio, gruppo, corsa, calendario e turni non
+  cambiano.
+- 2026-11-24 - K-026 - **Il mezzo aggiunto a una scheda uguale** (D1, errore del mandato trovato prima del codice): "non scritto non si
+  confronta" (K-024 D6) e "uguale = niente scritto" (K-025) insieme facevano si' che il mezzo non entrasse mai nelle schede gia' lette (la
+  colonna aggiunta dopo, o un mezzo aggiunto al pacchetto dopo la lettura): K-CTR-171 e il K-028 non lo avrebbero visto finche' il
+  committente non cambiava la scheda per altro. Ora una scheda uguale all'ultima versione, la cui copia non ha il mezzo o lo ha senza un
+  mezzo riconosciuto (o con un mezzo che non c'e' piu'), resta "uguale" (niente versione nuova, niente scelta della data, nessun elemento
+  rifatto), ma la copia dell'**ultima versione** prende quello che le manca (il testo, e il codice se ora si riconosce), con la data
+  (`--data`) e il riferimento della lettura (`mezzo.aggiunte[]`); mai un testo scritto diverso (non e' uguale: e' una versione nuova); solo
+  l'ultima versione (il file descrive solo quella). Cambia la regola del K-025: "uguale = niente di nuovo nel pacchetto, al massimo il mezzo
+  nella copia". Lo stesso file con lo stesso pacchetto non aggiunge niente la seconda volta (anche nel fuzzing). Per le schede completate la
+  lettura da' gli avvisi del mezzo (K-CTR-180) e K-CTR-171, come per le scritte; servizio, corsa e calendario non cambiano.
+- 2026-11-24 - K-026 - **Il mezzo nelle versioni** (D2): una versione nuova solo se il testo normalizzato cambia tra due celle scritte (non il
+  mezzo riconosciuto: un testo cambiato e non riconosciuto ne' prima ne' dopo deve fare una versione nuova); "non scritto" da una parte non
+  si confronta, come il numero dei disabili. Conseguenze accettate: una cella svuotata dopo non toglie il mezzo dalla copia; una versione
+  nuova fatta per altro con la cella vuota ha la copia senza il mezzo (il file non lo dice). "Mezzo" e' tra le cose che cambiano (comune).
+- 2026-11-24 - K-026 - **K-CTR-171 con i posti del mezzo** (D8): con il mezzo della scheda riconosciuto e ancora nel pacchetto, una
+  condizione con i posti si decide con i suoi posti (varianti 4 e 5: l'avviso dice il mezzo e i posti; con i posti uguali o meno della
+  soglia la condizione non vale); con il mezzo scritto e non riconosciuto (o non piu' nel pacchetto) varianti 6 e 7 ("dipende dal mezzo, e
+  quello della scheda non e' riconosciuto"); senza il mezzo scritto come prima (1 e 3). Una condizione senza i posti vince su quelle con i
+  posti. Il controllo con il mezzo del turno resta per la fotografia dei giri.
+- 2026-11-24 - K-026 - **K-CTR-180** (D9, avviso comune): nella lettura (schede scritte o completate) 0 targa che non c'e', 1 mezzo di
+  un'altra azienda senza prestito, 2 targa su piu' mezzi, 3 prestito per una parte dei giorni (riconosciuto), 4 la cella comincia con una
+  targa e ha altro dopo (solo un aiuto, mai un riconoscimento); in `kzero controlla` su ogni versione, con il pacchetto di oggi e il periodo
+  di oggi della versione (dopo i tagli), un avviso per scheda quando piu' versioni danno lo stesso risultato: 5 non riconosciuto alla
+  lettura, 6 come 5 sull'ultima versione ma oggi si riconoscerebbe (rileggere il file), 7 non piu' nel pacchetto, 8 oggi senza prestito, 9
+  oggi con un prestito per una parte dei giorni. Il testo scritto e' nel messaggio: e' un dato comune del registro (l'uscita `schede` dice
+  "nessun valore di una cella nei messaggi, tranne il mezzo scritto").
+- 2026-11-24 - K-026 - **Uscite**: profilo `profili_schede` alla versione 4 (le 1-3 si leggono ancora; un profilo che non nomina la colonna
+  legge come prima); registro `schede_servizi` sempre alla versione 4 (`scheda.mezzo`: `scritto`, `codice`, `aggiunte[]`; il testo con la
+  definizione `testo`, quindi nell'avviso sui nomi liberi del K-018, come il Nr e l'ID); uscita di `leggi-schede` alla versione 5 (`schede`
+  5, la 4 tra le non piu' prodotte): `mezzo` per scheda (`scritto`, `codice`, `riconosciuto`, `aggiunto`), "mezzo" tra le cose che
+  cambiano, `conteggi.mezzi_aggiunti`. Nel testo una riga "Mezzo della scheda" per le schede scritte e completate solo se il profilo ha la
+  colonna (o la versione ha il mezzo): con i profili di oggi il testo non cambia, anche la riga del riepilogo delle uguali.

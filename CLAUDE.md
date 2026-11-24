@@ -91,7 +91,8 @@ Si parte da ALP (3 minibus + 1 auto) e si deve poter crescere fino a 500 mezzi e
   `--scrivi` anteprima); `./build/kzero togli-scheda <pacchetto chiuso> --scheda CODICE-o-ID --riferimento "..." --data AAAA-MM-GG
   --utente CODICE [--tutte] [--scrivi <pacchetto chiuso>]`. Prove con dati inventati: tests/esempi/k021-schede (profilo e testi dei
   tre fogli, da cui le prove costruiscono il file .xlsx; `build/tests/crea_xlsx --fogli`). Dal K-024 il tipo per scheda (regole del
-  profilo alla versione 3) e il numero dei disabili: prove con dati inventati in tests/esempi/k024-schede.
+  profilo alla versione 3) e il numero dei disabili: prove con dati inventati in tests/esempi/k024-schede. Dal K-026 il mezzo della scheda
+  (colonna "Mezzo" del profilo alla versione 4, la targa): prove con dati inventati in tests/esempi/k026-schede.
 - Eseguire le prove: `ctest --test-dir build --output-on-failure`
 - Controllo del deposito pubblico (K-015: i quattro nomi in nessun file, nessun file di dati ne' manifesto di un pacchetto
   fuori da tests/ ed esempi/; K-016: solo testi UTF-8 e binari ammessi, cartelle saltate uguali a quelle di .gitignore):
@@ -271,6 +272,11 @@ Si parte da ALP (3 minibus + 1 auto) e si deve poter crescere fino a 500 mezzi e
 - Rilettura delle schede (K-025): rileggere il file intero del committente e' normale. Una scheda uguale all'ultima versione e' "uguale" prima
   di tutto quello che dipende dalla data (niente scelta, niente fermata per la data, nessun avviso della lettura): gli avvisi che
   descrivono il pacchetto li da' kzero controlla, su ogni versione, uno per scheda quando piu' versioni danno lo stesso risultato.
+- Mezzo della scheda (K-026): e' quello che scrive il committente, non il mezzo del turno (corse e turni non cambiano); si riconosce dalla
+  targa solo tra i mezzi dell'azienda del contratto e quelli in prestito a lei nei giorni di servizio della versione, mai gli ipotetici, mai
+  indovinato (una targa su piu' mezzi non si riconosce); una versione nuova solo se cambia il testo tra due celle scritte; a una scheda
+  uguale la rilettura aggiunge solo il mezzo che manca alla copia dell'ultima versione, con la data e il riferimento, mai un testo diverso.
+  Nel deposito solo targhe inventate.
 - Cassaforte (K-010): un valore si lega al suo elemento per codice (o per la chiave dichiarata nello schema,
   `x-kzero-chiave`), mai per posizione; un valore senza il suo elemento e' un errore K-CTR, mai un'unione sbagliata.
   Chi ha solo i dati personali non riceve mai la chiave dei particolari, nemmeno durante il cambio delle chiavi.
