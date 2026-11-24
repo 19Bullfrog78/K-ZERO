@@ -10,7 +10,10 @@
 # servizi (dal K-023 con il quarto foglio, le interruzioni, e i due profili alla versione 2 di tests/esempi/k023-schede; dal K-024 alla
 # versione 3, con il profilo di tests/esempi/k024-schede e uno con regole del tipo su tutte e quattro le colonne, e le quattro schede del
 # tipo per scheda con la colonna dei disabili; dal K-025 ogni scheda scritta si rilegge, subito e un mese dopo senza scelta, e deve
-# risultare uguale e senza avvisi, con il seme delle quattro schede di tests/esempi/k025-schede).
+# risultare uguale e senza avvisi, con il seme delle quattro schede di tests/esempi/k025-schede; dal K-026 alla versione 4, con la
+# colonna del mezzo della scheda, i semi delle tre schede di tests/esempi/k026-schede e delle stesse con le targhe scritte in altri modi:
+# un mezzo riconosciuto e' sempre il solo con quella targa, dell'azienda del contratto o in prestito a lei, e lo stesso file riletto con
+# lo stesso pacchetto non aggiunge mai il mezzo).
 # Un guasto (memoria, comportamento non definito, risultato incoerente, attesa oltre 10 secondi) ferma il bersaglio:
 # il file che lo provoca resta in <lavoro>/guasti/<bersaglio>/ e lo script esce con 1. Il file va corretto e messo in
 # tests/fuzz/casi/<bersaglio>/ (diventa una prova normale, fuzz.casi.<bersaglio>).
@@ -90,7 +93,7 @@ prova_bersaglio() {
       ambiente=(KZERO_FILE="$f")
       for semi in "$radice/esempi/demo" "$radice/esempi/demo-numeri" "$radice/tests/esempi/k007-demo" "$radice/tests/esempi/k011-orari" \
                   "$radice/tests/esempi/k012-servizi" "$radice/tests/esempi/k021-schede" "$radice/tests/esempi/k023-schede" \
-                  "$radice/tests/esempi/k024-schede"; do
+                  "$radice/tests/esempi/k024-schede" "$radice/tests/esempi/k026-schede"; do
         [ -f "$semi/$f" ] && cp "$semi/$f" "$corpus/seme-$(basename "$semi")-$f"
       done
       ;;
