@@ -563,7 +563,7 @@ void aggiungi_elenco(std::vector<DefinizioneControllo>& c) {
                   {1, "Riga {riga}: il nuovo utente {nuovo} forse e' un utente che il file non ha piu' e che ha cambiato scuola (stesso "
                       "nome e stessa casa). Il programma non li unisce: per vedere quale, --includi-dati-personali."}}});
     c.push_back({Check::ListExitsNotApplied, "K-CTR-151", A, N, "Elenco completo con righe illeggibili: uscite non applicate",
-                 {"L'elenco e' completo ma {righe} righe non si leggono: le uscite non si applicano (chi non e' nel file resta). "
+                 {"L'elenco e' completo ma {righe:# riga non si legge|# righe non si leggono}: le uscite non si applicano (chi non e' nel file resta). "
                   "Correggere le righe nel file, o chiedere al committente, e rileggerlo."}});
     c.push_back({Check::ListStopNotRecognized, "K-CTR-152", A, N, "Fermata indicata non riconosciuta",
                  {riga + "la fermata indicata non e' un luogo del pacchetto (ne' per il codice esterno del profilo ne' per il nome tra "
