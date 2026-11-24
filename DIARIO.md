@@ -958,6 +958,34 @@
   cinque versioni, la 5 uguale alla 1 e alla 3, l'avviso dice la 3). Prove: test_schede (+2). Sabotaggi, tutti e due presi e solo dalle
   prove nuove: in controlla sempre la variante 2; la versione di prima piu' vecchia. Per i punti 1 e 2 (il mezzo della scheda, K-CTR-171 con
   i posti del mezzo) prima le domande e le proposte per l'arbitro (K-026-domande-per-l-arbitro.md, consegnato come file), niente codice.
+- 2026-11-24 - K-026 (seguito, dopo le risposte dell'arbitro: D1 A con due condizioni, D2-D9 come proposto, D9 tutte le varianti 0-9, P1-P10
+  accettate, di P10 niente in questo mandato). Il mezzo della scheda: profilo delle schede alla versione 4 con la colonna facoltativa
+  "Mezzo" (solo la targa); la targa si confronta tenendo solo lettere e cifre e si riconosce solo tra i mezzi dell'azienda del contratto e
+  quelli in prestito a lei nei giorni di servizio della versione (un prestito per una parte dei giorni: riconosciuto con l'avviso), mai gli
+  ipotetici, mai una targa su piu' mezzi; il mezzo non ferma mai una scheda e non e' il mezzo del turno (corse e turni non cambiano).
+  Registro `schede_servizi` alla versione 4 (nella copia: testo scritto, codice del mezzo, aggiunte); versione nuova solo se il testo
+  cambia tra due celle scritte. D1 (errore del mandato): una scheda uguale prende il mezzo che manca alla copia dell'ultima versione (il
+  testo, e il codice se ora si riconosce), con la data e il riferimento della lettura; mai un testo diverso, solo l'ultima versione, e lo
+  stesso file riletto non aggiunge piu' niente. K-CTR-180 nuovo (varianti 0-4 nella lettura, 5-9 in `kzero controlla` su ogni versione);
+  K-CTR-171 con i posti del mezzo della scheda (varianti 4-7). Uscita `schede` alla versione 5 (il mezzo per scheda, "mezzo" tra le cose
+  che cambiano, `mezzi_aggiunti`); con i profili di oggi il testo non cambia. Nessun K-ERR nuovo. Dati di prova inventati in
+  tests/esempi/k026-schede (due profili alla versione 4, con e senza la colonna; tre schede: "AA 101-AA", una targa che non c'e', la cella
+  vuota; solo targhe inventate). Prove: test_schede (+9, una cambiata per la versione del registro), test_schede_comandi (+2, tre cambiate per le versioni), test_controlli
+  (catalogo), prove sul programma (+6, due con lo schema dell'uscita 5). Fuzzing: nel bersaglio delle schede un profilo con la colonna
+  del mezzo, un prestito per una parte dell'anno e una targa su due mezzi; un mezzo riconosciuto e' sempre il solo con quella targa e
+  dell'azienda o in prestito a lei; lo stesso file riletto con lo stesso pacchetto non aggiunge mai il mezzo; semi delle schede del K-026 e
+  del registro alla versione 4. Documenti: formato-dati, controlli (anche la tabella dei testi liberi: il mezzo scritto entra nell'avviso
+  sui nomi liberi), sicurezza, schemi `profili_schede` 4, `schede_servizi` 4 e `schede` 5, DECISIONI, CLAUDE.md (Trappole). Sabotaggi sul
+  codice finale, 20, tutti presi: gli 8 del mandato (targa con gli spazi non riconosciuta; targa di un'altra azienda senza prestito
+  riconosciuta; mezzo in prestito valido non riconosciuto; due mezzi con la stessa targa, uno scelto; mezzo cambiato che non fa una versione
+  nuova; colonna aggiunta che rifa' tutte le schede; K-CTR-171 che ignora i posti del mezzo; K-CTR-180 che manca in controlla su una
+  versione vecchia), S4 e S6 del punto 0 rifatti, i 4 dell'arbitro per D1 (completamento che sovrascrive un testo diverso; senza data e
+  riferimento; di una versione che non e' l'ultima; lo stesso file riletto che scrive ancora) e 6 miei (mezzo ipotetico riconosciuto;
+  prestito contato su tutti i giorni del periodo; cella senza lettere ne' cifre letta come scritta; l'aiuto della cella con la descrizione
+  che manca; la riga del mezzo che manca nell'uscita; K-CTR-171 non mostrato per le schede completate). Verifiche: compilazione senza avvisi
+  (gcc, clang con i sanitizer, clang del fuzzing); tutte le prove 1228 su 1228; con i sanitizer 1226 su 1226 (le due in meno sono solo della
+  costruzione normale); il primo commit del codice da solo compila e passa 1208 prove su 1208; fuzzing: i 39 bersagli per 20 secondi e, per
+  20 minuti, `schede-righe`, `pacchetto-schede_servizi.json` e `pacchetto-profili_schede.json`: nessun guasto.
 ## Bug e limiti noti
 - (K-018) L'avviso sui nomi liberi trova solo il nome scritto come nei dati (senza maiuscole ne' accenti, parole intere):
   non i nomi scritti male, i soprannomi, le iniziali, le sigle ("S-DIS"), un nome dentro una parola piu' lunga, le parole
