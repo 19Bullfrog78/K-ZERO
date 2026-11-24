@@ -216,6 +216,22 @@ JsonDati scheda_json(const kzero::Card& k) {
         if (k.chosen->from_rule) x["regola"] = k.chosen->rule;
         j["tipo"] = x;
     }
+    // K-026 (versione 4), dato comune: il mezzo della scheda, se scritto, e le letture che l'hanno completato (D1 dell'arbitro).
+    if (k.vehicle) {
+        JsonDati m = {{"scritto", k.vehicle->written}};
+        if (k.vehicle->code) m["codice"] = *k.vehicle->code;
+        if (!k.vehicle->additions.empty()) {
+            JsonDati a = JsonDati::array();
+            for (const kzero::CardVehicleAddition& x : k.vehicle->additions) {
+                JsonDati y = {{"data", kzero::text_from_day(x.date)}, {"riferimento", x.reference},
+                              {"cosa", x.text && x.code ? "testo_e_codice" : x.text ? "testo" : "codice"}};
+                if (x.previous_code) y["codice_prima"] = *x.previous_code;
+                a.push_back(y);
+            }
+            m["aggiunte"] = a;
+        }
+        j["mezzo"] = m;
+    }
     j["tot_giorni"] = k.total_days;
     j["tot_km_carico"] = km(k.total_loaded_km);
     j["tot_km_vuoto"] = km(k.total_empty_km);
@@ -260,7 +276,7 @@ const char* da_json(kzero::ChoiceFrom f) { return f == kzero::ChoiceFrom::File ?
 }  // namespace
 
 JsonDati registro(const std::vector<kzero::ServiceCard>& schede, const std::vector<kzero::RemovedCardVersions>& tolte) {
-    JsonDati d = {{"schema", "schede_servizi"}, {"schema_versione", 3}};   // K-024: sempre la 3 (contiene la 1 e la 2)
+    JsonDati d = {{"schema", "schede_servizi"}, {"schema_versione", 4}};   // K-026: sempre la 4 (contiene le altre)
     JsonDati v = JsonDati::array();
     for (const kzero::ServiceCard& s : schede) {
         JsonDati j = {{"codice", s.code}, {"id", s.id}, {"committente", s.client.code}, {"profilo", s.profile.code}, {"contratto", s.contract.code}};

@@ -90,6 +90,7 @@ enum class Check {
     CardDisabledMismatch,      // K-024: il numero dei disabili di una scheda non torna con il tipo del servizio
     CardProfileOldVersion,     // K-024: profilo delle schede alla versione 1 o 2 (il tipo e' un dato comune)
     CardSameAsOlderVersion,    // K-025: scheda uguale a una versione di prima, non all'ultima (solo kzero leggi-schede)
+    CardVehicleNotRecognized,  // K-026: il mezzo della scheda non riconosciuto dalla targa, o con un prestito che non copre i giorni
     // Turni (K-008): errori.
     ShiftPartInvalid,
     ShiftItemsOrder,

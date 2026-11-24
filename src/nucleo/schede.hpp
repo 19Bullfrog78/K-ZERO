@@ -170,6 +170,9 @@ struct CardOutcome {
     std::optional<CardFault> fault;
     Code service, group, trip, calendar;
     bool choice_unused = false;           // K-025: Same con una scelta --validita-scheda per lei (non serve: la scheda non cambia)
+    // K-026: il mezzo della versione (scritta, o l'ultima per una Same, dopo il completamento) e se questa lettura l'ha completato (D1).
+    std::optional<CardVehicle> vehicle;
+    bool vehicle_added = false;
 };
 
 struct CardsMerge {
@@ -185,6 +188,8 @@ struct CardsMerge {
     std::vector<std::pair<Code, int>> added;   // codice della scheda, numero della versione
     std::vector<CardVersion> removed;          // le versioni tolte, con i loro elementi
     std::vector<Cut> cuts;
+    // K-026 (D1): le schede uguali con il mezzo completato nella copia dell'ultima versione (codice della scheda, numero della versione).
+    std::vector<std::pair<Code, int>> completed;
 };
 
 // Confronta le schede lette con il registro del pacchetto (puo' non esserci: la prima volta tutte nuove). taken: la presa in
@@ -234,6 +239,44 @@ std::string card_kind_text(const CardKind& k);
 // K-024: il tipo del servizio in parole ("scolastico", "di linea", "per disabili", "NCC", "altro"), per i messaggi (dati particolari).
 std::string card_service_kind_text(ServiceKind k);
 
+// --- Il mezzo della scheda (K-026) -------------------------------------------------------------------------------------------
+// La riga "Mezzo" del committente: la targa. Si riconosce solo tra i mezzi dell'azienda del contratto e quelli di altre aziende in
+// prestito a lei nei giorni di servizio della versione; mai i mezzi ipotetici; mai indovinato (una targa su piu' mezzi del pacchetto non
+// si riconosce). Non e' il mezzo del turno.
+
+// La targa come chiave: le lettere e le cifre, confrontate come le parole del profilo (maiuscole, accenti, punteggiatura), senza
+// nessuno spazio ne' trattino. Vuota se il testo non ha lettere ne' cifre (una cella cosi' vale "non scritto").
+std::string plate_key(const std::string& text);
+
+// I giorni di servizio della versione coperti dai prestiti del mezzo all'azienda (il calendario della scheda nel periodo, interruzioni
+// comprese; senza nessun giorno di servizio, es. il calendario di base che manca, tutti i giorni del periodo).
+struct CardLoanCover {
+    bool any_loan = false;    // il mezzo ha almeno un prestito all'azienda
+    int days = 0;             // giorni di servizio
+    int covered = 0;          // ... coperti da un prestito
+    Day first_uncovered = 0;  // il primo giorno non coperto
+};
+CardLoanCover card_vehicle_loan(const Vehicle& v, const Code& company, const Card& k, DateRange period, const Index& idx);
+
+struct CardVehicleMatch {
+    enum class Outcome {
+        Recognized,     // un mezzo solo, dell'azienda o in prestito a lei (anche solo per una parte dei giorni: uncovered_days)
+        NotFound,       // nessun mezzo con quella targa (variante 0)
+        OtherCompany,   // la targa e' di un mezzo di un'altra azienda, senza prestito all'azienda nei giorni della versione (1)
+        Ambiguous,      // la targa e' su piu' mezzi del pacchetto (2)
+        Prefix,         // nessun mezzo con quella targa, ma la cella comincia con la targa di un mezzo e ha altro dopo (4)
+    };
+    Outcome outcome = Outcome::NotFound;
+    Code vehicle;                   // Recognized, OtherCompany, Prefix
+    Code vehicle_company;           // l'azienda del mezzo (Recognized di un'altra azienda, OtherCompany)
+    std::vector<Code> candidates;   // Ambiguous: i mezzi con la stessa targa
+    int uncovered_days = 0;         // Recognized: giorni di servizio non coperti dal prestito (variante 3)
+    Day first_uncovered = 0;
+};
+// Riconosce il mezzo scritto su una scheda: written e' il testo della cella, company l'azienda del contratto, k e period la scheda e il
+// periodo della versione (per i giorni di servizio dei prestiti).
+CardVehicleMatch match_card_vehicle(const std::string& written, const Code& company, const Card& k, DateRange period, const Index& idx);
+
 // Le cose che cambiano tra due schede (a: quella di prima).
 std::vector<CardChange> card_changes(const Card& a, const Card& b);
 // Le due schede sono uguali (la parola nuova/modifica e le righe del file non contano)?
@@ -262,8 +305,9 @@ CardRemoval remove_card(std::vector<ServiceCard>& cards, std::vector<RemovedCard
 
 // --- Controlli sul registro (kzero controlla) ------------------------------------------------------------------------------
 // K-CTR-169 (schede dello stesso servizio con periodi che si sovrappongono), K-CTR-171 (accompagnatore che manca su una corsa di una
-// scheda, con la regola del regolamento), K-CTR-172 (pezzo di una corsa di una scheda con i km non noti), e i controlli di sempre
-// sui codici doppi e sui riferimenti. Il confronto degli elementi con la scheda (K-CTR-170) lo fa l'API, che fa gli elementi.
+// scheda, con la regola del regolamento; dal K-026 con i posti del mezzo della scheda), K-CTR-172 (pezzo di una corsa di una scheda con i km
+// non noti), gli avvisi che descrivono il pacchetto su ogni versione (K-025: 163, 164, 176, 177; K-026: 180, il mezzo della scheda), e i
+// controlli di sempre sui codici doppi e sui riferimenti. Il confronto degli elementi con la scheda (K-CTR-170) lo fa l'API, che fa gli elementi.
 void check_cards(const Package& p, const Index& idx, std::vector<Problem>& out);
 
 // I km di un pezzo di corsa (dal passaggio from al passaggio to). Per una corsa fatta da una scheda i km di un passaggio coprono il

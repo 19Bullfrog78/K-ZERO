@@ -962,5 +962,7 @@ TEST(Controlli, catalogo_coperto) {
     EXPECT_EQ(api::definizione_controllo(Check::CardProfileOldVersion).codice, "K-CTR-178");
     // K-025: la scheda uguale a una versione di prima (le prove stanno in test_schede).
     EXPECT_EQ(api::definizione_controllo(Check::CardSameAsOlderVersion).codice, "K-CTR-179");
-    EXPECT_EQ(api::catalogo_controlli().size(), 179u);
+    // K-026: il mezzo della scheda (le prove stanno in test_schede).
+    EXPECT_EQ(api::definizione_controllo(Check::CardVehicleNotRecognized).codice, "K-CTR-180");
+    EXPECT_EQ(api::catalogo_controlli().size(), 180u);
 }

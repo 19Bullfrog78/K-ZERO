@@ -1,0 +1,663 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "kzero - schede, versione 5",
+  "description": "Uscita di 'kzero leggi-schede --formato json' (K-021): le schede dei servizi lette dal modello Excel, con l'esito di ognuna (nuova, versione nuova, uguale, ferma, senza la scelta della data), da quando a quando vale, gli elementi fatti, cosa cambia tra due versioni e i problemi. I dati particolari (tipo, pedana, servizio individualizzato, accompagnatore richiesto, le caselle tra le cose che cambiano) solo con --includi-dati-particolari: altrimenti null (con 'riservato'). Nessun valore di una cella nei messaggi, tranne (K-026) il mezzo scritto, che e' un dato comune del registro. Dalla versione 2 (K-023) le interruzioni lette: le righe del foglio delle interruzioni e, per ogni scheda letta, i suoi periodi. Dalla versione 3 (K-024) nei dati particolari di ogni scheda anche il tipo del gruppo, da dove viene il tipo (il profilo o una sua regola, con il codice) e il numero dei disabili a bordo (null se la scheda non lo scrive). Dalla versione 4 (K-025) per ogni scheda 'scelta_scheda_non_usata': vero per una scheda uguale all'ultima versione per cui --validita-scheda aveva una scelta (la scelta non serve: la scheda non e' cambiata). Le schede uguali si riconoscono prima di ogni scelta della data e non ripetono gli avvisi della lettura (quelli che descrivono il pacchetto sono in kzero controlla). Dalla versione 5 (K-026) per ogni scheda scritta o uguale il 'mezzo' della versione (la targa scritta, il mezzo riconosciuto, e se questa lettura l'ha aggiunto alla copia di una scheda uguale), 'mezzo' tra le cose che cambiano e, nei conteggi, 'mezzi_aggiunti': le schede uguali con il mezzo aggiunto alla copia dell'ultima versione.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "schema_versione",
+    "comando",
+    "utente",
+    "pacchetto",
+    "profilo",
+    "committente",
+    "contratto",
+    "presa_in_carico",
+    "riferimento",
+    "impronta",
+    "scritto",
+    "righe",
+    "conteggi",
+    "schede",
+    "problemi",
+    "problemi_riservati",
+    "avvisi",
+    "cassaforte"
+  ],
+  "properties": {
+    "schema": {
+      "const": "schede"
+    },
+    "schema_versione": {
+      "const": 5
+    },
+    "comando": {
+      "const": "leggi-schede"
+    },
+    "utente": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+    },
+    "pacchetto": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "codice",
+        "nome"
+      ],
+      "properties": {
+        "codice": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+        },
+        "nome": {
+          "type": "string"
+        }
+      }
+    },
+    "profilo": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+    },
+    "committente": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+    },
+    "contratto": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+    },
+    "presa_in_carico": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+    },
+    "riferimento": {
+      "type": "string"
+    },
+    "impronta": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "scritto": {
+      "type": "boolean"
+    },
+    "righe": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "schede",
+        "fermate",
+        "date",
+        "interruzioni"
+      ],
+      "properties": {
+        "schede": {
+          "type": "integer"
+        },
+        "fermate": {
+          "type": "integer"
+        },
+        "date": {
+          "type": "integer"
+        },
+        "interruzioni": {
+          "description": "K-023: righe del foglio delle interruzioni (0 se il profilo o il file non hanno il foglio).",
+          "type": "integer"
+        }
+      }
+    },
+    "conteggi": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "nuove",
+        "versioni_nuove",
+        "uguali",
+        "ferme",
+        "senza_scelta",
+        "mezzi_aggiunti"
+      ],
+      "properties": {
+        "nuove": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "versioni_nuove": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "uguali": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "ferme": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "senza_scelta": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "mezzi_aggiunti": {
+          "description": "K-026: le schede uguali all'ultima versione a cui questa lettura ha aggiunto il mezzo (il testo, il mezzo riconosciuto o tutti e due), senza una versione nuova.",
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    },
+    "schede": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "riga",
+          "nr",
+          "id",
+          "esito",
+          "codice",
+          "versione",
+          "dal",
+          "al",
+          "scelta",
+          "elementi",
+          "case_nuove",
+          "scelta_scheda_non_usata",
+          "interruzioni",
+          "versione_accorciata",
+          "versioni_tolte",
+          "giornate_prima_della_presa_in_carico",
+          "cambia",
+          "particolari",
+          "mezzo"
+        ],
+        "properties": {
+          "riga": {
+            "type": "integer",
+            "minimum": 0
+          },
+          "nr": {
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "id": {
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "esito": {
+            "enum": [
+              "nuova",
+              "versione_nuova",
+              "uguale",
+              "ferma",
+              "senza_scelta"
+            ]
+          },
+          "codice": {
+            "oneOf": [
+              {
+                "type": "string",
+                "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "versione": {
+            "oneOf": [
+              {
+                "type": "integer",
+                "minimum": 1
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "dal": {
+            "oneOf": [
+              {
+                "type": "string",
+                "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "al": {
+            "oneOf": [
+              {
+                "type": "string",
+                "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "scelta": {
+            "oneOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "modo",
+                  "da"
+                ],
+                "properties": {
+                  "modo": {
+                    "enum": [
+                      "attivazione",
+                      "presa_in_carico",
+                      "data"
+                    ]
+                  },
+                  "da": {
+                    "enum": [
+                      "nessuna",
+                      "file",
+                      "scheda"
+                    ]
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "elementi": {
+            "oneOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "servizio",
+                  "gruppo",
+                  "corsa",
+                  "calendario"
+                ],
+                "properties": {
+                  "servizio": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+                  },
+                  "gruppo": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+                  },
+                  "corsa": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+                  },
+                  "calendario": {
+                    "type": "string",
+                    "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "case_nuove": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+            }
+          },
+          "scelta_scheda_non_usata": {
+            "description": "K-025: vero solo per una scheda uguale all'ultima versione per cui --validita-scheda aveva una scelta, che non serve (la scheda non e' cambiata); falso per tutte le altre.",
+            "type": "boolean"
+          },
+          "interruzioni": {
+            "description": "K-023: le interruzioni della scheda letta, in ordine (vuoto se non ne ha; null per una scheda ferma o senza la scelta della data).",
+            "oneOf": [
+              {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "dal",
+                    "al"
+                  ],
+                  "properties": {
+                    "dal": {
+                      "type": "string",
+                      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+                    },
+                    "al": {
+                      "type": "string",
+                      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+                    }
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "mezzo": {
+            "description": "K-026: il mezzo della versione scritta (o dell'ultima, per una scheda uguale), come lo scrive il committente: null se non scritto (o se la scheda e' ferma o senza la scelta della data). Dato comune.",
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "scritto",
+                  "codice",
+                  "riconosciuto",
+                  "aggiunto"
+                ],
+                "properties": {
+                  "scritto": {
+                    "type": "string",
+                    "description": "La targa come sul file."
+                  },
+                  "codice": {
+                    "description": "Il mezzo riconosciuto (null se non riconosciuto).",
+                    "oneOf": [
+                      {
+                        "type": "string"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "riconosciuto": {
+                    "type": "boolean"
+                  },
+                  "aggiunto": {
+                    "description": "Vero se questa lettura ha aggiunto il mezzo alla copia di una scheda uguale (senza una versione nuova).",
+                    "type": "boolean"
+                  }
+                }
+              }
+            ]
+          },
+          "versione_accorciata": {
+            "oneOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "versione",
+                  "al"
+                ],
+                "properties": {
+                  "versione": {
+                    "type": "integer",
+                    "minimum": 1
+                  },
+                  "al": {
+                    "type": "string",
+                    "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "versioni_tolte": {
+            "type": "array",
+            "items": {
+              "type": "integer",
+              "minimum": 1
+            }
+          },
+          "giornate_prima_della_presa_in_carico": {
+            "oneOf": [
+              {
+                "type": "integer",
+                "minimum": 0
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "cambia": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "cosa",
+                "prima",
+                "dopo",
+                "riservato"
+              ],
+              "properties": {
+                "cosa": {
+                  "type": "string"
+                },
+                "prima": {
+                  "oneOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "dopo": {
+                  "oneOf": [
+                    {
+                      "type": "string"
+                    },
+                    {
+                      "type": "null"
+                    }
+                  ]
+                },
+                "riservato": {
+                  "type": "boolean"
+                }
+              }
+            }
+          },
+          "particolari": {
+            "oneOf": [
+              {
+                "type": "object",
+                "additionalProperties": false,
+                "required": [
+                  "tipo",
+                  "tipo_gruppo",
+                  "da",
+                  "regola",
+                  "disabili",
+                  "pedana_obbligatoria",
+                  "individualizzato",
+                  "assistente_richiesto"
+                ],
+                "properties": {
+                  "tipo": {
+                    "enum": [
+                      "linea",
+                      "scolastico",
+                      "disabili",
+                      "ncc",
+                      "altro"
+                    ]
+                  },
+                  "tipo_gruppo": {
+                    "enum": [
+                      "studenti",
+                      "disabili",
+                      "utenti_linea",
+                      "adulti_autorizzati",
+                      "altro"
+                    ]
+                  },
+                  "da": {
+                    "description": "Da dove viene il tipo: il profilo (nessuna regola scatta) o una sua regola.",
+                    "enum": [
+                      "profilo",
+                      "regola"
+                    ]
+                  },
+                  "regola": {
+                    "description": "Il codice della regola che ha dato il tipo, o null.",
+                    "oneOf": [
+                      {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 64
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "disabili": {
+                    "description": "Il numero dei disabili a bordo scritto sulla scheda, o null (non scritto, o profilo senza la colonna).",
+                    "oneOf": [
+                      {
+                        "type": "integer",
+                        "minimum": 0,
+                        "maximum": 10000
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "pedana_obbligatoria": {
+                    "type": "boolean"
+                  },
+                  "individualizzato": {
+                    "type": "boolean"
+                  },
+                  "assistente_richiesto": {
+                    "type": "boolean"
+                  }
+                }
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      }
+    },
+    "problemi": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "codice",
+          "livello",
+          "messaggio",
+          "riga"
+        ],
+        "properties": {
+          "codice": {
+            "type": "string",
+            "pattern": "^K-CTR-[0-9]{3}$"
+          },
+          "livello": {
+            "enum": [
+              "errore",
+              "avviso"
+            ]
+          },
+          "messaggio": {
+            "type": "string"
+          },
+          "riga": {
+            "oneOf": [
+              {
+                "type": "integer",
+                "minimum": 1
+              },
+              {
+                "type": "null"
+              }
+            ]
+          }
+        }
+      }
+    },
+    "problemi_riservati": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "avvisi": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "codice",
+          "messaggio"
+        ],
+        "properties": {
+          "codice": {
+            "oneOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ]
+          },
+          "messaggio": {
+            "type": "string"
+          }
+        }
+      }
+    },
+    "cassaforte": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "generazione",
+        "voci_registro"
+      ],
+      "properties": {
+        "id": {
+          "type": "string"
+        },
+        "generazione": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "voci_registro": {
+          "type": "integer",
+          "minimum": 0
+        }
+      }
+    }
+  }
+}

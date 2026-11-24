@@ -429,6 +429,12 @@ non ha una password; non protegge da tutto. Detto onestamente:
   **Un profilo solo per committente**: con le regole del tipo basta un profilo per tutte le schede del committente; un profilo a parte "per
   i disabili" dice il tipo con il suo nome o il suo codice (K-CTR-137 lo vede solo se il nome ha una parola degli elenchi): e'
   sconsigliato.
+- **Il mezzo della scheda** (K-026). La targa scritta dal committente e il mezzo riconosciuto sono dati comuni, come la targa in mezzi.json
+  e il mezzo di un turno: nessun dato nuovo da proteggere. **Rischio che resta**: un mezzo con la pedana (o con i posti carrozzina) su una
+  scheda puo' far pensare a un servizio per disabili, come oggi un mezzo con la pedana su un turno; non e' certo (un mezzo con la pedana fa
+  anche i giri scolastici), e il programma non lo nasconde, perche' chi pianifica deve sapere quale mezzo fa il giro. Il testo della cella
+  entra nell'avviso sui nomi liberi (K-018), come il Nr e l'ID: se chi copia scrive un nome di persona invece della targa, K-CTR-136 lo dice.
+  Nel deposito pubblico solo targhe inventate (anche nei mandati e negli esempi).
 - **Le librerie del sistema** (libreria C e C++ del compilatore) non sono nell'elenco dei componenti: le aggiorna il
   sistema operativo.
 

@@ -2173,6 +2173,7 @@ void profili_schede(const JsonDati& d, Package& pk) {
                  {"nuova_modifica", &s.new_or_change}})
             *dove = k.at("schede").at(campo).get<std::string>();
         s.disabled = c.testo(k.at("schede"), "disabili");   // K-024 (versione 3), facoltativo
+        s.vehicle = c.testo(k.at("schede"), "mezzo");       // K-026 (versione 4), facoltativo
         CardProfile::StopColumns& t = x.stop_cols;
         for (const auto& [campo, dove] : std::vector<std::pair<const char*, std::string*>>{
                  {"nr", &t.nr}, {"orario", &t.time}, {"punto", &t.point}, {"casa", &t.home}, {"salgono", &t.boarding},
@@ -2310,6 +2311,25 @@ void schede_servizi(const JsonDati& d, Package& pk) {
                     ck.rule = c.testo(ts, "regola");
                     k.chosen = ck;
                 }
+            }
+            // K-026 (versione 4), dato comune: il mezzo della scheda (il testo scritto, il codice se riconosciuto, le aggiunte delle letture
+            // che l'hanno completato). Manca = non scritto.
+            if (s.contains("mezzo")) {
+                const auto& m = s.at("mezzo");
+                CardVehicle mv;
+                mv.written = m.at("scritto").get<std::string>();
+                if (m.contains("codice")) mv.code = m.at("codice").get<std::string>();
+                for (const auto& a : c.elenco(m, "aggiunte")) {
+                    CardVehicleAddition x;
+                    x.date = c.data(a.at("data"));
+                    x.reference = a.at("riferimento").get<std::string>();
+                    const std::string cosa = a.at("cosa").get<std::string>();
+                    x.text = cosa != "codice";
+                    x.code = cosa != "testo";
+                    if (a.contains("codice_prima")) x.previous_code = a.at("codice_prima").get<std::string>();
+                    mv.additions.push_back(std::move(x));
+                }
+                k.vehicle = std::move(mv);
             }
             y.src = c.src(pv);
             x.versions.push_back(std::move(y));

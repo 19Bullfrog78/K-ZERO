@@ -662,7 +662,7 @@ const Lettura& lettura_schede() {
         // versione 3 (la contiene) e, in piu', il profilo del K-024 (regola del tipo sul calendario e colonna dei disabili) e uno con
         // regole su tutte e quattro le colonne, anche con tipi diversi sulla stessa scheda (si deve fermare).
         JsonDati pr = JsonDati::parse(testo_di(k023 + "profili_schede.json"));
-        pr["schema_versione"] = 3;
+        pr["schema_versione"] = 4;   // K-026: la 4 contiene le altre
         JsonDati p24 = JsonDati::parse(testo_di(k024 + "profili_schede.json")).at("profili").at(0);
         p24["codice"] = "PS-CVA-T";
         JsonDati p4 = p24;
@@ -677,7 +677,24 @@ const Lettura& lettura_schede() {
                                             regola("RT-4", "cadenza", {"Ogni 15 giorni"}, "ncc", "adulti_autorizzati")});
         pr.at("profili").push_back(p24);
         pr.at("profili").push_back(p4);
+        // K-026: un profilo alla versione 4 con la colonna del mezzo (il K-024 con "Mezzo" in fondo, come tests/esempi/k026-schede).
+        JsonDati p26 = p24;
+        p26["codice"] = "PS-CVA-M";
+        p26.at("colonne").at("schede")["mezzo"] = "Mezzo";
+        pr.at("profili").push_back(p26);
         m.file["profili_schede.json"] = pr.dump(2);
+        // K-026: i mezzi del demo con un prestito di BETA-01 all'azienda ALFA del contratto CT-SCU per una parte dell'anno e una targa su due
+        // mezzi (BETA-03 con la targa di ALFA-02), cosi' il riconoscimento passa da tutte le sue strade.
+        JsonDati mz = JsonDati::parse(m.file.at("mezzi.json"));
+        for (JsonDati& x : mz.at("mezzi"))
+            if (x.at("codice") == "BETA-01")
+                x["prestiti"] = JsonDati::array({{{"azienda", "ALFA"}, {"accordo", "prova"}, {"dal", "2026-09-21"}, {"al", "2027-01-31"}}});
+        JsonDati doppio = mz.at("mezzi").at(0);
+        doppio["codice"] = "BETA-03";
+        doppio["azienda"] = "BETA";
+        doppio["targa"] = "AA 102 AA";
+        mz.at("mezzi").push_back(doppio);
+        m.file["mezzi.json"] = mz.dump(2);
         Lettura x = leggi_pacchetto(m);
         if (!x.forma_valida()) guasto("pacchetto di prova delle schede con errori di forma");
         return x;
@@ -773,6 +790,11 @@ void prova_schede_righe(const std::uint8_t* dati, std::size_t n) {
                     if (scatta && (!g.kind || *g.kind != k.chosen->kind)) guasto("due regole con tipi diversi accettate");
                     if (scatta && !k.chosen->from_rule) guasto("regola che scatta ignorata");
                 }
+                // K-026: il mezzo letto ha sempre lettere o cifre (una cella senza e' "non scritto") e non e' ancora riconosciuto (si
+                // riconosce con il registro, che sa il contratto e il periodo).
+                if (k.vehicle && (kzero::plate_key(k.vehicle->written).empty() || k.vehicle->code || !k.vehicle->additions.empty()))
+                    guasto("mezzo letto senza targa o gia' riconosciuto");
+                if (k.vehicle && p.card_cols.vehicle.empty()) guasto("mezzo letto con un profilo senza la colonna");
                 if (coincidenza) {
                     const kzero::CardStop& capo = coincidenza->at_start ? k.stops.front() : k.stops.back();
                     const kzero::Place* y = idx.place(capo.place);
@@ -794,6 +816,26 @@ void prova_schede_righe(const std::uint8_t* dati, std::size_t n) {
                             if (s.code == codice && v.number == numero &&
                                 !kzero::first_active_day(kzero::card_calendar(v.card, "", v.valid), v.valid, idx))
                                 guasto("versione senza giorni scritta");
+                // K-026: un mezzo riconosciuto e' sempre il solo (non ipotetico) con quella targa, dell'azienda ALFA del contratto CT-SCU o
+                // in prestito a lei; un mezzo solo con quella targa e dell'azienda e' sempre riconosciuto. Mai un mezzo aggiunto alla prima
+                // lettura (il registro di prova e' vuoto).
+                if (!m.completed.empty()) guasto("mezzo aggiunto senza registro");
+                for (const kzero::CardOutcome& o : m.outcomes) {
+                    if (o.kind != kzero::CardOutcome::Kind::New && o.kind != kzero::CardOutcome::Kind::NewVersion) continue;
+                    if (!o.vehicle) continue;
+                    const std::string chiave = kzero::plate_key(o.vehicle->written);
+                    std::vector<const kzero::Vehicle*> stessa;
+                    for (const kzero::Vehicle& v : l.pacchetto.vehicles)
+                        if (!v.hypothetical && kzero::plate_key(v.plate) == chiave) stessa.push_back(&v);
+                    if (o.vehicle->code) {
+                        const kzero::Vehicle* v = idx.vehicle(*o.vehicle->code);
+                        if (!v || v->hypothetical || stessa.size() != 1 || stessa.front() != v) guasto("mezzo riconosciuto che non e' il solo con quella targa");
+                        const bool in_prestito = std::any_of(v->loans.begin(), v->loans.end(), [](const kzero::Loan& x) { return x.company.code == "ALFA"; });
+                        if (v->company.code != "ALFA" && !in_prestito) guasto("mezzo di un'altra azienda senza prestito riconosciuto");
+                    } else if (stessa.size() == 1 && stessa.front()->company.code == "ALFA") {
+                        guasto("mezzo dell'azienda del contratto non riconosciuto");
+                    }
+                }
                 if (scelta == kzero::DateChoice::Kind::None)
                     for (const kzero::CardOutcome& o : m.outcomes)
                         if ((o.kind == kzero::CardOutcome::Kind::New || o.kind == kzero::CardOutcome::Kind::NewVersion) && o.from != kzero::ChoiceFrom::None)
@@ -821,6 +863,8 @@ void prova_schede_righe(const std::uint8_t* dati, std::size_t n) {
                             uguali.insert(m2.outcomes[i].nr);
                         }
                         if (!m2.added.empty() || !m2.removed.empty() || !m2.cuts.empty()) guasto("rilettura che scrive qualcosa");
+                        // K-026 (D1): con lo stesso pacchetto la rilettura non aggiunge mai il mezzo alla copia.
+                        if (!m2.completed.empty()) guasto("rilettura che aggiunge il mezzo con lo stesso pacchetto");
                         for (const kzero::Problem& x : m2.problems)
                             for (const kzero::Param& q : x.params)
                                 if (q.name == "scheda" && q.kind == kzero::Param::Kind::Text && uguali.count(q.text))
@@ -860,6 +904,18 @@ void scrivi_semi_schede(const std::string& cartella) {
     std::ofstream(fs::path(cartella) / "schede-righe" / "seme-k025", std::ios::binary)
         << testo_di(k025 + "schede.tsv") << "@@\n" << testo_di(k025 + "fermate.tsv") << "@@\n" << testo_di(k025 + "date.tsv") << "@@\n"
         << testo_di(k025 + "interruzioni.tsv");
+    // K-026: le tre schede del mezzo della scheda (la colonna "Mezzo"), e le stesse con le targhe scritte in altri modi: un mezzo dell'altra
+    // azienda in prestito per una parte dell'anno, una targa su due mezzi, la targa con la descrizione.
+    const std::string k026 = std::string(KZERO_SORGENTI) + "/tests/esempi/k026-schede/";
+    const std::string resto = "@@\n" + testo_di(k026 + "fermate.tsv") + "@@\n" + testo_di(k026 + "date.tsv") + "@@\n" + testo_di(k026 + "interruzioni.tsv");
+    std::ofstream(fs::path(cartella) / "schede-righe" / "seme-k026", std::ios::binary) << testo_di(k026 + "schede.tsv") << resto;
+    std::string targhe = testo_di(k026 + "schede.tsv");
+    for (const auto& [da, a] : {std::make_pair(std::string("AA 101-AA"), std::string("bb.201.bb")),
+                                std::make_pair(std::string("ZZ 999 ZZ"), std::string("AA 102 AA"))})
+        targhe.replace(targhe.find(da), da.size(), a);
+    const std::string vuota = "Scheda nuova\t\t\n";
+    if (targhe.find(vuota) != std::string::npos) targhe.replace(targhe.find(vuota), vuota.size(), "Scheda nuova\t\tAA 103 AA - MARCA 00\n");
+    std::ofstream(fs::path(cartella) / "schede-righe" / "seme-k026-targhe", std::ios::binary) << targhe << resto;
 }
 
 int prova_semi_schede() {
@@ -899,6 +955,14 @@ int prova_semi_schede() {
     if (s.cards.size() != 4 || s.cards[0].fault || s.cards[1].fault || s.cards[2].fault || s.cards[3].fault || !s.cards[1].card.chosen ||
         !s.cards[1].card.chosen->from_rule || s.cards[0].card.chosen->from_rule)
         guasto("il seme delle schede del K-024 non si legge come atteso");
+    // K-026: le tre schede si leggono con il profilo con la colonna del mezzo; la prima ha la targa, la terza la cella vuota.
+    const std::string k026 = std::string(KZERO_SORGENTI) + "/tests/esempi/k026-schede/";
+    const kzero::CardsRead w = kzero::read_cards(tabelle_da_testo(testo_di(k026 + "schede.tsv") + "@@\n" + testo_di(k026 + "fermate.tsv") + "@@\n" +
+                                                                  testo_di(k026 + "date.tsv") + "@@\n" + testo_di(k026 + "interruzioni.tsv")),
+                                                 *idx.card_profile("PS-CVA-M"), idx, false);
+    if (w.cards.size() != 3 || w.cards[0].fault || w.cards[1].fault || w.cards[2].fault || !w.cards[0].card.vehicle ||
+        w.cards[0].card.vehicle->written != "AA 101-AA" || w.cards[2].card.vehicle)
+        guasto("il seme delle schede del K-026 non si legge come atteso");
     return n;
 }
 

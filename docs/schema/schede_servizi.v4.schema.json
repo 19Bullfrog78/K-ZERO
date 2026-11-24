@@ -1,0 +1,577 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "K-Zero - file di dati schede_servizi.json, versione 4",
+  "description": "Registro delle schede dei servizi del committente lette con kzero leggi-schede (K-021): per ogni scheda (ID) le versioni, ognuna con la copia della scheda letta, da quando a quando vale, la presa in carico, il riferimento, come e' stata scelta la data e gli elementi del pacchetto fatti dalla scheda (servizio, gruppo, corsa, calendario). Dati comuni, tranne le caselle 'individualizzato' e 'attrezzato' (particolari). Dalla versione 2 (K-023) la copia della scheda ha anche le interruzioni (periodi dal/al in cui il servizio non si fa). Dalla versione 3 (K-024) la copia della scheda ha anche, tra i dati particolari, il tipo scelto (dal profilo o da una sua regola, con il codice della regola) e il numero dei disabili a bordo, se la scheda lo scrive. Dalla versione 4 (K-026) la copia della scheda ha anche il mezzo della scheda (dato comune): la targa scritta, il codice del mezzo riconosciuto (tra quelli dell'azienda del contratto e quelli in prestito a lei) e le letture che l'hanno aggiunto a una scheda uguale.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "schema_versione",
+    "schede"
+  ],
+  "properties": {
+    "schema": {
+      "const": "schede_servizi",
+      "x-kzero-classe": "comune"
+    },
+    "schema_versione": {
+      "const": 4,
+      "x-kzero-classe": "comune"
+    },
+    "schede": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "codice",
+          "id",
+          "committente",
+          "profilo",
+          "contratto",
+          "versioni"
+        ],
+        "properties": {
+          "codice": {
+            "$ref": "#/definitions/codice",
+            "description": "Codice K-Zero della scheda, dato dal programma dal Nr della prima versione.",
+            "x-kzero-classe": "comune"
+          },
+          "id": {
+            "$ref": "#/definitions/testo",
+            "description": "L'ID della scheda del committente (es. un uuid): due schede con ID diversi non si uniscono mai.",
+            "x-kzero-classe": "comune"
+          },
+          "committente": {
+            "$ref": "#/definitions/codice",
+            "x-kzero-classe": "comune"
+          },
+          "profilo": {
+            "$ref": "#/definitions/codice",
+            "description": "Il profilo dell'ultima lettura (profili_schede.json).",
+            "x-kzero-classe": "comune"
+          },
+          "contratto": {
+            "$ref": "#/definitions/codice",
+            "x-kzero-classe": "comune"
+          },
+          "versioni": {
+            "description": "Le versioni, in ordine: ognuna vale dal suo 'dal' al suo 'al'; i giorni prima della data scelta non cambiano mai.",
+            "type": "array",
+            "minItems": 1,
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "x-kzero-chiave": [
+                "numero"
+              ],
+              "required": [
+                "numero",
+                "dal",
+                "al",
+                "presa_in_carico",
+                "riferimento",
+                "scelta",
+                "elementi",
+                "scheda"
+              ],
+              "properties": {
+                "numero": {
+                  "type": "integer",
+                  "minimum": 1,
+                  "maximum": 100000
+                },
+                "dal": {
+                  "$ref": "#/definitions/data",
+                  "description": "Primo giorno in cui la versione vale in K-Zero (la data scelta)."
+                },
+                "al": {
+                  "$ref": "#/definitions/data",
+                  "description": "Ultimo giorno: la disattivazione, o il giorno prima della versione dopo."
+                },
+                "al_prima": {
+                  "$ref": "#/definitions/data",
+                  "description": "Se questa versione ha accorciato quella di prima: la fine che aveva (per togli-scheda)."
+                },
+                "tolte": {
+                  "description": "Numeri delle versioni che questa ha tolto (cominciavano dalla sua data in poi).",
+                  "type": "array",
+                  "minItems": 0,
+                  "uniqueItems": true,
+                  "items": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "maximum": 100000
+                  }
+                },
+                "presa_in_carico": {
+                  "$ref": "#/definitions/data",
+                  "description": "La data della presa in carico (--data), scritta dall'utente."
+                },
+                "riferimento": {
+                  "$ref": "#/definitions/testo",
+                  "description": "Il riferimento (es. la mail del committente)."
+                },
+                "scelta": {
+                  "description": "Come e' stata scelta la data da cui vale.",
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "modo",
+                    "da"
+                  ],
+                  "properties": {
+                    "modo": {
+                      "enum": [
+                        "attivazione",
+                        "presa_in_carico",
+                        "data"
+                      ]
+                    },
+                    "da": {
+                      "description": "nessuna = l'attivazione non era prima della presa in carico (nessuna scelta serviva); file = --validita; scheda = --validita-scheda.",
+                      "enum": [
+                        "nessuna",
+                        "file",
+                        "scheda"
+                      ]
+                    }
+                  }
+                },
+                "elementi": {
+                  "description": "Gli elementi del pacchetto fatti da questa versione.",
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "servizio",
+                    "gruppo",
+                    "corsa",
+                    "calendario"
+                  ],
+                  "properties": {
+                    "servizio": {
+                      "$ref": "#/definitions/codice"
+                    },
+                    "gruppo": {
+                      "$ref": "#/definitions/codice"
+                    },
+                    "corsa": {
+                      "$ref": "#/definitions/codice"
+                    },
+                    "calendario": {
+                      "$ref": "#/definitions/codice"
+                    }
+                  }
+                },
+                "scheda": {
+                  "description": "La copia della scheda come e' stata letta (con i luoghi trovati).",
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "nr",
+                    "servizio",
+                    "verso",
+                    "scuole",
+                    "attivazione",
+                    "disattivazione",
+                    "giorni",
+                    "totali_alunni",
+                    "tot_giorni",
+                    "tot_km_carico",
+                    "tot_km_vuoto",
+                    "calendario",
+                    "calendario_base",
+                    "cadenza",
+                    "forma_cadenza",
+                    "nuova_modifica",
+                    "fermate"
+                  ],
+                  "properties": {
+                    "nr": {
+                      "$ref": "#/definitions/testo",
+                      "description": "Il Nr della scheda come sul file (es. '4000123 / 3')."
+                    },
+                    "servizio": {
+                      "$ref": "#/definitions/testo",
+                      "description": "Il testo di verso e momento, come nel profilo (es. 'Andata Mattino')."
+                    },
+                    "verso": {
+                      "enum": [
+                        "andata",
+                        "ritorno"
+                      ]
+                    },
+                    "scuole": {
+                      "description": "Le scuole della scheda (scuole.json).",
+                      "type": "array",
+                      "minItems": 1,
+                      "uniqueItems": true,
+                      "items": {
+                        "$ref": "#/definitions/codice"
+                      }
+                    },
+                    "attivazione": {
+                      "$ref": "#/definitions/data"
+                    },
+                    "disattivazione": {
+                      "$ref": "#/definitions/data"
+                    },
+                    "giorni": {
+                      "description": "I giorni segnati.",
+                      "type": "array",
+                      "minItems": 0,
+                      "uniqueItems": true,
+                      "items": {
+                        "enum": [
+                          "lunedi",
+                          "martedi",
+                          "mercoledi",
+                          "giovedi",
+                          "venerdi",
+                          "sabato",
+                          "domenica"
+                        ]
+                      }
+                    },
+                    "totali_alunni": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 10000
+                    },
+                    "individualizzato": {
+                      "description": "La casella 'Servizio Individualizzato' (servizio fatto per un solo utente): dato particolare.",
+                      "type": "boolean",
+                      "x-kzero-classe": "particolare"
+                    },
+                    "attrezzato": {
+                      "description": "La casella 'Attrezzato' (serve il mezzo con la pedana): dato particolare, come la pedana obbligatoria del servizio.",
+                      "type": "boolean",
+                      "x-kzero-classe": "particolare"
+                    },
+                    "disabili": {
+                      "description": "Versione 3 (K-024): il numero dei disabili a bordo, se la scheda lo scrive (la colonna dei disabili del profilo; manca = non scritto, mai 0). Dato particolare.",
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 10000,
+                      "x-kzero-classe": "particolare"
+                    },
+                    "tipo": {
+                      "description": "Versione 3 (K-024): il tipo scelto per la scheda, quello che la versione ha dato al servizio e al gruppo: dal profilo ('profilo') o da una sua regola ('regola', con il codice). Dato particolare: dice il tipo del servizio.",
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "tipo",
+                        "tipo_gruppo",
+                        "da"
+                      ],
+                      "properties": {
+                        "tipo": {
+                          "description": "Il tipo del servizio fatto dalla versione.",
+                          "enum": [
+                            "linea",
+                            "scolastico",
+                            "disabili",
+                            "ncc",
+                            "altro"
+                          ]
+                        },
+                        "tipo_descrizione": {
+                          "$ref": "#/definitions/testo",
+                          "description": "Con il tipo 'altro'."
+                        },
+                        "tipo_gruppo": {
+                          "description": "Il tipo del gruppo dei passeggeri fatto dalla versione.",
+                          "enum": [
+                            "studenti",
+                            "disabili",
+                            "utenti_linea",
+                            "adulti_autorizzati",
+                            "altro"
+                          ]
+                        },
+                        "tipo_gruppo_descrizione": {
+                          "$ref": "#/definitions/testo",
+                          "description": "Con il tipo del gruppo 'altro'."
+                        },
+                        "da": {
+                          "enum": [
+                            "profilo",
+                            "regola"
+                          ]
+                        },
+                        "regola": {
+                          "$ref": "#/definitions/codice",
+                          "description": "Con 'regola': il codice della regola del profilo."
+                        }
+                      },
+                      "x-kzero-classe": "particolare"
+                    },
+                    "mezzo": {
+                      "description": "Versione 4 (K-026): il mezzo della scheda, come lo scrive il committente (la targa). Manca = non scritto (cella vuota, profilo senza la colonna, versione scritta prima del K-026). Non e' il mezzo del turno.",
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "scritto"
+                      ],
+                      "properties": {
+                        "scritto": {
+                          "$ref": "#/definitions/testo",
+                          "description": "La cella come sul file (la targa, con i suoi spazi e trattini). Due versioni si confrontano con il testo senza spazi, trattini e maiuscole."
+                        },
+                        "codice": {
+                          "$ref": "#/definitions/codice",
+                          "description": "Il mezzo riconosciuto dalla targa (mezzi.json): dell'azienda del contratto o di un'altra azienda in prestito a lei nei giorni di servizio della versione. Manca = non riconosciuto (nessun mezzo, un mezzo di un'altra azienda senza prestito, o la targa su piu' mezzi)."
+                        },
+                        "aggiunte": {
+                          "description": "Le letture che hanno completato il mezzo di questa copia (scheda uguale all'ultima versione: la copia non aveva il testo, o non aveva un mezzo riconosciuto, e il file lo dava). Mai un testo diverso: quello e' una versione nuova.",
+                          "type": "array",
+                          "minItems": 1,
+                          "items": {
+                            "type": "object",
+                            "additionalProperties": false,
+                            "required": [
+                              "data",
+                              "riferimento",
+                              "cosa"
+                            ],
+                            "properties": {
+                              "data": {
+                                "$ref": "#/definitions/data",
+                                "description": "La presa in carico (--data) della lettura."
+                              },
+                              "riferimento": {
+                                "$ref": "#/definitions/testo",
+                                "description": "Il --riferimento della lettura."
+                              },
+                              "cosa": {
+                                "description": "Cosa ha aggiunto: il testo scritto (la copia non lo aveva), il codice del mezzo riconosciuto, o tutti e due.",
+                                "enum": [
+                                  "testo",
+                                  "codice",
+                                  "testo_e_codice"
+                                ]
+                              },
+                              "codice_prima": {
+                                "$ref": "#/definitions/codice",
+                                "description": "Il codice che c'era, di un mezzo che non era piu' nel pacchetto."
+                              }
+                            }
+                          }
+                        }
+                      },
+                      "x-kzero-classe": "comune"
+                    },
+                    "tot_giorni": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 3660
+                    },
+                    "tot_km_carico": {
+                      "$ref": "#/definitions/km"
+                    },
+                    "tot_km_vuoto": {
+                      "$ref": "#/definitions/km"
+                    },
+                    "calendario": {
+                      "$ref": "#/definitions/testo",
+                      "description": "La parola del calendario (es. SCOLASTICO), normalizzata come i codici esterni."
+                    },
+                    "calendario_base": {
+                      "$ref": "#/definitions/codice",
+                      "description": "Il calendario del pacchetto con quel codice esterno."
+                    },
+                    "cadenza": {
+                      "$ref": "#/definitions/testo",
+                      "description": "La cadenza, come nel profilo."
+                    },
+                    "forma_cadenza": {
+                      "enum": [
+                        "giorni_segnati",
+                        "date_elencate"
+                      ]
+                    },
+                    "nuova_modifica": {
+                      "enum": [
+                        "nuova",
+                        "modifica"
+                      ]
+                    },
+                    "fermate": {
+                      "description": "Le righe della scheda, nell'ordine.",
+                      "type": "array",
+                      "minItems": 1,
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "orario",
+                          "luogo",
+                          "riconosciuto",
+                          "salgono",
+                          "scendono"
+                        ],
+                        "properties": {
+                          "orario": {
+                            "$ref": "#/definitions/orario"
+                          },
+                          "luogo": {
+                            "$ref": "#/definitions/codice",
+                            "description": "Il luogo: una scuola (il suo luogo), un luogo pubblico o una casa porta a porta (codice del luogo privato)."
+                          },
+                          "riconosciuto": {
+                            "description": "Come e' stato trovato il punto di raccolta: la scuola (codice esterno della scuola), il codice esterno del luogo, il nome o un nome alternativo, oppure il codice di una casa (colonna della casa).",
+                            "enum": [
+                              "scuola",
+                              "codice_esterno",
+                              "nome",
+                              "casa"
+                            ]
+                          },
+                          "salgono": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 10000
+                          },
+                          "scendono": {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 10000
+                          },
+                          "km_pieni": {
+                            "$ref": "#/definitions/km",
+                            "description": "Km a pieno scritti su questa riga: coprono il tratto dalla riga prima che ha dei km (una cella vuota = non scritto, mai 0)."
+                          },
+                          "km_vuoti": {
+                            "$ref": "#/definitions/km",
+                            "description": "Km a vuoto scritti su questa riga, come sopra."
+                          },
+                          "accompagnatore": {
+                            "description": "L'accompagnatore sale o scende qui (compreso nei numeri della riga, come sulla scheda).",
+                            "enum": [
+                              "sale",
+                              "scende"
+                            ]
+                          }
+                        }
+                      }
+                    },
+                    "date": {
+                      "description": "Con la cadenza a date elencate: le date una per una.",
+                      "type": "array",
+                      "minItems": 0,
+                      "uniqueItems": true,
+                      "items": {
+                        "$ref": "#/definitions/data"
+                      }
+                    },
+                    "interruzioni": {
+                      "description": "Versione 2: le interruzioni della scheda, in ordine: periodi (primo e ultimo giorno compresi) in cui il servizio non si fa. Nel calendario della versione sono sospensioni, tagliate al periodo in cui la versione vale.",
+                      "type": "array",
+                      "minItems": 1,
+                      "items": {
+                        "type": "object",
+                        "additionalProperties": false,
+                        "required": [
+                          "dal",
+                          "al"
+                        ],
+                        "properties": {
+                          "dal": {
+                            "$ref": "#/definitions/data"
+                          },
+                          "al": {
+                            "$ref": "#/definitions/data"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      },
+      "x-kzero-classe": "comune"
+    },
+    "tolte": {
+      "description": "Le versioni tolte con kzero togli-scheda (schede scritte per errore): restano scritte qui con il riferimento e la data, e i loro numeri non si danno piu'.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "scheda",
+          "id",
+          "versioni",
+          "riferimento",
+          "data"
+        ],
+        "properties": {
+          "scheda": {
+            "$ref": "#/definitions/codice"
+          },
+          "id": {
+            "$ref": "#/definitions/testo"
+          },
+          "versioni": {
+            "description": "Le versioni tolte.",
+            "type": "array",
+            "minItems": 1,
+            "uniqueItems": true,
+            "items": {
+              "type": "integer",
+              "minimum": 1,
+              "maximum": 100000
+            }
+          },
+          "riferimento": {
+            "$ref": "#/definitions/testo"
+          },
+          "data": {
+            "$ref": "#/definitions/data",
+            "description": "Scritta dall'utente."
+          }
+        }
+      },
+      "x-kzero-classe": "comune"
+    }
+  },
+  "definitions": {
+    "codice": {
+      "description": "Codice K-Zero: scelto da chi scrive i dati, unico per tipo di elemento. Lettere senza accenti, cifre, '-', '_' e '.'; inizia con una lettera o una cifra; al massimo 64 caratteri.",
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+    },
+    "testo": {
+      "description": "Testo di una riga, non vuoto (al massimo 300 caratteri).",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 300,
+      "pattern": "\\S"
+    },
+    "parola": {
+      "description": "Una parola o un titolo del file del committente, come lo scrive lui (titolo di colonna, sigla, parola dello stato): si confronta senza maiuscole, accenti, punteggiatura e spazi doppi. Non e' un testo libero sulle persone: non entra nell'avviso sui nomi liberi (K-018).",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100,
+      "pattern": "\\S"
+    },
+    "data": {
+      "description": "Data AAAA-MM-GG che esiste nel calendario (es. 2026-09-14; il 29 febbraio solo negli anni bisestili).",
+      "type": "string",
+      "pattern": "^([0-9]{4}-((0[13578]|1[02])-(0[1-9]|[12][0-9]|3[01])|(0[469]|11)-(0[1-9]|[12][0-9]|30)|02-(0[1-9]|1[0-9]|2[0-8]))|([0-9]{2}(0[48]|[2468][048]|[13579][26])|([02468][048]|[13579][26])00)-02-29)$"
+    },
+    "orario": {
+      "description": "Orario HH:MM, ora locale del fuso del pacchetto. Dopo mezzanotte si continua a contare come in GTFS: 24:15 = 00:15 del giorno dopo; al massimo 47:59.",
+      "type": "string",
+      "pattern": "^([0-3][0-9]|4[0-7]):[0-5][0-9]$"
+    },
+    "km": {
+      "description": "Km, come li scrive il committente (al massimo 10.000).",
+      "type": "number",
+      "minimum": 0,
+      "maximum": 10000
+    }
+  }
+}
