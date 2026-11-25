@@ -97,7 +97,7 @@ Si parte da ALP (3 minibus + 1 auto) e si deve poter crescere fino a 500 mezzi e
   chiuso> --dal AAAA-MM-GG [--utente-elenco U-000001] [--tratta SIGLA] [--tutti] --utente CODICE` (legge soltanto: candidati e righe pronte);
   `./build/kzero conferma-punti <pacchetto chiuso> --dal AAAA-MM-GG` (le righe pronte sull'ingresso standard, dopo la password) e
   `./build/kzero assegna-punto <pacchetto chiuso> --utente-elenco U-000001 --tratta SIGLA --dal AAAA-MM-GG` (righe `punto: <scheda> / <luogo>
-  [/ <volta>] [/ <giorni>]`, `consenso: ...` o `nessuno`), `./build/kzero non-viaggia ... --utente-elenco U-000001 --dal AAAA-MM-GG [--al
+  [/ <volta>] [/ <giorni>]`, `consenso: ...` o `nessuno`), `./build/kzero non-frequenta ... --utente-elenco U-000001 --dal AAAA-MM-GG [--al
   ...] [--tratta SIGLA] [--fino-al ... | --togli]` (`motivo: ...`, `nota: ...`), sempre con `--riferimento "..." --data AAAA-MM-GG --utente
   CODICE [--scrivi <pacchetto chiuso>]`; `kzero sblocco` anche con `--giorni lunedi,mercoledi`, `--dal`, `--al`, `--fino-al` e `--a-voce`
   (`chi: ...` sull'ingresso); `./build/kzero confronta-schede <cartella> [--scheda CODICE-o-ID] [--dal ... --al ...]` (il confronto, che fa
