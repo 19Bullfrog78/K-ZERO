@@ -1,0 +1,923 @@
+{
+  "elenchi": [
+    {
+      "anno_scolastico": "2026-2027",
+      "committente": "CVA",
+      "profilo": "PR-CVA",
+      "ultima_lettura": {
+        "elenco": "completo",
+        "impronta": "bab2556d1b5366ce2044b29d80d4b9ff851d2fbd27bd548992c3bdc13ad1726b"
+      },
+      "utenti": [
+        {
+          "casa": {
+            "civico": "8/A",
+            "comune": "Lagobello",
+            "via": "via del Lago"
+          },
+          "classe": 1,
+          "codice": "U-000001",
+          "nome": "ROSSI ANNA",
+          "orari": [
+            {
+              "al": "2027-08-31",
+              "colonna": "ORARI MATTINA",
+              "dal": "2026-09-01",
+              "giorno": "lunedi",
+              "ora": "08:00",
+              "tratta": "AM"
+            },
+            {
+              "al": "2027-08-31",
+              "colonna": "ORARI MATTINA",
+              "dal": "2026-09-01",
+              "giorno": "martedi",
+              "ora": "08:00",
+              "tratta": "AM"
+            },
+            {
+              "al": "2027-08-31",
+              "colonna": "ORARI MATTINA",
+              "dal": "2026-09-01",
+              "giorno": "mercoledi",
+              "ora": "08:00",
+              "tratta": "AM"
+            },
+            {
+              "al": "2027-08-31",
+              "colonna": "ORARI MATTINA",
+              "dal": "2026-09-01",
+              "giorno": "giovedi",
+              "ora": "08:00",
+              "tratta": "AM"
+            },
+            {
+              "al": "2027-08-31",
+              "colonna": "ORARI MATTINA",
+              "dal": "2026-09-01",
+              "giorno": "venerdi",
+              "ora": "08:00",
+              "tratta": "AM"
+            }
+          ],
+          "punti": [
+            {
+              "storia": [
+                {
+                  "dal": "2026-09-21",
+                  "data": "2026-09-15",
+                  "origine": "a_mano",
+                  "regole": [
+                    {
+                      "luogo": "F-LAGOBELLO",
+                      "scheda": "7d2a9c10-27aa-4b1e-9c00-000000000901",
+                      "versione": 1,
+                      "volta": 1
+                    }
+                  ],
+                  "riferimento": "mail della scuola del 15/9"
+                }
+              ],
+              "tratta": "AM"
+            }
+          ],
+          "scuola": "SC-INFANZIA",
+          "stato": {
+            "tipo": "attivo"
+          },
+          "tratte": [
+            {
+              "azienda": "ALFA",
+              "sigla": "AM"
+            }
+          ]
+        },
+        {
+          "casa": {
+            "civico": "3",
+            "comune": "Pradello",
+            "via": "via Roma"
+          },
+          "classe": 2,
+          "codice": "U-000002",
+          "fermata": {
+            "luogo": "F-PRADELLO",
+            "riconosciuta": "codice_esterno"
+          },
+          "nome": "BIANCHI SOFIA",
+          "orari": [
+            {
+              "al": "2027-08-31",
+              "colonna": "ORARI MATTINA",
+              "dal": "2026-09-01",
+              "giorno": "lunedi",
+              "ora": "08:00",
+              "tratta": "AM"
+            },
+            {
+              "al": "2027-08-31",
+              "colonna": "ORARI MATTINA",
+              "dal": "2026-09-01",
+              "giorno": "martedi",
+              "ora": "08:00",
+              "tratta": "AM"
+            },
+            {
+              "al": "2027-08-31",
+              "colonna": "ORARI MATTINA",
+              "dal": "2026-09-01",
+              "giorno": "mercoledi",
+              "ora": "08:00",
+              "tratta": "AM"
+            },
+            {
+              "al": "2027-08-31",
+              "colonna": "ORARI MATTINA",
+              "dal": "2026-09-01",
+              "giorno": "giovedi",
+              "ora": "08:00",
+              "tratta": "AM"
+            },
+            {
+              "al": "2027-08-31",
+              "colonna": "ORARI MATTINA",
+              "dal": "2026-09-01",
+              "giorno": "venerdi",
+              "ora": "08:00",
+              "tratta": "AM"
+            }
+          ],
+          "punti": [
+            {
+              "storia": [
+                {
+                  "dal": "2026-09-21",
+                  "data": "2026-09-10",
+                  "fonte": "fermata_indicata",
+                  "origine": "proposta",
+                  "regole": [
+                    {
+                      "luogo": "F-PRADELLO",
+                      "scheda": "7d2a9c10-27aa-4b1e-9c00-000000000901",
+                      "versione": 1,
+                      "volta": 1
+                    }
+                  ],
+                  "riferimento": "elenco di settembre"
+                }
+              ],
+              "tratta": "AM"
+            }
+          ],
+          "scuola": "SC-INFANZIA",
+          "stato": {
+            "tipo": "attivo"
+          },
+          "tratte": [
+            {
+              "azienda": "ALFA",
+              "sigla": "AM"
+            }
+          ]
+        },
+        {
+          "casa": {
+            "civico": "5",
+            "comune": "Castelrovo",
+            "via": "via Alta"
+          },
+          "classe": 3,
+          "codice": "U-000003",
+          "nome": "VERDI LUCA",
+          "orari": [
+            {
+              "al": "2027-08-31",
+              "colonna": "ORARI MATTINA",
+              "dal": "2026-09-01",
+              "giorno": "lunedi",
+              "ora": "08:05",
+              "tratta": "AM"
+            },
+            {
+              "al": "2027-08-31",
+              "colonna": "ORARI MATTINA",
+              "dal": "2026-09-01",
+              "giorno": "martedi",
+              "ora": "08:05",
+              "tratta": "AM"
+            },
+            {
+              "al": "2027-08-31",
+              "colonna": "ORARI MATTINA",
+              "dal": "2026-09-01",
+              "giorno": "mercoledi",
+              "ora": "08:05",
+              "tratta": "AM"
+            },
+            {
+              "al": "2027-08-31",
+              "colonna": "ORARI MATTINA",
+              "dal": "2026-09-01",
+              "giorno": "giovedi",
+              "ora": "08:05",
+              "tratta": "AM"
+            },
+            {
+              "al": "2027-08-31",
+              "colonna": "ORARI MATTINA",
+              "dal": "2026-09-01",
+              "giorno": "venerdi",
+              "ora": "08:05",
+              "tratta": "AM"
+            },
+            {
+              "al": "2027-08-31",
+              "colonna": "ORARI POMERIGGIO",
+              "dal": "2026-09-01",
+              "giorno": "mercoledi",
+              "ora": "16:00",
+              "periodo": "o",
+              "tratta": "RP"
+            }
+          ],
+          "punti": [
+            {
+              "storia": [
+                {
+                  "dal": "2026-09-14",
+                  "data": "2026-09-12",
+                  "origine": "a_mano",
+                  "regole": [
+                    {
+                      "luogo": "F-CASTELROVO",
+                      "scheda": "7d2a9c10-27aa-4b1e-9c00-000000000903",
+                      "versione": 1,
+                      "volta": 1
+                    }
+                  ],
+                  "riferimento": "mail del committente del 12/9"
+                }
+              ],
+              "tratta": "AM"
+            },
+            {
+              "storia": [
+                {
+                  "dal": "2026-09-14",
+                  "data": "2026-09-12",
+                  "origine": "a_mano",
+                  "regole": [
+                    {
+                      "luogo": "F-CASTELROVO",
+                      "scheda": "7d2a9c10-27aa-4b1e-9c00-000000000902",
+                      "versione": 1,
+                      "volta": 1
+                    }
+                  ],
+                  "riferimento": "mail del committente del 12/9"
+                }
+              ],
+              "tratta": "RP"
+            }
+          ],
+          "sblocchi": [
+            {
+              "data": "2026-09-12",
+              "giorni": [
+                "mercoledi"
+              ],
+              "riferimento": "mail del committente del 12/9",
+              "tratta": "AM"
+            },
+            {
+              "a_voce": true,
+              "chi": "ufficio trasporti del committente",
+              "data": "2026-09-12",
+              "giorni": [
+                "mercoledi"
+              ],
+              "riferimento": "telefonata del 12/9",
+              "tratta": "RP"
+            }
+          ],
+          "scuola": "SC-PRIM",
+          "sezione": "A",
+          "stato": {
+            "tipo": "sospeso"
+          },
+          "tratte": [
+            {
+              "azienda": "ALFA",
+              "sigla": "AM"
+            },
+            {
+              "azienda": "ALFA",
+              "sigla": "RP"
+            }
+          ]
+        },
+        {
+          "casa": {
+            "civico": "7",
+            "comune": "Pradello",
+            "via": "via Roma"
+          },
+          "classe": 4,
+          "codice": "U-000004",
+          "fermata": {
+            "luogo": "F-PRADELLO",
+            "riconosciuta": "codice_esterno"
+          },
+          "nome": "NERI MARCO",
+          "non_viaggia": [
+            {
+              "dal": "2026-11-02",
+              "data": "2026-10-30",
+              "motivo": "ritirato",
+              "nota": "la famiglia lo accompagna",
+              "riferimento": "telefonata della famiglia del 30/10"
+            }
+          ],
+          "orari": [
+            {
+              "al": "2027-08-31",
+              "colonna": "ORARI MATTINA",
+              "dal": "2026-09-01",
+              "giorno": "lunedi",
+              "ora": "08:05",
+              "tratta": "AM"
+            },
+            {
+              "al": "2027-08-31",
+              "colonna": "ORARI MATTINA",
+              "dal": "2026-09-01",
+              "giorno": "martedi",
+              "ora": "08:05",
+              "tratta": "AM"
+            },
+            {
+              "al": "2027-08-31",
+              "colonna": "ORARI MATTINA",
+              "dal": "2026-09-01",
+              "giorno": "mercoledi",
+              "ora": "08:05",
+              "tratta": "AM"
+            },
+            {
+              "al": "2027-08-31",
+              "colonna": "ORARI MATTINA",
+              "dal": "2026-09-01",
+              "giorno": "giovedi",
+              "ora": "08:05",
+              "tratta": "AM"
+            },
+            {
+              "al": "2027-08-31",
+              "colonna": "ORARI MATTINA",
+              "dal": "2026-09-01",
+              "giorno": "venerdi",
+              "ora": "08:05",
+              "tratta": "AM"
+            },
+            {
+              "al": "2027-08-31",
+              "colonna": "ORARI MATTINA",
+              "dal": "2026-09-01",
+              "giorno": "lunedi",
+              "ora": "12:35",
+              "tratta": "RM"
+            },
+            {
+              "al": "2027-08-31",
+              "colonna": "ORARI MATTINA",
+              "dal": "2026-09-01",
+              "giorno": "martedi",
+              "ora": "12:35",
+              "tratta": "RM"
+            },
+            {
+              "al": "2027-08-31",
+              "colonna": "ORARI MATTINA",
+              "dal": "2026-09-01",
+              "giorno": "mercoledi",
+              "ora": "12:35",
+              "tratta": "RM"
+            },
+            {
+              "al": "2027-08-31",
+              "colonna": "ORARI MATTINA",
+              "dal": "2026-09-01",
+              "giorno": "giovedi",
+              "ora": "12:35",
+              "tratta": "RM"
+            },
+            {
+              "al": "2027-08-31",
+              "colonna": "ORARI MATTINA",
+              "dal": "2026-09-01",
+              "giorno": "venerdi",
+              "ora": "12:35",
+              "tratta": "RM"
+            }
+          ],
+          "punti": [
+            {
+              "storia": [
+                {
+                  "dal": "2026-09-14",
+                  "data": "2026-09-10",
+                  "fonte": "fermata_indicata",
+                  "origine": "proposta",
+                  "regole": [
+                    {
+                      "luogo": "F-PRADELLO",
+                      "scheda": "7d2a9c10-27aa-4b1e-9c00-000000000903",
+                      "versione": 1,
+                      "volta": 1
+                    }
+                  ],
+                  "riferimento": "elenco di settembre"
+                }
+              ],
+              "tratta": "AM"
+            },
+            {
+              "storia": [
+                {
+                  "dal": "2026-09-14",
+                  "data": "2026-09-10",
+                  "fonte": "fermata_indicata",
+                  "origine": "proposta",
+                  "regole": [
+                    {
+                      "luogo": "F-PRADELLO",
+                      "scheda": "7d2a9c10-27aa-4b1e-9c00-000000000904",
+                      "versione": 1,
+                      "volta": 1
+                    }
+                  ],
+                  "riferimento": "elenco di settembre"
+                }
+              ],
+              "tratta": "RM"
+            }
+          ],
+          "scuola": "SC-PRIM",
+          "sezione": "A",
+          "stato": {
+            "tipo": "attivo"
+          },
+          "tratte": [
+            {
+              "azienda": "ALFA",
+              "sigla": "AM"
+            },
+            {
+              "azienda": "ALFA",
+              "sigla": "RM"
+            }
+          ]
+        },
+        {
+          "casa": {
+            "civico": "9",
+            "comune": "Castelrovo",
+            "via": "via Alta"
+          },
+          "classe": 2,
+          "codice": "U-000005",
+          "nome": "GIALLI PAOLO",
+          "orari": [
+            {
+              "al": "2027-08-31",
+              "colonna": "ORARI MATTINA",
+              "dal": "2026-09-01",
+              "giorno": "lunedi",
+              "ora": "08:05",
+              "tratta": "AM"
+            },
+            {
+              "al": "2027-08-31",
+              "colonna": "ORARI MATTINA",
+              "dal": "2026-09-01",
+              "giorno": "martedi",
+              "ora": "08:05",
+              "tratta": "AM"
+            },
+            {
+              "al": "2027-08-31",
+              "colonna": "ORARI MATTINA",
+              "dal": "2026-09-01",
+              "giorno": "mercoledi",
+              "ora": "08:05",
+              "tratta": "AM"
+            },
+            {
+              "al": "2027-08-31",
+              "colonna": "ORARI MATTINA",
+              "dal": "2026-09-01",
+              "giorno": "giovedi",
+              "ora": "08:05",
+              "tratta": "AM"
+            },
+            {
+              "al": "2027-08-31",
+              "colonna": "ORARI MATTINA",
+              "dal": "2026-09-01",
+              "giorno": "venerdi",
+              "ora": "08:05",
+              "tratta": "AM"
+            }
+          ],
+          "scuola": "SC-PRIM",
+          "sezione": "B",
+          "stato": {
+            "tipo": "attivo"
+          },
+          "tratte": [
+            {
+              "azienda": "ALFA",
+              "sigla": "AM"
+            }
+          ]
+        },
+        {
+          "casa": {
+            "civico": "11",
+            "comune": "Pradello",
+            "via": "via Roma"
+          },
+          "classe": 5,
+          "codice": "U-000006",
+          "fermata": {
+            "luogo": "F-PRADELLO",
+            "riconosciuta": "codice_esterno"
+          },
+          "nome": "BRUNI ELSA",
+          "orari": [
+            {
+              "al": "2027-08-31",
+              "colonna": "ORARI MATTINA",
+              "dal": "2026-09-01",
+              "giorno": "lunedi",
+              "ora": "08:05",
+              "tratta": "AM"
+            },
+            {
+              "al": "2027-08-31",
+              "colonna": "ORARI MATTINA",
+              "dal": "2026-09-01",
+              "giorno": "martedi",
+              "ora": "08:05",
+              "tratta": "AM"
+            },
+            {
+              "al": "2027-08-31",
+              "colonna": "ORARI MATTINA",
+              "dal": "2026-09-01",
+              "giorno": "mercoledi",
+              "ora": "08:05",
+              "tratta": "AM"
+            },
+            {
+              "al": "2027-08-31",
+              "colonna": "ORARI MATTINA",
+              "dal": "2026-09-01",
+              "giorno": "giovedi",
+              "ora": "08:05",
+              "tratta": "AM"
+            },
+            {
+              "al": "2027-08-31",
+              "colonna": "ORARI MATTINA",
+              "dal": "2026-09-01",
+              "giorno": "venerdi",
+              "ora": "08:05",
+              "tratta": "AM"
+            }
+          ],
+          "punti": [
+            {
+              "storia": [
+                {
+                  "dal": "2026-09-14",
+                  "data": "2026-09-10",
+                  "fonte": "fermata_indicata",
+                  "origine": "proposta",
+                  "regole": [
+                    {
+                      "luogo": "F-PRADELLO",
+                      "scheda": "7d2a9c10-27aa-4b1e-9c00-000000000903",
+                      "versione": 1,
+                      "volta": 1
+                    }
+                  ],
+                  "riferimento": "elenco di settembre",
+                  "sostituita": {
+                    "data": "2026-09-12",
+                    "riferimento": "mail del committente del 12/9"
+                  }
+                },
+                {
+                  "consenso": "mail del committente del 12/9",
+                  "dal": "2026-09-14",
+                  "data": "2026-09-12",
+                  "origine": "a_mano",
+                  "regole": [
+                    {
+                      "giorni": [
+                        "lunedi",
+                        "martedi",
+                        "mercoledi"
+                      ],
+                      "luogo": "F-PRADELLO",
+                      "scheda": "7d2a9c10-27aa-4b1e-9c00-000000000903",
+                      "versione": 1,
+                      "volta": 1
+                    },
+                    {
+                      "giorni": [
+                        "giovedi",
+                        "venerdi"
+                      ],
+                      "luogo": "F-CASTELROVO",
+                      "scheda": "7d2a9c10-27aa-4b1e-9c00-000000000903",
+                      "versione": 1,
+                      "volta": 1
+                    }
+                  ],
+                  "riferimento": "mail del committente del 12/9"
+                }
+              ],
+              "tratta": "AM"
+            }
+          ],
+          "scuola": "SC-PRIM",
+          "sezione": "A",
+          "stato": {
+            "tipo": "attivo"
+          },
+          "tratte": [
+            {
+              "azienda": "ALFA",
+              "sigla": "AM"
+            }
+          ]
+        },
+        {
+          "casa": {
+            "civico": "12",
+            "comune": "Lagobello",
+            "via": "via del Lago"
+          },
+          "classe": 1,
+          "codice": "U-000007",
+          "nome": "MORI LIA",
+          "orari": [
+            {
+              "al": "2027-08-31",
+              "colonna": "ORARI MATTINA",
+              "dal": "2026-09-01",
+              "giorno": "lunedi",
+              "ora": "08:00",
+              "tratta": "AM"
+            },
+            {
+              "al": "2027-08-31",
+              "colonna": "ORARI MATTINA",
+              "dal": "2026-09-01",
+              "giorno": "martedi",
+              "ora": "08:00",
+              "tratta": "AM"
+            },
+            {
+              "al": "2027-08-31",
+              "colonna": "ORARI MATTINA",
+              "dal": "2026-09-01",
+              "giorno": "mercoledi",
+              "ora": "08:00",
+              "tratta": "AM"
+            },
+            {
+              "al": "2027-08-31",
+              "colonna": "ORARI MATTINA",
+              "dal": "2026-09-01",
+              "giorno": "giovedi",
+              "ora": "08:00",
+              "tratta": "AM"
+            },
+            {
+              "al": "2027-08-31",
+              "colonna": "ORARI MATTINA",
+              "dal": "2026-09-01",
+              "giorno": "venerdi",
+              "ora": "08:00",
+              "tratta": "AM"
+            }
+          ],
+          "punti": [
+            {
+              "storia": [
+                {
+                  "dal": "2026-09-21",
+                  "data": "2026-09-15",
+                  "origine": "a_mano",
+                  "regole": [
+                    {
+                      "luogo": "F-LAGOBELLO",
+                      "scheda": "7d2a9c10-27aa-4b1e-9c00-000000000901",
+                      "versione": 1,
+                      "volta": 2
+                    }
+                  ],
+                  "riferimento": "mail della scuola del 15/9"
+                }
+              ],
+              "tratta": "AM"
+            }
+          ],
+          "scuola": "SC-INFANZIA",
+          "stato": {
+            "tipo": "attivo"
+          },
+          "tratte": [
+            {
+              "azienda": "ALFA",
+              "sigla": "AM"
+            }
+          ]
+        },
+        {
+          "casa": {
+            "civico": "15",
+            "comune": "Pradello",
+            "via": "via Roma"
+          },
+          "classe": 3,
+          "codice": "U-000008",
+          "fermata": {
+            "luogo": "F-PRADELLO",
+            "riconosciuta": "codice_esterno"
+          },
+          "nome": "VIOLA DINO",
+          "orari": [
+            {
+              "al": "2027-08-31",
+              "colonna": "ORARI MATTINA",
+              "dal": "2026-09-01",
+              "giorno": "lunedi",
+              "ora": "08:05",
+              "tratta": "AM"
+            },
+            {
+              "al": "2027-08-31",
+              "colonna": "ORARI MATTINA",
+              "dal": "2026-09-01",
+              "giorno": "martedi",
+              "ora": "08:05",
+              "tratta": "AM"
+            },
+            {
+              "al": "2027-08-31",
+              "colonna": "ORARI MATTINA",
+              "dal": "2026-09-01",
+              "giorno": "mercoledi",
+              "ora": "08:05",
+              "tratta": "AM"
+            },
+            {
+              "al": "2027-08-31",
+              "colonna": "ORARI MATTINA",
+              "dal": "2026-09-01",
+              "giorno": "giovedi",
+              "ora": "08:05",
+              "tratta": "AM"
+            },
+            {
+              "al": "2027-08-31",
+              "colonna": "ORARI MATTINA",
+              "dal": "2026-09-01",
+              "giorno": "venerdi",
+              "ora": "08:05",
+              "tratta": "AM"
+            },
+            {
+              "al": "2027-08-31",
+              "colonna": "ORARI MATTINA",
+              "dal": "2026-09-01",
+              "giorno": "lunedi",
+              "ora": "12:35",
+              "tratta": "RM"
+            },
+            {
+              "al": "2027-08-31",
+              "colonna": "ORARI MATTINA",
+              "dal": "2026-09-01",
+              "giorno": "martedi",
+              "ora": "12:35",
+              "tratta": "RM"
+            },
+            {
+              "al": "2027-08-31",
+              "colonna": "ORARI MATTINA",
+              "dal": "2026-09-01",
+              "giorno": "mercoledi",
+              "ora": "12:35",
+              "tratta": "RM"
+            },
+            {
+              "al": "2027-08-31",
+              "colonna": "ORARI MATTINA",
+              "dal": "2026-09-01",
+              "giorno": "giovedi",
+              "ora": "12:35",
+              "tratta": "RM"
+            },
+            {
+              "al": "2027-08-31",
+              "colonna": "ORARI MATTINA",
+              "dal": "2026-09-01",
+              "giorno": "venerdi",
+              "ora": "12:35",
+              "tratta": "RM"
+            }
+          ],
+          "punti": [
+            {
+              "storia": [
+                {
+                  "dal": "2026-09-14",
+                  "data": "2026-09-10",
+                  "fonte": "fermata_indicata",
+                  "origine": "proposta",
+                  "regole": [
+                    {
+                      "luogo": "F-PRADELLO",
+                      "scheda": "7d2a9c10-27aa-4b1e-9c00-000000000903",
+                      "versione": 1,
+                      "volta": 1
+                    }
+                  ],
+                  "riferimento": "elenco di settembre"
+                },
+                {
+                  "dal": "2026-12-01",
+                  "data": "2026-11-25",
+                  "origine": "a_mano",
+                  "regole": [
+                    {
+                      "luogo": "F-CASTELROVO",
+                      "scheda": "7d2a9c10-27aa-4b1e-9c00-000000000903",
+                      "versione": 1,
+                      "volta": 1
+                    }
+                  ],
+                  "riferimento": "mail del committente del 25/11"
+                }
+              ],
+              "tratta": "AM"
+            },
+            {
+              "storia": [
+                {
+                  "dal": "2026-09-14",
+                  "data": "2026-09-10",
+                  "fonte": "fermata_indicata",
+                  "origine": "proposta",
+                  "regole": [
+                    {
+                      "luogo": "F-PRADELLO",
+                      "scheda": "7d2a9c10-27aa-4b1e-9c00-000000000904",
+                      "versione": 1,
+                      "volta": 1
+                    }
+                  ],
+                  "riferimento": "elenco di settembre"
+                }
+              ],
+              "tratta": "RM"
+            }
+          ],
+          "scuola": "SC-PRIM",
+          "sezione": "B",
+          "stato": {
+            "tipo": "attivo"
+          },
+          "tratte": [
+            {
+              "azienda": "ALFA",
+              "sigla": "AM"
+            },
+            {
+              "azienda": "ALFA",
+              "sigla": "RM"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "schema": "elenco_utenti",
+  "schema_versione": 3,
+  "ultimo_numero": 8
+}

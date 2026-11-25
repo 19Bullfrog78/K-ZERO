@@ -63,13 +63,20 @@ int prova_semi_elenco();
 void prova_schede_righe(const std::uint8_t* dati, std::size_t n);
 void scrivi_semi_schede(const std::string& cartella);
 int prova_semi_schede();
+// K-027: le righe dei punti scritte sull'ingresso (assegna-punto, le righe pronte di conferma-punti, non-viaggia, il "chi" dello sblocco a
+// voce): mai un'eccezione, mai un valore fuori dai limiti o di un altro comando accettato, la stessa lettura due volte; poi la voce letta
+// scritta in una storia di prova: mai un giorno prima della sua data cambiato, mai una voce tolta, la voce nuova vale dalla sua data.
+void prova_punti_campi(const std::uint8_t* dati, std::size_t n);
+void scrivi_semi_punti(const std::string& cartella);
+// Anche i semi dei file del K-027 (elenco alla versione 3 in tests/fuzz/semi, lo stradario di tests/esempi/k027-punti) nei loro bersagli.
+int prova_semi_punti();
 
 // I file del formato, cioe' i bersagli "pacchetto-<file>".
 std::vector<std::string> file_del_formato();
 
 // Esegue il bersaglio con quel nome ("pacchetto-corse.json", "parametri", "date-e-orari", "cassaforte",
-// "cassaforte-voci", "registro", "registro-voci", "password", "elenco-archivio", "elenco-foglio", "elenco-righe", "elenco-campi"); false se
-// non esiste.
+// "cassaforte-voci", "registro", "registro-voci", "password", "elenco-archivio", "elenco-foglio", "elenco-righe", "elenco-campi", "schede-righe",
+// "punti-campi"); false se non esiste.
 bool prova(const std::string& bersaglio, const std::uint8_t* dati, std::size_t n);
 
 }  // namespace kzero::fuzz
