@@ -1,0 +1,15 @@
+{
+  "schema": "stradari",
+  "schema_versione": 1,
+  "stradari": [
+    {
+      "azienda": "ALFA",
+      "righe": [
+        { "comune": "Lagobello", "via": "via del Lago", "grado": "infanzia", "punto": "F-LAGOBELLO", "nota": "Per l'infanzia il punto vicino al lago (dati inventati)" },
+        { "comune": "Lagobello", "via": "via del Lago", "punto": "F-PRADELLO" },
+        { "comune": "Castelrovo", "via": "via Alta", "punto": "F-CASTELROVO" },
+        { "comune": "Pradello", "via": "via Roma", "punto": "F-PRADELLO" }
+      ]
+    }
+  ]
+}

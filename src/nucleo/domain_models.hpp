@@ -1713,13 +1713,27 @@ struct ListUserTime {
     Source src;
     std::string column;   // K-020: la colonna del profilo da cui viene (profili[].orari[].colonna); vuota nei dati della versione 1
 };
-// Sblocco scritto dall'utente di K-Zero (kzero sblocco): per una tratta, con il riferimento e la data scritta da lui.
+// Sblocco scritto dall'utente di K-Zero (kzero sblocco): per una tratta, con il riferimento e la data scritta da lui. Dal K-027 anche
+// per giorni della settimana e per periodo (senza giorni ne' periodo: sempre, come gli sblocchi di prima) e a voce (chi l'ha detto).
 struct ListUserUnlock {
     std::string leg;
     std::string reference;
     Day date = 0;
     Source src;
+    bool all_days = true;            // K-027: senza giorni = tutti i giorni della settimana
+    Weekdays days;                   // K-027: con all_days falso, i giorni
+    std::optional<Day> from, to;     // K-027: periodo (manca = da sempre, senza fine)
+    bool by_voice = false;           // K-027: detto a voce dal committente
+    std::string who;                 // K-027: a voce, chi l'ha detto (dato personale; vuoto a chi non puo' leggerlo)
+
+    ListUserUnlock() = default;
+    // Uno sblocco "sempre" (come prima del K-027).
+    ListUserUnlock(std::string l, std::string r, Day d, Source s) : leg(std::move(l)), reference(std::move(r)), date(d), src(std::move(s)) {}
+
+    // Vale in quel giorno (giorno della settimana e periodo)?
+    bool covers(Day d) const { return (all_days || days.has(weekday_of(d))) && (!from || d >= *from) && (!to || d <= *to); }
 };
+
 enum class StopMatch { ExternalCode, Name };
 
 // --- Modifiche a mano dell'elenco (K-020) ---------------------------------------------------------------------------------
@@ -1743,6 +1757,61 @@ struct ManualField {
     std::shared_ptr<ListUser> before;
     Source src;
 };
+// --- Punti degli utenti dell'elenco (K-027) ------------------------------------------------------------------------------------
+// Per ogni utente dell'elenco e ogni tratta della nostra azienda, la storia dei punti: su quale scheda (per ID, mai per Nr) e a quale
+// passaggio sale (andata) o scende (ritorno), da quando, chi l'ha deciso. Il passaggio e' il luogo e la volta (una scheda puo' passare
+// due volte dallo stesso luogo in giri diversi), con la versione su cui la persona ha confermato: in un'altra versione e' lo stesso
+// passaggio solo se il luogo c'e' lo stesso numero di volte, mai riagganciato (D2 dell'arbitro). Una voce nuova dal giorno D chiude
+// quella di prima al giorno D-1: i giorni prima non cambiano mai. K-Zero propone, una persona conferma: mai un punto senza conferma.
+struct PointRule {
+    bool all_days = true;   // senza giorni = sempre
+    Weekdays days;
+    std::string card_id;    // l'ID della scheda del committente (schede[].id)
+    Ref place;              // il luogo del passaggio
+    int occurrence = 1;     // la volta (da 1)
+    int version = 1;        // la versione della scheda su cui si e' confermato
+    Source src;
+
+    bool covers(Weekday w) const { return all_days || days.has(w); }
+};
+enum class PointOrigin { Proposal, Manual };                   // proposta confermata, scritta a mano
+enum class PointSource { None, IndicatedStop, StreetTable };   // da dove veniva il luogo della proposta
+struct PointEntry {
+    Day from = 0;
+    ManualMark mark;                       // riferimento e data scritta dall'utente di K-Zero
+    PointOrigin origin = PointOrigin::Manual;
+    PointSource source = PointSource::None;
+    std::string consent;                   // doppia tratta (regole con luoghi diversi): il consenso del committente
+    std::vector<PointRule> rules;          // vuoto = da quel giorno nessun punto
+    std::optional<ManualMark> replaced;    // sostituita da una voce nuova con un dal uguale o prima: non conta piu'
+    Source src;
+};
+struct UserPoints {
+    std::string leg;                       // la sigla della tratta del profilo
+    std::vector<PointEntry> history;       // nell'ordine dei dal (le sostituite comprese)
+    Source src;
+};
+// "Non viaggia": un periodo in cui un utente attivo non usa il servizio, senza toglierlo dall'elenco. Il motivo e' una scelta fissa
+// (D8 dell'arbitro: per pianificare basta sapere che non viaggia); la nota e' facoltativa e personale.
+enum class NotTravelingReason { Family, OtherVehicle, Absent, Withdrawn, Other };   // famiglia, altro_mezzo, assente, ritirato, altro
+struct NotTraveling {
+    Day from = 0;
+    std::optional<Day> to;                 // manca = senza fine
+    std::vector<std::string> legs;         // vuoto = tutte le tratte della nostra azienda
+    NotTravelingReason reason = NotTravelingReason::Other;
+    std::string note;                      // personale; vuota a chi non puo' leggerla (o non scritta)
+    ManualMark mark;                       // riferimento (chi l'ha detto) e data scritta dall'utente di K-Zero
+    Source src;
+
+    bool covers(Day d, const std::string& leg) const {
+        if (d < from || (to && d > *to)) return false;
+        if (legs.empty()) return true;
+        for (const std::string& l : legs)
+            if (l == leg) return true;
+        return false;
+    }
+};
+
 struct ListUser {
     Code code;
     std::string name;                       // personale; vuoto se l'utente non puo' leggerlo
@@ -1763,7 +1832,16 @@ struct ListUser {
     std::optional<ManualMark> added;        // aggiunto a mano, non ancora portato da un file
     std::optional<ManualMark> removed;      // tolto a mano: mai nel piano; se ne va alla prima lettura completa senza di lui
     std::vector<ManualField> manual;        // campi cambiati a mano, non ancora confermati dal file
+    // K-027: i punti (per tratta) e i periodi in cui non viaggia. Una lettura dell'elenco non li cambia mai.
+    std::vector<UserPoints> points;
+    std::vector<NotTraveling> not_traveling;
     Source src;
+
+    const UserPoints* points_of(const std::string& leg) const {
+        for (const UserPoints& p : points)
+            if (p.leg == leg) return &p;
+        return nullptr;
+    }
 
     // Nel piano: ne' fuori elenco ne' tolto a mano.
     bool in_plan() const { return !out_of_list && !removed; }
@@ -1963,6 +2041,25 @@ struct RemovedCardVersions {
     Source src;
 };
 
+// --- Stradario di un'azienda (K-027) -------------------------------------------------------------------------------------------
+// Per ogni via (comune, frazione, numeri civici) il punto di raccolta degli utenti che abitano li': per tutti, per un grado di scuola o
+// per una scuola. Una delle fonti della proposta dei punti. Dati comuni.
+enum class StreetSide { All, Even, Odd };   // tutti, pari, dispari
+struct StreetRow {
+    std::string town, hamlet, street;
+    std::optional<int> number_from, number_to;   // i civici (insieme); mancano = tutta la via
+    StreetSide side = StreetSide::All;
+    std::optional<Ref> school;
+    std::optional<Grade> grade;
+    Ref point;
+    Source src;
+};
+struct StreetTable {
+    Ref company;
+    std::vector<StreetRow> rows;
+    Source src;
+};
+
 // Tutti i dati di un pacchetto. I luoghi privati (case) stanno insieme ai pubblici, segnati da is_private.
 struct Package {
     Manifest manifest;
@@ -1998,6 +2095,8 @@ struct Package {
     std::vector<CardProfile> card_profiles;
     std::vector<ServiceCard> service_cards;
     std::vector<RemovedCardVersions> removed_cards;
+    // K-027: gli stradari delle aziende.
+    std::vector<StreetTable> street_tables;
 };
 
 // --- Regole del mestiere sulle corse --------------------------------------------------------

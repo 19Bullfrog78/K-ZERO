@@ -10,6 +10,7 @@
 #include "schede.hpp"
 #include "orari.hpp"
 #include "pacchetto.hpp"
+#include "punti.hpp"
 #include "ricerca.hpp"
 
 namespace kzero {
@@ -1340,6 +1341,7 @@ std::vector<Problem> check_package(const Package& p, const HoursRequest* request
     const Index idx(p);
     check_lists(p, idx, out);   // K-019: profili di lettura ed elenchi utenti dei committenti
     check_cards(p, idx, out);   // K-021: profili delle schede e registro delle schede
+    check_points(p, idx, out);  // K-027: punti degli utenti dell'elenco e confronto con le schede
     PlanCollector collector(p);
     check_shifts(p, out, &collector);
     // Orari di lavoro (K-011): i dati, poi il piano di tutto il periodo (le giornate raccolte dai controlli sui turni).

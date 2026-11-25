@@ -91,6 +91,17 @@ enum class Check {
     CardProfileOldVersion,     // K-024: profilo delle schede alla versione 1 o 2 (il tipo e' un dato comune)
     CardSameAsOlderVersion,    // K-025: scheda uguale a una versione di prima, non all'ultima (solo kzero leggi-schede)
     CardVehicleNotRecognized,  // K-026: il mezzo della scheda non riconosciuto dalla targa, o con un prestito che non copre i giorni
+    // K-027: i punti degli utenti dell'elenco e il confronto con le schede (punti.hpp).
+    PointsCountsDiffer,        // numeri della scheda diversi dagli assegnati (una per versione; variante 1: la scuola di scarico)
+    PointsPassageEmpty,        // passaggio con salite (andata) o discese (ritorno) sulla scheda e nessun assegnato
+    PointsMissing,             // utente con diritto senza un punto nei giorni in cui viaggia ("grave": ha diritto)
+    PointsNotValid,            // punto che non vale quel giorno: passaggio che la versione non ha, scheda che non gira, non nel registro
+    PointsPassageChanged,      // il luogo del punto c'e' un numero diverso di volte rispetto alla versione confermata: mai riagganciato
+    PointsSuspendedNoUnlock,   // sospeso con un punto, senza uno sblocco quel giorno: non contato
+    PointsDoubleNoConsent,     // doppia tratta (luoghi diversi) senza il consenso del committente
+    PointsInconsistent,        // punto incoerente con l'utente o la tratta (committente, ditta, verso, scuola, coincidenza)
+    PointsDaysUnknown,         // i giorni in cui l'utente viaggia non si sanno (senza orari; senza i giorni di scuola)
+    StreetTableInvalid,        // stradario incoerente (errore)
     // Turni (K-008): errori.
     ShiftPartInvalid,
     ShiftItemsOrder,

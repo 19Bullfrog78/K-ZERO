@@ -2072,6 +2072,67 @@ void campi_a_mano(const Conversione& c, const JsonDati& campi, const std::string
     }
 }
 
+// K-027: i punti dell'utente (per tratta, la storia) e i periodi in cui non viaggia.
+void punti_utente(const Conversione& c, const JsonDati& v, const std::string& p, ListUser& x) {
+    for (std::size_t i = 0; i < v.size(); ++i) {
+        const auto& o = v[i];
+        const std::string pp = indice(p, i);
+        UserPoints up;
+        up.leg = o.at("tratta").get<std::string>();
+        const auto& storia = o.at("storia");
+        for (std::size_t j = 0; j < storia.size(); ++j) {
+            const auto& e = storia[j];
+            const std::string pe = indice(pp + "/storia", j);
+            PointEntry y;
+            y.from = c.data(e.at("dal"));
+            y.mark = ManualMark{e.at("riferimento").get<std::string>(), c.data(e.at("data"))};
+            y.origin = e.at("origine").get<std::string>() == "proposta" ? PointOrigin::Proposal : PointOrigin::Manual;
+            const std::string fonte = c.testo(e, "fonte");
+            y.source = fonte == "fermata_indicata" ? PointSource::IndicatedStop : fonte == "stradario" ? PointSource::StreetTable : PointSource::None;
+            y.consent = c.testo(e, "consenso");
+            const auto& regole = e.at("regole");
+            for (std::size_t k = 0; k < regole.size(); ++k) {
+                const auto& r = regole[k];
+                const std::string pr = indice(pe + "/regole", k);
+                PointRule z;
+                if (r.contains("giorni")) {
+                    z.all_days = false;
+                    z.days = c.giorni(r.at("giorni"));
+                }
+                z.card_id = r.at("scheda").get<std::string>();
+                z.place = c.ref(r, "luogo", pr);
+                z.occurrence = r.at("volta").get<int>();
+                z.version = r.at("versione").get<int>();
+                z.src = c.src(pr);
+                y.rules.push_back(std::move(z));
+            }
+            if (e.contains("sostituita")) y.replaced = segno_a_mano(e.at("sostituita"));
+            y.src = c.src(pe);
+            up.history.push_back(std::move(y));
+        }
+        up.src = c.src(pp);
+        x.points.push_back(std::move(up));
+    }
+}
+void non_viaggia_utente(const Conversione& c, const JsonDati& v, const std::string& p, ListUser& x) {
+    static const std::vector<std::pair<const char*, NotTravelingReason>> motivi = {
+        {"famiglia", NotTravelingReason::Family}, {"altro_mezzo", NotTravelingReason::OtherVehicle},
+        {"assente", NotTravelingReason::Absent},  {"ritirato", NotTravelingReason::Withdrawn},
+        {"altro", NotTravelingReason::Other}};
+    for (std::size_t i = 0; i < v.size(); ++i) {
+        const auto& o = v[i];
+        NotTraveling y;
+        y.from = c.data(o.at("dal"));
+        y.to = c.data_opz(o, "al");
+        y.legs = Conversione::testi(o, "tratte");
+        y.reason = valore_di(motivi, o.at("motivo").get<std::string>());
+        y.note = c.testo(o, "nota");
+        y.mark = ManualMark{o.at("riferimento").get<std::string>(), c.data(o.at("data"))};
+        y.src = c.src(indice(p, i));
+        x.not_traveling.push_back(std::move(y));
+    }
+}
+
 void elenco_utenti(const JsonDati& d, Package& pk) {
     const Conversione c("elenco_utenti.json");
     pk.list_last_number = d.at("ultimo_numero").get<int>();
@@ -2106,9 +2167,21 @@ void elenco_utenti(const JsonDati& d, Package& pk) {
             const auto& sblocchi = c.elenco(u, "sblocchi");
             for (std::size_t j = 0; j < sblocchi.size(); ++j) {
                 const auto& s = sblocchi[j];
-                x.unlocks.push_back({s.at("tratta").get<std::string>(), s.at("riferimento").get<std::string>(), c.data(s.at("data")),
-                                     c.src(indice(pu + "/sblocchi", j))});
+                ListUserUnlock y{s.at("tratta").get<std::string>(), s.at("riferimento").get<std::string>(), c.data(s.at("data")),
+                                 c.src(indice(pu + "/sblocchi", j))};
+                // K-027 (versione 3): giorni, periodo e "a voce" (chi e' un dato personale: manca a chi non puo' leggerlo).
+                if (s.contains("giorni")) {
+                    y.all_days = false;
+                    y.days = c.giorni(s.at("giorni"));
+                }
+                y.from = c.data_opz(s, "dal");
+                y.to = c.data_opz(s, "al");
+                y.by_voice = c.vero(s, "a_voce");
+                y.who = c.testo(s, "chi");
+                x.unlocks.push_back(std::move(y));
             }
+            punti_utente(c, c.elenco(u, "punti"), pu + "/punti", x);
+            non_viaggia_utente(c, c.elenco(u, "non_viaggia"), pu + "/non_viaggia", x);
             x.out_of_list = c.vero(u, "fuori_elenco");
             if (u.contains("a_mano")) {
                 const JsonDati& m = u.at("a_mano");
@@ -2351,6 +2424,42 @@ void schede_servizi(const JsonDati& d, Package& pk) {
     }
 }
 
+// --- Stradari delle aziende (K-027) ----------------------------------------------------------------------------------------
+
+void stradari(const JsonDati& d, Package& pk) {
+    const Conversione c("stradari.json");
+    const auto& v = d.at("stradari");
+    for (std::size_t i = 0; i < v.size(); ++i) {
+        const auto& o = v[i];
+        const std::string p = indice("/stradari", i);
+        StreetTable t;
+        t.company = c.ref(o, "azienda", p);
+        const auto& righe = o.at("righe");
+        for (std::size_t j = 0; j < righe.size(); ++j) {
+            const auto& r = righe[j];
+            const std::string pr = indice(p + "/righe", j);
+            StreetRow x;
+            x.town = r.at("comune").get<std::string>();
+            x.hamlet = c.testo(r, "frazione");
+            x.street = r.at("via").get<std::string>();
+            if (r.contains("civici")) {
+                const auto& n = r.at("civici");
+                x.number_from = n.at("dal").get<int>();
+                x.number_to = n.at("al").get<int>();
+                const std::string lato = c.testo(n, "lato");
+                x.side = lato == "pari" ? StreetSide::Even : lato == "dispari" ? StreetSide::Odd : StreetSide::All;
+            }
+            x.school = c.ref_opz(r, "scuola", pr);
+            if (r.contains("grado")) x.grade = valore_di(kGradi, r.at("grado").get<std::string>());
+            x.point = c.ref(r, "punto", pr);
+            x.src = c.src(pr);
+            t.rows.push_back(std::move(x));
+        }
+        t.src = c.src(p);
+        pk.street_tables.push_back(std::move(t));
+    }
+}
+
 void converti(const std::string& file, const JsonDati& d, Package& pk) {
     using Funzione = void (*)(const JsonDati&, Package&);
     static const std::vector<std::pair<const char*, Funzione>> conversioni = {
@@ -2361,7 +2470,8 @@ void converti(const std::string& file, const JsonDati& d, Package& pk) {
         {"tempi_sosta.json", tempi_sosta}, {"persone.json", persone}, {"assenze.json", assenze}, {"fermi.json", fermi},
         {"turni.json", turni}, {"rotazioni.json", rotazioni}, {"servizi_fissi.json", servizi_fissi},
         {"assegnazioni.json", assegnazioni}, {"blocchi.json", blocchi}, {"profili_elenchi.json", profili_elenchi},
-        {"elenco_utenti.json", elenco_utenti}, {"profili_schede.json", profili_schede}, {"schede_servizi.json", schede_servizi}};
+        {"elenco_utenti.json", elenco_utenti}, {"profili_schede.json", profili_schede}, {"schede_servizi.json", schede_servizi},
+        {"stradari.json", stradari}};
     for (const auto& [nome, f] : conversioni)
         if (file == nome) return f(d, pk);
     throw std::logic_error("file del formato senza conversione: " + file);

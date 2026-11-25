@@ -1,0 +1,5 @@
+Nr	ID	Servizio	Scuole	Attivazione	Disattivazione	Lu	Ma	Me	Gi	Ve	Sa	Do	Totali alunni	Servizio Individualizzato	Attrezzato	Tot Giorni	Tot Km Carico	Tot Km Vuoto	Calendario	Cadenza	Scheda nuova / Modifica	Disabili	Mezzo
+4000901 / 1	7d2a9c10-27aa-4b1e-9c00-000000000901	Andata Mattino	Scuola infanzia Lagobello	21/09/2026	12/06/2027	X	X	X	X	X			#5			#170	9,0	6,0	MATERNA	Sempre	Scheda nuova		AA 101-AA
+4000902 / 1	7d2a9c10-27aa-4b1e-9c00-000000000902	Ritorno Pomeriggio	Scuola primaria Valfonda	14/09/2026	12/06/2027			X					#1			#35	4,5	4,5	SCOLASTICO	Sempre	Scheda nuova		AA 101-AA
+4000903 / 1	7d2a9c10-27aa-4b1e-9c00-000000000903	Andata Mattino	Scuola primaria Valfonda	14/09/2026	12/06/2027	X	X	X	X	X			#5			#170	12,0	6,0	SCOLASTICO	Sempre	Scheda nuova		AA 101-AA
+4000904 / 1	7d2a9c10-27aa-4b1e-9c00-000000000904	Ritorno Mezzogiorno	Scuola primaria Valfonda	14/09/2026	12/06/2027	X	X	X	X	X			#2			#170	9,0	6,0	SCOLASTICO	Sempre	Scheda nuova		AA 101-AA

@@ -66,6 +66,10 @@ bool file_riservato(const std::string& file);
 //   gruppi, salite e discese dei passeggeri, passaggi delle sue corse). Il nome di un privato che noleggia per andare a un
 //   centro diurno lo lega al centro come il nome di un passeggero; altrimenti resta solo personale (il tipo del servizio
 //   resta un dato particolare a parte).
+// - (K-019, K-020) gli utenti dell'elenco del committente la cui scuola o la fermata indicata (anche quelle di prima di una modifica a
+//   mano) sta in un luogo sensibile; (K-027) anche con un punto (in tutta la storia) in un luogo sensibile o in una casa legata (e la
+//   casa porta a porta di un utente legato e' legata), oppure su una scheda per disabili o individualizzata (D3 dell'arbitro: il nome
+//   con la scheda direbbe la salute a chi ha i soli dati personali). La regola e' per persona: gli altri utenti della stessa scheda no.
 // Non riguarda il personale (es. il garage presso la casa di un autista), i committenti che sono enti ne' i conteggi. Una
 // regola sola nel codice, usata da tutte le uscite (vista.hpp, controlli_catalogo.cpp) e dalla cassaforte (classi.hpp).
 class LegameSensibile {

@@ -42,5 +42,11 @@ Risultato esegui_cancella_da_elenco(const DefinizioneComando& comando, const Par
 // K-021: schede dei servizi (comando_schede.cpp).
 Risultato esegui_leggi_schede(const DefinizioneComando& c, const Parametri& p);
 Risultato esegui_togli_scheda(const DefinizioneComando& c, const Parametri& p);
+// K-027: i punti degli utenti dell'elenco e il confronto con le schede (comando_punti.cpp).
+Risultato esegui_proponi_punti(const DefinizioneComando& c, const Parametri& p);
+Risultato esegui_assegna_punto(const DefinizioneComando& c, const Parametri& p);
+Risultato esegui_conferma_punti(const DefinizioneComando& c, const Parametri& p);
+Risultato esegui_non_viaggia(const DefinizioneComando& c, const Parametri& p);
+Risultato esegui_confronta_schede(const DefinizioneComando& c, const Parametri& p);
 
 }  // namespace kzero::api

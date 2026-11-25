@@ -49,6 +49,11 @@ struct Parametri {
     std::string validita_schede;          // --validita-scheda: "NR=valore" per una o piu' schede (separate da ";")
     std::string scheda;                   // --scheda: codice o ID della scheda (kzero togli-scheda)
     bool tutte = false;                   // --tutte: toglie tutte le versioni della scheda
+    // Punti degli utenti dell'elenco (K-027)
+    std::optional<kzero::Day> fino_al;    // --fino-al: chiude uno sblocco o un periodo "non viaggia" (l'ultimo giorno)
+    bool a_voce = false;                  // --a-voce: sblocco detto a voce (chi l'ha detto dall'ingresso standard)
+    std::string giorni;                   // --giorni: i giorni della settimana di uno sblocco (es. "mercoledi" o "lunedi,mercoledi")
+    bool tutti = false;                   // --tutti: proponi-punti anche per chi ha gia' un punto
     std::vector<std::string> argomenti;   // argomenti del comando (es. la cartella), nell'ordine della definizione
 };
 
