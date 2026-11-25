@@ -1028,6 +1028,19 @@
   compila e passa 1229 prove su 1229; fuzzing: i 42 bersagli per 20 secondi e, per 10 minuti, `punti-campi` (3,6 milioni di casi),
   `pacchetto-elenco_utenti.json` e `pacchetto-stradari.json`: nessun guasto. Il demo non cambia (`kzero controlla esempi/demo`: 0 errori,
   32 avvisi, come prima).
+- 2026-11-25 - K-027 (correzione dell'arbitro a D8, prima della chiusura). Per chi usa K-Zero "ritirato" vuol dire che l'utente non c'e'
+  piu' e non tornera' (es. trasferito): non e' un periodo, e' il togliere dall'elenco, che c'e' gia' (`kzero togli-da-elenco`, K-020). Il
+  periodo di questo mandato si chiama ora **"non frequenta"** (iscritto, al momento non usa il mezzo): comando `non-frequenta` (era
+  `non-viaggia`), campo `non_frequenta` dell'elenco alla versione 3 (era `non_viaggia`), azioni `non_frequenta`, `non_frequenta_chiuso` e
+  `non_frequenta_tolto` nell'uscita `punti`, `non_frequentano` nell'uscita `confronto_schede`, K-ERR-058 "Periodo \"non frequenta\" non
+  ammesso", testi, avvisi e documenti con queste parole, nel nucleo `NotAttending` (era `NotTraveling`). Motivi: `famiglia`, `altro_mezzo`,
+  `assente`, `altro` (piu' la nota facoltativa); "ritirato" e' rifiutato (K-ERR-050) con il rimando a `kzero togli-da-elenco` (prova nuova
+  `punti_non_frequenta_ritirato`). Nessuna versione nuova degli schemi: l'elenco alla versione 3 e le uscite nuove non sono mai state unite
+  a main. Nel pacchetto di prova NERI non frequenta per "famiglia"; il seme del fuzzing dell'elenco e' rifatto. Restano com'erano le frasi
+  che parlano d'altro ("sospeso (posto libero: non viaggia)" del K-019, il mezzo che quel giorno non viaggia).
+  Verifiche: compilazione senza avvisi (gcc, clang con i sanitizer, clang del fuzzing); tutte le prove 1267 su 1267; con i sanitizer le 61
+  prove dei punti, dell'elenco e del fuzzing (il giro completo lo fa il controllo GitHub); fuzzing dei 42 bersagli per 20 secondi: nessun
+  guasto; i 16 sabotaggi rifatti sul codice rinominato: tutti presi.
 ## Bug e limiti noti
 - (K-018) L'avviso sui nomi liberi trova solo il nome scritto come nei dati (senza maiuscole ne' accenti, parole intere):
   non i nomi scritti male, i soprannomi, le iniziali, le sigle ("S-DIS"), un nome dentro una parola piu' lunga, le parole
