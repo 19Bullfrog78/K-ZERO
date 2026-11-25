@@ -2011,6 +2011,15 @@ kzero_punti(punti_sblocco_a_voce letto USCITA 0 FORMATO testo
             NON_CONTIENE "signora Nera"
             ARGOMENTI sblocco @PACCHETTO@ --utente-elenco U-000003 --tratta RP --giorni mercoledi --a-voce --riferimento "telefonata del 12/9"
                       --data 2026-09-12 --scrivi @PACCHETTO@)
+# K-028, punto 0 (X1): lo sblocco del mercoledi' di U-000003 chiuso con --fino-al il 30/11: il mercoledi' 25/11 sale a Castelrovo, il
+# mercoledi' 02/12 non e' piu' sbloccato (K-CTR-186 anche per quel giorno). Sabotaggio: ListUserUnlock::covers senza le date.
+kzero_punti(punti_sblocco_fino_al punti USCITA 0 FORMATO testo
+            PREPARA sblocco @PACCHETTO@ --utente-elenco U-000003 --tratta AM --fino-al 2026-11-30 --scrivi @PACCHETTO@ --utente TITOLARE
+                    --password-da-ingresso
+            PREPARA_INGRESSO "${PW_K027}"
+            CONTIENE "Salgono: U-000003."
+                     "non e' sbloccato in 5 giorni (dal 2026-11-26 al 2026-11-27, dal 2026-11-30 al 2026-12-02)"
+            ARGOMENTI confronta-schede @PACCHETTO@ --scheda SCH-4000903-1 --dal 2026-11-25 --al 2026-12-02)
 kzero_punti(punti_confronta punti USCITA 0 FORMATO testo
             CONTIENE "Scheda SCH-4000903-1 (4000903/1, Andata Mattino), versione 1, dal 2026-09-14 al 2027-06-12:"
                      "07:40 F-CASTELROVO (1a volta): salgono 2 sulla scheda, 2 con il punto; scendono 0 sulla scheda, 0 con il punto. Salgono: U-000003, U-000008."

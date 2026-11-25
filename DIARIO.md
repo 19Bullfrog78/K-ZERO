@@ -1041,6 +1041,20 @@
   Verifiche: compilazione senza avvisi (gcc, clang con i sanitizer, clang del fuzzing); tutte le prove 1267 su 1267; con i sanitizer le 61
   prove dei punti, dell'elenco e del fuzzing (il giro completo lo fa il controllo GitHub); fuzzing dei 42 bersagli per 20 secondi: nessun
   guasto; i 16 sabotaggi rifatti sul codice rinominato: tutti presi.
+- 2026-11-25 - K-028 (programma, proposta "K-028: posti liberi per giro"). Punto 0, le prove mancanti del K-027 (sabotaggi dell'arbitro che
+  nessuna prova prendeva; il codice era gia' giusto), in test_punti: X1 `SbloccoConIlPeriodoContaSoloNelPeriodo` (sblocco dal 16/11 al
+  27/11: il sospeso conta solo nel periodo; lo stesso sblocco chiuso il 20/11 non conta piu' dal 23/11) e, sul programma,
+  `punti_sblocco_fino_al` (`kzero sblocco --fino-al 2026-11-30`, poi `kzero confronta-schede`: il mercoledi' 25/11 sale, il 02/12 no); X2
+  `NonFrequentaConLaFine` (dopo la fine conta di nuovo e, sulla tratta senza punto, torna K-CTR-183); X3 `NonFrequentaUnaTrattaSola`
+  (l'altra tratta conta); X5 `UtenteLegatoDalTipoDellaScheda` (il tipo "disabili" solo nella copia della scheda, da una regola del profilo,
+  con il servizio scolastico: l'utente e' legato); X6 `UtenteSoloAlcuniGiorni` (orari solo il lunedi' e il mercoledi' su una scheda che gira
+  tutti i giorni: contato solo in quei giorni, nessun "senza punto" negli altri); X8 `PassaggioVuotoSulRitorno` (K-CTR-182 sul ritorno guarda
+  le discese); X10 `VoceSostituitaNonTornaMai` (una voce dal 20/11 scritta dopo quella dal 01/12: la sostituita non torna mai). Sabotaggi,
+  tutti presi, ognuno solo dalla sua prova nuova: X1 (`ListUserUnlock::covers` senza le date, preso anche da `punti_sblocco_fino_al`), X2
+  (`NotAttending::covers` senza la fine), X3 (le tratte del periodo ignorate), X5 (`k.chosen` ignorato in `LegameSensibile`), X6 (tolto "non
+  viaggia quel giorno -> non contato"), X8 in due forme (i numeri delle salite al posto delle discese; gli utenti che salgono al posto di quelli
+  che scendono), X10 (`point_entry_on` senza "sostituita"). Per i punti 1-5 (il giro, a bordo e posti liberi, avvisi e scelte, resoconto,
+  documenti) prima le domande e le proposte per l'arbitro (K-028-domande-per-l-arbitro.md, consegnato come file), niente codice.
 ## Bug e limiti noti
 - (K-018) L'avviso sui nomi liberi trova solo il nome scritto come nei dati (senza maiuscole ne' accenti, parole intere):
   non i nomi scritti male, i soprannomi, le iniziali, le sigle ("S-DIS"), un nome dentro una parola piu' lunga, le parole

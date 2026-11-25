@@ -283,6 +283,36 @@ TEST(Punti, VoceNuovaNonCambiaIGiorniPrima) {
     EXPECT_EQ(salgono(c2, "SCH-4000903-1", g("2026-11-20"), kCastelrovo), std::vector<Code>{a.viola});
 }
 
+// K-028, punto 0 (X10, prova mancante del K-027): una voce nuova con un dal prima di una voce gia' scritta la sostituisce, e la voce
+// sostituita non torna mai, nemmeno dal suo dal in poi. VIOLA DINO: Pradello dal 14/09, Castelrovo dal 01/12; poi una voce dal 20/11 di
+// nuovo a Pradello: dal 20/11 sale sempre a Pradello (anche il 01/12 e dopo), mai a Castelrovo. Sabotaggio: point_entry_on che non guarda
+// "sostituita" (dal 01/12 tornerebbe Castelrovo).
+TEST(Punti, VoceSostituitaNonTornaMai) {
+    const PacchettoInMemoria m = con_elenco(pacchetto_k027(), [](ClientList& l, const Package& p) {
+        ListUser& v = utente(l, "VIOLA DINO");
+        punto(v, "AM", "2026-09-14", {regola(p, "SCH-4000903-1", "F-PRADELLO")});
+        punto(v, "AM", "2026-12-01", {regola(p, "SCH-4000903-1", "F-CASTELROVO")});
+        punto(v, "AM", "2026-11-20", {regola(p, "SCH-4000903-1", "F-PRADELLO")});
+    });
+    const Alunni a = alunni(m);
+    const Lettura l = lettura(m);
+    const ListUser u = utente(l.pacchetto, "VIOLA DINO");
+    ASSERT_EQ(u.points.at(0).history.size(), 3u);
+    EXPECT_TRUE(u.points[0].history[2].replaced);
+    const PointsComparison c = confronto(l);
+    for (const char* d : {"2026-11-19", "2026-11-20", "2026-12-01", "2026-12-02", "2027-03-01", "2027-06-11"}) {
+        EXPECT_EQ(salgono(c, "SCH-4000903-1", g(d), kPradello), std::vector<Code>{a.viola}) << d;
+        EXPECT_TRUE(salgono(c, "SCH-4000903-1", g(d), kCastelrovo).empty()) << d;
+    }
+    const UserPoints& up = u.points.at(0);
+    for (Day d = g("2026-11-20"); d <= g("2027-06-12"); ++d) {
+        const PointEntry* e = point_entry_on(up, d);
+        ASSERT_TRUE(e) << text_from_day(d);
+        EXPECT_FALSE(e->replaced) << text_from_day(d);
+        EXPECT_EQ(e->from, g("2026-11-20")) << text_from_day(d);
+    }
+}
+
 // --- Chi conta ----------------------------------------------------------------------------------------------------------------
 
 // K-027: un sospeso conta solo nei giorni in cui e' sbloccato. VERDI LUCA (sospeso) ha il punto a Castelrovo sulla 4000903/1 (da lunedi' a
@@ -314,6 +344,46 @@ TEST(Punti, SospesoSbloccatoSoloIlMercoledi) {
     for (const Day d : giorni) EXPECT_NE(weekday_of(d), Weekday::Wednesday) << text_from_day(d);
     // Il mercoledi' ha il punto e lo sblocco: niente "senza punto"; RP (sospeso, senza sblocco) non ha diritto: nessun avviso.
     EXPECT_FALSE(problema(v, Check::PointsMissing, a.verdi));
+}
+
+// K-028, punto 0 (X1, prova mancante del K-027): uno sblocco con il periodo (--dal, --al) vale solo nel periodo; uno sblocco "sempre" chiuso da
+// un giorno (--fino-al: il nucleo scrive la fine) non vale piu' dopo quel giorno. VERDI LUCA (sospeso) ha il punto a Castelrovo sulla 4000903/1
+// e lo sblocco AM dal 16/11 al 27/11: conta il lunedi' 16/11 e il venerdi' 27/11, non il venerdi' 13/11 ne' il lunedi' 30/11 (non contato,
+// K-CTR-186 in quei giorni). Sabotaggio: ListUserUnlock::covers senza le date.
+TEST(Punti, SbloccoConIlPeriodoContaSoloNelPeriodo) {
+    const PacchettoInMemoria m = con_elenco(pacchetto_k027(), [](ClientList& l, const Package& p) {
+        ListUser& v = utente(l, "VERDI LUCA");
+        ListUserUnlock s("AM", "mail del committente del 12/11", g("2026-11-12"), {});
+        s.from = g("2026-11-16");
+        s.to = g("2026-11-27");
+        v.unlocks.push_back(s);
+        punto(v, "AM", "2026-09-14", {regola(p, "SCH-4000903-1", "F-CASTELROVO")});
+    });
+    const Alunni a = alunni(m);
+    const Lettura l = lettura(m);
+    const PointsComparison c = confronto(l);
+    for (const char* d : {"2026-11-16", "2026-11-18", "2026-11-27"})
+        EXPECT_EQ(salgono(c, "SCH-4000903-1", g(d), kCastelrovo), std::vector<Code>{a.verdi}) << d;
+    for (const char* d : {"2026-11-13", "2026-11-30", "2026-12-02"}) {
+        EXPECT_TRUE(salgono(c, "SCH-4000903-1", g(d), kCastelrovo).empty()) << d;
+        const ComparedPeriod* pe = periodo(c, "SCH-4000903-1", g(d));
+        ASSERT_TRUE(pe) << d;
+        EXPECT_EQ(pe->not_counted, std::vector<Code>{a.verdi}) << d;
+    }
+    const Problem* p186 = problema(problemi_dei_punti(l), Check::PointsSuspendedNoUnlock, a.verdi);
+    ASSERT_TRUE(p186);
+    for (const Day d : giorni_di(*p186)) EXPECT_TRUE(d < g("2026-11-16") || d > g("2026-11-27")) << text_from_day(d);
+    // Lo stesso sblocco "sempre" chiuso il 20/11 (--fino-al scrive la fine): dal 23/11 non conta piu'.
+    const PacchettoInMemoria chiuso = con_elenco(m, [](ClientList& l2, const Package&) {
+        ListUserUnlock& s = utente(l2, "VERDI LUCA").unlocks.at(0);
+        s.from.reset();
+        s.to = g("2026-11-20");
+    });
+    const Lettura lc = lettura(chiuso);
+    const PointsComparison cc = confronto(lc);
+    EXPECT_EQ(salgono(cc, "SCH-4000903-1", g("2026-10-05"), kCastelrovo), std::vector<Code>{a.verdi});
+    EXPECT_EQ(salgono(cc, "SCH-4000903-1", g("2026-11-20"), kCastelrovo), std::vector<Code>{a.verdi});
+    EXPECT_TRUE(salgono(cc, "SCH-4000903-1", g("2026-11-23"), kCastelrovo).empty());
 }
 
 // K-027: chi non frequenta (periodo "non frequenta") non conta e il confronto lo mostra; nessun "senza punto" nel periodo. Sabotaggio: chi non
@@ -352,6 +422,115 @@ TEST(Punti, ChiNonFrequentaNonConta) {
     const std::vector<Day> giorni = giorni_di(*p183);
     ASSERT_FALSE(giorni.empty());
     EXPECT_EQ(giorni.back(), g("2026-10-30"));
+}
+
+// I giorni di "senza punto" (K-CTR-183) di un utente e di una tratta.
+std::vector<Day> giorni_senza_punto(const std::vector<Problem>& v, const Code& u, const std::string& tratta) {
+    for (const Problem& p : v) {
+        if (p.check != Check::PointsMissing) continue;
+        bool chi = false, quale = false;
+        for (const Param& x : p.params) {
+            chi = chi || (x.name == "utente" && x.text == u);
+            quale = quale || (x.name == "tratta" && x.text == tratta);
+        }
+        if (chi && quale) return giorni_di(p);
+    }
+    return {};
+}
+
+// K-028, punto 0 (X2, prova mancante del K-027): un periodo "non frequenta" con la fine. Dopo la fine l'utente conta di nuovo e, sulla tratta
+// senza punto, torna "senza punto" (K-CTR-183). NERI MARCO non frequenta dal 02/11 al 20/11: il 20/11 non conta, il 23/11 si'; RM (nessun
+// punto) "senza punto" fino al 30/10 e di nuovo dal 23/11. Sabotaggio: NotAttending::covers senza la fine.
+TEST(Punti, NonFrequentaConLaFine) {
+    const PacchettoInMemoria m = con_elenco(pacchetto_k027(), [](ClientList& l, const Package& p) {
+        ListUser& n = utente(l, "NERI MARCO");
+        punto(n, "AM", "2026-09-14", {regola(p, "SCH-4000903-1", "F-PRADELLO")});
+        NotAttending x;
+        x.from = g("2026-11-02");
+        x.to = g("2026-11-20");
+        x.reason = NotAttendingReason::Absent;
+        x.mark = ManualMark{"telefonata della famiglia del 30/10", g("2026-10-30")};
+        n.not_attending.push_back(x);
+    });
+    const Alunni a = alunni(m);
+    const Lettura l = lettura(m);
+    const PointsComparison c = confronto(l);
+    EXPECT_TRUE(salgono(c, "SCH-4000903-1", g("2026-11-20"), kPradello).empty());
+    const ComparedPeriod* pe = periodo(c, "SCH-4000903-1", g("2026-11-20"));
+    ASSERT_TRUE(pe);
+    EXPECT_EQ(pe->not_attending, std::vector<Code>{a.neri});
+    for (const char* d : {"2026-11-23", "2026-11-25", "2027-02-01"}) {
+        EXPECT_EQ(salgono(c, "SCH-4000903-1", g(d), kPradello), std::vector<Code>{a.neri}) << d;
+        const ComparedPeriod* dopo = periodo(c, "SCH-4000903-1", g(d));
+        ASSERT_TRUE(dopo) << d;
+        EXPECT_TRUE(dopo->not_attending.empty()) << d;
+    }
+    const std::vector<Day> rm = giorni_senza_punto(problemi_dei_punti(l), a.neri, "RM");
+    const auto ha = [&](const char* d) { return std::find(rm.begin(), rm.end(), g(d)) != rm.end(); };
+    EXPECT_TRUE(ha("2026-10-30"));
+    EXPECT_FALSE(ha("2026-11-02"));
+    EXPECT_FALSE(ha("2026-11-20"));
+    EXPECT_TRUE(ha("2026-11-23"));
+    EXPECT_TRUE(ha("2027-02-01"));
+}
+
+// K-028, punto 0 (X3, prova mancante del K-027): un periodo "non frequenta" per una tratta sola. NERI MARCO non frequenta solo RM dal 02/11:
+// all'andata (AM, 4000903/1) sale ancora a Pradello; al ritorno (RM, 4000904/1) non scende a Pradello e il confronto lo mostra tra chi non
+// frequenta. Sabotaggio: le tratte del periodo ignorate (vale per tutte).
+TEST(Punti, NonFrequentaUnaTrattaSola) {
+    const PacchettoInMemoria m = con_elenco(pacchetto_k027(), [](ClientList& l, const Package& p) {
+        ListUser& n = utente(l, "NERI MARCO");
+        punto(n, "AM", "2026-09-14", {regola(p, "SCH-4000903-1", "F-PRADELLO")});
+        punto(n, "RM", "2026-09-14", {regola(p, "SCH-4000904-1", "F-PRADELLO")});
+        NotAttending x;
+        x.from = g("2026-11-02");
+        x.legs = {"RM"};
+        x.reason = NotAttendingReason::OtherVehicle;
+        x.mark = ManualMark{"mail della famiglia del 30/10", g("2026-10-30")};
+        n.not_attending.push_back(x);
+    });
+    const Alunni a = alunni(m);
+    const Lettura l = lettura(m);
+    const PointsComparison c = confronto(l);
+    const Day lun = g("2026-11-09");
+    EXPECT_EQ(salgono(c, "SCH-4000903-1", lun, kPradello), std::vector<Code>{a.neri});
+    const ComparedPeriod* am = periodo(c, "SCH-4000903-1", lun);
+    ASSERT_TRUE(am);
+    EXPECT_TRUE(am->not_attending.empty());
+    EXPECT_TRUE(scendono(c, "SCH-4000904-1", lun, 2).empty());   // la 4000904/1: 0 scuola, 1 Castelrovo, 2 Pradello
+    const ComparedPeriod* rm = periodo(c, "SCH-4000904-1", lun);
+    ASSERT_TRUE(rm);
+    EXPECT_EQ(rm->not_attending, std::vector<Code>{a.neri});
+    // Prima del periodo scende a Pradello.
+    EXPECT_EQ(scendono(c, "SCH-4000904-1", g("2026-10-30"), 2), std::vector<Code>{a.neri});
+}
+
+// K-028, punto 0 (X6, prova mancante del K-027): un utente che viaggia solo alcuni giorni (dai suoi orari) su una scheda che gira tutti i
+// giorni si conta solo nei suoi giorni, anche con il punto "sempre". GIALLI PAOLO ha gli orari AM solo il lunedi' e il mercoledi': sale a
+// Castelrovo il lunedi' e il mercoledi', non il martedi' (ne' contato ne' "non contato"), e nessun "senza punto" il martedi'. Sabotaggio:
+// tolto "non viaggia quel giorno -> non contato".
+TEST(Punti, UtenteSoloAlcuniGiorni) {
+    const PacchettoInMemoria m = con_elenco(pacchetto_k027(), [](ClientList& l, const Package& p) {
+        ListUser& u = utente(l, "GIALLI PAOLO");
+        u.times.erase(std::remove_if(u.times.begin(), u.times.end(),
+                                     [](const ListUserTime& t) { return t.day != Weekday::Monday && t.day != Weekday::Wednesday; }),
+                      u.times.end());
+        punto(u, "AM", "2026-09-14", {regola(p, "SCH-4000903-1", "F-CASTELROVO")});
+    });
+    const Alunni a = alunni(m);
+    const Lettura l = lettura(m);
+    ASSERT_EQ(utente(l.pacchetto, "GIALLI PAOLO").times.size(), 2u);
+    const PointsComparison c = confronto(l);
+    EXPECT_EQ(salgono(c, "SCH-4000903-1", g("2026-11-09"), kCastelrovo), std::vector<Code>{a.gialli});   // lunedi'
+    EXPECT_EQ(salgono(c, "SCH-4000903-1", g("2026-11-18"), kCastelrovo), std::vector<Code>{a.gialli});   // mercoledi'
+    for (const char* d : {"2026-11-10", "2026-11-12", "2026-11-13"}) {   // martedi', giovedi', venerdi'
+        EXPECT_TRUE(salgono(c, "SCH-4000903-1", g(d), kCastelrovo).empty()) << d;
+        const ComparedPeriod* pe = periodo(c, "SCH-4000903-1", g(d));
+        ASSERT_TRUE(pe) << d;
+        EXPECT_TRUE(pe->not_counted.empty()) << d;
+        EXPECT_EQ(std::count(pe->passages[kScuola].alighting.begin(), pe->passages[kScuola].alighting.end(), a.gialli), 0) << d;
+    }
+    EXPECT_TRUE(giorni_senza_punto(problemi_dei_punti(l), a.gialli, "AM").empty());
 }
 
 // K-027 (D5): un attivo con una tratta della nostra azienda senza punto nei giorni in cui viaggia ha l'avviso K-CTR-183 ("grave": ha
@@ -394,6 +573,38 @@ TEST(Punti, ScuolaDiScarico) {
     EXPECT_EQ(scendono(c, "SCH-4000901-1", lun, kScuola1), std::vector<Code>{a.rossi});
     EXPECT_TRUE(scendono(c, "SCH-4000901-1", lun, kScuola2).empty());
     EXPECT_TRUE(problema(problemi_dei_punti(l), Check::PointsInconsistent, a.gialli, 3));
+}
+
+// K-028, punto 0 (X8, prova mancante del K-027): K-CTR-182 su una scheda di ritorno guarda le discese (St. Scar.), non le salite. Sulla
+// 4000904/1 (0 scuola, salgono 2; 1 Castelrovo, scende 1; 2 Pradello, scende 1) NERI MARCO ha il punto RM a Pradello: l'avviso e' per
+// Castelrovo (variante 1, "scende"), mai per Pradello ne' per la scuola. Sabotaggio: le salite al posto delle discese.
+TEST(Punti, PassaggioVuotoSulRitorno) {
+    const PacchettoInMemoria m = con_elenco(pacchetto_k027(), [](ClientList& l, const Package& p) {
+        punto(utente(l, "NERI MARCO"), "RM", "2026-09-14", {regola(p, "SCH-4000904-1", "F-PRADELLO")});
+    });
+    const Lettura l = lettura(m);
+    const std::vector<Problem> v = problemi_dei_punti(l);
+    std::vector<std::string> luoghi;
+    for (const Problem& p : v) {
+        if (p.check != Check::PointsPassageEmpty) continue;
+        bool ritorno = false;
+        std::string luogo;
+        for (const Param& x : p.params) {
+            ritorno = ritorno || (x.name == "scheda" && x.text == "SCH-4000904-1");
+            if (x.name == "luogo") luogo = x.text;
+        }
+        if (!ritorno) continue;
+        EXPECT_EQ(p.variant, 1);
+        luoghi.push_back(luogo);
+    }
+    ASSERT_FALSE(luoghi.empty());
+    for (const std::string& x : luoghi) EXPECT_EQ(x, "F-CASTELROVO");
+    const std::vector<std::string> m182 = messaggi(l, v, Check::PointsPassageEmpty);
+    bool trovato = false;
+    for (const std::string& x : m182)
+        trovato = trovato || x.find("Scheda SCH-4000904-1 (versione 1): al passaggio F-CASTELROVO (Castelrovo, Bivio) (1a volta, alle 12:55) sulla "
+                                    "scheda scende 1 persona") != std::string::npos;
+    EXPECT_TRUE(trovato);
 }
 
 // K-027 (D7): doppia tratta. BRUNI ELSA con due luoghi in giorni diversi (con il consenso): il lunedi' a Pradello, il giovedi' a
@@ -579,6 +790,43 @@ TEST(Punti, UtenteLegatoDaiPunti) {
         EXPECT_TRUE(ls.utente(a.gialli));
         EXPECT_FALSE(ls.utente(a.rossi));
     }
+}
+
+// K-028, punto 0 (X5, prova mancante del K-027): una scheda e' "per disabili" anche solo per il tipo scelto per la scheda stessa (una regola
+// del profilo, nella copia del registro), con il servizio del pacchetto che non lo dice. ROSSI ANNA (punto sulla 4000901/1) e' legata; gli
+// altri no. Sabotaggio: il tipo scelto della copia (k.chosen) ignorato in LegameSensibile.
+TEST(Punti, UtenteLegatoDalTipoDellaScheda) {
+    const PacchettoInMemoria m = con_elenco(pacchetto_k027(), [](ClientList& l, const Package& p) {
+        punto(utente(l, "ROSSI ANNA"), "AM", "2026-09-21", {regola(p, "SCH-4000901-1", "F-LAGOBELLO", 1)});
+        punto(utente(l, "VIOLA DINO"), "AM", "2026-09-14", {regola(p, "SCH-4000903-1", "F-PRADELLO")});
+    });
+    const Alunni a = alunni(m);
+    {
+        const Lettura l = lettura(m);
+        const Index idx(l.pacchetto);
+        EXPECT_FALSE(LegameSensibile(&idx).utente(a.rossi));
+    }
+    PacchettoInMemoria t = m;
+    JsonDati r = JsonDati::parse(t.file.at("schede_servizi.json"));
+    for (JsonDati& x : r.at("schede"))
+        if (x.at("codice") == "SCH-4000901-1")
+            x.at("versioni").at(0).at("scheda")["tipo"] = JsonDati{{"tipo", "disabili"}, {"tipo_gruppo", "disabili"}, {"da", "regola"}, {"regola", "R-DIS"}};
+    t.file["schede_servizi.json"] = r.dump(2);
+    const Lettura l = lettura(t);
+    const Index idx(l.pacchetto);
+    // Il servizio della versione resta scolastico, con i gruppi di studenti: il tipo viene solo dalla copia della scheda.
+    const ServiceCard* sc = card_by_id(l.pacchetto, "7d2a9c10-27aa-4b1e-9c00-000000000901");
+    ASSERT_TRUE(sc);
+    ASSERT_TRUE(sc->versions.at(0).card.chosen);
+    EXPECT_TRUE(sc->versions[0].card.chosen->from_rule);
+    const Service* s = idx.service(sc->versions[0].service);
+    ASSERT_TRUE(s);
+    ASSERT_TRUE(s->kind.known());
+    EXPECT_NE(s->kind.value(), ServiceKind::Disability);
+    for (const PassengerGroup& gr : s->groups) EXPECT_FALSE(gr.type.known() && gr.type.value() == GroupType::Disabled);
+    const LegameSensibile ls(&idx);
+    EXPECT_TRUE(ls.utente(a.rossi));
+    EXPECT_FALSE(ls.utente(a.viola));
 }
 
 // --- Coerenza dei dati -----------------------------------------------------------------------------------------------------------
