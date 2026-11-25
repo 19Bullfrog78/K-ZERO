@@ -1,0 +1,182 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "kzero - proposte_punti, versione 1",
+  "description": "Uscita di 'kzero proponi-punti --formato json' (K-027): per ogni utente dell'elenco con diritto e una tratta della nostra azienda senza punto (con --tutti anche con), la fonte (fermata indicata, stradario), i candidati per giorno della settimana (scheda e passaggio) e le righe pronte per kzero conferma-punti. Piu' candidati: nessuna scelta. Niente e' scritto. I nomi solo con --includi-dati-personali, entro i permessi.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "schema_versione",
+    "comando",
+    "dal",
+    "proposte",
+    "righe_pronte"
+  ],
+  "properties": {
+    "schema": {
+      "const": "proposte_punti"
+    },
+    "schema_versione": {
+      "const": 1
+    },
+    "comando": {
+      "const": "proponi-punti"
+    },
+    "dal": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+    },
+    "proposte": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "utente_elenco",
+          "nome",
+          "tratta",
+          "verso",
+          "fonte",
+          "luoghi",
+          "giorni_noti",
+          "ha_punto",
+          "giorni",
+          "righe_pronte"
+        ],
+        "properties": {
+          "utente_elenco": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+          },
+          "nome": {
+            "description": "Nome dell'utente: solo con --includi-dati-personali (di chi e' legato a un luogo sensibile anche con --includi-dati-particolari), entro i permessi; altrimenti null.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "tratta": {
+            "type": "string",
+            "minLength": 1
+          },
+          "verso": {
+            "enum": [
+              "andata",
+              "ritorno"
+            ]
+          },
+          "fonte": {
+            "enum": [
+              "fermata_indicata",
+              "stradario",
+              "nessuna"
+            ]
+          },
+          "luoghi": {
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+            }
+          },
+          "giorni_noti": {
+            "type": "boolean"
+          },
+          "ha_punto": {
+            "type": "boolean"
+          },
+          "giorni": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "giorno",
+                "ora",
+                "candidati"
+              ],
+              "properties": {
+                "giorno": {
+                  "enum": [
+                    "lunedi",
+                    "martedi",
+                    "mercoledi",
+                    "giovedi",
+                    "venerdi",
+                    "sabato",
+                    "domenica"
+                  ]
+                },
+                "ora": {
+                  "type": [
+                    "string",
+                    "null"
+                  ],
+                  "pattern": "^[0-9]{2}:[0-9]{2}$"
+                },
+                "candidati": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "scheda",
+                      "id",
+                      "versione",
+                      "luogo",
+                      "volta",
+                      "orario",
+                      "orario_scuola"
+                    ],
+                    "properties": {
+                      "scheda": {
+                        "type": "string",
+                        "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+                      },
+                      "id": {
+                        "type": "string",
+                        "minLength": 1
+                      },
+                      "versione": {
+                        "type": "integer",
+                        "minimum": 1
+                      },
+                      "luogo": {
+                        "type": "string",
+                        "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+                      },
+                      "volta": {
+                        "type": "integer",
+                        "minimum": 1
+                      },
+                      "orario": {
+                        "type": "string",
+                        "pattern": "^[0-9]{2}:[0-9]{2}$"
+                      },
+                      "orario_scuola": {
+                        "type": "string",
+                        "pattern": "^[0-9]{2}:[0-9]{2}$"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "righe_pronte": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "righe_pronte": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  }
+}

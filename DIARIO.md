@@ -986,6 +986,61 @@
   (gcc, clang con i sanitizer, clang del fuzzing); tutte le prove 1228 su 1228; con i sanitizer 1226 su 1226 (le due in meno sono solo della
   costruzione normale); il primo commit del codice da solo compila e passa 1208 prove su 1208; fuzzing: i 39 bersagli per 20 secondi e, per
   20 minuti, `schede-righe`, `pacchetto-schede_servizi.json` e `pacchetto-profili_schede.json`: nessun guasto.
+- 2026-11-24 - K-027 (programma, proposta "K-027: alunni ai punti di raccolta"). Punto 0, la prova mancante del K-026 (sabotaggio
+  dell'arbitro che nessuna prova prendeva; il codice era gia' giusto): in `card_vehicle_loan` un giorno di servizio conta come coperto solo da
+  un prestito all'azienda del contratto (Schede.PrestitoAUnaTerzaAziendaNonCopreIGiorni: una terza azienda, GAMMA, nel manifesto; BETA-01 in
+  prestito tutto l'anno a GAMMA e ad ALFA solo fino al 31/01/2027: variante 3 nella lettura e 9 in `kzero controlla`; ad ALFA solo in estate:
+  variante 1, e 8 in controlla dopo una lettura con un prestito valido). Sabotaggio "giorno coperto da un prestito a qualsiasi azienda":
+  preso, solo dalla prova nuova. Per i punti 1-6 (punti di raccolta degli utenti, proposta e conferma, sblocchi per giorni, confronto con le
+  schede, testo al singolare, documenti) prima le domande e le proposte per l'arbitro (K-027-domande-per-l-arbitro.md, consegnato come
+  file), niente codice.
+- 2026-11-24 - K-027 (seguito, dopo le risposte dell'arbitro: D1-D6 A, D7 A con "doppio sulla stessa scheda", D8 B con "ritirato", D9 come
+  proposto, D10-D12 A, P1-P14 accettate, lo sblocco senza anteprima). Punti degli utenti dell'elenco: `elenco_utenti.json` alla versione 3
+  (per ogni tratta della nostra azienda la storia dei punti; i periodi "non viaggia"; gli sblocchi per giorni, per periodo e a voce); il
+  punto e' il passaggio (scheda, luogo, volta e versione confermata), mai il solo luogo; una voce nuova chiude quella di prima e non cambia
+  mai i giorni prima; una lettura dell'elenco porta avanti punti e periodi. Comandi nuovi: `proponi-punti` (legge soltanto: fermata
+  indicata, poi lo stradario; con piu' candidati non sceglie), `conferma-punti` (solo le righe ricevute, ognuna ancora candidata),
+  `assegna-punto` (a mano, la doppia tratta con il consenso), `non-viaggia`, `confronta-schede`; `sblocco` con `--giorni`, `--dal`, `--al`,
+  `--fino-al`, `--a-voce`. File nuovo `stradari.json` (comune). Confronto con St. Car. e St. Scar. in `kzero controlla` e
+  `confronta-schede`, per versione, giorno della settimana e periodo, per scuola di scarico, senza l'accompagnatore, solo nei giorni di
+  scuola (i calendari di base delle schede della scuola); la doppia tratta conta su tutti e due i passaggi e alla scuola una volta per
+  passaggio; la scheda e l'elenco non si correggono mai. Legame con la salute (`LegameSensibile`): anche un punto in un luogo sensibile, in
+  una casa legata o su una scheda per disabili o individualizzata, per persona. Codici: K-ERR-057, 058; K-CTR-181 ... 190, K-CTR-140
+  varianti 5-10; schemi `elenco_utenti` 3, `stradari` 1, `sblocco` 2, `punti` 1, `proposte_punti` 1, `confronto_schede` 1. Dati di prova
+  inventati in tests/esempi/k027-punti (quattro schede: andata dell'infanzia a due giri con Lagobello due volte, ritorno solo il
+  mercoledi', andata e ritorno della primaria; otto alunni; lo stradario). Prove: test_punti (13), prove sul programma (+24: 17 comandi, 6
+  schemi delle uscite e la preparazione del pacchetto chiuso), test_unione (il pacchetto del K-027 e l'elenco del K-020 alla versione 3 nella prova di copertura dei
+  campi riservati), test_api e test_controlli (catalogo). Fuzzing: bersaglio nuovo `punti-campi` (le righe dei quattro comandi, poi la voce
+  scritta in una storia di prova: mai un giorno prima cambiato) e i file `elenco_utenti.json` (seme alla versione 3 in tests/fuzz/semi) e
+  `stradari.json` tra i bersagli del pacchetto (42 in tutto). Trovato dalle uscite da mostrare: alla scuola la doppia tratta contava una
+  volta sola (l'elenco degli utenti contati toglieva i doppi), contro la regola D7 scritta nella prova; corretto (alla fermata una volta,
+  alla scuola una volta per passaggio contato; nell'uscita il nome una volta sola), con la prova rafforzata e un sabotaggio in piu'. Trovato
+  da clang (fuzzing e sanitizer, con gli avvisi come errori): un campo non usato nel nucleo e una costante non usata in una prova; dai
+  sanitizer: due prove dei punti usavano risultati di oggetti temporanei gia' distrutti (con gcc passavano per caso), corrette. Documenti: formato-dati, controlli, errori, cassaforte, sicurezza, DECISIONI, CLAUDE.md (comandi,
+  bersagli, Trappole). Sabotaggi sul codice finale, 16, tutti presi: i 9 del mandato (assegnazione al luogo invece che al passaggio; voce
+  nuova che cambia i giorni prima; proposta scritta senza conferma; sospeso sbloccato solo il mercoledi' contato anche il lunedi'; chi non
+  viaggia contato; attivo senza punto non segnalato; scuola di scarico ignorata; nome di un legato a un luogo sensibile fuori dai
+  particolari; il punto 0), quello dell'arbitro per D7 (un doppio contato una volta sola) e 6 miei (la lettura dell'elenco che perde i
+  punti; K-CTR-151 sempre al plurale; i giorni di festa contati come giorni in cui viaggia; doppia tratta senza consenso accettata; riga di
+  conferma che non e' piu' un candidato accettata; il doppio contato una volta sola alla scuola). Verifiche: compilazione senza avvisi
+  (gcc, clang con i sanitizer, clang del fuzzing); tutte le prove 1266 su 1266; con i sanitizer 1262 su 1264 al primo giro (le due cadute
+  erano gli errori delle prove detti sopra, corretti; poi test_punti intero con i sanitizer: 13 su 13); il primo commit del codice da solo
+  compila e passa 1229 prove su 1229; fuzzing: i 42 bersagli per 20 secondi e, per 10 minuti, `punti-campi` (3,6 milioni di casi),
+  `pacchetto-elenco_utenti.json` e `pacchetto-stradari.json`: nessun guasto. Il demo non cambia (`kzero controlla esempi/demo`: 0 errori,
+  32 avvisi, come prima).
+- 2026-11-25 - K-027 (correzione dell'arbitro a D8, prima della chiusura). Per chi usa K-Zero "ritirato" vuol dire che l'utente non c'e'
+  piu' e non tornera' (es. trasferito): non e' un periodo, e' il togliere dall'elenco, che c'e' gia' (`kzero togli-da-elenco`, K-020). Il
+  periodo di questo mandato si chiama ora **"non frequenta"** (iscritto, al momento non usa il mezzo): comando `non-frequenta` (era
+  `non-viaggia`), campo `non_frequenta` dell'elenco alla versione 3 (era `non_viaggia`), azioni `non_frequenta`, `non_frequenta_chiuso` e
+  `non_frequenta_tolto` nell'uscita `punti`, `non_frequentano` nell'uscita `confronto_schede`, K-ERR-058 "Periodo \"non frequenta\" non
+  ammesso", testi, avvisi e documenti con queste parole, nel nucleo `NotAttending` (era `NotTraveling`). Motivi: `famiglia`, `altro_mezzo`,
+  `assente`, `altro` (piu' la nota facoltativa); "ritirato" e' rifiutato (K-ERR-050) con il rimando a `kzero togli-da-elenco` (prova nuova
+  `punti_non_frequenta_ritirato`). Nessuna versione nuova degli schemi: l'elenco alla versione 3 e le uscite nuove non sono mai state unite
+  a main. Nel pacchetto di prova NERI non frequenta per "famiglia"; il seme del fuzzing dell'elenco e' rifatto. Restano com'erano le frasi
+  che parlano d'altro ("sospeso (posto libero: non viaggia)" del K-019, il mezzo che quel giorno non viaggia).
+  Verifiche: compilazione senza avvisi (gcc, clang con i sanitizer, clang del fuzzing); tutte le prove 1267 su 1267; con i sanitizer le 61
+  prove dei punti, dell'elenco e del fuzzing (il giro completo lo fa il controllo GitHub); fuzzing dei 42 bersagli per 20 secondi: nessun
+  guasto; i 16 sabotaggi rifatti sul codice rinominato: tutti presi.
 ## Bug e limiti noti
 - (K-018) L'avviso sui nomi liberi trova solo il nome scritto come nei dati (senza maiuscole ne' accenti, parole intere):
   non i nomi scritti male, i soprannomi, le iniziali, le sigle ("S-DIS"), un nome dentro una parola piu' lunga, le parole
@@ -1099,9 +1154,16 @@
   fanno per quel gruppo (scelta D3 A).
 
 - (K-023) Coincidenze delle schede: il legame A -> B (la persona che scende da A al punto di trasbordo e' quella che sale su B; B passa da
-  li' dopo A) non e' controllato: K-CTR-176 dice di vederlo a mano. Va nel mandato del confronto tra l'elenco e le schede.
+  li' dopo A) non e' controllato: K-CTR-176 dice di vederlo a mano. Resta fuori anche dal K-027 (D11 A): chi ha il punto su una scheda in
+  coincidenza si conta al punto di trasbordo, con l'avviso K-CTR-188 variante 4; un mandato suo.
 - (K-023) I controlli che confronteranno le corse con l'arrivo a scuola (lezioni, attesa, finestra, durata a bordo) non esistono ancora:
   per un gruppo in coincidenza dovranno contare la catena A -> B, e senza il legame dire "non verificato" (DECISIONI.md, K-023).
+- (K-027) Lo stradario si scrive a mano (`stradari.json`): non si legge da un file Excel e non si ricava dai punti dell'anno prima (vorrebbe
+  le case degli utenti di allora). La casa si confronta come i nomi dei luoghi: un'abbreviazione ("V. Roma") non trova la riga.
+- (K-027) Il confronto conta le persone, non i posti: chi ha la doppia tratta sulla stessa scheda e' segnato "doppio sulla stessa scheda",
+  ma a bordo occupa un posto solo; i posti li conta il K-028 (una persona una volta per giro).
+- (K-027) Senza orari per una tratta i giorni in cui l'utente viaggia non si sanno (K-CTR-189): conta in tutti i giorni della scheda del
+  suo punto, e "senza punto" dice solo se manca del tutto un punto per la tratta.
 
 ## Idee
 - Generare scenari "gonfiati" (50-500 mezzi) dai giri reali per provare il carico.

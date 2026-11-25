@@ -28,6 +28,7 @@
 #include "controlli.hpp"
 #include "lettore.hpp"
 #include "riservatezza.hpp"
+#include "punti_prove.hpp"
 #include "schede_prove.hpp"
 #include "orari.hpp"
 #include "schemi_dati.hpp"
@@ -110,7 +111,7 @@ ValoriCassaforte valori(const Chiuso& c, Visibilita leggibili) {
     return v;
 }
 
-std::string elenco(const std::vector<kzero::Problem>& problemi) {
+std::string elenco_problemi(const std::vector<kzero::Problem>& problemi) {
     std::string s;
     for (const auto& p : problemi)
     {
@@ -130,7 +131,7 @@ TEST(Unione, DemoChiusoERiapertoUguale) {
     const Chiuso c = chiudi(chiaro);
     const ValoriCassaforte tutti = valori(c, {true, true});
     const Lettura riaperta = leggi_pacchetto(c.normali, &tutti);
-    EXPECT_TRUE(riaperta.forma_valida()) << elenco(riaperta.problemi);
+    EXPECT_TRUE(riaperta.forma_valida()) << elenco_problemi(riaperta.problemi);
     std::string differenza;
     EXPECT_TRUE(chiusura::stessi_dati(originale, riaperta, differenza)) << differenza;
     EXPECT_EQ(riaperta.in_chiaro.personali + riaperta.in_chiaro.particolari, 0u);
@@ -142,7 +143,7 @@ TEST(Unione, LetturaConPermessiParziali) {
     for (const Visibilita v : {Visibilita{true, false}, Visibilita{false, true}, Visibilita{false, false}}) {
         const ValoriCassaforte x = valori(c, v);
         const Lettura l = leggi_pacchetto(c.normali, &x);
-        EXPECT_TRUE(l.forma_valida()) << v.personali << v.particolari << "\n" << elenco(l.problemi);
+        EXPECT_TRUE(l.forma_valida()) << v.personali << v.particolari << "\n" << elenco_problemi(l.problemi);
     }
 }
 
@@ -462,7 +463,7 @@ TEST(Unione, RiordinoNonCambiaNulla) {
     metti(c.normali, "servizi.json", servizi);
     const ValoriCassaforte tutti = valori(c, {true, true});
     const Lettura l = leggi_pacchetto(c.normali, &tutti);
-    ASSERT_TRUE(l.forma_valida()) << elenco(l.problemi);
+    ASSERT_TRUE(l.forma_valida()) << elenco_problemi(l.problemi);
     // Nomi e note seguono i codici e le chiavi.
     const JsonDati& prima = originale.documenti.at("persone.json").at("persone");
     const JsonDati& dopo = l.documenti.at("persone.json").at("persone");
@@ -497,7 +498,7 @@ TEST(Unione, ElementoToltoOCambiato) {
         const ValoriCassaforte tutti = valori(c, {true, true});
         const Lettura l = leggi_pacchetto(c.normali, &tutti);
         EXPECT_FALSE(l.forma_valida()) << come;
-        EXPECT_TRUE(codici(l).count("K-CTR-094 persone.json")) << come << "\n" << elenco(l.problemi);
+        EXPECT_TRUE(codici(l).count("K-CTR-094 persone.json")) << come << "\n" << elenco_problemi(l.problemi);
         EXPECT_FALSE(l.usato("persone.json"));
     }
 }
@@ -510,7 +511,7 @@ TEST(Unione, RigaSenzaCodiceCambiata) {
     metti(c.normali, "assegnazioni.json", a);
     const ValoriCassaforte tutti = valori(c, {true, true});
     const Lettura l = leggi_pacchetto(c.normali, &tutti);
-    EXPECT_TRUE(codici(l).count("K-CTR-094 assegnazioni.json")) << elenco(l.problemi);
+    EXPECT_TRUE(codici(l).count("K-CTR-094 assegnazioni.json")) << elenco_problemi(l.problemi);
 }
 
 // Un valore sia nella cassaforte sia in chiaro: K-CTR-095. Un valore nuovo solo in chiaro accanto alla cassaforte: avviso
@@ -522,7 +523,7 @@ TEST(Unione, ValoreDoppioEValoreInChiaro) {
     metti(c.normali, "persone.json", persone);
     const ValoriCassaforte tutti = valori(c, {true, true});
     Lettura l = leggi_pacchetto(c.normali, &tutti);
-    EXPECT_TRUE(codici(l).count("K-CTR-095 persone.json")) << elenco(l.problemi);
+    EXPECT_TRUE(codici(l).count("K-CTR-095 persone.json")) << elenco_problemi(l.problemi);
 
     Chiuso d = chiudi(demo_in_chiaro());
     JsonDati assegnazioni = documento(d.normali, "assegnazioni.json");
@@ -533,7 +534,7 @@ TEST(Unione, ValoreDoppioEValoreInChiaro) {
     metti(d.normali, "assegnazioni.json", assegnazioni);
     const ValoriCassaforte tutti_d = valori(d, {true, true});
     l = leggi_pacchetto(d.normali, &tutti_d);
-    EXPECT_TRUE(codici(l).count("K-CTR-096 ")) << elenco(l.problemi);
+    EXPECT_TRUE(codici(l).count("K-CTR-096 ")) << elenco_problemi(l.problemi);
     EXPECT_EQ(l.in_chiaro.personali, 1u);
 }
 
@@ -555,7 +556,7 @@ TEST(Unione, AssenzeIntereEPasseggeriLegati) {
     // Chi ha i soli dati personali non vede il nome di P-D1, ma vede quello di P-A1.
     const ValoriCassaforte pers = valori(c, {true, false});
     const Lettura l = leggi_pacchetto(c.normali, &pers);
-    ASSERT_TRUE(l.forma_valida()) << elenco(l.problemi);
+    ASSERT_TRUE(l.forma_valida()) << elenco_problemi(l.problemi);
     const std::string servizi = l.documenti.at("servizi.json").dump();
     EXPECT_EQ(servizi.find("Bianchi Luca"), std::string::npos);
     EXPECT_NE(servizi.find("Rossi Giulia"), std::string::npos);
@@ -563,14 +564,14 @@ TEST(Unione, AssenzeIntereEPasseggeriLegati) {
     // Chi ha i soli particolari: niente assenze, e nemmeno il nome di P-D1 (e' un dato personale).
     const ValoriCassaforte part = valori(c, {false, true});
     const Lettura lp = leggi_pacchetto(c.normali, &part);
-    ASSERT_TRUE(lp.forma_valida()) << elenco(lp.problemi);
+    ASSERT_TRUE(lp.forma_valida()) << elenco_problemi(lp.problemi);
     EXPECT_EQ(lp.documenti.at("assenze.json").at("assenze"), JsonDati::array());
     EXPECT_EQ(lp.documenti.at("servizi.json").dump().find("Bianchi Luca"), std::string::npos);
     EXPECT_EQ(lp.documenti.at("servizi.json").dump().find("Rossi Giulia"), std::string::npos);
     // Chi ha tutti e due i permessi legge tutti e due i nomi.
     const ValoriCassaforte tutti = valori(c, {true, true});
     const Lettura lt = leggi_pacchetto(c.normali, &tutti);
-    ASSERT_TRUE(lt.forma_valida()) << elenco(lt.problemi);
+    ASSERT_TRUE(lt.forma_valida()) << elenco_problemi(lt.problemi);
     EXPECT_NE(lt.documenti.at("servizi.json").dump().find("Bianchi Luca"), std::string::npos);
     EXPECT_NE(lt.documenti.at("servizi.json").dump().find("Rossi Giulia"), std::string::npos);
 }
@@ -581,7 +582,7 @@ TEST(Unione, CassaforteMancanteNonDichiarataOAltraChiusura) {
     InMemoria senza = c.normali;
     senza.file.erase("cassaforte.kzc");
     Lettura l = leggi_pacchetto(senza);
-    EXPECT_TRUE(codici(l).count("K-CTR-091 pacchetto.json")) << elenco(l.problemi);
+    EXPECT_TRUE(codici(l).count("K-CTR-091 pacchetto.json")) << elenco_problemi(l.problemi);
     EXPECT_FALSE(l.forma_valida());
 
     InMemoria non_dichiarata = c.normali;
@@ -589,18 +590,18 @@ TEST(Unione, CassaforteMancanteNonDichiarataOAltraChiusura) {
     m["cassaforte"] = false;
     metti(non_dichiarata, "pacchetto.json", m);
     l = leggi_pacchetto(non_dichiarata);
-    EXPECT_TRUE(codici(l).count("K-CTR-092 pacchetto.json")) << elenco(l.problemi);
+    EXPECT_TRUE(codici(l).count("K-CTR-092 pacchetto.json")) << elenco_problemi(l.problemi);
 
     ValoriCassaforte tutti = valori(c, {true, true});
     tutti.generazione = 2;
     l = leggi_pacchetto(c.normali, &tutti);
-    EXPECT_TRUE(codici(l).count("K-CTR-093 pacchetto.json")) << elenco(l.problemi);
+    EXPECT_TRUE(codici(l).count("K-CTR-093 pacchetto.json")) << elenco_problemi(l.problemi);
 
     InMemoria senza_assegnazioni = c.normali;
     senza_assegnazioni.file.erase("assegnazioni.json");
     const ValoriCassaforte t2 = valori(c, {true, true});
     l = leggi_pacchetto(senza_assegnazioni, &t2);
-    EXPECT_TRUE(codici(l).count("K-CTR-094 assegnazioni.json")) << elenco(l.problemi);
+    EXPECT_TRUE(codici(l).count("K-CTR-094 assegnazioni.json")) << elenco_problemi(l.problemi);
 }
 
 // Dati personali in chiaro in un pacchetto che non dice "dati_inventati": avviso K-CTR-096; il demo (dati inventati) no.
@@ -611,7 +612,7 @@ TEST(Unione, DatiInChiaroSenzaDatiInventati) {
     m.erase("dati_inventati");
     metti(chiaro, "pacchetto.json", m);
     const Lettura l = leggi_pacchetto(chiaro);
-    EXPECT_TRUE(codici(l).count("K-CTR-096 ")) << elenco(l.problemi);
+    EXPECT_TRUE(codici(l).count("K-CTR-096 ")) << elenco_problemi(l.problemi);
     EXPECT_TRUE(l.forma_valida());   // e' un avviso
 }
 
@@ -833,7 +834,7 @@ TEST(Unione, CommittentiPrivatiNellaCassaforte) {
              {Visibilita{false, true}, "CP-01: CP-02: "}}) {
         const ValoriCassaforte x = valori(c, v);
         const Lettura l = leggi_pacchetto(c.normali, &x);
-        ASSERT_TRUE(l.forma_valida()) << elenco(l.problemi);
+        ASSERT_TRUE(l.forma_valida()) << elenco_problemi(l.problemi);
         std::string visti;
         for (const kzero::Client& k : l.pacchetto.clients)
             if (k.is_private) visti += k.code + ":" + k.name + " ";
@@ -847,7 +848,7 @@ TEST(Unione, CommittentiPrivatiNellaCassaforte) {
 TEST(Unione, ElencoUtentiNellaCassaforte) {
     const InMemoria chiaro = pacchetto_k019();
     const Lettura l = leggi_pacchetto(chiaro);
-    ASSERT_TRUE(l.forma_valida()) << elenco(l.problemi);
+    ASSERT_TRUE(l.forma_valida()) << elenco_problemi(l.problemi);
     const Chiuso c = chiudi(chiaro);
     std::map<std::string, std::string> trovate;
     for (const Voce& v : c.voci) {
@@ -874,7 +875,7 @@ TEST(Unione, ElencoUtentiNellaCassaforte) {
              {Visibilita{false, true}, "U-000001: U-000002: U-000003: "}}) {
         const ValoriCassaforte x = valori(c, v);
         const Lettura lv = leggi_pacchetto(c.normali, &x);
-        ASSERT_TRUE(lv.forma_valida()) << elenco(lv.problemi);
+        ASSERT_TRUE(lv.forma_valida()) << elenco_problemi(lv.problemi);
         std::string visti;
         for (const kzero::ClientList& e : lv.pacchetto.client_lists)
             for (const kzero::ListUser& u : e.users) visti += u.code + ":" + u.name + " ";
@@ -899,7 +900,7 @@ TEST(Unione, ElencoUtentiNellaCassaforte) {
 TEST(Unione, ModificheAManoNellaCassaforte) {
     const InMemoria chiaro = pacchetto_k020();
     const Lettura l = leggi_pacchetto(chiaro);
-    ASSERT_TRUE(l.forma_valida()) << elenco(l.problemi);
+    ASSERT_TRUE(l.forma_valida()) << elenco_problemi(l.problemi);
     const Chiuso c = chiudi(chiaro);
     std::map<std::string, std::string> trovate;
     for (const Voce& v : c.voci) {
@@ -934,7 +935,7 @@ TEST(Unione, ModificheAManoNellaCassaforte) {
     // Chi ha i soli dati personali non legge il nome di U-000005 (legato per la scuola di prima).
     const ValoriCassaforte x = valori(c, Visibilita{true, false});
     const Lettura lb = leggi_pacchetto(c.normali, &x);
-    ASSERT_TRUE(lb.forma_valida()) << elenco(lb.problemi);
+    ASSERT_TRUE(lb.forma_valida()) << elenco_problemi(lb.problemi);
     for (const kzero::ClientList& e : lb.pacchetto.client_lists)
         for (const kzero::ListUser& u : e.users) {
             if (u.code == "U-000005") {
@@ -960,7 +961,7 @@ TEST(Unione, FermataDiPrimaInUnLuogoSensibile) {
                                                    {"prima", {{"luogo", "L-CENTRO"}, {"riconosciuta", "codice_esterno"}}}}}}}};
     chiaro.file["elenco_utenti.json"] = d.dump(2);
     const Lettura l = leggi_pacchetto(chiaro);
-    ASSERT_TRUE(l.forma_valida()) << elenco(l.problemi);
+    ASSERT_TRUE(l.forma_valida()) << elenco_problemi(l.problemi);
     const kzero::Index idx(l.pacchetto);
     EXPECT_TRUE(LegameSensibile(&idx).utente("U-000001"));
     const Chiuso c = chiudi(chiaro);
@@ -973,7 +974,7 @@ TEST(Unione, FermataDiPrimaInUnLuogoSensibile) {
     EXPECT_EQ(trovate, attese);
     const ValoriCassaforte x = valori(c, Visibilita{true, false});
     const Lettura lb = leggi_pacchetto(c.normali, &x);
-    ASSERT_TRUE(lb.forma_valida()) << elenco(lb.problemi);
+    ASSERT_TRUE(lb.forma_valida()) << elenco_problemi(lb.problemi);
     for (const kzero::ClientList& e : lb.pacchetto.client_lists)
         for (const kzero::ListUser& u : e.users)
             if (u.code == "U-000001") {
@@ -1008,7 +1009,7 @@ TEST(Unione, DichiarazioneParticolareConMotivoLegato) {
     for (const Visibilita v : {Visibilita{false, true}, Visibilita{true, false}}) {
         const ValoriCassaforte x = valori(c, v);
         const Lettura l = leggi_pacchetto(c.normali, &x);
-        ASSERT_TRUE(l.forma_valida()) << elenco(l.problemi);
+        ASSERT_TRUE(l.forma_valida()) << elenco_problemi(l.problemi);
         const kzero::CompanySettings* alfa = nullptr;
         for (const kzero::CompanySettings& a : l.pacchetto.company_settings)
             if (a.company.code == "ALFA") alfa = &a;
@@ -1104,6 +1105,14 @@ TEST(Unione, OgniCampoRiservatoDegliSchemiCompareNeiPacchettiDelleProve) {
     pacchetti.push_back({"k019-elenco", pacchetto_k019()});   // K-019: profili ed elenco utenti
     pacchetti.push_back({"k020-elenco", pacchetto_k020()});   // K-020: elenco della versione 2, con le modifiche a mano
     {
+        // K-027: lo stesso elenco del K-020 alla versione 3 (la 3 contiene la 2): cosi' le modifiche a mano contano anche per l'ultima versione.
+        InMemoria v3 = pacchetto_k020();
+        JsonDati e = JsonDati::parse(v3.file.at("elenco_utenti.json"));
+        e["schema_versione"] = 3;
+        v3.file["elenco_utenti.json"] = e.dump(2);
+        pacchetti.push_back({"k020-elenco-v3", v3});
+    }
+    {
         InMemoria k021;   // K-021: servizi della versione 4 (individualizzato) e il registro delle schede (le due caselle)
         k021.file = kzero::prove::schede::pacchetto_con_schede().file;
         // Un servizio "altro" della versione 4, con la sua descrizione (dato particolare).
@@ -1144,6 +1153,26 @@ TEST(Unione, OgniCampoRiservatoDegliSchemiCompareNeiPacchettiDelleProve) {
         k024.file["schede_servizi.json"] = rg.dump(2);
         pacchetti.push_back({"k024-schede", k024});
     }
+    {
+        // K-027: l'elenco alla versione 3 con i punti, uno sblocco a voce (chi l'ha detto, personale) e un periodo "non frequenta" con la
+        // nota (personale).
+        namespace pu = kzero::prove::punti;
+        InMemoria k027;
+        k027.file = pu::con_elenco(pu::pacchetto_k027(), [](kzero::ClientList& l, const kzero::Package& p) {
+                        kzero::ListUser& v = pu::utente(l, "VERDI LUCA");
+                        kzero::ListUserUnlock s("AM", "telefonata all'ufficio trasporti", *kzero::day_from_text("2026-11-03"), {});
+                        s.by_voice = true;
+                        s.who = "ufficio trasporti";
+                        v.unlocks.push_back(s);
+                        pu::punto(v, "AM", "2026-09-14", {pu::regola(p, "SCH-4000903-1", "F-CASTELROVO")});
+                        kzero::NotAttending n;
+                        n.from = *kzero::day_from_text("2026-11-02");
+                        n.note = "nota di prova";
+                        n.mark = kzero::ManualMark{"telefonata", *kzero::day_from_text("2026-10-30")};
+                        pu::utente(l, "NERI MARCO").not_attending.push_back(n);
+                    }).file;
+        pacchetti.push_back({"k027-punti", k027});
+    }
     for (const PacchettoDiProva& p : pacchetti)
         for (const auto& [file, testo] : p.chiaro.file) {
             const FileDati* f = file_dati_per_nome(file);
@@ -1179,7 +1208,7 @@ TEST(Unione, ComandiConPermessiParziali) {
     for (const PacchettoDiProva& p : pacchetti_delle_prove()) {
         // I giorni della giornata: pochi, scelti perche' ogni corsa fatta da una persona compaia almeno una volta.
         const Lettura completa = leggi_pacchetto(p.chiaro);
-        ASSERT_TRUE(completa.forma_valida()) << p.nome << "\n" << elenco(completa.problemi);
+        ASSERT_TRUE(completa.forma_valida()) << p.nome << "\n" << elenco_problemi(completa.problemi);
         const kzero::DateRange periodo = completa.pacchetto.manifest.period;
         kzero::HoursRequest richiesta;
         richiesta.report = true;

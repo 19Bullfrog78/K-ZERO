@@ -358,32 +358,75 @@ std::vector<DefinizioneComando> comandi_elenco() {
         r.nome = "--riferimento";
         r.tipo = TipoParametro::Valore;
         r.forma = FormaValore::Testo;
-        r.incompatibili = {"--togli"};
-        r.descrizione = "Il riferimento dello sblocco (es. la mail del committente), obbligatorio per aggiungerlo. Dato comune: "
-                        "senza nomi di persone.";
+        r.incompatibili = {"--togli", "--fino-al"};
+        r.descrizione = "Il riferimento dello sblocco (es. la mail del committente, o \"a voce\" con chi e quando), obbligatorio per "
+                        "aggiungerlo. Dato comune: senza nomi di persone.";
         r.applica = [](Parametri& par, const std::string& v) { par.riferimento = v; };
         p.push_back(r);
         DefinizioneParametro d;
         d.nome = "--data";
         d.tipo = TipoParametro::Valore;
         d.forma = FormaValore::Data;
-        d.incompatibili = {"--togli"};
+        d.incompatibili = {"--togli", "--fino-al"};
         d.descrizione = "La data dello sblocco, scritta dall'utente (il programma non usa l'orologio), obbligatoria per aggiungerlo.";
         d.applica = [](Parametri& par, const std::string& v) { par.data_sblocco = kzero::day_from_text(v); };
         p.push_back(d);
         DefinizioneParametro g;
         g.nome = "--togli";
         g.tipo = TipoParametro::Interruttore;
-        g.incompatibili = {"--data", "--riferimento"};
-        g.descrizione = "Toglie lo sblocco della tratta invece di aggiungerlo.";
+        g.incompatibili = {"--data", "--riferimento", "--giorni", "--al", "--a-voce", "--fino-al"};
+        g.descrizione = "Toglie uno sblocco della tratta scritto per errore (con piu' sblocchi della tratta, --dal dice quale).";
         g.applica = [](Parametri& par, const std::string&) { par.togli = true; };
         p.push_back(g);
+        // K-027: per giorni e per periodo, a voce, la chiusura da un giorno.
+        DefinizioneParametro gi;
+        gi.nome = "--giorni";
+        gi.tipo = TipoParametro::Valore;
+        gi.forma = FormaValore::Testo;
+        gi.incompatibili = {"--togli", "--fino-al"};
+        gi.descrizione = "Solo in questi giorni della settimana (es. \"mercoledi\" o \"lunedi,mercoledi\"); senza, tutti i giorni.";
+        gi.applica = [](Parametri& par, const std::string& v) { par.giorni = v; };
+        p.push_back(gi);
+        DefinizioneParametro da;
+        da.nome = "--dal";
+        da.tipo = TipoParametro::Valore;
+        da.forma = FormaValore::Data;
+        da.incompatibili = {"--fino-al"};
+        da.descrizione = "Primo giorno in cui vale lo sblocco (senza: da sempre); con --togli, quale sblocco togliere.";
+        da.applica = [](Parametri& par, const std::string& v) { par.dal = kzero::day_from_text(v); };
+        p.push_back(da);
+        DefinizioneParametro al;
+        al.nome = "--al";
+        al.tipo = TipoParametro::Valore;
+        al.forma = FormaValore::Data;
+        al.incompatibili = {"--togli", "--fino-al"};
+        al.descrizione = "Ultimo giorno in cui vale lo sblocco (senza: senza fine).";
+        al.applica = [](Parametri& par, const std::string& v) { par.al = kzero::day_from_text(v); };
+        p.push_back(al);
+        DefinizioneParametro av;
+        av.nome = "--a-voce";
+        av.tipo = TipoParametro::Interruttore;
+        av.incompatibili = {"--togli", "--fino-al"};
+        av.descrizione = "Lo sblocco e' stato detto a voce dal committente: chi l'ha detto si scrive sull'ingresso standard (\"chi: ...\", dato "
+                         "personale), dopo la password; --riferimento e --data restano obbligatori.";
+        av.applica = [](Parametri& par, const std::string&) { par.a_voce = true; };
+        p.push_back(av);
+        DefinizioneParametro fa;
+        fa.nome = "--fino-al";
+        fa.tipo = TipoParametro::Valore;
+        fa.forma = FormaValore::Data;
+        fa.incompatibili = {"--togli", "--giorni", "--dal", "--al", "--a-voce", "--data", "--riferimento"};
+        fa.descrizione = "Chiude lo sblocco della tratta che vale quel giorno: e' l'ultimo giorno in cui vale (i giorni prima non cambiano).";
+        fa.applica = [](Parametri& par, const std::string& v) { par.fino_al = kzero::day_from_text(v); };
+        p.push_back(fa);
         c.push_back({"sblocco",
                      "Aggiunge (con --riferimento e --data) o toglie (con --togli) lo sblocco di una tratta di un utente "
                      "dell'elenco del committente: un utente sospeso viaggia su quella tratta. Lo scrive l'utente di K-Zero (nel file "
-                     "del committente non c'e'); una lettura dell'elenco non lo cancella mai. Stessa scrittura e stessi permessi di "
-                     "kzero leggi-elenco (dati personali e particolari), voce nel registro.",
-                     {{"cartella", "Cartella del pacchetto chiuso."}}, p, Schema{"sblocco", 1}, esegui_sblocco});
+                     "del committente non c'e'); una lettura dell'elenco non lo cancella mai. Dal K-027 anche per giorni della settimana "
+                     "(--giorni) e per periodo (--dal, --al), a voce (--a-voce), e si chiude da un giorno (--fino-al); piu' sblocchi della "
+                     "stessa tratta non hanno giorni in comune. Stessa scrittura e stessi permessi di kzero leggi-elenco (dati personali e "
+                     "particolari), voce nel registro.",
+                     {{"cartella", "Cartella del pacchetto chiuso."}}, p, Schema{"sblocco", 2}, esegui_sblocco});
     }
     // K-020: modifiche a mano dell'elenco. Stessi parametri di base; i valori dei campi dall'ingresso standard, mai come parametri.
     const auto base_a_mano = [](const std::string& di_che) {
@@ -573,6 +616,147 @@ std::vector<DefinizioneComando> comandi_schede() {
     return c;
 }
 
+// --- Punti degli utenti dell'elenco (K-027) -----------------------------------------------------------------------------
+
+DefinizioneParametro parametro_data_valore(const char* nome, bool obbligatorio, std::string descrizione,
+                                           void (*applica)(Parametri&, const std::string&)) {
+    DefinizioneParametro d;
+    d.nome = nome;
+    d.tipo = TipoParametro::Valore;
+    d.forma = FormaValore::Data;
+    d.obbligatorio = obbligatorio;
+    d.descrizione = std::move(descrizione);
+    d.applica = applica;
+    return d;
+}
+
+std::vector<DefinizioneComando> comandi_punti() {
+    std::vector<DefinizioneComando> c;
+    const std::vector<DefinizioneArgomento> cartella = {{"cartella", "Cartella del pacchetto (chiuso, livello completo, per scrivere)."}};
+    // I comandi che scrivono: come le modifiche a mano dell'elenco (K-020), con l'anteprima senza --scrivi.
+    const auto base_scrittura = [](const std::string& di_che) {
+        std::vector<DefinizioneParametro> p{parametro_formato(), parametro_password_da_ingresso(), parametro_utente(true),
+                                            parametro_dati_personali(), parametro_dati_particolari()};
+        DefinizioneParametro s = parametro_scrivi("La cartella del pacchetto chiuso, la stessa dell'argomento: con --scrivi si scrive nella "
+                                                  "cassaforte; senza, si vede soltanto (anteprima).");
+        s.obbligatorio = false;
+        p.push_back(s);
+        DefinizioneParametro r;
+        r.nome = "--riferimento";
+        r.tipo = TipoParametro::Valore;
+        r.forma = FormaValore::Testo;
+        r.obbligatorio = true;
+        r.descrizione = "Il riferimento " + di_che + " (es. la mail del committente, chi l'ha detto). Dato comune: senza nomi di persone.";
+        r.applica = [](Parametri& par, const std::string& v) { par.riferimento = v; };
+        p.push_back(r);
+        p.push_back(parametro_data_valore("--data", true, "La data scritta da chi lo scrive (il programma non usa l'orologio).",
+                                          [](Parametri& par, const std::string& v) { par.data_sblocco = kzero::day_from_text(v); }));
+        return p;
+    };
+    const auto utente_elenco = [](bool obbligatorio) {
+        return parametro_codice("--utente-elenco", "Il codice dell'utente dell'elenco (es. U-000012).", obbligatorio,
+                                [](Parametri& par, const std::string& v) { par.utente_elenco = v; });
+    };
+    const auto tratta = [](bool obbligatorio, std::string descrizione) {
+        return parametro_codice("--tratta", std::move(descrizione), obbligatorio, [](Parametri& par, const std::string& v) { par.tratta = v; });
+    };
+    const auto dal = [](bool obbligatorio, std::string descrizione) {
+        return parametro_data_valore("--dal", obbligatorio, std::move(descrizione),
+                                     [](Parametri& par, const std::string& v) { par.dal = kzero::day_from_text(v); });
+    };
+    {
+        std::vector<DefinizioneParametro> p{parametro_formato(), parametro_password_da_ingresso(), parametro_utente(false),
+                                            parametro_dati_personali(), parametro_dati_particolari()};
+        p.push_back(dal(true, "Il giorno della proposta: le schede in vigore quel giorno, e gli utenti senza un punto quel giorno."));
+        p.push_back(utente_elenco(false));
+        p.push_back(tratta(false, "Solo questa tratta (sigla del profilo, es. AM)."));
+        DefinizioneParametro t;
+        t.nome = "--tutti";
+        t.tipo = TipoParametro::Interruttore;
+        t.descrizione = "Propone anche per chi ha gia' un punto quel giorno (per vedere se la proposta e' diversa).";
+        t.applica = [](Parametri& par, const std::string&) { par.tutti = true; };
+        p.push_back(t);
+        c.push_back({"proponi-punti",
+                     "Propone il punto (la scheda e il passaggio) di ogni utente dell'elenco con diritto al servizio e una tratta della nostra "
+                     "azienda senza punto: dalla fermata indicata nell'elenco, poi dallo stradario dell'azienda (la prima fonte con almeno un "
+                     "candidato); per ogni giorno della settimana in cui viaggia, le schede del committente con il contratto dell'azienda della "
+                     "tratta, del suo verso, in vigore quel giorno, che passano dal luogo e dalla sua scuola, con l'orario compatibile con le "
+                     "attese del pacchetto. Piu' candidati: elencati, nessuna scelta. Non scrive niente: stampa le righe pronte per kzero "
+                     "conferma-punti. Con un pacchetto chiuso serve chi ha i dati personali e particolari (lo stradario guarda le case).",
+                     cartella, p, Schema{"proposte_punti", 1}, esegui_proponi_punti});
+    }
+    {
+        auto p = base_scrittura("del punto");
+        p.push_back(utente_elenco(true));
+        p.push_back(tratta(true, "La tratta del punto (sigla del profilo, es. AM): una tratta della nostra azienda nei percorsi dell'utente."));
+        p.push_back(dal(true, "Da quando vale il punto: chiude il punto di prima al giorno prima; i giorni prima non cambiano mai."));
+        c.push_back({"assegna-punto",
+                     "Scrive a mano il punto di un utente per una tratta, da un giorno: la scheda (codice o ID) e il passaggio (il luogo e la "
+                     "volta: una scheda puo' passare due volte dallo stesso luogo), per tutti i giorni o per alcuni giorni della settimana. "
+                     "Una voce nuova dal giorno D chiude quella di prima; le voci da D in poi restano scritte, sostituite. Luoghi diversi "
+                     "(doppia tratta) solo con il consenso del committente. I valori sull'ingresso standard (mai come parametri), una riga per "
+                     "regola: \"punto: <scheda> / <luogo> [/ <volta>] [/ <giorni>]\", \"consenso: ...\", oppure \"nessuno\" (da quel giorno "
+                     "nessun punto). Serve chi ha i dati personali e particolari; senza --scrivi mostra soltanto cosa cambierebbe.",
+                     cartella, p, Schema{"punti", 1}, esegui_assegna_punto});
+    }
+    {
+        auto p = base_scrittura("della conferma");
+        p.push_back(dal(true, "Il giorno della proposta confermata, e da quando valgono i punti."));
+        c.push_back({"conferma-punti",
+                     "Conferma i punti proposti da kzero proponi-punti: una riga per punto sull'ingresso standard, come la stampa la proposta "
+                     "(\"<utente> <tratta>: <scheda> / <luogo> / <volta> [/ <giorni>]\"). Ogni riga deve essere ancora un candidato della "
+                     "proposta di quel giorno, altrimenti niente si scrive (un punto scelto a mano: kzero assegna-punto). Nessuna conferma "
+                     "\"di tutto\": una riga, una conferma. Serve chi ha i dati personali e particolari; senza --scrivi mostra soltanto cosa "
+                     "cambierebbe.",
+                     cartella, p, Schema{"punti", 1}, esegui_conferma_punti});
+    }
+    {
+        auto p = base_scrittura("del periodo");
+        p.push_back(utente_elenco(true));
+        p.push_back(tratta(false, "Solo questa tratta (sigla del profilo); senza, tutte le tratte della nostra azienda."));
+        p.push_back(dal(false, "Primo giorno in cui non frequenta (per aggiungere il periodo, o per --togli: quale periodo)."));
+        DefinizioneParametro a = parametro_data_valore("--al", false, "Ultimo giorno in cui non frequenta; senza, il periodo resta aperto.",
+                                                       [](Parametri& par, const std::string& v) { par.al = kzero::day_from_text(v); });
+        a.incompatibili = {"--fino-al", "--togli"};
+        p.push_back(a);
+        DefinizioneParametro f = parametro_data_valore("--fino-al", false, "Chiude il periodo aperto: l'ultimo giorno in cui non frequenta.",
+                                                       [](Parametri& par, const std::string& v) { par.fino_al = kzero::day_from_text(v); });
+        f.incompatibili = {"--al", "--togli"};
+        p.push_back(f);
+        DefinizioneParametro t;
+        t.nome = "--togli";
+        t.tipo = TipoParametro::Interruttore;
+        t.incompatibili = {"--al", "--fino-al"};
+        t.descrizione = "Toglie il periodo che comincia il giorno --dal (scritto per errore).";
+        t.applica = [](Parametri& par, const std::string&) { par.togli = true; };
+        p.push_back(t);
+        c.push_back({"non-frequenta",
+                     "Segna che un utente iscritto e attivo al momento non usa il mezzo (non frequenta) in un periodo (dal, al facoltativo), "
+                     "senza toglierlo dall'elenco: non conta nei numeri del confronto con le schede, e il suo punto resta (quando riprende, "
+                     "sale li'); chi non c'e' piu' si toglie dall'elenco (kzero togli-da-elenco). Il motivo e' una scelta "
+                     "fissa sull'ingresso standard (\"motivo: famiglia\", altro_mezzo, assente o altro) con una nota facoltativa "
+                     "(\"nota: ...\", dato personale). Con --fino-al chiude il periodo aperto; con --togli e --dal toglie un periodo scritto per "
+                     "errore. Serve chi ha i dati personali e particolari; senza --scrivi mostra soltanto cosa cambierebbe.",
+                     cartella, p, Schema{"punti", 1}, esegui_non_frequenta});
+    }
+    {
+        std::vector<DefinizioneParametro> p{parametro_formato(), parametro_password_da_ingresso(), parametro_utente(false),
+                                            parametro_dati_personali(), parametro_dati_particolari()};
+        p.push_back(parametro_codice("--scheda", "Solo questa scheda (codice del registro, es. SCH-4000123-3).", false,
+                                     [](Parametri& par, const std::string& v) { par.scheda = v; }));
+        p.push_back(dal(false, "Primo giorno del confronto (con --al); senza, il periodo del pacchetto."));
+        p.push_back(parametro_data_valore("--al", false, "Ultimo giorno del confronto (con --dal).",
+                                          [](Parametri& par, const std::string& v) { par.al = kzero::day_from_text(v); }));
+        c.push_back({"confronta-schede",
+                     "Confronta i punti degli utenti con i numeri delle schede: per ogni versione di scheda, giorno della settimana e periodo, "
+                     "chi sale e chi scende a ogni passaggio (attivi e sospesi sbloccati quel giorno, meno chi non frequenta) contro St. Car. e "
+                     "St. Scar. (l'accompagnatore tolto), anche alla scuola di scarico; i \"doppi\"; chi non frequenta e chi non e' contato; gli "
+                     "avvisi (in testa gli utenti con diritto senza punto). Non corregge niente.",
+                     cartella, p, Schema{"confronto_schede", 1}, esegui_confronta_schede});
+    }
+    return c;
+}
+
 std::vector<DefinizioneComando> crea_comandi() {
     std::vector<DefinizioneComando> c = {
         {"controlla",
@@ -633,6 +817,7 @@ std::vector<DefinizioneComando> crea_comandi() {
     for (DefinizioneComando& x : comandi_cassaforte()) c.push_back(std::move(x));
     for (DefinizioneComando& x : comandi_elenco()) c.push_back(std::move(x));
     for (DefinizioneComando& x : comandi_schede()) c.push_back(std::move(x));
+    for (DefinizioneComando& x : comandi_punti()) c.push_back(std::move(x));
     for (auto& comando : c)
         std::sort(comando.parametri.begin(), comando.parametri.end(),
                   [](const DefinizioneParametro& a, const DefinizioneParametro& b) { return a.nome < b.nome; });
@@ -672,7 +857,7 @@ const std::vector<Schema>& schemi_ritirati() {
         {"controlla", 1},     {"controlla", 2},     {"controlla", 3}, {"controlla", 4}, {"controlla", 5},
         {"descrivi", 1},      {"descrivi", 2},      {"descrivi", 3},  {"descrivi", 4},  {"descrivi", 5},
         {"dimostrazione", 1}, {"dimostrazione", 2},
-        {"elenco", 1},
+        {"elenco", 1},        {"sblocco", 1},
         {"schede", 1},        {"schede", 2},        {"schede", 3},        {"schede", 4},
         {"giornata", 1},      {"giornata", 2},      {"giornata", 3},  {"giornata", 4},  {"giornata", 5},
         {"ore", 1},           {"ore", 2}};

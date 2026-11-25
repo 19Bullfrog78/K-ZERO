@@ -84,6 +84,12 @@ target_link_libraries(test_schede PRIVATE kzero_api GTest::gtest_main)
 target_compile_options(test_schede PRIVATE ${KZERO_WARNINGS})
 target_compile_definitions(test_schede PRIVATE KZERO_CARTELLA_PROVE="${CMAKE_CURRENT_SOURCE_DIR}")
 gtest_discover_tests(test_schede PROPERTIES LABELS sicurezza)
+# K-027: i punti degli utenti dell'elenco e il confronto con le schede.
+add_executable(test_punti test_punti.cpp)
+target_link_libraries(test_punti PRIVATE kzero_api GTest::gtest_main)
+target_compile_options(test_punti PRIVATE ${KZERO_WARNINGS})
+target_compile_definitions(test_punti PRIVATE KZERO_CARTELLA_PROVE="${CMAKE_CURRENT_SOURCE_DIR}")
+gtest_discover_tests(test_punti PROPERTIES LABELS sicurezza)
 add_executable(test_schede_comandi test_schede_comandi.cpp)
 target_link_libraries(test_schede_comandi PRIVATE kzero_api GTest::gtest_main)
 target_compile_options(test_schede_comandi PRIVATE ${KZERO_WARNINGS})
@@ -1924,6 +1930,105 @@ kzero_schede26(schede26_controlla USCITA 0 FORMATO testo
                         "il mezzo della scheda, ALFA-01 (AA 101 AA), ne ha 16"
                NON_CONTIENE "Errore" "K-CTR-170" "K-CTR-174" "K-CTR-178"
                ARGOMENTI controlla @PACCHETTO@)
+
+# --- Punti degli utenti dell'elenco (K-027): il pacchetto di prova di tests/esempi/k027-punti, chiuso, con le schede e l'elenco letti ("letto")
+# e con i punti della dimostrazione ("punti"); i valori sull'ingresso standard dopo la password (RIGHE). Dati inventati.
+set(KZERO_K027 ${CMAKE_CURRENT_BINARY_DIR}/k027)
+set(PW_K027 "una frase lunga per i punti di prova")
+add_test(NAME punti.prepara
+         COMMAND ${CMAKE_COMMAND} -DKZERO=$<TARGET_FILE:kzero> -DPREPARA=$<TARGET_FILE:prepara_k019> -DCREA=$<TARGET_FILE:crea_xlsx>
+                 -DELENCO=${CMAKE_CURRENT_SOURCE_DIR}/esempi/k019-elenco -DESEMPI=${CMAKE_CURRENT_SOURCE_DIR}/esempi
+                 -DUSCITA=${KZERO_K027} -P ${CMAKE_CURRENT_SOURCE_DIR}/programma/prepara_k027.cmake)
+set_tests_properties(punti.prepara PROPERTIES FIXTURES_SETUP k027 LABELS programma)
+function(kzero_punti nome base)
+  cmake_parse_arguments(E "" "" "ARGOMENTI;RIGHE" ${ARGN})
+  kzero_prova(${nome} BASE ${KZERO_K027}/${base} INGRESSO "${PW_K027}" ${E_RIGHE} ${E_UNPARSED_ARGUMENTS}
+              ARGOMENTI ${E_ARGOMENTI} --utente TITOLARE --password-da-ingresso)
+  set_tests_properties(programma.${nome} PROPERTIES FIXTURES_REQUIRED k027)
+endfunction()
+set(K027_RIF --riferimento "mail del committente del 12/9" --data 2026-09-12)
+kzero_punti(punti_proponi letto USCITA 0 FORMATO testo
+            CONTIENE "Utente U-000001, tratta AM: dallo stradario dell'azienda (F-LAGOBELLO)."
+                     "F-LAGOBELLO 2a volta alle 07:53 (scuola alle 08:00): piu' candidati, nessuna scelta."
+                     "Utente U-000002, tratta AM: dalla fermata indicata nell'elenco (F-PRADELLO)."
+                     "Righe pronte per kzero conferma-punti" "  U-000002 AM: SCH-4000901-1 / F-PRADELLO / 1"
+            NON_CONTIENE "ROSSI" "BIANCHI" "U-000003" "SCH-4000902-1"
+            ARGOMENTI proponi-punti @PACCHETTO@ --dal 2026-09-21)
+kzero_punti(punti_proponi_json letto USCITA 0 FORMATO json SCHEMA proposte_punti
+            CONTIENE "\"fonte\": \"stradario\"" "\"fonte\": \"fermata_indicata\"" "\"nome\": null" "\"volta\": 2"
+            NON_CONTIENE "ROSSI"
+            ARGOMENTI proponi-punti @PACCHETTO@ --dal 2026-09-21 --formato json)
+kzero_punti(punti_conferma letto USCITA 0 FORMATO testo
+            RIGHE "U-000004 AM: SCH-4000903-1 / F-PRADELLO / 1" "U-000005 AM: SCH-4000903-1 / F-CASTELROVO / 1"
+            CONTIENE "Punto confermato dalla proposta: utente U-000004, tratta AM, dal 2026-09-14: SCH-4000903-1 / F-PRADELLO / 1 (sempre, versione 1). Proposto dalla fermata indicata nell'elenco."
+                     "Punto confermato dalla proposta: utente U-000005, tratta AM, dal 2026-09-14: SCH-4000903-1 / F-CASTELROVO / 1 (sempre, versione 1). Proposto dallo stradario dell'azienda."
+            NON_CONTIENE "Anteprima" "utente U-000006" "utente U-000008"
+            ARGOMENTI conferma-punti @PACCHETTO@ --dal 2026-09-14 ${K027_RIF} --scrivi @PACCHETTO@)
+kzero_punti(punti_conferma_non_candidato letto USCITA 2 FORMATO testo ERRORE K-ERR-057
+            RIGHE "U-000002 AM: SCH-4000901-1 / F-LAGOBELLO / 1"
+            CONTIENE "non e' un candidato della proposta"
+            ARGOMENTI conferma-punti @PACCHETTO@ --dal 2026-09-21 ${K027_RIF} --scrivi @PACCHETTO@)
+kzero_punti(punti_assegna_json letto USCITA 0 FORMATO json SCHEMA punti
+            RIGHE "punto: SCH-4000901-1 / F-LAGOBELLO / 2"
+            CONTIENE "\"azione\": \"assegnato\"" "\"volta\": 2" "\"origine\": \"a_mano\"" "\"scritto\": true"
+            ARGOMENTI assegna-punto @PACCHETTO@ --utente-elenco U-000007 --tratta AM --dal 2026-09-21 ${K027_RIF} --scrivi @PACCHETTO@
+                      --formato json)
+kzero_punti(punti_assegna_senza_volta letto USCITA 2 FORMATO testo ERRORE K-ERR-057
+            RIGHE "punto: SCH-4000901-1 / F-LAGOBELLO"
+            CONTIENE "passa 2 volte dal luogo F-LAGOBELLO: scrivere quale volta" "il punto e' il passaggio, non il luogo"
+            ARGOMENTI assegna-punto @PACCHETTO@ --utente-elenco U-000007 --tratta AM --dal 2026-09-21 ${K027_RIF})
+kzero_punti(punti_assegna_doppia_senza_consenso letto USCITA 2 FORMATO testo ERRORE K-ERR-057
+            RIGHE "punto: SCH-4000903-1 / F-PRADELLO / 1 / lunedi" "punto: SCH-4000903-1 / F-CASTELROVO / 1 / giovedi"
+            CONTIENE "serve il consenso del committente"
+            ARGOMENTI assegna-punto @PACCHETTO@ --utente-elenco U-000006 --tratta AM --dal 2026-09-14 ${K027_RIF})
+kzero_punti(punti_assegna_anteprima letto USCITA 0 FORMATO testo
+            RIGHE "punto: SCH-4000903-1 / F-CASTELROVO"
+            CONTIENE "Anteprima (niente e' stato scritto: per scrivere, --scrivi)." "Punto scritto a mano: utente U-000005"
+            ARGOMENTI assegna-punto @PACCHETTO@ --utente-elenco U-000005 --tratta AM --dal 2026-09-14 ${K027_RIF})
+kzero_punti(punti_valori_scritti_male letto USCITA 2 FORMATO json SCHEMA errore ERRORE K-ERR-050
+            RIGHE "punto: SCH-4000903-1 / F-CASTELROVO / 1 / domenicale"
+            ARGOMENTI assegna-punto @PACCHETTO@ --utente-elenco U-000005 --tratta AM --dal 2026-09-14 ${K027_RIF} --formato json)
+kzero_punti(punti_non_frequenta_json letto USCITA 0 FORMATO json SCHEMA punti
+            RIGHE "motivo: famiglia" "nota: la famiglia lo accompagna"
+            CONTIENE "\"azione\": \"non_frequenta\"" "\"motivo\": \"famiglia\"" "\"nota\": null" "\"nota_riservata\": true"
+            NON_CONTIENE "la famiglia lo accompagna"
+            ARGOMENTI non-frequenta @PACCHETTO@ --utente-elenco U-000004 --dal 2026-11-02 ${K027_RIF} --scrivi @PACCHETTO@ --formato json)
+kzero_punti(punti_non_frequenta_motivo_libero letto USCITA 2 FORMATO testo ERRORE K-ERR-050
+            RIGHE "motivo: operato al ginocchio"
+            NON_CONTIENE "ginocchio"
+            ARGOMENTI non-frequenta @PACCHETTO@ --utente-elenco U-000004 --dal 2026-11-02 ${K027_RIF})
+# Correzione D8 dell'arbitro: "ritirato" non e' un periodo (chi non c'e' piu' si toglie dall'elenco), il messaggio lo dice.
+kzero_punti(punti_non_frequenta_ritirato letto USCITA 2 FORMATO testo ERRORE K-ERR-050
+            RIGHE "motivo: ritirato"
+            CONTIENE "famiglia, altro_mezzo, assente, altro" "kzero togli-da-elenco"
+            ARGOMENTI non-frequenta @PACCHETTO@ --utente-elenco U-000004 --dal 2026-11-02 ${K027_RIF})
+kzero_punti(punti_sblocco_giorni_json letto USCITA 0 FORMATO json SCHEMA sblocco
+            CONTIENE "\"schema_versione\": 2" "\"mercoledi\"" "\"a_voce\": false" "\"al\": null"
+            ARGOMENTI sblocco @PACCHETTO@ --utente-elenco U-000003 --tratta AM --giorni mercoledi ${K027_RIF} --scrivi @PACCHETTO@ --formato json)
+kzero_punti(punti_sblocco_a_voce letto USCITA 0 FORMATO testo
+            RIGHE "chi: ufficio trasporti, signora Nera"
+            CONTIENE "Sblocco aggiunto: utente U-000003 (committente CVA), tratta RP (mercoledi, sempre, a voce)"
+            NON_CONTIENE "signora Nera"
+            ARGOMENTI sblocco @PACCHETTO@ --utente-elenco U-000003 --tratta RP --giorni mercoledi --a-voce --riferimento "telefonata del 12/9"
+                      --data 2026-09-12 --scrivi @PACCHETTO@)
+kzero_punti(punti_confronta punti USCITA 0 FORMATO testo
+            CONTIENE "Scheda SCH-4000903-1 (4000903/1, Andata Mattino), versione 1, dal 2026-09-14 al 2027-06-12:"
+                     "07:40 F-CASTELROVO (1a volta): salgono 2 sulla scheda, 2 con il punto; scendono 0 sulla scheda, 0 con il punto. Salgono: U-000003, U-000008."
+                     "Non frequentano (non contati): U-000004." "Con il punto qui ma non contati (vedi gli avvisi): U-000003."
+                     "Avviso K-CTR-186: L'utente U-000003 e' sospeso"
+            NON_CONTIENE "VERDI" "VIOLA"
+            ARGOMENTI confronta-schede @PACCHETTO@ --scheda SCH-4000903-1 --dal 2026-11-30 --al 2026-12-04)
+kzero_punti(punti_confronta_json punti USCITA 0 FORMATO json SCHEMA confronto_schede
+            CONTIENE "\"periodi_diversi\":" "K-CTR-183" "\"doppi\": []"
+            ARGOMENTI confronta-schede @PACCHETTO@ --formato json)
+kzero_punti(punti_confronta_scheda_che_non_c_e punti USCITA 2 FORMATO testo ERRORE K-ERR-054
+            ARGOMENTI confronta-schede @PACCHETTO@ --scheda SCH-9999999-1)
+kzero_punti(punti_controlla punti USCITA 0 FORMATO testo
+            CONTIENE "Avviso K-CTR-183 (elenco_utenti.json, /elenchi/0/utenti/4): L'utente U-000005 e' attivo e ha la tratta AM della nostra azienda, ma non ha un punto"
+                     "Avviso K-CTR-186 (elenco_utenti.json, /elenchi/0/utenti/2/punti/0/storia/0/regole/0): L'utente U-000003 e' sospeso"
+                     "Avviso K-CTR-182 (schede_servizi.json, /schede/0/versioni/0): Scheda SCH-4000901-1 (versione 1): al passaggio F-CASTELROVO"
+            NON_CONTIENE "Errore" "K-CTR-187" "K-CTR-185" "K-CTR-184"
+            ARGOMENTI controlla @PACCHETTO@)
 
 kzero_schede(schede_profilo_vecchio_avviso USCITA 0 FORMATO testo
              CONTIENE "Avviso K-CTR-178 (profili_schede.json, /profili/0): Il profilo delle schede PS-CVA e' in profili_schede.json alla versione 1"

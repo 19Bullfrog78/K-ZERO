@@ -16,6 +16,7 @@
 #include "cassaforte.hpp"
 #include "cassaforte_prove.hpp"
 #include "chiusura.hpp"
+#include "controlli_catalogo.hpp"
 #include "controllo.hpp"
 #include "elenco.hpp"
 #include "errori.hpp"
@@ -435,6 +436,21 @@ TEST(Elenco, ParzialeEIlleggibiliNonFannoUscire) {
     const bool avviso = std::any_of(illeggibili.warnings.begin(), illeggibili.warnings.end(),
                                     [](const Problem& p) { return p.check == Check::ListExitsNotApplied; });
     EXPECT_TRUE(avviso);
+    // K-027, punto 5: con una riga sola il testo e' al singolare; con due o piu' come prima.
+    const auto testo_151 = [&](const ListMerge& m) {
+        const Presentatore pr(&l.pacchetto, &l.versioni, Visibilita{true, true});
+        for (const Problem& p : m.warnings)
+            if (p.check == Check::ListExitsNotApplied) return pr.messaggio(p);
+        return std::string();
+    };
+    EXPECT_EQ(testo_151(illeggibili), "L'elenco e' completo ma 1 riga non si legge: le uscite non si applicano (chi non e' nel file resta). "
+                                      "Correggere le righe nel file, o chiedere al committente, e rileggerlo.");
+    const ListMerge due = leggi_e_confronta(l, {kTitoli, riga("Scuola primaria Valfonda", "ROSSI ANNA"),
+                                                riga("Scuola primaria Valfonda", "VERDI LUCA", "ATTIVO", "AM/ALFA", "AM: 25:00 LU"),
+                                                riga("Scuola primaria Valfonda", "NERI SARA", "ATTIVO", "AM/ALFA", "AM: 26:00 LU")},
+                                            true);
+    EXPECT_EQ(testo_151(due), "L'elenco e' completo ma 2 righe non si leggono: le uscite non si applicano (chi non e' nel file resta). "
+                              "Correggere le righe nel file, o chiedere al committente, e rileggerlo.");
     // Lo stesso file completo e tutto leggibile: NERI e VERDI escono.
     const ListMerge buono = leggi_e_confronta(l, {kTitoli, riga("Scuola primaria Valfonda", "ROSSI ANNA")}, true);
     EXPECT_EQ(conta(buono, ListChange::Kind::Exited), 2);

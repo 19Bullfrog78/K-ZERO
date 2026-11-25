@@ -1,6 +1,6 @@
 // K-Zero - fuzzing (libFuzzer): l'elenco utenti del committente (K-019). Il bersaglio si sceglie con la variabile KZERO_BERSAGLIO:
 // "elenco-archivio" (un file .xlsx intero), "elenco-foglio" (la parte XML di un foglio), "elenco-righe" (le righe del file); K-020 "elenco-campi" (i campi di una modifica a mano);
-// K-021 "schede-righe" (le tre tabelle delle schede dei servizi).
+// K-021 "schede-righe" (le tre tabelle delle schede dei servizi); K-027 "punti-campi" (le righe dei punti degli utenti).
 #include <cstddef>
 #include <cstdio>
 #include <cstdlib>

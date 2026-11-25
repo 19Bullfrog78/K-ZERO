@@ -13,7 +13,10 @@
 # risultare uguale e senza avvisi, con il seme delle quattro schede di tests/esempi/k025-schede; dal K-026 alla versione 4, con la
 # colonna del mezzo della scheda, i semi delle tre schede di tests/esempi/k026-schede e delle stesse con le targhe scritte in altri modi:
 # un mezzo riconosciuto e' sempre il solo con quella targa, dell'azienda del contratto o in prestito a lei, e lo stesso file riletto con
-# lo stesso pacchetto non aggiunge mai il mezzo).
+# lo stesso pacchetto non aggiunge mai il mezzo); dal K-027 i file elenco_utenti.json (alla versione 3, con i punti, chi non frequenta e
+# gli sblocchi per giorni: seme in tests/fuzz/semi) e stradari.json tra i bersagli del pacchetto, e le righe dei punti scritte
+# sull'ingresso (punti-campi: assegna-punto, conferma-punti, non-frequenta, lo sblocco a voce), scritte poi in una storia di prova (mai un
+# giorno prima della voce nuova cambiato).
 # Un guasto (memoria, comportamento non definito, risultato incoerente, attesa oltre 10 secondi) ferma il bersaglio:
 # il file che lo provoca resta in <lavoro>/guasti/<bersaglio>/ e lo script esce con 1. Il file va corretto e messo in
 # tests/fuzz/casi/<bersaglio>/ (diventa una prova normale, fuzz.casi.<bersaglio>).
@@ -37,13 +40,13 @@ lavoro="$(cd "$lavoro" && pwd)"
 file_formato=(pacchetto.json aziende.json norme.json luoghi.json tratti.json regolamenti.json festivita.json
   calendari.json scuole.json committenti.json contratti.json gruppi_servizi.json servizi.json corse.json mezzi.json
   rimesse.json tempi_sosta.json persone.json assenze.json fermi.json turni.json rotazioni.json servizi_fissi.json
-  assegnazioni.json blocchi.json profili_schede.json schede_servizi.json)
+  assegnazioni.json blocchi.json profili_schede.json schede_servizi.json elenco_utenti.json stradari.json)
 if [ $# -gt 0 ]; then
   bersagli=("$@")
 else
   bersagli=()
   for f in "${file_formato[@]}"; do bersagli+=("pacchetto-$f"); done
-  bersagli+=(parametri date-e-orari cassaforte cassaforte-voci registro registro-voci password elenco-archivio elenco-foglio elenco-righe elenco-campi schede-righe)
+  bersagli+=(parametri date-e-orari cassaforte cassaforte-voci registro registro-voci password elenco-archivio elenco-foglio elenco-righe elenco-campi schede-righe punti-campi)
 fi
 # Semi dei bersagli della cassaforte (K-010, chiavi casuali) e dell'elenco (K-019, file .xlsx costruiti dai testi): preparati a
 # ogni giro da rigioca_fuzz.
@@ -93,13 +96,14 @@ prova_bersaglio() {
       ambiente=(KZERO_FILE="$f")
       for semi in "$radice/esempi/demo" "$radice/esempi/demo-numeri" "$radice/tests/esempi/k007-demo" "$radice/tests/esempi/k011-orari" \
                   "$radice/tests/esempi/k012-servizi" "$radice/tests/esempi/k021-schede" "$radice/tests/esempi/k023-schede" \
-                  "$radice/tests/esempi/k024-schede" "$radice/tests/esempi/k026-schede"; do
+                  "$radice/tests/esempi/k024-schede" "$radice/tests/esempi/k026-schede" "$radice/tests/esempi/k020-elenco" \
+                  "$radice/tests/esempi/k027-punti"; do
         [ -f "$semi/$f" ] && cp "$semi/$f" "$corpus/seme-$(basename "$semi")-$f"
       done
       ;;
     parametri) programma="$build/tests/fuzz_parametri"; cp "$radice/tests/fuzz/semi/parametri/"* "$corpus/" ;;
     date-e-orari) programma="$build/tests/fuzz_date_e_orari"; cp "$radice/tests/fuzz/semi/date-e-orari/"* "$corpus/" ;;
-    elenco-archivio|elenco-foglio|elenco-righe|elenco-campi|schede-righe)
+    elenco-archivio|elenco-foglio|elenco-righe|elenco-campi|schede-righe|punti-campi)
       programma="$build/tests/fuzz_elenco"
       ambiente=(KZERO_BERSAGLIO="$b")
       cp "$semi_cassaforte/$b/"* "$corpus/" ;;

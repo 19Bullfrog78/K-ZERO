@@ -964,5 +964,16 @@ TEST(Controlli, catalogo_coperto) {
     EXPECT_EQ(api::definizione_controllo(Check::CardSameAsOlderVersion).codice, "K-CTR-179");
     // K-026: il mezzo della scheda (le prove stanno in test_schede).
     EXPECT_EQ(api::definizione_controllo(Check::CardVehicleNotRecognized).codice, "K-CTR-180");
-    EXPECT_EQ(api::catalogo_controlli().size(), 180u);
+    // K-027: i punti degli utenti dell'elenco e il confronto con le schede (le prove stanno in test_punti).
+    EXPECT_EQ(api::definizione_controllo(Check::PointsCountsDiffer).codice, "K-CTR-181");
+    EXPECT_EQ(api::definizione_controllo(Check::PointsPassageEmpty).codice, "K-CTR-182");
+    EXPECT_EQ(api::definizione_controllo(Check::PointsMissing).codice, "K-CTR-183");
+    EXPECT_EQ(api::definizione_controllo(Check::PointsNotValid).codice, "K-CTR-184");
+    EXPECT_EQ(api::definizione_controllo(Check::PointsPassageChanged).codice, "K-CTR-185");
+    EXPECT_EQ(api::definizione_controllo(Check::PointsSuspendedNoUnlock).codice, "K-CTR-186");
+    EXPECT_EQ(api::definizione_controllo(Check::PointsDoubleNoConsent).codice, "K-CTR-187");
+    EXPECT_EQ(api::definizione_controllo(Check::PointsInconsistent).codice, "K-CTR-188");
+    EXPECT_EQ(api::definizione_controllo(Check::PointsDaysUnknown).codice, "K-CTR-189");
+    EXPECT_EQ(api::definizione_controllo(Check::StreetTableInvalid).codice, "K-CTR-190");
+    EXPECT_EQ(api::catalogo_controlli().size(), 190u);
 }

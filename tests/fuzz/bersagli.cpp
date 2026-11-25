@@ -38,6 +38,7 @@
 #include "elenco.hpp"
 #include "excel.hpp"
 #include "campi_ingresso.hpp"
+#include "punti.hpp"
 #include "../xlsx_prove.hpp"
 
 namespace kzero::fuzz {
@@ -966,6 +967,176 @@ int prova_semi_schede() {
     return n;
 }
 
+// --- K-027: i punti degli utenti dell'elenco -------------------------------------------------------------------------------
+
+namespace {
+
+// Una voce della storia dei punti come testo (dal, regole, giorni): per confrontare i giorni prima e dopo una voce nuova.
+std::string firma_voce(const kzero::PointEntry* e) {
+    if (!e) return "nessuna voce";
+    std::string out = std::to_string(e->from) + (e->rules.empty() ? " nessun punto" : "");
+    for (const kzero::PointRule& r : e->rules) {
+        out += " | " + r.card_id + " " + r.place.code + " " + std::to_string(r.occurrence) + " v" + std::to_string(r.version) + " ";
+        for (int g = 0; g < 7; ++g) out += r.covers(static_cast<kzero::Weekday>(g)) ? '1' : '0';
+    }
+    return out;
+}
+
+}  // namespace
+
+void prova_punti_campi(const std::uint8_t* dati, std::size_t n) {
+    const campi::Righe r = campi::leggi_testo(std::string(reinterpret_cast<const char*>(dati), n));
+    if (r.motivo != campi::Motivo::Nessuno) {
+        if (r.riga < 1) guasto("riga fuori dai limiti senza numero");
+        return;
+    }
+    const int righe = static_cast<int>(r.righe.size());
+    using Modo = kzero::PointLinesMode;
+    using Guasto = kzero::PointLinesFault;
+    for (const Modo modo : {Modo::Assign, Modo::Confirm, Modo::NotAttending, Modo::Voice}) {
+        const kzero::PointLines a = kzero::parse_point_lines(r.righe, modo);
+        const kzero::PointLines b = kzero::parse_point_lines(r.righe, modo);
+        if (a.fault != b.fault || a.line != b.line || a.points.size() != b.points.size() || a.consent != b.consent || a.who != b.who ||
+            a.note != b.note || a.reason != b.reason || a.nobody != b.nobody)
+            guasto("le stesse righe dei punti lette in due modi diversi");
+        if (a.line < 0 || a.line > righe) guasto("riga del problema fuori dalle righe");
+        if (a.fault != Guasto::None) continue;
+        for (const kzero::PointLine& x : a.points) {
+            if (x.card.empty() || x.card.size() > 300 || x.place.empty()) guasto("punto senza scheda o senza luogo accettato");
+            if (x.occurrence && (*x.occurrence < 1 || *x.occurrence > 99)) guasto("volta fuori dai limiti accettata");
+            if (x.all_days != x.days.empty()) guasto("giorni del punto incoerenti");
+            if (x.line < 1 || x.line > righe) guasto("riga del punto fuori dalle righe");
+            if (modo == Modo::Confirm && (!x.occurrence || x.user.empty() || x.leg.empty() || x.leg.size() > 100))
+                guasto("riga pronta della conferma senza utente, tratta o volta accettata");
+            if (modo != Modo::Confirm && (!x.user.empty() || !x.leg.empty())) guasto("utente o tratta fuori dalla conferma");
+        }
+        if (modo != Modo::Assign && (a.nobody || !a.consent.empty())) guasto("\"nessuno\" o consenso fuori da assegna-punto");
+        if (modo != Modo::NotAttending && (a.reason || !a.note.empty())) guasto("motivo o nota fuori da non-frequenta");
+        if (modo != Modo::Voice && !a.who.empty()) guasto("\"chi\" fuori dallo sblocco a voce");
+        if (modo == Modo::Assign && a.nobody == !a.points.empty()) guasto("\"nessuno\" e i punti insieme, o nessuno dei due");
+        if (modo == Modo::Assign && a.nobody && !a.consent.empty()) guasto("consenso con \"nessuno\"");
+        if (modo == Modo::Confirm && a.points.empty()) guasto("conferma senza righe accettata");
+        if (modo == Modo::NotAttending && (!a.reason || a.note.size() > 2000)) guasto("non-frequenta senza motivo o con la nota troppo lunga");
+        if (modo == Modo::Voice && (a.who.empty() || a.who.size() > 300)) guasto("sblocco a voce senza \"chi\" o troppo lungo");
+        if (a.consent.size() > 300) guasto("consenso troppo lungo accettato");
+    }
+    for (const std::string& x : r.righe) {
+        const std::optional<kzero::Weekdays> g = kzero::parse_weekdays(x);
+        if (g && g->empty()) guasto("giorni della settimana vuoti accettati");
+    }
+    // La storia: una voce nuova (i punti letti per assegna-punto, dal giorno ricavato dai byte) non cambia mai i giorni prima della sua
+    // data, vale da li' in poi e non toglie nessuna voce dalla storia (le voci dopo restano, segnate come sostituite).
+    const kzero::PointLines a = kzero::parse_point_lines(r.righe, Modo::Assign);
+    if (a.fault != Guasto::None) return;
+    const kzero::Day inizio = kzero::day_from_ymd(2026, 9, 1);
+    unsigned somma = 0;
+    for (std::size_t i = 0; i < n; ++i) somma = somma * 31u + dati[i];
+    kzero::PointEntry e;
+    e.from = inizio + static_cast<kzero::Day>(somma % 300u);
+    e.mark = kzero::ManualMark{"prova", e.from};
+    e.consent = a.consent;
+    for (const kzero::PointLine& x : a.points) {
+        kzero::PointRule pr;
+        pr.card_id = x.card;
+        pr.place = kzero::Ref{x.place, {}};
+        pr.occurrence = x.occurrence.value_or(1);
+        pr.all_days = x.all_days;
+        pr.days = x.days;
+        e.rules.push_back(pr);
+    }
+    kzero::UserPoints up{"AM", {}, {}};
+    for (const auto& [dal, luogo] : {std::make_pair(14, "F-UNO"), std::make_pair(62, "F-DUE"), std::make_pair(200, "F-TRE")}) {
+        kzero::PointEntry v;
+        v.from = inizio + dal;
+        v.mark = kzero::ManualMark{"prima", v.from};
+        kzero::PointRule pr;
+        pr.card_id = "SCHEDA";
+        pr.place = kzero::Ref{luogo, {}};
+        v.rules.push_back(pr);
+        (void)kzero::add_point_entry(up, v);
+    }
+    std::vector<std::string> prima;
+    for (kzero::Day d = inizio - 5; d < inizio + 320; ++d) prima.push_back(firma_voce(kzero::point_entry_on(up, d)));
+    const std::size_t voci = up.history.size();
+    const std::vector<kzero::Day> sostituite = kzero::add_point_entry(up, e);
+    if (up.history.size() != voci + 1) guasto("la voce nuova ha tolto o aggiunto altre voci della storia");
+    for (kzero::Day s : sostituite)
+        if (s < e.from) guasto("sostituita una voce che comincia prima della nuova");
+    const std::string nuova = firma_voce(&e);
+    for (kzero::Day d = inizio - 5; d < inizio + 320; ++d) {
+        const std::string ora = firma_voce(kzero::point_entry_on(up, d));
+        if (d < e.from && ora != prima[static_cast<std::size_t>(d - (inizio - 5))]) guasto("una voce nuova ha cambiato un giorno prima della sua data");
+        if (d >= e.from && ora != nuova) guasto("la voce nuova non vale dalla sua data in poi");
+    }
+}
+
+void scrivi_semi_punti(const std::string& cartella) {
+    namespace fs = std::filesystem;
+    const auto scrivi = [&](const std::string& nome, const std::string& testo) {
+        fs::create_directories(fs::path(cartella) / "punti-campi");
+        std::ofstream(fs::path(cartella) / "punti-campi" / nome, std::ios::binary) << testo;
+    };
+    // Le righe dei quattro comandi, come nelle prove (dati inventati): assegna-punto con le due volte e i giorni, la doppia tratta con il
+    // consenso, "nessuno", le righe pronte di kzero proponi-punti, non-frequenta e lo sblocco a voce.
+    scrivi("seme-assegna", "punto: SCH-4000901-1 / F-LAGOBELLO / 2 / lunedi, mercoledi\npunto: SCH-4000901-1 / F-LAGOBELLO / 1 / martedi,giovedi,venerdi\n");
+    scrivi("seme-doppia", "punto: 7d2a9c10-27aa-4b1e-9c00-000000000903 / F-PRADELLO\npunto: SCH-4000903-1 / F-CASTELROVO / 1 / venerdi\n"
+                          "consenso: mail del committente del 3/11 (prova)\n");
+    scrivi("seme-nessuno", "nessuno\n");
+    scrivi("seme-conferma", "U-000001 AM: SCH-4000901-1 / F-LAGOBELLO / 1\nU-000002 AM: SCH-4000901-1 / F-PRADELLO / 1 / martedi, mercoledi\n");
+    scrivi("seme-non-frequenta", "motivo: famiglia\nnota: la famiglia lo accompagna (prova)\n");
+    scrivi("seme-a-voce", "chi: la mamma al telefono (prova)\n");
+}
+
+int prova_semi_punti() {
+    namespace fs = std::filesystem;
+    const fs::path cartella = fs::temp_directory_path() / ("kzero-semi-punti-" + std::to_string(::getpid()));
+    scrivi_semi_punti(cartella.string());
+    int n = 0;
+    for (const auto& x : fs::directory_iterator(cartella / "punti-campi")) {
+        const std::string t = testo_di(x.path().string());
+        prova("punti-campi", reinterpret_cast<const std::uint8_t*>(t.data()), t.size());
+        ++n;
+    }
+    std::error_code ec;
+    fs::remove_all(cartella, ec);
+    // I semi devono essere buoni: ognuno si legge senza problemi nel suo comando.
+    const auto righe = [](const std::string& t) { return campi::leggi_testo(t).righe; };
+    using Modo = kzero::PointLinesMode;
+    const kzero::PointLines as = kzero::parse_point_lines(righe("punto: SCH-4000901-1 / F-LAGOBELLO / 2 / lunedi, mercoledi\n"), Modo::Assign);
+    const kzero::PointLines co = kzero::parse_point_lines(righe("U-000001 AM: SCH-4000901-1 / F-LAGOBELLO / 1\n"), Modo::Confirm);
+    const kzero::PointLines nv = kzero::parse_point_lines(righe("motivo: altro mezzo\n"), Modo::NotAttending);
+    const kzero::PointLines vo = kzero::parse_point_lines(righe("chi: la mamma al telefono (prova)\n"), Modo::Voice);
+    if (as.fault != kzero::PointLinesFault::None || as.points.size() != 1 || as.points[0].occurrence != 2 || as.points[0].all_days ||
+        co.fault != kzero::PointLinesFault::None || co.points.size() != 1 || co.points[0].user != "U-000001" ||
+        nv.fault != kzero::PointLinesFault::None || nv.reason != kzero::NotAttendingReason::OtherVehicle || vo.fault != kzero::PointLinesFault::None)
+        guasto("i semi dei punti non si leggono come atteso");
+    // I semi dei file del K-027 nei bersagli del pacchetto: l'elenco alla versione 3 (con i punti, chi non frequenta e gli sblocchi per
+    // giorni) e lo stradario si leggono, i punti restano.
+    const std::string semi = std::string(KZERO_SORGENTI) + "/tests/fuzz/semi/pacchetto-elenco_utenti.json/";
+    for (const auto& x : fs::directory_iterator(semi)) {
+        const std::string t = testo_di(x.path().string());
+        prova("pacchetto-elenco_utenti.json", reinterpret_cast<const std::uint8_t*>(t.data()), t.size());
+        ++n;
+        Lettura l = base_senza("elenco_utenti.json");
+        leggi_file("elenco_utenti.json", t, l);
+        std::size_t punti = 0, fermi = 0, sblocchi = 0;
+        for (const kzero::ClientList& c : l.pacchetto.client_lists)
+            for (const kzero::ListUser& u : c.users) {
+                punti += u.points.size();
+                fermi += u.not_attending.size();
+                for (const kzero::ListUserUnlock& s : u.unlocks) sblocchi += s.all_days ? 0 : 1;
+            }
+        if (!l.usato("elenco_utenti.json") || punti == 0 || fermi == 0 || sblocchi == 0)
+            guasto("il seme dell'elenco alla versione 3 non si legge come atteso: " + x.path().filename().string());
+    }
+    const std::string stradario = testo_di(std::string(KZERO_SORGENTI) + "/tests/esempi/k027-punti/stradari.json");
+    prova("pacchetto-stradari.json", reinterpret_cast<const std::uint8_t*>(stradario.data()), stradario.size());
+    Lettura l = base_senza("stradari.json");
+    leggi_file("stradari.json", stradario, l);
+    if (l.pacchetto.street_tables.size() != 1 || l.pacchetto.street_tables[0].rows.size() != 4) guasto("lo stradario di prova non si legge come atteso");
+    return n + 1;
+}
+
 bool prova(const std::string& bersaglio, const std::uint8_t* dati, std::size_t n) {
     if (bersaglio == "cassaforte") prova_cassaforte(dati, n);
     else if (bersaglio == "cassaforte-voci") prova_cassaforte_voci(dati, n);
@@ -979,6 +1150,7 @@ bool prova(const std::string& bersaglio, const std::uint8_t* dati, std::size_t n
     else if (bersaglio == "elenco-righe") prova_elenco_righe(dati, n);
     else if (bersaglio == "elenco-campi") prova_elenco_campi(dati, n);
     else if (bersaglio == "schede-righe") prova_schede_righe(dati, n);
+    else if (bersaglio == "punti-campi") prova_punti_campi(dati, n);
     else if (bersaglio.rfind("pacchetto-", 0) == 0 && file_dati_per_nome(bersaglio.substr(10)))
         prova_file_del_pacchetto(bersaglio.substr(10), dati, n);
     else return false;

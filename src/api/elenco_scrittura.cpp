@@ -180,6 +180,53 @@ JsonDati a_mano_json(const kzero::ListUser& u) {
     return j;
 }
 
+// K-027: i giorni della settimana, i punti e i periodi in cui un utente non frequenta.
+JsonDati giorni_json(const kzero::Weekdays& g) {
+    JsonDati v = JsonDati::array();
+    for (int i = 0; i < 7; ++i)
+        if (g.has(static_cast<kzero::Weekday>(i))) v.push_back(nome_giorno(static_cast<kzero::Weekday>(i)));
+    return v;
+}
+JsonDati punti_json(const std::vector<kzero::UserPoints>& punti) {
+    JsonDati v = JsonDati::array();
+    for (const kzero::UserPoints& p : punti) {
+        JsonDati storia = JsonDati::array();
+        for (const kzero::PointEntry& e : p.history) {
+            JsonDati x = segno_json(e.mark);
+            x["dal"] = kzero::text_from_day(e.from);
+            x["origine"] = e.origin == kzero::PointOrigin::Proposal ? "proposta" : "a_mano";
+            if (e.source == kzero::PointSource::IndicatedStop) x["fonte"] = "fermata_indicata";
+            if (e.source == kzero::PointSource::StreetTable) x["fonte"] = "stradario";
+            if (!e.consent.empty()) x["consenso"] = e.consent;
+            JsonDati regole = JsonDati::array();
+            for (const kzero::PointRule& r : e.rules) {
+                JsonDati y = {{"scheda", r.card_id}, {"luogo", r.place.code}, {"volta", r.occurrence}, {"versione", r.version}};
+                if (!r.all_days) y["giorni"] = giorni_json(r.days);
+                regole.push_back(y);
+            }
+            x["regole"] = regole;
+            if (e.replaced) x["sostituita"] = segno_json(*e.replaced);
+            storia.push_back(x);
+        }
+        v.push_back({{"tratta", p.leg}, {"storia", storia}});
+    }
+    return v;
+}
+JsonDati non_frequenta_json(const std::vector<kzero::NotAttending>& periodi) {
+    static const char* motivi[] = {"famiglia", "altro_mezzo", "assente", "altro"};
+    JsonDati v = JsonDati::array();
+    for (const kzero::NotAttending& n : periodi) {
+        JsonDati x = segno_json(n.mark);
+        x["dal"] = kzero::text_from_day(n.from);
+        if (n.to) x["al"] = kzero::text_from_day(*n.to);
+        if (!n.legs.empty()) x["tratte"] = n.legs;
+        x["motivo"] = motivi[static_cast<int>(n.reason)];
+        if (!n.note.empty()) x["nota"] = n.note;
+        v.push_back(x);
+    }
+    return v;
+}
+
 JsonDati utente_json(const kzero::ListUser& u) {
     JsonDati j = JsonDati::object();
     j["codice"] = u.code;
@@ -194,10 +241,19 @@ JsonDati utente_json(const kzero::ListUser& u) {
     if (!u.times.empty()) j["orari"] = orari_json(u.times, true);
     if (!u.unlocks.empty()) {
         JsonDati v = JsonDati::array();
-        for (const kzero::ListUserUnlock& s : u.unlocks)
-            v.push_back({{"tratta", s.leg}, {"riferimento", s.reference}, {"data", kzero::text_from_day(s.date)}});
+        for (const kzero::ListUserUnlock& s : u.unlocks) {
+            JsonDati x = {{"tratta", s.leg}, {"riferimento", s.reference}, {"data", kzero::text_from_day(s.date)}};
+            if (!s.all_days) x["giorni"] = giorni_json(s.days);
+            if (s.from) x["dal"] = kzero::text_from_day(*s.from);
+            if (s.to) x["al"] = kzero::text_from_day(*s.to);
+            if (s.by_voice) x["a_voce"] = true;
+            if (!s.who.empty()) x["chi"] = s.who;
+            v.push_back(x);
+        }
         j["sblocchi"] = v;
     }
+    if (!u.points.empty()) j["punti"] = punti_json(u.points);
+    if (!u.not_attending.empty()) j["non_frequenta"] = non_frequenta_json(u.not_attending);
     if (u.out_of_list) j["fuori_elenco"] = true;
     if (u.added || u.removed || !u.manual.empty()) j["a_mano"] = a_mano_json(u);
     return j;
@@ -221,7 +277,7 @@ JsonDati documento_con(const Lettura& vecchia, const kzero::ClientList& l, int u
     JsonDati d = vecchia.documenti.count(kFile) ? vecchia.documenti.at(kFile)
                                                 : JsonDati{{"schema", "elenco_utenti"}, {"schema_versione", kVersione}, {"ultimo_numero", 0},
                                                            {"elenchi", JsonDati::array()}};
-    // Gli altri elenchi della versione 1 si scrivono uguali: la 2 aggiunge soltanto campi che non devono esserci.
+    // Gli altri elenchi delle versioni 1 e 2 si scrivono uguali: la 2 e la 3 aggiungono soltanto campi che non devono esserci.
     d["schema_versione"] = kVersione;
     d["ultimo_numero"] = ultimo_numero;
     JsonDati elenchi = JsonDati::array();

@@ -120,6 +120,38 @@ LegameSensibile::LegameSensibile(const kzero::Index* indice) {
         if (l.type == kzero::PlaceType::DoorToDoor) porta_a_porta.insert(l.code);
     }
     const bool tutto_il_porta_a_porta = p.manifest.door_to_door_sensitive;
+
+    // K-027 (D3 dell'arbitro): l'utente dell'elenco con un punto (in tutta la storia, anche le voci sostituite) su una scheda per
+    // disabili o individualizzata. Il nome con la scheda direbbe la salute a chi ha i soli dati personali (la scheda dice molto anche
+    // senza i particolari: Totali alunni 1, il calendario del committente, una casa porta a porta). Una scheda e' "di salute" se una
+    // sua versione ha il tipo disabili (servizio o gruppo) o la casella individualizzato, nella copia o nel suo servizio del
+    // pacchetto. Si calcola quando si scrive la cassaforte (chi scrive ha tutti e due i permessi); chi legge senza i particolari non
+    // conosce il tipo, ma non decifra nemmeno la sezione dei legati.
+    std::set<std::string> schede_di_salute;
+    for (const kzero::ServiceCard& sc : p.service_cards) {
+        bool salute = false;
+        for (const kzero::CardVersion& v : sc.versions) {
+            const kzero::Card& k = v.card;
+            if (k.chosen && (k.chosen->kind.kind == kzero::ServiceKind::Disability || k.chosen->kind.group == kzero::GroupType::Disabled))
+                salute = true;
+            if (k.individual && *k.individual) salute = true;
+            if (const kzero::Service* s = indice->service(v.service)) {
+                if (s->kind.known() && s->kind.value() == kzero::ServiceKind::Disability) salute = true;
+                if (s->individual && *s->individual) salute = true;
+                for (const kzero::PassengerGroup& g : s->groups)
+                    if (g.type.known() && g.type.value() == kzero::GroupType::Disabled) salute = true;
+            }
+        }
+        if (salute) schede_di_salute.insert(sc.id);
+    }
+    if (!schede_di_salute.empty())
+        for (const kzero::ClientList& l : p.client_lists)
+            for (const kzero::ListUser& u : l.users)
+                for (const kzero::UserPoints& up : u.points)
+                    for (const kzero::PointEntry& e : up.history)
+                        for (const kzero::PointRule& r : e.rules)
+                            if (schede_di_salute.count(r.card_id)) utenti_.insert(u.code);
+
     if (sensibili.empty() && !(tutto_il_porta_a_porta && !porta_a_porta.empty())) return;
     const auto sensibile = [&](const kzero::Code& c) { return sensibili.count(c) > 0; };
     const auto casa_pap = [&](const kzero::Code& c) { return porta_a_porta.count(c) > 0; };
@@ -137,6 +169,12 @@ LegameSensibile::LegameSensibile(const kzero::Index* indice) {
             bool legato = tocca(u);
             for (const kzero::ManualField& m : u.manual)
                 if (m.field == kzero::ListField::School || m.field == kzero::ListField::Stop) legato = legato || tocca(*m.before);
+            // K-027: un punto (in tutta la storia) in un luogo sensibile o, con tutto il porta a porta sensibile, in una casa porta a
+            // porta. Le case legate per altre vie sono sotto, insieme ai passeggeri.
+            for (const kzero::UserPoints& up : u.points)
+                for (const kzero::PointEntry& e : up.history)
+                    for (const kzero::PointRule& r : e.rules)
+                        legato = legato || sensibile(r.place.code) || (tutto_il_porta_a_porta && casa_pap(r.place.code));
             if (legato) utenti_.insert(u.code);
         }
 
@@ -214,9 +252,20 @@ LegameSensibile::LegameSensibile(const kzero::Index* indice) {
             if (ct && privati.count(ct->client.code)) committenti_.insert(ct->client.code);
         }
 
-    // Passeggeri e case si legano a vicenda, fino a quando non cambia piu' nulla.
+    // Passeggeri e case si legano a vicenda, fino a quando non cambia piu' nulla; dal K-027 anche gli utenti dell'elenco e le case dei
+    // loro punti (un utente legato lega la casa porta a porta dove sale; una casa legata lega l'utente che ci sale).
     for (bool cambiato = true; cambiato;) {
         cambiato = false;
+        for (const kzero::ClientList& l : p.client_lists)
+            for (const kzero::ListUser& u : l.users)
+                for (const kzero::UserPoints& up : u.points)
+                    for (const kzero::PointEntry& e : up.history)
+                        for (const kzero::PointRule& r : e.rules) {
+                            if (!casa_pap(r.place.code)) continue;
+                            const bool lu = utenti_.count(u.code) > 0, lc = case_.count(r.place.code) > 0;
+                            if (lu && !lc) cambiato = case_.insert(r.place.code).second || cambiato;
+                            if (lc && !lu) cambiato = utenti_.insert(u.code).second || cambiato;
+                        }
         for (const kzero::Service& s : p.services)
             for (const kzero::PassengerGroup& g : s.groups)
                 for (const kzero::Passenger& q : g.passengers)

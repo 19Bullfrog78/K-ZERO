@@ -1,0 +1,373 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "kzero - confronto_schede, versione 1",
+  "description": "Uscita di 'kzero confronta-schede --formato json' (K-027): per ogni versione di scheda, giorno della settimana e periodo, chi sale e chi scende a ogni passaggio (utenti con il punto, contati) contro St. Car. e St. Scar. della scheda (l'accompagnatore tolto), i doppi, chi non frequenta e chi non e' contato; poi gli avvisi (in testa K-CTR-183). Nessuna correzione. I nomi solo con --includi-dati-personali, entro i permessi.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "schema_versione",
+    "comando",
+    "dal",
+    "al",
+    "scheda",
+    "versioni",
+    "periodi_diversi",
+    "problemi"
+  ],
+  "properties": {
+    "schema": {
+      "const": "confronto_schede"
+    },
+    "schema_versione": {
+      "const": 1
+    },
+    "comando": {
+      "const": "confronta-schede"
+    },
+    "dal": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+    },
+    "al": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+    },
+    "scheda": {
+      "type": [
+        "string",
+        "null"
+      ]
+    },
+    "versioni": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "scheda",
+          "id",
+          "nr",
+          "versione",
+          "verso",
+          "servizio",
+          "dal",
+          "al",
+          "periodi"
+        ],
+        "properties": {
+          "scheda": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+          },
+          "id": {
+            "type": "string"
+          },
+          "nr": {
+            "type": "string"
+          },
+          "versione": {
+            "type": "integer",
+            "minimum": 1
+          },
+          "verso": {
+            "enum": [
+              "andata",
+              "ritorno"
+            ]
+          },
+          "servizio": {
+            "type": "string"
+          },
+          "dal": {
+            "type": "string",
+            "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+          },
+          "al": {
+            "type": "string",
+            "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+          },
+          "periodi": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "giorno",
+                "dal",
+                "al",
+                "giorni",
+                "diverso",
+                "passaggi",
+                "non_frequentano",
+                "non_contati"
+              ],
+              "properties": {
+                "giorno": {
+                  "enum": [
+                    "lunedi",
+                    "martedi",
+                    "mercoledi",
+                    "giovedi",
+                    "venerdi",
+                    "sabato",
+                    "domenica"
+                  ]
+                },
+                "dal": {
+                  "type": "string",
+                  "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+                },
+                "al": {
+                  "type": "string",
+                  "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+                },
+                "giorni": {
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+                  }
+                },
+                "diverso": {
+                  "type": "boolean"
+                },
+                "passaggi": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "riga",
+                      "luogo",
+                      "volta",
+                      "orario",
+                      "scuola",
+                      "scheda_salgono",
+                      "salgono",
+                      "scheda_scendono",
+                      "scendono",
+                      "utenti_salgono",
+                      "utenti_scendono",
+                      "doppi",
+                      "doppi_stessa_scheda"
+                    ],
+                    "properties": {
+                      "riga": {
+                        "type": "integer",
+                        "minimum": 1
+                      },
+                      "luogo": {
+                        "type": "string"
+                      },
+                      "volta": {
+                        "type": "integer",
+                        "minimum": 1
+                      },
+                      "orario": {
+                        "type": "string"
+                      },
+                      "scuola": {
+                        "type": "boolean"
+                      },
+                      "scheda_salgono": {
+                        "type": "integer"
+                      },
+                      "salgono": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "scheda_scendono": {
+                        "type": "integer"
+                      },
+                      "scendono": {
+                        "type": "integer",
+                        "minimum": 0
+                      },
+                      "utenti_salgono": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "utente_elenco",
+                            "nome"
+                          ],
+                          "properties": {
+                            "utente_elenco": {
+                              "type": "string",
+                              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+                            },
+                            "nome": {
+                              "description": "Nome dell'utente: solo con --includi-dati-personali (di chi e' legato a un luogo sensibile anche con --includi-dati-particolari), entro i permessi; altrimenti null.",
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            }
+                          }
+                        }
+                      },
+                      "utenti_scendono": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "utente_elenco",
+                            "nome"
+                          ],
+                          "properties": {
+                            "utente_elenco": {
+                              "type": "string",
+                              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+                            },
+                            "nome": {
+                              "description": "Nome dell'utente: solo con --includi-dati-personali (di chi e' legato a un luogo sensibile anche con --includi-dati-particolari), entro i permessi; altrimenti null.",
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            }
+                          }
+                        }
+                      },
+                      "doppi": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "utente_elenco",
+                            "nome"
+                          ],
+                          "properties": {
+                            "utente_elenco": {
+                              "type": "string",
+                              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+                            },
+                            "nome": {
+                              "description": "Nome dell'utente: solo con --includi-dati-personali (di chi e' legato a un luogo sensibile anche con --includi-dati-particolari), entro i permessi; altrimenti null.",
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            }
+                          }
+                        }
+                      },
+                      "doppi_stessa_scheda": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "additionalProperties": false,
+                          "required": [
+                            "utente_elenco",
+                            "nome"
+                          ],
+                          "properties": {
+                            "utente_elenco": {
+                              "type": "string",
+                              "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+                            },
+                            "nome": {
+                              "description": "Nome dell'utente: solo con --includi-dati-personali (di chi e' legato a un luogo sensibile anche con --includi-dati-particolari), entro i permessi; altrimenti null.",
+                              "type": [
+                                "string",
+                                "null"
+                              ]
+                            }
+                          }
+                        }
+                      }
+                    }
+                  }
+                },
+                "non_frequentano": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "utente_elenco",
+                      "nome"
+                    ],
+                    "properties": {
+                      "utente_elenco": {
+                        "type": "string",
+                        "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+                      },
+                      "nome": {
+                        "description": "Nome dell'utente: solo con --includi-dati-personali (di chi e' legato a un luogo sensibile anche con --includi-dati-particolari), entro i permessi; altrimenti null.",
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      }
+                    }
+                  }
+                },
+                "non_contati": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "additionalProperties": false,
+                    "required": [
+                      "utente_elenco",
+                      "nome"
+                    ],
+                    "properties": {
+                      "utente_elenco": {
+                        "type": "string",
+                        "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+                      },
+                      "nome": {
+                        "description": "Nome dell'utente: solo con --includi-dati-personali (di chi e' legato a un luogo sensibile anche con --includi-dati-particolari), entro i permessi; altrimenti null.",
+                        "type": [
+                          "string",
+                          "null"
+                        ]
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "periodi_diversi": {
+      "type": "integer",
+      "minimum": 0
+    },
+    "problemi": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "codice",
+          "livello",
+          "messaggio"
+        ],
+        "properties": {
+          "codice": {
+            "type": "string",
+            "pattern": "^K-CTR-[0-9]{3}$"
+          },
+          "livello": {
+            "enum": [
+              "errore",
+              "avviso"
+            ]
+          },
+          "messaggio": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    }
+  }
+}

@@ -19,7 +19,7 @@
 namespace kzero::api::elenco {
 
 inline constexpr const char* kFile = "elenco_utenti.json";
-inline constexpr int kVersione = 2;   // la versione che scrivono i comandi (K-020); la 1 si legge ancora
+inline constexpr int kVersione = 3;   // la versione che scrivono i comandi (K-027); la 1 e la 2 si leggono ancora
 
 // Il controllo dei permessi dell'elenco, in un punto solo (oggi: tutti e due).
 void permessi(const cassaforte::Permessi& p, const std::string& utente, const std::string& comando);

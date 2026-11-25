@@ -453,6 +453,85 @@ void aggiungi_schede(std::vector<DefinizioneControllo>& c) {
                   "{primo}). Controllare il prestito (mezzi.json)."}});
 }
 
+// K-027: i punti degli utenti dell'elenco (su quale scheda e a quale passaggio salgono o scendono) e il confronto con i numeri delle
+// schede (kzero controlla e kzero confronta-schede). Tutti dati comuni: codici degli utenti, schede, luoghi, giorni; mai un nome. Nessuna
+// correzione automatica: ne' della scheda ne' dell'elenco.
+void aggiungi_punti(std::vector<DefinizioneControllo>& c) {
+    const Livello E = Livello::Errore, A = Livello::Avviso;
+    const Classe N = Classe::Comune;
+    const std::string dettaglio = " Il dettaglio, giorno per giorno: kzero confronta-schede. Il programma non corregge ne' la scheda ne' l'elenco.";
+    const std::string chi = "L'utente {utente}, tratta {tratta}: ";
+    const std::string riscrivere = " Scrivere il punto giusto (kzero proponi-punti, poi kzero conferma-punti o kzero assegna-punto).";
+    c.push_back({Check::PointsCountsDiffer, "K-CTR-181", A, N, "Numeri della scheda diversi dagli utenti con il punto",
+                 {"Scheda {scheda} (versione {versione}): in {passaggi:# passaggio|# passaggi} i numeri della scheda sono diversi da quelli "
+                  "degli utenti con il punto li', {giorni}. Il primo: {luogo} ({volta}a volta, alle {orario}), sulla scheda salgono "
+                  "{scheda_salgono} e scendono {scheda_scendono}, con il punto salgono {salgono} e scendono {scendono}." + dettaglio,
+                  "Scheda {scheda} (versione {versione}): alla scuola (scuola di scarico) in {passaggi:# passaggio|# passaggi} i numeri della "
+                  "scheda sono diversi da quelli degli utenti di quella scuola con il punto sulla scheda, {giorni}. Il primo: {luogo} "
+                  "({volta}a volta, alle {orario}), sulla scheda scendono {scheda_scendono} e salgono {scheda_salgono}, con il punto scendono "
+                  "{scendono} e salgono {salgono}." + dettaglio}});
+    c.push_back({Check::PointsPassageEmpty, "K-CTR-182", A, N, "Passaggio con persone sulla scheda e nessun utente con il punto",
+                 {"Scheda {scheda} (versione {versione}): al passaggio {luogo} ({volta}a volta, alle {orario}) sulla scheda "
+                  "{numero:sale # persona|salgono # persone}, e nessun utente ha il punto li', {giorni}. Forse manca un punto: kzero proponi-punti.",
+                  "Scheda {scheda} (versione {versione}): al passaggio {luogo} ({volta}a volta, alle {orario}) sulla scheda "
+                  "{numero:scende # persona|scendono # persone}, e nessun utente ha il punto li', {giorni}. Forse manca un punto: kzero proponi-punti."}});
+    c.push_back({Check::PointsMissing, "K-CTR-183", A, N, "Utente con diritto al servizio senza un punto",
+                 {"L'utente {utente} e' attivo e ha la tratta {tratta} della nostra azienda, ma non ha un punto {giorni} (giorni in cui "
+                  "viaggia, dai suoi orari): ha diritto al servizio." + riscrivere,
+                  "L'utente {utente} e' sospeso e sbloccato per la tratta {tratta}, ma non ha un punto {giorni} (giorni sbloccati in cui "
+                  "viaggia, dai suoi orari)." + riscrivere,
+                  "L'utente {utente} ha la tratta {tratta} della nostra azienda, senza orari (i giorni in cui viaggia non si sanno) e senza "
+                  "nessun punto per la tratta: ha diritto al servizio." + riscrivere}});
+    c.push_back({Check::PointsNotValid, "K-CTR-184", A, N, "Punto che non vale",
+                 {chi + "il punto e' sulla scheda {scheda} a {luogo} ({volta}a volta), ma la versione {versione} passa da li' "
+                        "{volte:# volta|# volte}: quel passaggio non c'e', {giorni}. Non contato." + riscrivere,
+                  chi + "la scheda {scheda} del suo punto (versione {versione}) non gira {giorni}, e lui viaggia (dai suoi orari): in quei "
+                        "giorni e' senza punto." + riscrivere,
+                  chi + "la scheda {scheda} del suo punto non ha una versione in vigore {giorni}, e lui viaggia (dai suoi orari): in quei "
+                        "giorni e' senza punto." + riscrivere,
+                  chi + "il punto e' su una scheda con l'ID \"{id}\", che non e' nel registro delle schede (forse tolta): il punto non vale." +
+                        riscrivere}});
+    c.push_back({Check::PointsPassageChanged, "K-CTR-185", A, N, "Passaggio del punto forse cambiato tra le versioni della scheda",
+                 {chi + "il punto e' a {luogo} ({volta}a volta) sulla scheda {scheda}, confermato sulla versione {confermata}, che passa da li' "
+                        "{volte_prima:# volta|# volte}; la versione {versione} ci passa {volte:# volta|# volte}: forse e' un altro passaggio. Il "
+                        "programma non lo riaggancia: non contato {giorni}. Confermare di nuovo il punto (kzero assegna-punto).",
+                  chi + "il punto a {luogo} ({volta}a volta) e' stato confermato sulla versione {confermata} della scheda {scheda}, che non c'e' "
+                        "piu' (tolta): il passaggio non si riconosce nella versione {versione}. Non contato {giorni}. Confermare di nuovo il "
+                        "punto (kzero assegna-punto)."}});
+    c.push_back({Check::PointsSuspendedNoUnlock, "K-CTR-186", A, N, "Utente sospeso con un punto, senza sblocco",
+                 {"L'utente {utente} e' sospeso e ha un punto sulla scheda {scheda} per la tratta {tratta}, ma non e' sbloccato {giorni}: "
+                  "non contato (un sospeso viaggia solo se sbloccato). Se il committente lo sblocca: kzero sblocco."}});
+    c.push_back({Check::PointsDoubleNoConsent, "K-CTR-187", A, N, "Doppia tratta senza il consenso del committente",
+                 {chi + "dal {dal} il punto ha luoghi diversi in giorni diversi (doppia tratta) senza il consenso del committente. "
+                        "Riscrivere il punto con il consenso (kzero assegna-punto, riga \"consenso:\")."}});
+    c.push_back({Check::PointsInconsistent, "K-CTR-188", A, N, "Punto incoerente con l'utente o con la tratta",
+                 {chi + "la scheda {scheda} del suo punto e' del committente {committente}, non di quello del suo elenco: non contato "
+                        "{giorni}." + riscrivere,
+                  chi + "la scheda {scheda} del suo punto e' di un contratto di un'altra azienda, mentre per l'elenco la tratta e' "
+                        "dell'azienda {azienda} (o non e' piu' nei suoi percorsi): non contato {giorni}." + riscrivere,
+                  chi + "la scheda {scheda} del suo punto (versione {versione}) va nel verso opposto a quello della tratta: non contato "
+                        "{giorni}." + riscrivere,
+                  chi + "la scheda {scheda} del suo punto (versione {versione}) non porta alla sua scuola {scuola} dopo il passaggio del punto "
+                        "(al ritorno: non parte dalla sua scuola prima): contato dove sale (al ritorno, dove scende), non alla scuola, "
+                        "{giorni}." + riscrivere,
+                  chi + "la scheda {scheda} del suo punto (versione {versione}) finisce (al ritorno: comincia) al punto di trasbordo della "
+                        "sua scuola (coincidenza, K-023): contato li', {giorni}. Il proseguimento con l'altra scheda non e' ancora controllato: "
+                        "va visto a mano."}});
+    c.push_back({Check::PointsDaysUnknown, "K-CTR-189", A, N, "Giorni in cui l'utente viaggia non noti",
+                 {"L'utente {utente} ha la tratta {tratta} della nostra azienda senza orari nell'elenco: i giorni in cui viaggia non si sanno "
+                  "(il programma non li inventa). Nel confronto conta in tutti i giorni in cui gira la scheda del suo punto.",
+                  "L'utente {utente} ha gli orari della tratta {tratta}, ma nessuna scheda del committente passa dalla sua scuola {scuola}: i "
+                  "giorni di scuola (i calendari di base delle schede) non si sanno, e il programma non controlla giorno per giorno se ha un "
+                  "punto."}});
+    c.push_back({Check::StreetTableInvalid, "K-CTR-190", E, N, "Stradario incoerente",
+                 {"Nello stradario dell'azienda {azienda} una riga c'e' due volte.",
+                  "Nello stradario dell'azienda {azienda} una riga ha insieme la scuola e il grado: se ne scrive uno solo.",
+                  "L'azienda {azienda} ha due stradari: uno solo per azienda.",
+                  "Nello stradario dell'azienda {azienda} il punto {punto} e' un luogo privato (una casa): il punto di raccolta e' un luogo "
+                  "pubblico.",
+                  "Nello stradario dell'azienda {azienda} i civici di una riga (dal {dal} al {al}) finiscono prima di cominciare."}});
+}
+
 // K-019: l'elenco utenti del committente. Sui dati (kzero controlla) e sulle righe del file letto (kzero leggi-elenco).
 void aggiungi_elenco(std::vector<DefinizioneControllo>& c) {
     const Livello E = Livello::Errore, A = Livello::Avviso;
@@ -473,7 +552,18 @@ void aggiungi_elenco(std::vector<DefinizioneControllo>& c) {
                   "L'utente {utente} ha un orario del periodo \"{periodo}\", che il profilo del suo elenco non ha.",
                   "L'utente {utente} ha la tratta \"{tratta}\" due volte.",
                   "L'utente {utente} ha due modifiche a mano della colonna degli orari \"{colonna}\" (K-020): ce ne puo' essere una "
-                  "sola per colonna."}});
+                  "sola per colonna.",
+                  // K-027: i punti, i periodi in cui non frequenta e gli sblocchi per giorni.
+                  "L'utente {utente} ha un punto, o un periodo in cui non frequenta, della tratta \"{tratta}\", che il profilo del suo elenco "
+                  "non ha.",
+                  "L'utente {utente} ha due volte i punti della tratta \"{tratta}\": la storia dei punti e' una sola per tratta.",
+                  "L'utente {utente}, tratta \"{tratta}\": nella storia dei punti la voce dal {dal} non viene dopo quella di prima (le voci "
+                  "che contano hanno dal tutti diversi e in ordine). La storia la scrivono kzero assegna-punto e kzero conferma-punti.",
+                  "L'utente {utente} ha due sblocchi della tratta \"{tratta}\" che valgono in uno stesso giorno: per cambiare uno sblocco, "
+                  "prima chiuderlo (kzero sblocco --fino-al) o toglierlo.",
+                  "L'utente {utente} ha due periodi in cui non frequenta che si sovrappongono (per una stessa tratta).",
+                  "L'utente {utente}, tratta \"{tratta}\": nella voce dal {dal} due regole hanno lo stesso passaggio negli stessi giorni (il "
+                  "punto si conterebbe due volte)."}});
     c.push_back({Check::ListUserCodeClash, "K-CTR-141", E, N, "Codice di un utente dell'elenco usato da un altro elemento",
                  {"Il codice dell'utente {utente} dell'elenco e' anche il codice di un altro elemento del pacchetto: i codici degli "
                   "utenti dell'elenco sono unici in tutto il pacchetto (li da' kzero leggi-elenco). Cambiare il codice dell'altro "
@@ -563,7 +653,7 @@ void aggiungi_elenco(std::vector<DefinizioneControllo>& c) {
                   {1, "Riga {riga}: il nuovo utente {nuovo} forse e' un utente che il file non ha piu' e che ha cambiato scuola (stesso "
                       "nome e stessa casa). Il programma non li unisce: per vedere quale, --includi-dati-personali."}}});
     c.push_back({Check::ListExitsNotApplied, "K-CTR-151", A, N, "Elenco completo con righe illeggibili: uscite non applicate",
-                 {"L'elenco e' completo ma {righe} righe non si leggono: le uscite non si applicano (chi non e' nel file resta). "
+                 {"L'elenco e' completo ma {righe:# riga non si legge|# righe non si leggono}: le uscite non si applicano (chi non e' nel file resta). "
                   "Correggere le righe nel file, o chiedere al committente, e rileggerlo."}});
     c.push_back({Check::ListStopNotRecognized, "K-CTR-152", A, N, "Fermata indicata non riconosciuta",
                  {riga + "la fermata indicata non e' un luogo del pacchetto (ne' per il codice esterno del profilo ne' per il nome tra "
@@ -1453,6 +1543,7 @@ const std::vector<DefinizioneControllo>& catalogo_controlli() {
         aggiungi_testi_liberi(c);
         aggiungi_elenco(c);
         aggiungi_schede(c);
+        aggiungi_punti(c);
         // Controlli che usano dati personali o particolari per giudicare altro (K-010, "non verificato" per chi non li puo'
         // aprire). P = personali, Q = particolari.
         struct Richiede {

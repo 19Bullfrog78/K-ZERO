@@ -55,9 +55,10 @@ Solo il manifesto e' obbligatorio; un file che manca vuol dire "nessun elemento 
 | `assegnazioni.json` | no | Assegnazioni del singolo giorno: sostituzioni, scambi, un mezzo al posto di un altro, lavori occasionali |
 | `blocchi.json` | no | Blocchi: corse fissate su un mezzo, per il calcolo futuro |
 | `profili_elenchi.json` | no | (K-019) Profili di lettura dell'elenco utenti di un committente: come e' fatto il suo file |
-| `elenco_utenti.json` | no | (K-019) Elenco utenti dei committenti come lo mandano: casa, scuola, stato, fermata indicata, ditta e orari di ogni tratta, sblocchi; dal K-020 le modifiche a mano non ancora confermate dal file. Solo nel livello completo |
+| `elenco_utenti.json` | no | (K-019) Elenco utenti dei committenti come lo mandano: casa, scuola, stato, fermata indicata, ditta e orari di ogni tratta, sblocchi; dal K-020 le modifiche a mano non ancora confermate dal file; dal K-027 gli sblocchi per giorni e periodo, i punti degli utenti (scheda e passaggio, da quando) e i periodi in cui non frequentano. Solo nel livello completo |
 | `profili_schede.json` | no | (K-021) Profili di lettura delle schede dei servizi di un committente: com'e' fatto il modello Excel in cui si copiano |
 | `schede_servizi.json` | no | (K-021) Registro delle schede dei servizi lette: le versioni di ogni scheda, con la copia letta e gli elementi fatti dalla scheda |
+| `stradari.json` | no | (K-027) Stradari delle aziende: per ogni via il punto di raccolta degli utenti che abitano li', per tutti, per un grado o per una scuola |
 
 Un file con un nome diverso da questi non viene letto (avviso K-CTR-008): di solito e' un nome scritto male.
 
@@ -1448,9 +1449,11 @@ scuola, lo stato, la fermata indicata e, per ogni tratta, la ditta e gli orari. 
 committente quasi mai dice la fermata e mai il servizio o il giro (le schede dei servizi arrivano a parte, con un altro
 mandato). Lo scrive `kzero leggi-elenco`, gli sblocchi `kzero sblocco`, le modifiche a mano (K-020) i comandi sotto "Modifiche a
 mano dell'elenco"; solo in un pacchetto chiuso (i nomi e le case stanno solo nella cassaforte) e solo nel livello **completo** (nel
-livello "solo numeri" e' un errore, K-CTR-019). Schema: [docs/schema/elenco_utenti.v2.schema.json](schema/elenco_utenti.v2.schema.json)
-(versione 2, K-020: la colonna di ogni orario e le modifiche a mano); la versione 1
-([docs/schema/elenco_utenti.v1.schema.json](schema/elenco_utenti.v1.schema.json)) si legge ancora, e i comandi scrivono la 2.
+livello "solo numeri" e' un errore, K-CTR-019). Schema: [docs/schema/elenco_utenti.v3.schema.json](schema/elenco_utenti.v3.schema.json)
+(versione 3, K-027: gli sblocchi per giorni e periodo, anche a voce; i punti degli utenti; i periodi "non frequenta"); la versione 2
+([docs/schema/elenco_utenti.v2.schema.json](schema/elenco_utenti.v2.schema.json), K-020: la colonna di ogni orario e le modifiche a mano) e la 1
+([docs/schema/elenco_utenti.v1.schema.json](schema/elenco_utenti.v1.schema.json)) si leggono ancora, e i comandi scrivono la 3 (le 1 e 2 sono la 3
+senza i campi nuovi: gli sblocchi di prima valgono "sempre").
 
 | Campo | Obbl. | Classe | Significato |
 |---|---|---|---|
@@ -1470,7 +1473,13 @@ livello "solo numeri" e' un errore, K-CTR-019). Schema: [docs/schema/elenco_uten
 | `elenchi[].utenti[].fermata` | no | comune | La fermata indicata: `luogo` e come e' stata `riconosciuta` (`codice_esterno` oppure `nome`), oppure `testo` (personale) se non e' un luogo del pacchetto |
 | `elenchi[].utenti[].tratte[]` | no | comune | Per ogni tratta del file (`sigla` del profilo) la ditta: `azienda` del pacchetto oppure `altra_ditta` con il nome com'e' |
 | `elenchi[].utenti[].orari[]` | no | comune | `tratta`, `giorno`, `ora`, `periodo` (la sigla, se c'e'), `dal` e `al` (date intere); dalla versione 2 `colonna`, la colonna del profilo da cui viene (manca solo negli orari letti con la versione 1, fino alla lettura dopo) |
-| `elenchi[].utenti[].sblocchi[]` | no | comune | `tratta`, `riferimento` (es. la mail del committente), `data` scritta dall'utente di K-Zero |
+| `elenchi[].utenti[].sblocchi[]` | no | comune | `tratta`, `riferimento` (es. la mail del committente), `data` scritta dall'utente di K-Zero; dalla versione 3 (K-027) `giorni` (i giorni della settimana; manca = tutti), `dal` e `al` (manca = da sempre, senza fine), `a_voce` (detto a voce dal committente) |
+| `...sblocchi[].chi` | no | personale | (versione 3) Sblocco a voce: chi l'ha detto (spesso il nome di una persona: nella cassaforte) |
+| `elenchi[].utenti[].punti[]` | no | comune | (versione 3, K-027) Per ogni `tratta` della nostra azienda la `storia` dei punti (sotto, "Punti degli utenti") |
+| `...punti[].storia[]` | si' | comune | Le voci, in ordine di `dal`: `dal`, `data` (scritta dall'utente di K-Zero), `riferimento`, `origine` (`proposta` confermata o `a_mano`), `fonte` (con la proposta: `fermata_indicata` o `stradario`), `consenso` (doppia tratta), `regole[]` (vuoto = da quel giorno nessun punto), `sostituita` (`data` e `riferimento` della voce che l'ha sostituita) |
+| `...storia[].regole[]` | si' | comune | `scheda` (l'ID della scheda, mai il Nr), `luogo` e `volta` (il passaggio), `versione` (quella su cui si e' confermato), `giorni` (manca = sempre) |
+| `elenchi[].utenti[].non_frequenta[]` | no | comune | (versione 3, K-027) I periodi in cui l'utente non usa il servizio: `dal`, `al` (manca = senza fine), `tratte` (manca = tutte quelle della nostra azienda), `motivo` (`famiglia`, `altro_mezzo`, `assente`, `altro`), `riferimento` (chi l'ha detto), `data` |
+| `...non_frequenta[].nota` | no | personale | Una nota facoltativa |
 | `elenchi[].utenti[].fuori_elenco` | no | comune | `true` = non e' piu' nell'elenco del committente, resta solo per uno sblocco |
 | `elenchi[].utenti[].a_mano.aggiunto` | no | comune | (versione 2) Aggiunto a mano: `riferimento` e `data`, finche' un file lo porta |
 | `elenchi[].utenti[].a_mano.tolto` | no | comune | (versione 2) Tolto a mano: `riferimento` e `data`; mai nel piano, se ne va alla prima lettura completa senza di lui |
@@ -1510,7 +1519,13 @@ completo|parziale --utente U [--scrivi <pacchetto>]`):
 --scrivi <pacchetto>`, o `--togli`): lo scrive l'utente di K-Zero (nel file del committente non c'e'), per tratta del file, con
 il riferimento e la data scritta da lui, come lo "sbloccato" dei passeggeri. Si aggiunge solo a un utente sospeso, per una
 tratta che il committente gli da' (i percorsi); errore K-ERR-049 altrimenti. Una lettura non lo cancella mai; uno sblocco di un
-utente diventato attivo o di una tratta che non ha piu' ha un avviso (K-CTR-146).
+utente diventato attivo o di una tratta che non ha piu' ha un avviso (K-CTR-146). **Dal K-027** uno sblocco puo' valere solo in alcuni giorni
+della settimana (`--giorni "mercoledi"`; i passivi a volte valgono solo il pomeriggio o in certi giorni) e in un periodo (`--dal`, `--al`);
+senza, vale sempre (come gli sblocchi di prima). Puo' essere detto **a voce** dal committente (`--a-voce`): `--riferimento` e `--data`
+restano obbligatori, e chi l'ha detto si scrive sull'ingresso standard (`chi: ...`, dato personale, nella cassaforte). Piu' sblocchi della
+stessa tratta non hanno mai giorni in comune (un giorno vale per uno solo). `--fino-al AAAA-MM-GG` chiude lo sblocco che vale quel giorno
+(i giorni prima non cambiano); `--togli` toglie uno sblocco scritto per errore (con piu' sblocchi della tratta, `--dal` dice quale).
+Uscita: [sblocco versione 2](schema/sblocco.v2.schema.json) (la 1 tra le non piu' prodotte).
 
 **Modifiche a mano dell'elenco** (K-020). Le novita' che il committente manda per mail, una alla volta, senza tirare fuori i dati in
 chiaro (stessa scrittura, stessi permessi e stessa `--scrivi` di `kzero leggi-elenco`; senza `--scrivi` un'anteprima):
@@ -1569,6 +1584,74 @@ Uscita: schema [modifica_elenco versione 1](schema/modifica_elenco.v1.schema.jso
 `--includi-dati-personali` (di chi e' legato a un luogo sensibile anche con `--includi-dati-particolari`), ed entro i permessi.
 L'uscita di `kzero leggi-elenco` e' dalla versione 2 ([elenco.v2](schema/elenco.v2.schema.json)): i casi nuovi (tolti a mano ancora
 nel file o che se ne vanno davvero, aggiunti o rimessi a mano non nel file) e le modifiche confermate.
+
+**Punti degli utenti** (K-027). Il committente manda l'elenco senza la fermata e le schede con i numeri per fermata, senza nomi: chi sale
+dove lo decide l'azienda insieme al committente. Per ogni utente e ogni **tratta della nostra azienda** (una tratta dei percorsi con la
+ditta che e' un'azienda del pacchetto) la **storia dei punti** dice su quale scheda (per **ID**, mai per Nr) e a quale **passaggio** sale
+(andata) o scende (ritorno), da quando e chi l'ha deciso:
+- **il passaggio, non il luogo**: il luogo e la **volta** (1 = la prima volta che la scheda passa da quel luogo, nell'ordine delle righe):
+  una scheda a due giri puo' passare due volte dallo stesso luogo. Con la **versione** su cui la persona ha confermato: in un'altra versione
+  e' lo stesso passaggio solo se il luogo c'e' lo stesso numero di volte; altrimenti un avviso (K-CTR-185) e il punto non conta, **mai
+  riagganciato** (D2 dell'arbitro);
+- una voce nuova dal giorno D **chiude** quella di prima al giorno D-1; le voci da D in poi restano scritte, segnate **sostituite** (con la
+  data e il riferimento della voce nuova), e non contano piu'. **I giorni prima di D non cambiano mai**. Una voce senza regole = "da quel
+  giorno nessun punto";
+- una voce ha una o piu' **regole**, per tutti i giorni o per alcuni giorni della settimana (es. il mercoledi' un'altra scheda di ritorno:
+  lo stesso luogo, non e' una doppia). Regole con **luoghi diversi** sono una **doppia tratta** (es. genitori separati, anche "sempre", a
+  settimane alterne) e vogliono il **consenso** del committente (D7): l'utente conta su tutti e due i passaggi, segnato "doppio" (e "doppio
+  sulla stessa scheda" se sono sulla stessa versione: a bordo occupa un posto solo, i posti li conta il K-028), e quindi alla scuola scende
+  (o sale) una volta per ogni passaggio contato, come lo conta il committente; nell'uscita il suo nome compare una volta sola;
+- **K-Zero propone, una persona conferma**: mai un punto senza conferma. `kzero proponi-punti` non scrive niente; `kzero conferma-punti`
+  scrive le righe pronte della proposta (origine `proposta`, con la fonte), `kzero assegna-punto` un punto scritto a mano (origine `a_mano`);
+- una lettura dell'elenco non cambia mai i punti; un utente che esce dall'elenco se ne va con i suoi punti.
+
+**Non frequenta** (K-027). Un utente iscritto e attivo che al momento non usa il mezzo si segna con `kzero non-frequenta` (dal, al
+facoltativo, le tratte o tutte, il motivo, chi l'ha detto nel riferimento) **senza toglierlo dall'elenco**: non conta nei numeri del
+confronto, e l'uscita del confronto lo mostra; il punto resta (quando riprende, sale li'). Chi **non c'e' piu' e non tornera'** (es.
+trasferito) non ha un periodo "non frequenta": si toglie dall'elenco (`kzero togli-da-elenco`, K-020). Il motivo e' una **scelta fissa** (D8
+dell'arbitro, corretta: `famiglia` = lo porta la famiglia, `altro_mezzo`, `assente`, `altro`), con una nota facoltativa (personale):
+per pianificare basta sapere che non frequenta, e un testo libero attirerebbe i motivi di salute. `--fino-al` chiude il periodo aperto,
+`--togli --dal` toglie un periodo scritto per errore.
+
+**La proposta** (`kzero proponi-punti <pacchetto> --dal AAAA-MM-GG [--utente-elenco U] [--tratta T] [--tutti] --utente U`). Per ogni utente nel
+piano con diritto al servizio (attivo, o sospeso con uno sblocco della tratta) e una tratta della nostra azienda senza punto il giorno
+`--dal` (con `--tutti` anche con):
+1. **le fonti, in ordine**: la fermata indicata nell'elenco (se riconosciuta), lo stradario dell'azienda della tratta (`stradari.json`);
+   si usa la prima che da' almeno un candidato. Lo stradario non ha anno: il pacchetto dell'anno dopo parte dallo stesso file;
+2. **i candidati**, per ogni giorno della settimana in cui l'utente viaggia (dai suoi orari): le schede del committente dell'elenco, con il
+   contratto dell'azienda della tratta, del verso della tratta, con una versione in vigore il giorno `--dal`, che girano in quel giorno della
+   settimana, che passano dal luogo e poi dalla sua scuola (andata) o prima dalla scuola e poi dal luogo (ritorno); con l'**orario
+   compatibile** (D6: l'ora del file e' l'ora delle lezioni): all'andata la scheda arriva alla scuola tra l'ora meno l'attesa massima prima e
+   l'ora, al ritorno ne parte tra l'ora e l'ora piu' l'attesa massima dopo; le attese sono quella concordata con la scuola quel giorno, se no
+   quelle del regolamento del contratto; senza attese nei dati solo "non dopo" (andata) e "non prima" (ritorno). Nessun valore nel programma;
+3. un candidato solo per tutti i giorni = una regola "sempre"; candidati unici diversi per giorno = regole con i giorni; **piu' candidati:
+   elencati, nessuna scelta** (la riga pronta copre solo i giorni chiari).
+`kzero conferma-punti <pacchetto> --dal ... --riferimento ... --data ... --utente U [--scrivi ...]` legge sull'ingresso standard una riga per
+punto, `U-000003 AM: SCH-4000123-3 / F-PRADELLO / 1 [/ lunedi, martedi]` (le righe pronte): ognuna deve essere ancora un candidato della
+proposta di quel giorno (altrimenti K-ERR-057, niente scritto); nessuna conferma "di tutto" (D10). `kzero assegna-punto <pacchetto>
+--utente-elenco U --tratta T --dal ... --riferimento ... --data ... --utente U [--scrivi ...]` legge `punto: <scheda> / <luogo> [/ <volta>] [/
+<giorni>]` (una riga per regola; con il luogo piu' volte la volta va scritta), `consenso: ...` per una doppia tratta, oppure `nessuno`.
+Uscite: [proposte_punti versione 1](schema/proposte_punti.v1.schema.json) e [punti versione 1](schema/punti.v1.schema.json) (anche di `kzero
+non-frequenta`).
+
+**Il confronto con le schede** (in `kzero controlla` e, giorno per giorno, `kzero confronta-schede <pacchetto> [--scheda S] [--dal --al]`, uscita
+[confronto_schede versione 1](schema/confronto_schede.v1.schema.json)). Per ogni versione di scheda e ogni giorno in cui gira (dentro il periodo
+e l'anno scolastico dell'elenco del committente) si contano gli utenti nel piano con una regola valida quel giorno che punta alla scheda, la cui
+tratta e' della ditta del contratto, che quel giorno viaggiano la tratta, attivi o sospesi con uno sblocco valido quel giorno, e non "non
+viaggia". **Andata**: sale al passaggio, scende alla prima riga dopo nel luogo della sua scuola (nella coincidenza del K-023, al punto di
+trasbordo); **ritorno**: scende al passaggio, sale all'ultima riga prima nel luogo della sua scuola. Si confronta con St. Car. e St. Scar. di
+ogni riga **senza l'accompagnatore** (dove lo dice la sua colonna): le discese a ogni scuola si confrontano con chi va in quella scuola
+(scuola di scarico), **mai dividendo i St. Car. tra le scuole**. I giorni con lo stesso risultato si raggruppano per giorno della settimana e
+periodo. I **giorni in cui un utente viaggia** una tratta vengono dai suoi orari, solo nei **giorni di scuola**: i giorni in cui vale almeno
+uno dei calendari di base delle schede della sua scuola (D4). Senza orari i giorni non si sanno (K-CTR-189): conta in tutti i giorni in cui
+gira la scheda del suo punto. Gli avvisi in controlli.md ("Punti degli utenti e confronto con le schede", K-CTR-181 ... 190). **Il programma
+non corregge mai ne' la scheda ne' l'elenco**.
+
+**Classi** (K-027). I punti sono dati comuni (codici, luoghi, date, riferimenti), come la fermata indicata; chi ha detto uno sblocco a voce e la
+nota di un periodo "non frequenta" sono personali. **Legame con la salute** (`LegameSensibile`, D3 dell'arbitro): nome e casa di un utente vanno
+tra i legati (particolari) anche se un suo punto, in tutta la storia, e' in un luogo sensibile o in una casa legata, oppure su una **scheda per
+disabili o individualizzata** (il tipo o la casella in una versione della copia, o il suo servizio): il nome con la scheda direbbe la salute a
+chi ha i soli dati personali. La regola e' per persona: gli altri utenti della stessa scheda no.
 
 ### profili_schede.json
 
@@ -1833,6 +1916,27 @@ solo con i dati particolari). Mai unire schede con ID diversi.
 AAAA-MM-GG --utente U [--tutte] [--scrivi <pacchetto>]` toglie l'ultima versione (servizio, gruppo, corsa, calendario) e rida' alla
 versione di prima la fine che aveva; se era l'unica, la scheda sparisce dal registro; con `--tutte`, tutte le versioni. Non si
 toglie (errore) una versione che ha tolto altre versioni (solo con `--tutte`), ne' una corsa usata da un turno o da un blocco.
+
+### stradari.json
+
+(K-027) Lo **stradario** di un'azienda: per ogni via il punto di raccolta degli utenti che abitano li'. E' una delle fonti della proposta
+dei punti (sopra, "Punti degli utenti", in elenco_utenti.json). Tutti dati comuni: vie e luoghi pubblici, nessun nome di persona. Non ha
+anno: il pacchetto dell'anno dopo parte dallo stesso file (lo stradario dell'anno prima e' questo; ricavarlo dai punti dell'anno prima vorrebbe
+le case degli utenti di allora). Si scrive a mano, come gli altri file comuni. Schema:
+[docs/schema/stradari.v1.schema.json](schema/stradari.v1.schema.json).
+
+| Campo | Obbl. | Classe | Significato |
+|---|---|---|---|
+| `stradari[].azienda` | si' | comune | L'azienda dello stradario (uno per azienda: K-CTR-190) |
+| `stradari[].righe[].comune`, `frazione`, `via` | si' (la frazione no) | comune | La via, come nella casa degli utenti dell'elenco; la frazione conta solo se la casa la scrive |
+| `stradari[].righe[].civici` | no | comune | `dal`, `al` e `lato` (`pari`, `dispari`, `tutti`): i numeri civici della riga (il numero iniziale del civico: "21/C" = 21) |
+| `stradari[].righe[].scuola` o `grado` | no | comune | Solo per gli utenti di quella scuola, o di una scuola di quel grado (es. l'infanzia ha punti in piu'); mai tutti e due (K-CTR-190) |
+| `stradari[].righe[].punto` | si' | comune | Il punto di raccolta: un luogo pubblico |
+| `stradari[].righe[].nota` | no | comune | Note |
+
+La casa si confronta come i nomi dei luoghi (senza maiuscole, accenti, punteggiatura): nessuna abbreviazione si indovina ("V. Roma" non e' "Via
+Roma"). **Vince la riga piu' precisa**: prima la scuola, poi il grado, poi tutte; a pari livello con i civici prima che senza. Piu' righe al
+livello che vince = piu' candidati (nessuna scelta).
 
 ## Ricerca dei luoghi per nome o codice esterno
 

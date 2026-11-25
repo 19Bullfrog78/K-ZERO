@@ -1,0 +1,336 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "kzero - punti, versione 1",
+  "description": "Uscita di 'kzero assegna-punto', 'kzero conferma-punti' e 'kzero non-frequenta' con --formato json (K-027): i punti degli utenti dell'elenco scritti (o, senza --scrivi, che si scriverebbero), con la scheda e il passaggio, da quando, e le voci sostituite; oppure il periodo \"non frequenta\" scritto, chiuso o tolto. I nomi e la nota (dati personali) solo con --includi-dati-personali, entro i permessi.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "schema_versione",
+    "comando",
+    "utente",
+    "azione",
+    "scritto",
+    "committente",
+    "riferimento",
+    "data",
+    "voci",
+    "non_frequenta",
+    "problemi",
+    "avvisi",
+    "cassaforte"
+  ],
+  "properties": {
+    "schema": {
+      "const": "punti"
+    },
+    "schema_versione": {
+      "const": 1
+    },
+    "comando": {
+      "enum": [
+        "assegna-punto",
+        "conferma-punti",
+        "non-frequenta"
+      ]
+    },
+    "utente": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+    },
+    "azione": {
+      "enum": [
+        "assegnato",
+        "confermato",
+        "non_frequenta",
+        "non_frequenta_chiuso",
+        "non_frequenta_tolto"
+      ]
+    },
+    "scritto": {
+      "type": "boolean"
+    },
+    "committente": {
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+    },
+    "riferimento": {
+      "type": "string"
+    },
+    "data": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+    },
+    "voci": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "utente_elenco",
+          "nome",
+          "tratta",
+          "dal",
+          "origine",
+          "fonte",
+          "consenso",
+          "regole",
+          "sostituite"
+        ],
+        "properties": {
+          "utente_elenco": {
+            "type": "string",
+            "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+          },
+          "nome": {
+            "description": "Nome dell'utente: solo con --includi-dati-personali (di chi e' legato a un luogo sensibile anche con --includi-dati-particolari), entro i permessi; altrimenti null.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "tratta": {
+            "type": "string",
+            "minLength": 1
+          },
+          "dal": {
+            "type": "string",
+            "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+          },
+          "origine": {
+            "enum": [
+              "proposta",
+              "a_mano"
+            ]
+          },
+          "fonte": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "enum": [
+              "fermata_indicata",
+              "stradario",
+              null
+            ]
+          },
+          "consenso": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "regole": {
+            "description": "Vuoto: da quel giorno nessun punto.",
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "scheda",
+                "id",
+                "luogo",
+                "volta",
+                "versione",
+                "giorni"
+              ],
+              "properties": {
+                "scheda": {
+                  "type": [
+                    "string",
+                    "null"
+                  ]
+                },
+                "id": {
+                  "type": "string",
+                  "minLength": 1
+                },
+                "luogo": {
+                  "type": "string",
+                  "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+                },
+                "volta": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "versione": {
+                  "type": "integer",
+                  "minimum": 1
+                },
+                "giorni": {
+                  "description": "null = sempre",
+                  "type": [
+                    "array",
+                    "null"
+                  ],
+                  "items": {
+                    "enum": [
+                      "lunedi",
+                      "martedi",
+                      "mercoledi",
+                      "giovedi",
+                      "venerdi",
+                      "sabato",
+                      "domenica"
+                    ]
+                  }
+                }
+              }
+            }
+          },
+          "sostituite": {
+            "description": "I dal delle voci sostituite (restano scritte, segnate).",
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+            }
+          }
+        }
+      }
+    },
+    "non_frequenta": {
+      "type": [
+        "object",
+        "null"
+      ],
+      "additionalProperties": false,
+      "required": [
+        "utente_elenco",
+        "nome",
+        "tratte",
+        "dal",
+        "al",
+        "motivo",
+        "nota",
+        "nota_riservata"
+      ],
+      "properties": {
+        "utente_elenco": {
+          "type": "string",
+          "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+        },
+        "nome": {
+          "description": "Nome dell'utente: solo con --includi-dati-personali (di chi e' legato a un luogo sensibile anche con --includi-dati-particolari), entro i permessi; altrimenti null.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "tratte": {
+          "description": "Vuoto: tutte le tratte della nostra azienda.",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "dal": {
+          "type": "string",
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+        },
+        "al": {
+          "type": [
+            "string",
+            "null"
+          ],
+          "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$"
+        },
+        "motivo": {
+          "enum": [
+            "famiglia",
+            "altro_mezzo",
+            "assente",
+            "altro"
+          ]
+        },
+        "nota": {
+          "description": "Nota (dato personale): solo con --includi-dati-personali.",
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "nota_riservata": {
+          "type": "boolean"
+        }
+      }
+    },
+    "problemi": {
+      "description": "Gli avvisi sui punti degli utenti toccati (K-CTR-181 ... 190), sul pacchetto nuovo.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "codice",
+          "livello",
+          "messaggio"
+        ],
+        "properties": {
+          "codice": {
+            "type": "string",
+            "pattern": "^K-CTR-[0-9]{3}$"
+          },
+          "livello": {
+            "enum": [
+              "errore",
+              "avviso"
+            ]
+          },
+          "messaggio": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "avvisi": {
+      "description": "Avvisi della cassaforte (K-CTR-097, K-CTR-098) con i testi del catalogo; codice null = un'indicazione del comando.",
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "codice",
+          "messaggio"
+        ],
+        "properties": {
+          "codice": {
+            "type": [
+              "string",
+              "null"
+            ],
+            "pattern": "^K-CTR-[0-9]{3}$"
+          },
+          "messaggio": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "cassaforte": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "generazione",
+        "voci_registro"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[0-9a-f]{32}$"
+        },
+        "generazione": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "voci_registro": {
+          "type": "integer",
+          "minimum": 1
+        }
+      }
+    }
+  }
+}

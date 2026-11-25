@@ -88,6 +88,8 @@ enum class Errore {
     SchedaNonTrovata,      // K-021: --scheda che non c'e' nel registro
     ToglimentoNonAmmesso,  // K-021: kzero togli-scheda non si puo' fare
     SchedaDellaSceltaNonNelFile,   // K-025: --validita-scheda nomina un Nr che non e' nel foglio delle schede
+    PuntoNonAmmesso,       // K-027: un punto di un utente che non si puo' scrivere (kzero assegna-punto, conferma-punti)
+    NonFrequentaNonAmmesso,  // K-027: un periodo "non frequenta" che non si puo' scrivere (kzero non-frequenta)
 };
 
 struct DefinizioneErrore {

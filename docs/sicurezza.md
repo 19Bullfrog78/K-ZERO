@@ -168,7 +168,10 @@ mai nei dati: una riga al massimo 8.192 byte (una cella del file ha al massimo 2
 64 righe (i campi sono meno di 20, piu' le colonne degli orari), solo UTF-8 valido (niente forme troppo lunghe, ne' meta' di
 coppie), nessun carattere di controllo (es. le sequenze che cambiano i colori del terminale); si legge un byte alla volta e non
 oltre la riga vuota che chiude i campi; una riga fuori dai limiti ferma tutto (K-ERR-050) e niente cambia. Il messaggio dice la
-riga e il campo, mai il valore. Un bersaglio di fuzzing (`elenco-campi`) prova la lettura e la modifica con dati casuali. Resta
+riga e il campo, mai il valore. Un bersaglio di fuzzing (`elenco-campi`) prova la lettura e la modifica con dati casuali. Dal K-027
+allo stesso modo i punti degli utenti (`kzero assegna-punto`, le righe pronte di `kzero conferma-punti`), il motivo e la nota di
+`kzero non-frequenta` e chi ha detto uno sblocco a voce (`kzero sblocco --a-voce`), con la stessa lettura e gli stessi limiti (K-ERR-050) e
+il loro bersaglio di fuzzing (`punti-campi`). Resta
 che i valori scritti a mano possono finire altrove sul PC se chi li scrive li copia da un file in chiaro o da una mail: e' fuori
 dal controllo del programma (consigli, sotto).
 
@@ -435,6 +438,17 @@ non ha una password; non protegge da tutto. Detto onestamente:
   anche i giri scolastici), e il programma non lo nasconde, perche' chi pianifica deve sapere quale mezzo fa il giro. Il testo della cella
   entra nell'avviso sui nomi liberi (K-018), come il Nr e l'ID: se chi copia scrive un nome di persona invece della targa, K-CTR-136 lo dice.
   Nel deposito pubblico solo targhe inventate (anche nei mandati e negli esempi).
+- **I punti degli utenti** (K-027). Il punto di un utente (scheda e passaggio) e' un dato comune, come la fermata indicata: serve a
+  pianificare e a confrontare i numeri delle schede. **Rischi che restano**: (1) il punto dice dove sale ogni giorno un bambino; nel file
+  normale c'e' solo il codice dell'utente (U-000001), il nome e la casa restano nella cassaforte, ma chi ha il file normale e conosce gia'
+  il bambino puo' ricavare la fermata e l'ora; e' lo stesso rischio, gia' accettato, della fermata indicata dal committente. (2) Il
+  legame con la salute: nome e casa di chi ha un punto su una scheda per disabili o individualizzata, o in un luogo sensibile o in una casa
+  legata, vanno tra i legati (D3 dell'arbitro); il codice dell'utente con la scheda resta comune e, con il tipo della scheda particolare
+  (K-024), chi ha il file normale non sa che la scheda e' per disabili; chi conosce da fuori le parole del committente (es. il calendario)
+  lo puo' capire, come nel caso C9 del K-021. (3) Lo stradario e' comune (vie e luoghi pubblici, mai nomi): una riga per una via con una
+  sola casa direbbe dove sale chi abita li'; il programma non lo puo' sapere: righe per vie con piu' case, o per tratti di civici. (4) Chi
+  ha detto uno sblocco a voce e la nota di "non frequenta" sono personali (nella cassaforte); il riferimento resta comune ed entra
+  nell'avviso sui nomi liberi (K-CTR-136): "telefonata della mamma" va bene, il nome della mamma no.
 - **Le librerie del sistema** (libreria C e C++ del compilatore) non sono nell'elenco dei componenti: le aggiorna il
   sistema operativo.
 

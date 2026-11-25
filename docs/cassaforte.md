@@ -47,6 +47,13 @@ cosa protegge e cosa resta: [sicurezza.md](sicurezza.md). Il formato dei file no
   cassaforte come il valore di oggi (una prova cerca i valori di prima nel file normale); se la scuola o la fermata di prima e'
   in un luogo sensibile, i dati personali dell'utente (anche quelli di prima) stanno tra i legati, anche quando quella di oggi
   non lo e'.
+- **Punti degli utenti** (K-027): `kzero assegna-punto`, `kzero conferma-punti`, `kzero non-frequenta` e `kzero sblocco` (anche per
+  giorni, per un periodo e a voce) scrivono nella cassaforte con la stessa scrittura e gli stessi permessi dei comandi dell'elenco
+  (`elenco::permessi`, `elenco::scrivi`), con l'anteprima senza `--scrivi` (lo sblocco no, come prima). I valori (punti, motivo, nota,
+  chi ha detto lo sblocco a voce) arrivano dall'ingresso standard dopo la password, mai dagli argomenti; la voce del registro ha il codice
+  dell'utente e il comando, mai i valori. `kzero proponi-punti` legge soltanto, ma vuole gli stessi permessi (lo stradario guarda le case,
+  dati personali; con la casa o il punto in un luogo sensibile, dati particolari); `kzero confronta-schede` legge con i permessi che
+  l'utente ha (i nomi solo entro quelli, i conteggi sempre).
 - **Utenti**: `kzero aggiungi-utente`, `kzero togli-utente`, `kzero password` (la propria, o una nuova per un altro con
   `--per-utente`); **conservazione**: `kzero conservazione`; **cancellazione**: `kzero cancella`; **vedere**:
   `kzero cassaforte` (utenti, permessi, conteggi) e `kzero registro`.
@@ -100,6 +107,12 @@ Una regola sola, ricavata dalle marcature degli schemi (`x-kzero-classe`, src/ap
   cassaforte finche' il mandato del legame con le persone non le completa); con il porta a porta sensibile, o un giro che passa
   da un luogo sensibile, sono legate come le altre case. Scrivono nella cassaforte solo chi ha i dati personali e particolari,
   con la scrittura dei comandi dell'elenco (pacchetto nuovo in memoria, riaperto con la password, poi cassaforte e file normali);
+- (K-027) i **punti degli utenti** dell'elenco sono dati comuni (codici, luoghi, date, riferimenti: restano nel file normale, come la
+  fermata indicata); **chi** ha detto uno sblocco a voce e la **nota** di un periodo "non frequenta" sono personali. Nome e casa di un utente
+  vanno tra i **legati** anche quando un suo punto (in tutta la storia) e' in un luogo sensibile o in una casa legata, oppure su una
+  **scheda per disabili o individualizzata** (D3 dell'arbitro: il nome insieme alla scheda direbbe la salute a chi ha i soli dati
+  personali); la regola e' per persona, una sola (`LegameSensibile`), e gli altri utenti della stessa scheda non cambiano. Lo stradario
+  (`stradari.json`) e' tutto comune: vie e luoghi pubblici, mai nomi;
 - per la stessa ragione **un campo personale dentro un dato particolare** va tra i legati (regola ricavata dagli schemi, K-011
   aggiunta 2): oggi motivo e chi della dichiarazione del modo delle corse (dato particolare). Chi ha solo i particolari
   riceve la dichiarazione senza motivo e chi; chi ha solo i personali non la riceve. Un elemento marcato intero non puo'

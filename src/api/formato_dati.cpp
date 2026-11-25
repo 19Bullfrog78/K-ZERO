@@ -48,9 +48,10 @@ const std::vector<FileDati>& file_dati() {
         {"blocchi.json", "blocchi", {1}, false, "Blocchi: corse legate a un mezzo (mezzo fisso o tutto fisso), per il calcolo."},
         {"profili_elenchi.json", "profili_elenchi", {1}, false,
          "Profili di lettura dell'elenco utenti di un committente (K-019): titoli, parole, sigle e separatori del suo file."},
-        {"elenco_utenti.json", "elenco_utenti", {1, 2}, false,
+        {"elenco_utenti.json", "elenco_utenti", {1, 2, 3}, false,
          "Elenco utenti dei committenti come lo mandano (K-019): casa, scuola, stato, fermata indicata, ditta e orari di ogni "
-         "tratta, sblocchi. Solo nel livello completo."},
+         "tratta, sblocchi; dalla versione 2 le modifiche a mano; dalla versione 3 gli sblocchi per giorni e periodo, i punti degli "
+         "utenti (scheda e passaggio, da quando) e i periodi in cui un utente non frequenta. Solo nel livello completo."},
         {"profili_schede.json", "profili_schede", {1, 2, 3, 4}, false,
          "Profili di lettura delle schede dei servizi di un committente (K-021): fogli, titoli, parole, cadenze e separatori del "
          "modello in cui si copiano le schede; dalla versione 2 il foglio delle interruzioni; dalla versione 3 le regole del tipo, la "
@@ -60,6 +61,9 @@ const std::vector<FileDati>& file_dati() {
          "valgono e gli elementi del pacchetto fatti dalla scheda; dalla versione 2 le interruzioni della scheda; dalla versione 3 il "
          "tipo scelto e il numero dei disabili (dati particolari); dalla versione 4 il mezzo della scheda (la targa scritta, il mezzo "
          "riconosciuto e le letture che l'hanno aggiunto)."},
+        {"stradari.json", "stradari", {1}, false,
+         "Stradari delle aziende (K-027): per ogni via il punto di raccolta degli utenti che abitano li', per tutti, per un grado o "
+         "per una scuola. Una delle fonti della proposta dei punti degli utenti."},
     };
     return elenco;
 }

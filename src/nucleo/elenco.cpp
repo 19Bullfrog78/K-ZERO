@@ -1395,6 +1395,9 @@ ListMerge merge_list(const Package& p, const ReadingProfile& profile, int first_
         }
         u.code = v.code;
         u.unlocks = v.unlocks;   // una lettura non cancella mai uno sblocco
+        // K-027: ne' i punti ne' i periodi in cui non frequenta (non sono nel file del committente).
+        u.points = v.points;
+        u.not_attending = v.not_attending;
         u.out_of_list = false;
         std::vector<std::string> confermati;
         for (const auto& [campo, colonna] : tutti_i_campi(profile, v, u)) {

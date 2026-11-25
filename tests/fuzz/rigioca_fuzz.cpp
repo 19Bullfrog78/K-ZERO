@@ -36,8 +36,9 @@ int main(int argc, char** argv) {
         provati += kzero::fuzz::prova_semi_cassaforte();
         provati += kzero::fuzz::prova_semi_elenco();
         provati += kzero::fuzz::prova_semi_schede();
+        provati += kzero::fuzz::prova_semi_punti();
         std::printf("%d semi provati nei loro bersagli (file del demo, cassaforte del pacchetto di prova dei servizi, elenco utenti, "
-                    "schede dei servizi)\n",
+                    "schede dei servizi, punti degli utenti)\n",
                     provati);
         return 0;
     }
@@ -45,6 +46,7 @@ int main(int argc, char** argv) {
         kzero::fuzz::scrivi_semi_cassaforte(argv[2]);
         kzero::fuzz::scrivi_semi_elenco(argv[2]);
         kzero::fuzz::scrivi_semi_schede(argv[2]);
+        kzero::fuzz::scrivi_semi_punti(argv[2]);
         return 0;
     }
     if (argc < 3) {

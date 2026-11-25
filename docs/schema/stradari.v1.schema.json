@@ -1,0 +1,136 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "K-Zero - file di dati stradari.json, versione 1",
+  "description": "(K-027) Lo stradario di un'azienda: per ogni via (con il comune, la frazione e i numeri civici, se servono) il punto di raccolta dove salgono e scendono gli utenti che abitano li', per tutti, per un grado di scuola (es. l'infanzia ha punti in piu') o per una scuola. E' una delle fonti della proposta dei punti degli utenti (kzero proponi-punti): vince la riga piu' precisa (la scuola, poi il grado, poi tutte; a pari livello con i civici prima che senza). Dati comuni: vie e luoghi pubblici, nessun nome di persona. Non ha anno: il pacchetto dell'anno dopo parte da questo stesso file.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema",
+    "schema_versione",
+    "stradari"
+  ],
+  "properties": {
+    "schema": {
+      "const": "stradari",
+      "x-kzero-classe": "comune"
+    },
+    "schema_versione": {
+      "const": 1,
+      "x-kzero-classe": "comune"
+    },
+    "stradari": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "azienda",
+          "righe"
+        ],
+        "properties": {
+          "azienda": {
+            "$ref": "#/definitions/codice",
+            "description": "L'azienda dello stradario (una per azienda)."
+          },
+          "righe": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "comune",
+                "via",
+                "punto"
+              ],
+              "properties": {
+                "comune": {
+                  "$ref": "#/definitions/testo",
+                  "description": "Il comune, come nella casa degli utenti dell'elenco."
+                },
+                "frazione": {
+                  "$ref": "#/definitions/testo",
+                  "description": "La frazione: conta solo se la casa dell'utente la scrive."
+                },
+                "via": {
+                  "$ref": "#/definitions/testo",
+                  "description": "La via, scritta per intero (nessuna abbreviazione si indovina)."
+                },
+                "civici": {
+                  "type": "object",
+                  "additionalProperties": false,
+                  "required": [
+                    "dal",
+                    "al"
+                  ],
+                  "description": "I numeri civici della riga (il numero iniziale del civico: 21/C = 21); manca = tutta la via.",
+                  "properties": {
+                    "dal": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 99999
+                    },
+                    "al": {
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 99999
+                    },
+                    "lato": {
+                      "enum": [
+                        "pari",
+                        "dispari",
+                        "tutti"
+                      ],
+                      "description": "manca = tutti"
+                    }
+                  }
+                },
+                "scuola": {
+                  "$ref": "#/definitions/codice",
+                  "description": "Solo per gli utenti di questa scuola (scuole.json)."
+                },
+                "grado": {
+                  "enum": [
+                    "infanzia",
+                    "primaria",
+                    "secondaria_primo_grado",
+                    "secondaria_secondo_grado"
+                  ],
+                  "description": "Solo per gli utenti di una scuola di questo grado."
+                },
+                "punto": {
+                  "$ref": "#/definitions/codice",
+                  "description": "Il punto di raccolta: un luogo pubblico (luoghi.json)."
+                },
+                "nota": {
+                  "$ref": "#/definitions/nota"
+                }
+              }
+            }
+          }
+        }
+      },
+      "x-kzero-classe": "comune"
+    }
+  },
+  "definitions": {
+    "codice": {
+      "description": "Codice K-Zero: scelto da chi scrive i dati, unico per tipo di elemento. Lettere senza accenti, cifre, '-', '_' e '.'; inizia con una lettera o una cifra; al massimo 64 caratteri.",
+      "type": "string",
+      "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$"
+    },
+    "testo": {
+      "description": "Testo di una riga, non vuoto (al massimo 300 caratteri).",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 300,
+      "pattern": "\\S"
+    },
+    "nota": {
+      "description": "Testo libero, non vuoto (al massimo 2000 caratteri).",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2000,
+      "pattern": "\\S"
+    }
+  }
+}

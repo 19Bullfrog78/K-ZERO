@@ -547,3 +547,63 @@ Formato: data - decisione - perche'.
   5, la 4 tra le non piu' prodotte): `mezzo` per scheda (`scritto`, `codice`, `riconosciuto`, `aggiunto`), "mezzo" tra le cose che
   cambiano, `conteggi.mezzi_aggiunti`. Nel testo una riga "Mezzo della scheda" per le schede scritte e completate solo se il profilo ha la
   colonna (o la versione ha il mezzo): con i profili di oggi il testo non cambia, anche la riga del riepilogo delle uguali.
+- 2026-11-24 - K-027 - **Dove stanno i punti degli utenti** (D1): in `elenco_utenti.json` alla **versione 3**, dentro ogni utente (`punti`,
+  per tratta, con la storia; `non_frequenta`), insieme agli sblocchi per giorni e per periodo. Le versioni 1 e 2 si leggono ancora (gli sblocchi
+  di allora valgono sempre); i comandi scrivono la 3. Il nome e' "punto" (non "assegnazione": `assegnazioni.json` e' un'altra cosa). Una
+  lettura del file del committente porta avanti punti e periodi come gli sblocchi (`merge_list`): non li cambia mai; un utente che esce o si
+  cancella porta via i suoi.
+- 2026-11-24 - K-027 - **Il punto punta al passaggio** (D2): scheda (l'ID del committente) + luogo + **volta** (1a, 2a... volta che la scheda
+  passa da quel luogo, nell'ordine delle righe) + la versione su cui si e' confermato. In un'altra versione e' lo stesso passaggio solo se il
+  luogo c'e' lo stesso numero di volte (se no avviso K-CTR-185, **mai riagganciato**); una volta che non c'e' piu' non si conta (K-CTR-184).
+  Con un luogo piu' volte nella scheda la volta va scritta (K-ERR-057): mai un passaggio scelto dal programma.
+- 2026-11-24 - K-027 - **La storia**: una voce nuova dal giorno D chiude quella di prima al giorno D-1; le voci con un dal uguale o dopo
+  diventano "sostituite" (restano nella storia, con la data e il riferimento della nuova); **i giorni prima non cambiano mai**. Una voce
+  senza regole ("nessuno") dice che da quel giorno l'utente non ha un punto. Ogni voce ha il riferimento e la data scritti dall'utente di
+  K-Zero, l'origine (proposta confermata o a mano) e, con la proposta, la fonte (fermata indicata o stradario).
+- 2026-11-24 - K-027 - **K-Zero propone, una persona conferma** (D10, P3, P4): `kzero proponi-punti` legge soltanto e stampa i candidati (la
+  fermata indicata dal committente, poi lo stradario dell'azienda per la scuola o il grado) e le righe pronte; con piu' candidati li elenca
+  tutti e non sceglie. `kzero conferma-punti` scrive solo le righe ricevute sull'ingresso standard, ognuna ancora candidata della proposta di
+  quel giorno (altrimenti K-ERR-057 e niente scritto); nessun "conferma tutto". `kzero assegna-punto` scrive a mano. `--riferimento` e
+  `--data` obbligatori; senza `--scrivi` anteprima.
+- 2026-11-24 - K-027 - **Legame con la salute attraverso la scheda** (D3): nome e casa di un utente vanno tra i legati (particolari) anche se un
+  suo punto, in tutta la storia, e' in un luogo sensibile o in una casa legata, oppure su una scheda per disabili o individualizzata (il tipo
+  o la casella in una versione della copia, o il suo servizio). La regola e' per persona, in `LegameSensibile`: gli altri utenti della stessa
+  scheda non cambiano. I punti restano dati comuni (come la fermata indicata); chi ha detto uno sblocco a voce e la nota di "non frequenta"
+  sono personali.
+- 2026-11-24 - K-027 - **In quali giorni viaggia un utente** (D4, D6): dai suoi orari (giorno, ora e date), solo nei **giorni di scuola**: i
+  giorni in cui vale almeno uno dei calendari di base delle schede della sua scuola. L'ora del file e' l'ora delle lezioni (entrata o
+  uscita), non quella di salita: nella proposta una scheda e' candidata se alla scuola arriva (andata) tra l'ora meno l'attesa e l'ora, o
+  parte (ritorno) tra l'ora e l'ora piu' l'attesa (l'attesa concordata della scuola, se no quella del regolamento; senza attese solo "non
+  dopo" e "non prima"). Senza orari i giorni "non si sanno" (K-CTR-189): nel confronto conta in tutti i giorni della scheda del suo punto;
+  mai giorni inventati.
+- 2026-11-24 - K-027 - **Il confronto con le schede** (P6): per ogni versione, giorno della settimana e periodo, gli utenti con il punto
+  contro St. Car. (andata) e St. Scar. (ritorno) di ogni passaggio, **senza l'accompagnatore** dove lo dice la sua colonna; le discese (o
+  salite) alla scuola si confrontano con chi va in quella scuola (scuola di scarico), mai dividendo i St. Car. tra le scuole. Contano gli
+  attivi e i sospesi sbloccati quel giorno, mai chi "non frequenta". Solo avvisi (K-CTR-181 ... 189), in `kzero controlla` e in `kzero
+  confronta-schede`; **la scheda e l'elenco non si correggono mai da soli**.
+- 2026-11-24 - K-027 - **"Senza punto" e' un avviso** (D5, D12): uno per utente e tratta con i giorni, in testa agli avvisi del confronto
+  (K-CTR-183); un errore fermerebbe `kzero giornata` a inizio anno per un lavoro non ancora fatto. Per tutti gli elenchi del pacchetto.
+- 2026-11-24 - K-027 - **Doppia tratta** (D7): una voce puo' avere piu' regole (con giorni o "sempre"); e' doppia solo con **luoghi diversi**
+  (es. due case) e vuole il consenso del committente (assegna-punto la rifiuta senza, K-CTR-187 lo dice dopo una correzione a mano); lo stesso
+  luogo su schede diverse in giorni diversi non e' una doppia. Il committente conta la doppia su tutte e due le fermate: nel confronto conta
+  in tutti e due i passaggi, segnato "doppio", e alla scuola una volta per ogni passaggio contato (le discese della scheda sono la somma
+  delle salite); con i due passaggi sulla stessa versione di scheda l'uscita dice "doppio sulla stessa scheda" (a bordo e' un posto solo: i
+  posti li conta il K-028).
+- 2026-11-24 - K-027 - **Non frequenta** (D8, corretta dall'arbitro il 25/11): l'utente iscritto e attivo che al momento non usa il mezzo.
+  Un periodo (dal, al facoltativo), per tutte le tratte della nostra azienda o per alcune, con un motivo a scelta fissa (comune: `famiglia`,
+  `altro_mezzo`, `assente`, `altro`) e una nota facoltativa (personale). Periodi che non si sovrappongono; `--fino-al` chiude, `--togli`
+  toglie. Chi non c'e' piu' e non tornera' (es. trasferito) non e' un periodo: si toglie dall'elenco (`kzero togli-da-elenco`, K-020); per
+  questo "ritirato" non e' tra i motivi. Fino alla correzione il periodo si chiamava "non viaggia" (comando `non-viaggia`, campo
+  `non_viaggia`), con "ritirato" tra i motivi: mai unito a main.
+- 2026-11-24 - K-027 - **Sblocchi per giorni, per periodo e a voce** (D9): `kzero sblocco` con `--giorni`, `--dal`, `--al` e `--a-voce`
+  (chi l'ha detto sull'ingresso standard, personale); `--riferimento` e `--data` restano obbligatori. Piu' sblocchi della stessa tratta senza
+  giorni in comune; quelli delle versioni 1 e 2 valgono sempre. Senza anteprima, come prima (P4).
+- 2026-11-24 - K-027 - **La coincidenza** (D11): chi ha il punto su una scheda che finisce (o comincia) in un punto di trasbordo per la sua
+  scuola si conta li'; il proseguimento con l'altra scheda (legame A -> B) non e' controllato: un mandato suo.
+- 2026-11-24 - K-027 - **Lo stradario** (P5): file nuovo `stradari.json` (versione 1, tutto comune), uno per azienda: per comune, frazione,
+  via, civici (dal, al, lato) e, se serve, scuola o grado, il punto di raccolta (un luogo pubblico). La casa si confronta come i nomi dei
+  luoghi; nessuna abbreviazione si indovina. Non ha anno; lo stradario da Excel e quello ricavato dai punti dell'anno prima: non in questo
+  mandato. Errori nello stradario: K-CTR-190.
+- 2026-11-24 - K-027 - **Uscite e codici**: elenco `elenco_utenti` 3, `stradari` 1, `sblocco` 2 (giorni, dal, al, a voce), `punti` 1 (uscita di
+  assegna-punto, conferma-punti e non-frequenta), `proposte_punti` 1, `confronto_schede` 1. Errori K-ERR-057 (punto non ammesso) e 058 ("non
+  viaggia" non ammesso); controlli K-CTR-181 ... 190 e K-CTR-140 varianti 5-10. K-CTR-151 al singolare con una riga (punto 5).

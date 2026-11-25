@@ -12,6 +12,7 @@
 #include <vector>
 
 #include "accesso.hpp"
+#include "campi_ingresso.hpp"
 #include "chiusura.hpp"
 #include "controlli_catalogo.hpp"
 #include "elenco.hpp"
@@ -20,6 +21,7 @@
 #include "excel.hpp"
 #include "elenco_scrittura.hpp"
 #include "riservatezza.hpp"
+#include "punti.hpp"
 
 namespace kzero::api {
 
@@ -333,17 +335,43 @@ Risultato esegui_leggi_elenco(const DefinizioneComando& comando, const Parametri
 Risultato esegui_sblocco(const DefinizioneComando& comando, const Parametri& par) {
     const fs::path cartella(par.argomenti.at(0));
     elenco::stessa_cartella(cartella.string(), par.scrivi);
-    if (!par.togli && (par.riferimento.empty() || !par.data_sblocco))
+    const bool chiudi = par.fino_al.has_value();
+    if (!par.togli && !chiudi && (par.riferimento.empty() || !par.data_sblocco))
         throw ErroreKZero(Errore::ParametroObbligatorio, "Per aggiungere uno sblocco servono --riferimento (es. la mail del committente) "
-                                                         "e --data; per toglierlo, --togli.");
+                                                         "e --data; per toglierlo, --togli; per chiuderlo da un giorno, --fino-al.");
+    // K-027: i giorni della settimana (--giorni) e il periodo (--dal, --al).
+    std::optional<kzero::Weekdays> giorni;
+    if (!par.giorni.empty()) {
+        giorni = kzero::parse_weekdays(par.giorni);
+        if (!giorni)
+            throw ErroreKZero(Errore::ValoreScrittoMale, "--giorni: i nomi dei giorni della settimana separati da virgole (es. \"lunedi,mercoledi\").");
+    }
+    if (par.dal && par.al && *par.al < *par.dal) throw ErroreKZero(Errore::ValoreScrittoMale, "--al e' prima di --dal.");
     const ManifestoLetto manifesto = accesso::manifesto_con_cassaforte(cartella);
     elenco::permessi_prima_della_password(cartella, par.utente, comando.nome);
     const auto in = accesso::ingresso(par);
     const cripto::Segreto password = accesso::chiedi_password(*in, par.utente);
     cripto::niente_core_dump();
+    // A voce: chi l'ha detto (dato personale) dall'ingresso standard, dopo la password, mai come argomento.
+    std::string chi;
+    if (par.a_voce) {
+        std::function<int()> byte = accesso::ambiente().valori;
+        if (!byte) byte = campi::ingresso_standard();
+        const campi::Righe r = campi::leggi(byte);
+        if (r.motivo != campi::Motivo::Nessuno)
+            throw ErroreKZero(Errore::CampiScrittiMale, "Valori dall'ingresso, riga " + std::to_string(r.riga) + ": " + campi::spiegazione(r.motivo) +
+                                                            ". Niente e' cambiato.");
+        const kzero::PointLines x = kzero::parse_point_lines(r.righe, kzero::PointLinesMode::Voice);
+        if (x.fault != kzero::PointLinesFault::None)
+            throw ErroreKZero(Errore::CampiScrittiMale, "Valori dall'ingresso: per uno sblocco a voce si scrive una riga \"chi: ...\" (chi l'ha "
+                                                        "detto), una volta sola. Niente e' cambiato.");
+        chi = x.who;
+    }
     std::size_t restanti = 0;
     bool fuori = false;
     std::string committente;
+    std::string azione = par.togli ? "tolto" : chiudi ? "chiuso" : "aggiunto";
+    kzero::ListUserUnlock fatto_su;
     const cassaforte::Riepilogo r = elenco::scrivi(cartella, manifesto, par.utente, password, comando.nome, [&](const Lettura& vecchia) {
         elenco::pacchetto_completo(vecchia, cartella.string(), par.utente);
         const kzero::Index idx(vecchia.pacchetto);
@@ -360,11 +388,34 @@ Risultato esegui_sblocco(const DefinizioneComando& comando, const Parametri& par
         kzero::ListUser* w = nullptr;
         for (kzero::ListUser& x : nuova_lista.users)
             if (x.code == u->code) w = &x;
-        const auto it = std::find_if(w->unlocks.begin(), w->unlocks.end(), [&](const kzero::ListUserUnlock& s) { return s.leg == par.tratta; });
+        std::vector<std::size_t> della_tratta;
+        for (std::size_t i = 0; i < w->unlocks.size(); ++i)
+            if (w->unlocks[i].leg == par.tratta) della_tratta.push_back(i);
         if (par.togli) {
-            if (it == w->unlocks.end())
+            // Con piu' sblocchi della tratta, --dal dice quale (quello che comincia quel giorno); senza --dal, quello "da sempre".
+            std::optional<std::size_t> quale;
+            for (std::size_t i : della_tratta)
+                if (della_tratta.size() == 1 && !par.dal) quale = i;
+                else if (w->unlocks[i].from == par.dal) quale = i;
+            if (della_tratta.empty())
                 throw ErroreKZero(Errore::SbloccoNonAmmesso, "L'utente " + w->code + " non ha uno sblocco della tratta '" + par.tratta + "'.");
-            w->unlocks.erase(it);
+            if (!quale)
+                throw ErroreKZero(Errore::SbloccoNonAmmesso, "L'utente " + w->code + " ha piu' sblocchi della tratta '" + par.tratta + "' (o nessuno "
+                                                             "che comincia quel giorno): --dal dice quale togliere (il giorno in cui comincia).");
+            fatto_su = w->unlocks[*quale];
+            w->unlocks.erase(w->unlocks.begin() + static_cast<std::ptrdiff_t>(*quale));
+        } else if (chiudi) {
+            // Lo sblocco della tratta che vale quel giorno (dal suo periodo: i giorni della settimana non contano) finisce quel giorno.
+            kzero::ListUserUnlock* aperto = nullptr;
+            for (std::size_t i : della_tratta) {
+                kzero::ListUserUnlock& x = w->unlocks[i];
+                if ((!x.from || *x.from <= *par.fino_al) && (!x.to || *x.to >= *par.fino_al)) aperto = &x;
+            }
+            if (!aperto)
+                throw ErroreKZero(Errore::SbloccoNonAmmesso, "L'utente " + w->code + " non ha uno sblocco della tratta '" + par.tratta +
+                                                             "' che vale il " + kzero::text_from_day(*par.fino_al) + ": niente da chiudere.");
+            aperto->to = *par.fino_al;
+            fatto_su = *aperto;
         } else {
             if (w->out_of_list)
                 throw ErroreKZero(Errore::SbloccoNonAmmesso, "L'utente " + w->code + " non e' piu' nell'elenco del committente: non si "
@@ -376,21 +427,57 @@ Risultato esegui_sblocco(const DefinizioneComando& comando, const Parametri& par
             if (!ha_tratta)
                 throw ErroreKZero(Errore::SbloccoNonAmmesso, "Il committente non da' all'utente " + w->code + " la tratta '" + par.tratta +
                                                              "' (percorsi del file): non c'e' niente da sbloccare.");
-            if (it != w->unlocks.end())
-                throw ErroreKZero(Errore::SbloccoNonAmmesso, "L'utente " + w->code + " ha gia' uno sblocco della tratta '" + par.tratta +
-                                                             "': per cambiarlo, prima toglierlo (--togli).");
-            w->unlocks.push_back({profilo->leg(par.tratta)->code, par.riferimento, *par.data_sblocco, {}});
+            kzero::ListUserUnlock s(profilo->leg(par.tratta)->code, par.riferimento, *par.data_sblocco, {});
+            if (giorni) {
+                s.all_days = false;
+                s.days = *giorni;
+            }
+            s.from = par.dal;
+            s.to = par.al;
+            s.by_voice = par.a_voce;
+            s.who = chi;
+            // K-027: piu' sblocchi della stessa tratta, mai con giorni in comune (un giorno vale per uno sblocco solo).
+            for (std::size_t i : della_tratta) {
+                const kzero::ListUserUnlock& x = w->unlocks[i];
+                bool stesso_giorno = false;
+                for (int g = 0; g < 7; ++g) {
+                    const kzero::Weekday d = static_cast<kzero::Weekday>(g);
+                    stesso_giorno = stesso_giorno || ((x.all_days || x.days.has(d)) && (s.all_days || s.days.has(d)));
+                }
+                const kzero::Day a1 = x.from ? *x.from : -1000000, b1 = x.to ? *x.to : 1000000000;
+                const kzero::Day a2 = s.from ? *s.from : -1000000, b2 = s.to ? *s.to : 1000000000;
+                if (stesso_giorno && a1 <= b2 && a2 <= b1)
+                    throw ErroreKZero(Errore::SbloccoNonAmmesso, "L'utente " + w->code + " ha gia' uno sblocco della tratta '" + par.tratta +
+                                                                 "' che vale in uno di quei giorni: per cambiarlo, prima chiuderlo (--fino-al) o "
+                                                                 "toglierlo (--togli).");
+            }
+            w->unlocks.push_back(s);
+            fatto_su = s;
         }
         restanti = w->unlocks.size();
         fuori = w->out_of_list;
         committente = nuova_lista.client.code;
         Lettura nuova = elenco::con_documento(vecchia, kFile, elenco::documento_con(vecchia, nuova_lista, vecchia.pacchetto.list_last_number));
-        return std::make_pair(std::move(nuova), std::string(par.togli ? "sblocco tolto" : "sblocco aggiunto") + ": utente " + w->code +
-                                                    ", tratta " + par.tratta);
+        return std::make_pair(std::move(nuova), "sblocco " + azione + ": utente " + w->code + ", tratta " + par.tratta);
     });
     const std::vector<accesso::AvvisoMostrato> avvisi = elenco::avvisi_di(r, par.utente);
-    std::string fatto = std::string(par.togli ? "Sblocco tolto" : "Sblocco aggiunto") + ": utente " + par.utente_elenco + " (committente " +
-                        committente + "), tratta " + par.tratta + "; sblocchi che restano all'utente: " + std::to_string(restanti) + ".";
+    static const char* nomi_giorni[] = {"lunedi", "martedi", "mercoledi", "giovedi", "venerdi", "sabato", "domenica"};
+    std::string quando;
+    Json giorni_j = nullptr;
+    if (!fatto_su.all_days) {
+        giorni_j = Json::array();
+        for (int g = 0; g < 7; ++g)
+            if (fatto_su.days.has(static_cast<kzero::Weekday>(g))) {
+                quando += (quando.empty() ? "" : ", ") + std::string(nomi_giorni[g]);
+                giorni_j.push_back(nomi_giorni[g]);
+            }
+    }
+    const std::string periodo = std::string(fatto_su.from ? " dal " + kzero::text_from_day(*fatto_su.from) : "") +
+                                (fatto_su.to ? " al " + kzero::text_from_day(*fatto_su.to) : "");
+    std::string fatto = std::string(par.togli ? "Sblocco tolto" : chiudi ? "Sblocco chiuso" : "Sblocco aggiunto") + ": utente " + par.utente_elenco +
+                        " (committente " + committente + "), tratta " + par.tratta + " (" + (fatto_su.all_days ? "tutti i giorni" : quando) +
+                        (periodo.empty() ? ", sempre" : "," + periodo) + (fatto_su.by_voice ? ", a voce" : "") +
+                        "); sblocchi che restano all'utente: " + std::to_string(restanti) + ".";
     if (fuori && restanti == 0)
         fatto += " L'utente non e' piu' nell'elenco del committente e non ha piu' sblocchi: non viene tolto adesso, se ne andra' alla "
                  "prossima lettura completa dell'elenco (kzero leggi-elenco --elenco completo).";
@@ -401,9 +488,13 @@ Risultato esegui_sblocco(const DefinizioneComando& comando, const Parametri& par
         j["utente_elenco"] = par.utente_elenco;
         j["committente"] = committente;
         j["tratta"] = par.tratta;
-        j["azione"] = par.togli ? "tolto" : "aggiunto";
-        j["riferimento"] = par.togli ? Json(nullptr) : Json(par.riferimento);
-        j["data"] = par.togli ? Json(nullptr) : Json(kzero::text_from_day(*par.data_sblocco));
+        j["azione"] = azione;
+        j["riferimento"] = par.togli || chiudi ? Json(nullptr) : Json(par.riferimento);
+        j["data"] = par.togli || chiudi ? Json(nullptr) : Json(kzero::text_from_day(*par.data_sblocco));
+        j["giorni"] = giorni_j;
+        j["dal"] = fatto_su.from ? Json(kzero::text_from_day(*fatto_su.from)) : Json(nullptr);
+        j["al"] = fatto_su.to ? Json(kzero::text_from_day(*fatto_su.to)) : Json(nullptr);
+        j["a_voce"] = fatto_su.by_voice;
         j["sblocchi_restanti"] = restanti;
         j["fuori_elenco"] = fuori;
         j["fatto"] = fatto;

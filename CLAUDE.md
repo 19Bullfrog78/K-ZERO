@@ -93,6 +93,16 @@ Si parte da ALP (3 minibus + 1 auto) e si deve poter crescere fino a 500 mezzi e
   tre fogli, da cui le prove costruiscono il file .xlsx; `build/tests/crea_xlsx --fogli`). Dal K-024 il tipo per scheda (regole del
   profilo alla versione 3) e il numero dei disabili: prove con dati inventati in tests/esempi/k024-schede. Dal K-026 il mezzo della scheda
   (colonna "Mezzo" del profilo alla versione 4, la targa): prove con dati inventati in tests/esempi/k026-schede.
+- Punti degli utenti dell'elenco (K-027, docs/formato-dati.md "Punti degli utenti", `stradari.json`): `./build/kzero proponi-punti <pacchetto
+  chiuso> --dal AAAA-MM-GG [--utente-elenco U-000001] [--tratta SIGLA] [--tutti] --utente CODICE` (legge soltanto: candidati e righe pronte);
+  `./build/kzero conferma-punti <pacchetto chiuso> --dal AAAA-MM-GG` (le righe pronte sull'ingresso standard, dopo la password) e
+  `./build/kzero assegna-punto <pacchetto chiuso> --utente-elenco U-000001 --tratta SIGLA --dal AAAA-MM-GG` (righe `punto: <scheda> / <luogo>
+  [/ <volta>] [/ <giorni>]`, `consenso: ...` o `nessuno`), `./build/kzero non-frequenta ... --utente-elenco U-000001 --dal AAAA-MM-GG [--al
+  ...] [--tratta SIGLA] [--fino-al ... | --togli]` (`motivo: ...`, `nota: ...`), sempre con `--riferimento "..." --data AAAA-MM-GG --utente
+  CODICE [--scrivi <pacchetto chiuso>]`; `kzero sblocco` anche con `--giorni lunedi,mercoledi`, `--dal`, `--al`, `--fino-al` e `--a-voce`
+  (`chi: ...` sull'ingresso); `./build/kzero confronta-schede <cartella> [--scheda CODICE-o-ID] [--dal ... --al ...]` (il confronto, che fa
+  anche kzero controlla). Prove con dati inventati: tests/esempi/k027-punti (quattro schede, otto alunni, lo stradario),
+  tests/test_punti.cpp e le prove `punti_*` sul programma (tests/programma/prepara_k027.cmake).
 - Eseguire le prove: `ctest --test-dir build --output-on-failure`
 - Controllo del deposito pubblico (K-015: i quattro nomi in nessun file, nessun file di dati ne' manifesto di un pacchetto
   fuori da tests/ ed esempi/; K-016: solo testi UTF-8 e binari ammessi, cartelle saltate uguali a quelle di .gitignore):
@@ -118,9 +128,10 @@ Si parte da ALP (3 minibus + 1 auto) e si deve poter crescere fino a 500 mezzi e
   cmake --build build-fuzz --target fuzz_pacchetto fuzz_parametri fuzz_date_e_orari fuzz_cassaforte fuzz_elenco rigioca_fuzz`
   (rigioca_fuzz prepara i semi della cassaforte, con chiavi nuove a ogni giro, e quelli dell'elenco e delle schede dai testi delle
   prove), poi
-  `tests/fuzz/fuzz.sh build-fuzz <secondi per bersaglio> [cartella di lavoro] [bersagli]` (39 bersagli: `pacchetto-<file>`,
+  `tests/fuzz/fuzz.sh build-fuzz <secondi per bersaglio> [cartella di lavoro] [bersagli]` (42 bersagli: `pacchetto-<file>`,
   `parametri`, `date-e-orari` e, dal K-010, `cassaforte`, `cassaforte-voci`, `registro`, `registro-voci`, `password`; dal K-019
-  `elenco-archivio`, `elenco-foglio`, `elenco-righe`; dal K-020 `elenco-campi`; dal K-021 `schede-righe` e i file `profili_schede.json` e `schede_servizi.json`; nel
+  `elenco-archivio`, `elenco-foglio`, `elenco-righe`; dal K-020 `elenco-campi`; dal K-021 `schede-righe` e i file `profili_schede.json` e `schede_servizi.json`;
+  dal K-027 `punti-campi` e i file `elenco_utenti.json` e `stradari.json`; nel
   controllo GitHub 20 secondi; in locale a lungo, es. `KZERO_FUZZ_PARALLELI=4
   tests/fuzz/fuzz.sh build-fuzz 3600 ~/kzero-fuzz`). Un guasto lascia il file che lo provoca in
   `<lavoro>/guasti/<bersaglio>/`: si corregge e il file va in `tests/fuzz/casi/<bersaglio>/` (diventa una prova normale).
@@ -277,6 +288,8 @@ Si parte da ALP (3 minibus + 1 auto) e si deve poter crescere fino a 500 mezzi e
   indovinato (una targa su piu' mezzi non si riconosce); una versione nuova solo se cambia il testo tra due celle scritte; a una scheda
   uguale la rilettura aggiunge solo il mezzo che manca alla copia dell'ultima versione, con la data e il riferimento, mai un testo diverso.
   Nel deposito solo targhe inventate.
+- Punti degli utenti (K-027): l'assegnazione punta al passaggio (scheda, luogo e volta), mai al solo luogo; una voce nuova non cambia mai i
+  giorni prima del suo dal; K-Zero propone, una persona conferma; la scheda e l'elenco non si correggono mai da soli.
 - Cassaforte (K-010): un valore si lega al suo elemento per codice (o per la chiave dichiarata nello schema,
   `x-kzero-chiave`), mai per posizione; un valore senza il suo elemento e' un errore K-CTR, mai un'unione sbagliata.
   Chi ha solo i dati personali non riceve mai la chiave dei particolari, nemmeno durante il cambio delle chiavi.
