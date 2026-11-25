@@ -63,7 +63,7 @@ int prova_semi_elenco();
 void prova_schede_righe(const std::uint8_t* dati, std::size_t n);
 void scrivi_semi_schede(const std::string& cartella);
 int prova_semi_schede();
-// K-027: le righe dei punti scritte sull'ingresso (assegna-punto, le righe pronte di conferma-punti, non-viaggia, il "chi" dello sblocco a
+// K-027: le righe dei punti scritte sull'ingresso (assegna-punto, le righe pronte di conferma-punti, non-frequenta, il "chi" dello sblocco a
 // voce): mai un'eccezione, mai un valore fuori dai limiti o di un altro comando accettato, la stessa lettura due volte; poi la voce letta
 // scritta in una storia di prova: mai un giorno prima della sua data cambiato, mai una voce tolta, la voce nuova vale dalla sua data.
 void prova_punti_campi(const std::uint8_t* dati, std::size_t n);

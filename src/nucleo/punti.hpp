@@ -75,8 +75,8 @@ bool point_entry_double(const PointEntry& e);
 // giorni prima del dal della voce nuova non cambiano mai. Restituisce i dal delle voci sostituite.
 std::vector<Day> add_point_entry(UserPoints& up, const PointEntry& e);
 
-// Il periodo "non viaggia" che vale quel giorno per la tratta (nullptr se nessuno).
-const NotTraveling* not_traveling_on(const ListUser& u, Day d, const std::string& leg);
+// Il periodo "non frequenta" che vale quel giorno per la tratta (nullptr se nessuno).
+const NotAttending* not_attending_on(const ListUser& u, Day d, const std::string& leg);
 // Ha diritto al servizio su quella tratta quel giorno: nel piano e attivo, oppure sospeso con uno sblocco che vale quel giorno.
 bool point_right(const ListUser& u, const std::string& leg, Day d);
 // Viaggia la tratta quel giorno? Dai suoi orari (giorno della settimana e date), solo nei giorni di scuola. Senza orari per la tratta,
@@ -155,7 +155,7 @@ struct ComparedPeriod {
     Weekday weekday = Weekday::Monday;
     std::vector<Day> days;                       // i giorni del periodo (quel giorno della settimana), in ordine
     std::vector<ComparedPassage> passages;       // una per riga della scheda
-    std::vector<Code> not_traveling;             // con un punto qui, ma "non viaggia"
+    std::vector<Code> not_attending;             // con un punto qui, ma "non frequenta"
     std::vector<Code> not_counted;               // con un punto qui, non contati: sospesi senza sblocco, punti che non valgono
     bool differs = false;
 };
@@ -172,15 +172,15 @@ struct PointsComparison {
 // della scheda). only_card: solo la scheda con quel codice o ID (vuoto = tutte).
 PointsComparison compare_points(const Package& p, const Index& idx, DateRange range, const std::string& only_card = std::string());
 
-// --- I valori dall'ingresso standard (kzero assegna-punto, conferma-punti, non-viaggia, sblocco --a-voce) ---------------------
+// --- I valori dall'ingresso standard (kzero assegna-punto, conferma-punti, non-frequenta, sblocco --a-voce) ---------------------
 // Come i campi del K-020: una riga per valore, mai come argomenti; le righe arrivano gia' pulite e nei limiti (lo fa l'API, che le legge).
 // - assegna-punto: "punto: <scheda> / <luogo> [/ <volta>] [/ <giorni>]" (una riga per regola), "consenso: <testo>", oppure "nessuno";
 // - conferma-punti: "<utente> <tratta>: <scheda> / <luogo> / <volta> [/ <giorni>]" (le righe pronte di kzero proponi-punti);
-// - non-viaggia: "motivo: famiglia|altro_mezzo|assente|ritirato|altro", "nota: <testo>";
+// - non-frequenta: "motivo: famiglia|altro_mezzo|assente|altro", "nota: <testo>";
 // - sblocco --a-voce: "chi: <testo>".
 // La scheda e' il codice del registro o l'ID; il luogo il codice; i giorni nomi della settimana separati da virgole (es. "lunedi,
 // mercoledi"), senza = sempre.
-enum class PointLinesMode { Assign, Confirm, NotTraveling, Voice };
+enum class PointLinesMode { Assign, Confirm, NotAttending, Voice };
 struct PointLine {
     Code user;               // conferma: l'utente
     std::string leg;         // conferma: la tratta
@@ -206,7 +206,7 @@ struct PointLines {
     std::vector<PointLine> points;
     std::string consent;
     bool nobody = false;
-    std::optional<NotTravelingReason> reason;
+    std::optional<NotAttendingReason> reason;
     std::string note;
     std::string who;
     PointLinesFault fault = PointLinesFault::None;

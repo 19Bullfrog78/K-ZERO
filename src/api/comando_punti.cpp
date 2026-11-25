@@ -1,4 +1,4 @@
-// K-Zero API - i punti degli utenti dell'elenco (K-027): kzero proponi-punti, assegna-punto, conferma-punti, non-viaggia e
+// K-Zero API - i punti degli utenti dell'elenco (K-027): kzero proponi-punti, assegna-punto, conferma-punti, non-frequenta e
 // confronta-schede. Uscite: schemi "proposte_punti", "punti" e "confronto_schede".
 //
 // K-Zero propone, una persona conferma: proponi-punti non scrive niente; assegna-punto (un punto scritto a mano) e conferma-punti (le
@@ -72,8 +72,8 @@ const char* testo_fonte(kzero::PointSource f) {
     }
     return "senza fonte";
 }
-const char* nome_motivo(kzero::NotTravelingReason m) {
-    static const char* nomi[] = {"famiglia", "altro_mezzo", "assente", "ritirato", "altro"};
+const char* nome_motivo(kzero::NotAttendingReason m) {
+    static const char* nomi[] = {"famiglia", "altro_mezzo", "assente", "altro"};
     return nomi[static_cast<int>(m)];
 }
 
@@ -108,7 +108,7 @@ std::vector<std::string> righe_dall_ingresso(const char* aiuto) {
             break;
         case kzero::PointLinesFault::Day: m = "un giorno della settimana non esiste (lunedi, martedi, mercoledi, giovedi, venerdi, sabato, domenica)"; break;
         case kzero::PointLinesFault::Number: m = "la volta non e' un numero da 1 a 99"; break;
-        case kzero::PointLinesFault::Reason: m = "il motivo non e' uno di quelli fissi (famiglia, altro_mezzo, assente, ritirato, altro)"; break;
+        case kzero::PointLinesFault::Reason: m = "il motivo non e' uno di quelli fissi (famiglia, altro_mezzo, assente, altro; chi non c'e' piu' si toglie dall'elenco: kzero togli-da-elenco)"; break;
         case kzero::PointLinesFault::Missing: m = "manca il valore che serve (un punto, o \"nessuno\"; il motivo; chi l'ha detto)"; break;
         case kzero::PointLinesFault::NobodyWithPoints: m = "\"nessuno\" si scrive da solo, senza punti ne' consenso"; break;
         case kzero::PointLinesFault::None: break;
@@ -235,19 +235,19 @@ struct Calcolo {
     Lettura vecchia, nuova;
     std::string committente;
     std::vector<VoceScritta> voci;
-    std::optional<kzero::NotTraveling> non_viaggia;   // il periodo scritto, chiuso o tolto
-    kzero::Code utente_non_viaggia;
+    std::optional<kzero::NotAttending> non_frequenta;   // il periodo scritto, chiuso o tolto
+    kzero::Code utente_non_frequenta;
     std::string nota;
 };
 
-enum class Azione { Assegna, Conferma, NonViaggia, NonViaggiaChiudi, NonViaggiaTogli };
+enum class Azione { Assegna, Conferma, NonFrequenta, NonFrequentaChiudi, NonFrequentaTogli };
 const char* nome_azione(Azione a) {
     switch (a) {
         case Azione::Assegna: return "assegnato";
         case Azione::Conferma: return "confermato";
-        case Azione::NonViaggia: return "non_viaggia";
-        case Azione::NonViaggiaChiudi: return "non_viaggia_chiuso";
-        case Azione::NonViaggiaTogli: return "non_viaggia_tolto";
+        case Azione::NonFrequenta: return "non_frequenta";
+        case Azione::NonFrequentaChiudi: return "non_frequenta_chiuso";
+        case Azione::NonFrequentaTogli: return "non_frequenta_tolto";
     }
     return "?";
 }
@@ -381,12 +381,12 @@ Calcolo calcola_conferma(const Lettura& vecchia, const Parametri& par, const std
     return c;
 }
 
-Calcolo calcola_non_viaggia(Azione azione, const Lettura& vecchia, const Parametri& par, const std::vector<std::string>& righe,
+Calcolo calcola_non_frequenta(Azione azione, const Lettura& vecchia, const Parametri& par, const std::vector<std::string>& righe,
                             const std::string& cartella) {
     elenco::pacchetto_completo(vecchia, cartella, par.utente);
     const kzero::Index idx(vecchia.pacchetto);
-    const Chi chi = trova(vecchia.pacchetto, idx, par.utente_elenco, par.tratta, Errore::NonViaggiaNonAmmesso);
-    const auto no = [](const std::string& m) { throw ErroreKZero(Errore::NonViaggiaNonAmmesso, "Periodo non scritto: " + m + ". Niente e' cambiato."); };
+    const Chi chi = trova(vecchia.pacchetto, idx, par.utente_elenco, par.tratta, Errore::NonFrequentaNonAmmesso);
+    const auto no = [](const std::string& m) { throw ErroreKZero(Errore::NonFrequentaNonAmmesso, "Periodo non scritto: " + m + ". Niente e' cambiato."); };
     kzero::ClientList lista = *chi.lista;
     kzero::ListUser* u = nullptr;
     for (kzero::ListUser& x : lista.users)
@@ -394,28 +394,28 @@ Calcolo calcola_non_viaggia(Azione azione, const Lettura& vecchia, const Paramet
     const std::vector<std::string> tratte = par.tratta.empty() ? std::vector<std::string>{} : std::vector<std::string>{par.tratta};
     Calcolo c;
     c.committente = lista.client.code;
-    c.utente_non_viaggia = u->code;
-    if (azione == Azione::NonViaggiaTogli) {
-        const auto it = std::find_if(u->not_traveling.begin(), u->not_traveling.end(),
-                                     [&](const kzero::NotTraveling& n) { return n.from == *par.dal && n.legs == tratte; });
-        if (it == u->not_traveling.end())
-            no("l'utente " + u->code + " non ha un periodo \"non viaggia\" dal " + kzero::text_from_day(*par.dal) +
+    c.utente_non_frequenta = u->code;
+    if (azione == Azione::NonFrequentaTogli) {
+        const auto it = std::find_if(u->not_attending.begin(), u->not_attending.end(),
+                                     [&](const kzero::NotAttending& n) { return n.from == *par.dal && n.legs == tratte; });
+        if (it == u->not_attending.end())
+            no("l'utente " + u->code + " non ha un periodo \"non frequenta\" dal " + kzero::text_from_day(*par.dal) +
                (par.tratta.empty() ? " per tutte le tratte" : " per la tratta " + par.tratta));
-        c.non_viaggia = *it;
-        u->not_traveling.erase(it);
-    } else if (azione == Azione::NonViaggiaChiudi) {
-        kzero::NotTraveling* aperto = nullptr;
-        for (kzero::NotTraveling& n : u->not_traveling)
+        c.non_frequenta = *it;
+        u->not_attending.erase(it);
+    } else if (azione == Azione::NonFrequentaChiudi) {
+        kzero::NotAttending* aperto = nullptr;
+        for (kzero::NotAttending& n : u->not_attending)
             if (!n.to && n.from <= *par.fino_al && n.legs == tratte) aperto = &n;
         if (!aperto)
-            no("l'utente " + u->code + " non ha un periodo \"non viaggia\" aperto (senza fine) cominciato entro il " + kzero::text_from_day(*par.fino_al) +
+            no("l'utente " + u->code + " non ha un periodo \"non frequenta\" aperto (senza fine) cominciato entro il " + kzero::text_from_day(*par.fino_al) +
                (par.tratta.empty() ? " per tutte le tratte" : " per la tratta " + par.tratta));
         aperto->to = *par.fino_al;
-        c.non_viaggia = *aperto;
+        c.non_frequenta = *aperto;
     } else {
-        const kzero::PointLines in = kzero::parse_point_lines(righe, kzero::PointLinesMode::NotTraveling);
+        const kzero::PointLines in = kzero::parse_point_lines(righe, kzero::PointLinesMode::NotAttending);
         if (in.fault != kzero::PointLinesFault::None) errore_righe(in);
-        kzero::NotTraveling n;
+        kzero::NotAttending n;
         n.from = *par.dal;
         n.to = par.al;
         if (n.to && *n.to < n.from) no("il periodo finisce (--al) prima di cominciare (--dal)");
@@ -423,22 +423,22 @@ Calcolo calcola_non_viaggia(Azione azione, const Lettura& vecchia, const Paramet
         n.reason = *in.reason;
         n.note = in.note;
         n.mark = kzero::ManualMark{par.riferimento, *par.data_sblocco};
-        for (const kzero::NotTraveling& x : u->not_traveling) {
+        for (const kzero::NotAttending& x : u->not_attending) {
             const bool tratte_in_comune =
                 x.legs.empty() || n.legs.empty() || std::find(x.legs.begin(), x.legs.end(), par.tratta) != x.legs.end();
             const kzero::Day f1 = x.to ? *x.to : 1000000000, f2 = n.to ? *n.to : 1000000000;
             if (tratte_in_comune && x.from <= f2 && n.from <= f1)
-                no("l'utente " + u->code + " ha gia' un periodo \"non viaggia\" dal " + kzero::text_from_day(x.from) +
+                no("l'utente " + u->code + " ha gia' un periodo \"non frequenta\" dal " + kzero::text_from_day(x.from) +
                    " che si sovrappone (per chiuderlo: --fino-al; per toglierlo: --togli)");
         }
-        u->not_traveling.push_back(n);
-        std::stable_sort(u->not_traveling.begin(), u->not_traveling.end(),
-                         [](const kzero::NotTraveling& a, const kzero::NotTraveling& b) { return a.from < b.from; });
-        c.non_viaggia = n;
+        u->not_attending.push_back(n);
+        std::stable_sort(u->not_attending.begin(), u->not_attending.end(),
+                         [](const kzero::NotAttending& a, const kzero::NotAttending& b) { return a.from < b.from; });
+        c.non_frequenta = n;
     }
     c.nuova = elenco::con_documento(vecchia, kFile, elenco::documento_con(vecchia, lista, vecchia.pacchetto.list_last_number));
     c.vecchia = vecchia;
-    c.nota = std::string("non viaggia (") + nome_azione(azione) + "): utente " + u->code + (par.tratta.empty() ? std::string() : ", tratta " + par.tratta);
+    c.nota = std::string("non frequenta (") + nome_azione(azione) + "): utente " + u->code + (par.tratta.empty() ? std::string() : ", tratta " + par.tratta);
     return c;
 }
 
@@ -492,7 +492,7 @@ Risultato uscita(Azione azione, const DefinizioneComando& comando, const Paramet
     const Nomi nomi(c.nuova, v);
     std::set<kzero::Code> utenti;
     for (const VoceScritta& x : c.voci) utenti.insert(x.utente);
-    if (c.non_viaggia) utenti.insert(c.utente_non_viaggia);
+    if (c.non_frequenta) utenti.insert(c.utente_non_frequenta);
     const std::vector<Problema> problemi = problemi_di(c.nuova, utenti, v);
     const std::string data = kzero::text_from_day(par.data_sblocco.value_or(0));
     if (par.formato == Formato::Json) {
@@ -517,17 +517,17 @@ Risultato uscita(Azione azione, const DefinizioneComando& comando, const Paramet
                           {"regole", regole_json(x.voce.rules, c.nuova.pacchetto)}, {"sostituite", s}});
         }
         j["voci"] = vj;
-        if (c.non_viaggia) {
-            const kzero::NotTraveling& n = *c.non_viaggia;
-            const auto nome = nomi.di(c.utente_non_viaggia);
+        if (c.non_frequenta) {
+            const kzero::NotAttending& n = *c.non_frequenta;
+            const auto nome = nomi.di(c.utente_non_frequenta);
             const bool nota_visibile = nome.has_value();   // la nota e' personale come il nome (e legata come il nome)
-            j["non_viaggia"] = {{"utente_elenco", c.utente_non_viaggia}, {"nome", nome ? Json(*nome) : Json(nullptr)},
+            j["non_frequenta"] = {{"utente_elenco", c.utente_non_frequenta}, {"nome", nome ? Json(*nome) : Json(nullptr)},
                                 {"tratte", n.legs}, {"dal", kzero::text_from_day(n.from)},
                                 {"al", n.to ? Json(kzero::text_from_day(*n.to)) : Json(nullptr)}, {"motivo", nome_motivo(n.reason)},
                                 {"nota", n.note.empty() || !nota_visibile ? Json(nullptr) : Json(n.note)},
                                 {"nota_riservata", !n.note.empty() && !nota_visibile}};
         } else {
-            j["non_viaggia"] = nullptr;
+            j["non_frequenta"] = nullptr;
         }
         Json pj = Json::array();
         for (const Problema& p : problemi) pj.push_back({{"codice", p.codice}, {"livello", p.livello}, {"messaggio", p.messaggio}});
@@ -555,12 +555,12 @@ Risultato uscita(Azione azione, const DefinizioneComando& comando, const Paramet
                  kzero::text_from_day(x.voce.from) + " non cambiano.\n";
         }
     }
-    if (c.non_viaggia) {
-        const kzero::NotTraveling& n = *c.non_viaggia;
-        const auto nome = nomi.di(c.utente_non_viaggia);
-        std::string cosa = azione == Azione::NonViaggiaTogli ? "Periodo \"non viaggia\" tolto" : azione == Azione::NonViaggiaChiudi ? "Periodo \"non viaggia\" chiuso"
-                                                                                                                                    : "Non viaggia";
-        t += cosa + ": utente " + c.utente_non_viaggia + (nome ? " \"" + *nome + "\"" : "") + ", " +
+    if (c.non_frequenta) {
+        const kzero::NotAttending& n = *c.non_frequenta;
+        const auto nome = nomi.di(c.utente_non_frequenta);
+        std::string cosa = azione == Azione::NonFrequentaTogli ? "Periodo \"non frequenta\" tolto" : azione == Azione::NonFrequentaChiudi ? "Periodo \"non frequenta\" chiuso"
+                                                                                                                                    : "Non frequenta";
+        t += cosa + ": utente " + c.utente_non_frequenta + (nome ? " \"" + *nome + "\"" : "") + ", " +
              (n.legs.empty() ? std::string("tutte le tratte della nostra azienda") : "tratta " + n.legs.front()) + ", dal " +
              kzero::text_from_day(n.from) + (n.to ? " al " + kzero::text_from_day(*n.to) : std::string(" senza fine")) + ", motivo " +
              nome_motivo(n.reason) + (n.note.empty() ? "" : nome ? ", nota \"" + n.note + "\"" : ", nota (riservata: --includi-dati-personali)") +
@@ -580,7 +580,7 @@ Risultato esegui_scrittura(Azione azione, const DefinizioneComando& comando, con
     if (par.riferimento.empty() || !par.data_sblocco)
         throw ErroreKZero(Errore::ParametroObbligatorio, "Ogni punto o periodo vuole --riferimento (es. la mail del committente, chi l'ha detto) "
                                                          "e --data (scritta da chi lo scrive).");
-    if ((azione == Azione::Assegna || azione == Azione::Conferma || azione == Azione::NonViaggia || azione == Azione::NonViaggiaTogli) && !par.dal)
+    if ((azione == Azione::Assegna || azione == Azione::Conferma || azione == Azione::NonFrequenta || azione == Azione::NonFrequentaTogli) && !par.dal)
         throw ErroreKZero(Errore::ParametroObbligatorio, "Serve --dal: da quando vale (i giorni prima non cambiano mai).");
     const ManifestoLetto manifesto = accesso::manifesto_con_cassaforte(cartella);
     elenco::permessi_prima_della_password(cartella, par.utente, comando.nome);
@@ -594,14 +594,14 @@ Risultato esegui_scrittura(Azione azione, const DefinizioneComando& comando, con
                                     "\"consenso: ...\" per una doppia tratta; una riga vuota per finire.\n");
     else if (azione == Azione::Conferma)
         righe = righe_dall_ingresso("Scrivi le righe pronte della proposta (kzero proponi-punti), una per punto; una riga vuota per finire.\n");
-    else if (azione == Azione::NonViaggia)
-        righe = righe_dall_ingresso("Scrivi il motivo (motivo: famiglia, altro_mezzo, assente, ritirato o altro) e, se serve, una nota (nota: ...); "
+    else if (azione == Azione::NonFrequenta)
+        righe = righe_dall_ingresso("Scrivi il motivo (motivo: famiglia, altro_mezzo, assente o altro) e, se serve, una nota (nota: ...); "
                                     "una riga vuota per finire.\n");
     const auto calcola = [&](const Lettura& vecchia) {
         switch (azione) {
             case Azione::Assegna: return calcola_assegna(vecchia, par, righe, cartella.string());
             case Azione::Conferma: return calcola_conferma(vecchia, par, righe, cartella.string());
-            default: return calcola_non_viaggia(azione, vecchia, par, righe, cartella.string());
+            default: return calcola_non_frequenta(azione, vecchia, par, righe, cartella.string());
         }
     };
     if (!scrivere) {
@@ -725,10 +725,10 @@ Risultato esegui_proponi_punti(const DefinizioneComando& comando, const Parametr
 
 Risultato esegui_assegna_punto(const DefinizioneComando& c, const Parametri& p) { return esegui_scrittura(Azione::Assegna, c, p); }
 Risultato esegui_conferma_punti(const DefinizioneComando& c, const Parametri& p) { return esegui_scrittura(Azione::Conferma, c, p); }
-Risultato esegui_non_viaggia(const DefinizioneComando& c, const Parametri& p) {
+Risultato esegui_non_frequenta(const DefinizioneComando& c, const Parametri& p) {
     if (p.togli && p.fino_al)
         throw ErroreKZero(Errore::ParametriIncompatibili, "--togli e --fino-al non vanno insieme: togliere un periodo scritto per errore, o chiuderne uno aperto.");
-    return esegui_scrittura(p.togli ? Azione::NonViaggiaTogli : p.fino_al ? Azione::NonViaggiaChiudi : Azione::NonViaggia, c, p);
+    return esegui_scrittura(p.togli ? Azione::NonFrequentaTogli : p.fino_al ? Azione::NonFrequentaChiudi : Azione::NonFrequenta, c, p);
 }
 
 Risultato esegui_confronta_schede(const DefinizioneComando& comando, const Parametri& par) {
@@ -797,7 +797,7 @@ Risultato esegui_confronta_schede(const DefinizioneComando& comando, const Param
                 for (kzero::Day d : pe.days) giorni.push_back(kzero::text_from_day(d));
                 per.push_back({{"giorno", nome_giorno(pe.weekday)}, {"dal", kzero::text_from_day(pe.days.front())},
                                {"al", kzero::text_from_day(pe.days.back())}, {"giorni", giorni}, {"diverso", pe.differs}, {"passaggi", pas},
-                               {"non_viaggiano", lista_json(pe.not_traveling)}, {"non_contati", lista_json(pe.not_counted)}});
+                               {"non_frequentano", lista_json(pe.not_attending)}, {"non_contati", lista_json(pe.not_counted)}});
             }
             vj.push_back({{"scheda", v.card->code}, {"id", v.card->id}, {"nr", k.nr}, {"versione", v.version->number},
                           {"verso", k.direction == kzero::Direction::Outbound ? "andata" : "ritorno"}, {"servizio", k.service_text},
@@ -843,7 +843,7 @@ Risultato esegui_confronta_schede(const DefinizioneComando& comando, const Param
                     t += ". Doppi sulla stessa scheda (a bordo un posto solo: i posti li conta il K-028): " + codici_con_nomi(q.doubles_same_card);
                 t += ".\n";
             }
-            if (!pe.not_traveling.empty()) t += "    Non viaggiano (non contati): " + codici_con_nomi(pe.not_traveling) + ".\n";
+            if (!pe.not_attending.empty()) t += "    Non frequentano (non contati): " + codici_con_nomi(pe.not_attending) + ".\n";
             if (!pe.not_counted.empty()) t += "    Con il punto qui ma non contati (vedi gli avvisi): " + codici_con_nomi(pe.not_counted) + ".\n";
         }
     }

@@ -46,7 +46,7 @@ Risultato esegui_togli_scheda(const DefinizioneComando& c, const Parametri& p);
 Risultato esegui_proponi_punti(const DefinizioneComando& c, const Parametri& p);
 Risultato esegui_assegna_punto(const DefinizioneComando& c, const Parametri& p);
 Risultato esegui_conferma_punti(const DefinizioneComando& c, const Parametri& p);
-Risultato esegui_non_viaggia(const DefinizioneComando& c, const Parametri& p);
+Risultato esegui_non_frequenta(const DefinizioneComando& c, const Parametri& p);
 Risultato esegui_confronta_schede(const DefinizioneComando& c, const Parametri& p);
 
 }  // namespace kzero::api

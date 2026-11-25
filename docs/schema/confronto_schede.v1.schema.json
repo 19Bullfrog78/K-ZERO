@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "kzero - confronto_schede, versione 1",
-  "description": "Uscita di 'kzero confronta-schede --formato json' (K-027): per ogni versione di scheda, giorno della settimana e periodo, chi sale e chi scende a ogni passaggio (utenti con il punto, contati) contro St. Car. e St. Scar. della scheda (l'accompagnatore tolto), i doppi, chi non viaggia e chi non e' contato; poi gli avvisi (in testa K-CTR-183). Nessuna correzione. I nomi solo con --includi-dati-personali, entro i permessi.",
+  "description": "Uscita di 'kzero confronta-schede --formato json' (K-027): per ogni versione di scheda, giorno della settimana e periodo, chi sale e chi scende a ogni passaggio (utenti con il punto, contati) contro St. Car. e St. Scar. della scheda (l'accompagnatore tolto), i doppi, chi non frequenta e chi non e' contato; poi gli avvisi (in testa K-CTR-183). Nessuna correzione. I nomi solo con --includi-dati-personali, entro i permessi.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -99,7 +99,7 @@
                 "giorni",
                 "diverso",
                 "passaggi",
-                "non_viaggiano",
+                "non_frequentano",
                 "non_contati"
               ],
               "properties": {
@@ -283,7 +283,7 @@
                     }
                   }
                 },
-                "non_viaggiano": {
+                "non_frequentano": {
                   "type": "array",
                   "items": {
                     "type": "object",

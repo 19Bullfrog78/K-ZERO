@@ -180,7 +180,7 @@ JsonDati a_mano_json(const kzero::ListUser& u) {
     return j;
 }
 
-// K-027: i giorni della settimana, i punti e i periodi in cui un utente non viaggia.
+// K-027: i giorni della settimana, i punti e i periodi in cui un utente non frequenta.
 JsonDati giorni_json(const kzero::Weekdays& g) {
     JsonDati v = JsonDati::array();
     for (int i = 0; i < 7; ++i)
@@ -212,10 +212,10 @@ JsonDati punti_json(const std::vector<kzero::UserPoints>& punti) {
     }
     return v;
 }
-JsonDati non_viaggia_json(const std::vector<kzero::NotTraveling>& periodi) {
-    static const char* motivi[] = {"famiglia", "altro_mezzo", "assente", "ritirato", "altro"};
+JsonDati non_frequenta_json(const std::vector<kzero::NotAttending>& periodi) {
+    static const char* motivi[] = {"famiglia", "altro_mezzo", "assente", "altro"};
     JsonDati v = JsonDati::array();
-    for (const kzero::NotTraveling& n : periodi) {
+    for (const kzero::NotAttending& n : periodi) {
         JsonDati x = segno_json(n.mark);
         x["dal"] = kzero::text_from_day(n.from);
         if (n.to) x["al"] = kzero::text_from_day(*n.to);
@@ -253,7 +253,7 @@ JsonDati utente_json(const kzero::ListUser& u) {
         j["sblocchi"] = v;
     }
     if (!u.points.empty()) j["punti"] = punti_json(u.points);
-    if (!u.not_traveling.empty()) j["non_viaggia"] = non_viaggia_json(u.not_traveling);
+    if (!u.not_attending.empty()) j["non_frequenta"] = non_frequenta_json(u.not_attending);
     if (u.out_of_list) j["fuori_elenco"] = true;
     if (u.added || u.removed || !u.manual.empty()) j["a_mano"] = a_mano_json(u);
     return j;

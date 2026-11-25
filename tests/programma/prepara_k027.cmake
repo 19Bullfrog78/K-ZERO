@@ -49,7 +49,7 @@ if(NOT r EQUAL 0)
   message(FATAL_ERROR "kzero leggi-elenco: ${r}")
 endif()
 # La copia "punti": i punti della dimostrazione del mandato (conferma della proposta, punti a mano con le due volte di Lagobello, il sospeso
-# sbloccato solo il mercoledi', chi non viaggia, la doppia tratta con il consenso, il cambio di fermata dal 01/12/2026).
+# sbloccato solo il mercoledi', chi non frequenta, la doppia tratta con il consenso, il cambio di fermata dal 01/12/2026).
 file(COPY "${USCITA}/letto/" DESTINATION "${USCITA}/punti")
 function(passo nome)
   cmake_parse_arguments(A "" "" "RIGHE;ARGOMENTI" ${ARGN})
@@ -85,7 +85,7 @@ passo(sblocco-am ARGOMENTI sblocco "${P}" --utente-elenco U-000003 --tratta AM -
       --data 2026-09-12)
 passo(sblocco-rp RIGHE "chi: ufficio trasporti del committente"
       ARGOMENTI sblocco "${P}" --utente-elenco U-000003 --tratta RP --giorni mercoledi --a-voce --riferimento "telefonata del 12/9" --data 2026-09-12)
-passo(neri RIGHE "motivo: ritirato" "nota: la famiglia lo accompagna"
-      ARGOMENTI non-viaggia "${P}" --utente-elenco U-000004 --dal 2026-11-02 --riferimento "telefonata della famiglia del 30/10" --data 2026-10-30)
+passo(neri RIGHE "motivo: famiglia" "nota: la famiglia lo accompagna"
+      ARGOMENTI non-frequenta "${P}" --utente-elenco U-000004 --dal 2026-11-02 --riferimento "telefonata della famiglia del 30/10" --data 2026-10-30)
 passo(viola RIGHE "punto: SCH-4000903-1 / F-CASTELROVO"
       ARGOMENTI assegna-punto "${P}" --utente-elenco U-000008 --tratta AM --dal 2026-12-01 --riferimento "mail del committente del 25/11" --data 2026-11-25)

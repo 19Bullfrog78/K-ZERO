@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "K-Zero - file di dati elenco_utenti.json, versione 3",
-  "description": "Elenco degli utenti trasportati come lo manda il committente (K-019), uno per committente: chi ha diritto al servizio, dove abita, quale scuola, lo stato, la fermata indicata e, per ogni tratta, la ditta e gli orari. Non sono i gruppi dei servizi (il file non dice ne' la fermata ne' il giro). Solo nei pacchetti di livello completo. Lo scrive kzero leggi-elenco; gli sblocchi kzero sblocco; le modifiche a mano (K-020) kzero aggiungi-in-elenco, cambia-in-elenco, togli-da-elenco, rimetti-in-elenco e cancella-da-elenco. Versione 2 (K-020): la colonna di ogni orario e le modifiche a mano non ancora confermate dal file, con il valore di prima. Versione 3 (K-027): gli sblocchi per giorni e periodo (anche a voce), i punti degli utenti (su quale scheda e a quale passaggio salgono o scendono, da quando) e i periodi in cui un utente non viaggia.",
+  "description": "Elenco degli utenti trasportati come lo manda il committente (K-019), uno per committente: chi ha diritto al servizio, dove abita, quale scuola, lo stato, la fermata indicata e, per ogni tratta, la ditta e gli orari. Non sono i gruppi dei servizi (il file non dice ne' la fermata ne' il giro). Solo nei pacchetti di livello completo. Lo scrive kzero leggi-elenco; gli sblocchi kzero sblocco; le modifiche a mano (K-020) kzero aggiungi-in-elenco, cambia-in-elenco, togli-da-elenco, rimetti-in-elenco e cancella-da-elenco. Versione 2 (K-020): la colonna di ogni orario e le modifiche a mano non ancora confermate dal file, con il valore di prima. Versione 3 (K-027): gli sblocchi per giorni e periodo (anche a voce), i punti degli utenti (su quale scheda e a quale passaggio salgono o scendono, da quando) e i periodi in cui un utente non frequenta.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -959,8 +959,8 @@
           },
           "x-kzero-classe": "comune"
         },
-        "non_viaggia": {
-          "description": "(K-027) Periodi in cui l'utente attivo non usa il servizio, senza toglierlo dall'elenco: non conta nei numeri del confronto con le schede. Li scrive kzero non-viaggia.",
+        "non_frequenta": {
+          "description": "(K-027) Periodi in cui l'utente, iscritto e attivo, al momento non usa il mezzo (non frequenta), senza toglierlo dall'elenco: non conta nei numeri del confronto con le schede. Li scrive kzero non-frequenta. Chi non c'e' piu' e non tornera' (es. trasferito) non ha un periodo: si toglie dall'elenco (kzero togli-da-elenco).",
           "type": "array",
           "items": {
             "type": "object",
@@ -993,10 +993,9 @@
                   "famiglia",
                   "altro_mezzo",
                   "assente",
-                  "ritirato",
                   "altro"
                 ],
-                "description": "famiglia = lo porta la famiglia; altro_mezzo; assente; ritirato = non usa piu' il servizio ma resta attivo nell'elenco del committente; altro. Una scelta fissa: per pianificare basta sapere che non viaggia."
+                "description": "famiglia = lo porta la famiglia; altro_mezzo; assente; altro. Una scelta fissa: per pianificare basta sapere che non frequenta."
               },
               "nota": {
                 "$ref": "#/definitions/nota",

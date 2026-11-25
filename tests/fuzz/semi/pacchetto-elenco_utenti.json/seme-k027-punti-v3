@@ -329,11 +329,11 @@
             "riconosciuta": "codice_esterno"
           },
           "nome": "NERI MARCO",
-          "non_viaggia": [
+          "non_frequenta": [
             {
               "dal": "2026-11-02",
               "data": "2026-10-30",
-              "motivo": "ritirato",
+              "motivo": "famiglia",
               "nota": "la famiglia lo accompagna",
               "riferimento": "telefonata della famiglia del 30/10"
             }

@@ -1791,14 +1791,15 @@ struct UserPoints {
     std::vector<PointEntry> history;       // nell'ordine dei dal (le sostituite comprese)
     Source src;
 };
-// "Non viaggia": un periodo in cui un utente attivo non usa il servizio, senza toglierlo dall'elenco. Il motivo e' una scelta fissa
-// (D8 dell'arbitro: per pianificare basta sapere che non viaggia); la nota e' facoltativa e personale.
-enum class NotTravelingReason { Family, OtherVehicle, Absent, Withdrawn, Other };   // famiglia, altro_mezzo, assente, ritirato, altro
-struct NotTraveling {
+// "Non frequenta": un periodo in cui un utente iscritto e attivo al momento non usa il mezzo, senza toglierlo dall'elenco. Il motivo e'
+// una scelta fissa (D8 dell'arbitro: per pianificare basta sapere che non frequenta); la nota e' facoltativa e personale. Chi non c'e' piu'
+// e non tornera' (es. trasferito) non e' un periodo: si toglie dall'elenco (kzero togli-da-elenco, K-020).
+enum class NotAttendingReason { Family, OtherVehicle, Absent, Other };   // famiglia, altro_mezzo, assente, altro
+struct NotAttending {
     Day from = 0;
     std::optional<Day> to;                 // manca = senza fine
     std::vector<std::string> legs;         // vuoto = tutte le tratte della nostra azienda
-    NotTravelingReason reason = NotTravelingReason::Other;
+    NotAttendingReason reason = NotAttendingReason::Other;
     std::string note;                      // personale; vuota a chi non puo' leggerla (o non scritta)
     ManualMark mark;                       // riferimento (chi l'ha detto) e data scritta dall'utente di K-Zero
     Source src;
@@ -1832,9 +1833,9 @@ struct ListUser {
     std::optional<ManualMark> added;        // aggiunto a mano, non ancora portato da un file
     std::optional<ManualMark> removed;      // tolto a mano: mai nel piano; se ne va alla prima lettura completa senza di lui
     std::vector<ManualField> manual;        // campi cambiati a mano, non ancora confermati dal file
-    // K-027: i punti (per tratta) e i periodi in cui non viaggia. Una lettura dell'elenco non li cambia mai.
+    // K-027: i punti (per tratta) e i periodi in cui non frequenta. Una lettura dell'elenco non li cambia mai.
     std::vector<UserPoints> points;
-    std::vector<NotTraveling> not_traveling;
+    std::vector<NotAttending> not_attending;
     Source src;
 
     const UserPoints* points_of(const std::string& leg) const {

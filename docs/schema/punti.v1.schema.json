@@ -1,7 +1,7 @@
 {
   "$schema": "http://json-schema.org/draft-07/schema#",
   "title": "kzero - punti, versione 1",
-  "description": "Uscita di 'kzero assegna-punto', 'kzero conferma-punti' e 'kzero non-viaggia' con --formato json (K-027): i punti degli utenti dell'elenco scritti (o, senza --scrivi, che si scriverebbero), con la scheda e il passaggio, da quando, e le voci sostituite; oppure il periodo \"non viaggia\" scritto, chiuso o tolto. I nomi e la nota (dati personali) solo con --includi-dati-personali, entro i permessi.",
+  "description": "Uscita di 'kzero assegna-punto', 'kzero conferma-punti' e 'kzero non-frequenta' con --formato json (K-027): i punti degli utenti dell'elenco scritti (o, senza --scrivi, che si scriverebbero), con la scheda e il passaggio, da quando, e le voci sostituite; oppure il periodo \"non frequenta\" scritto, chiuso o tolto. I nomi e la nota (dati personali) solo con --includi-dati-personali, entro i permessi.",
   "type": "object",
   "additionalProperties": false,
   "required": [
@@ -15,7 +15,7 @@
     "riferimento",
     "data",
     "voci",
-    "non_viaggia",
+    "non_frequenta",
     "problemi",
     "avvisi",
     "cassaforte"
@@ -31,7 +31,7 @@
       "enum": [
         "assegna-punto",
         "conferma-punti",
-        "non-viaggia"
+        "non-frequenta"
       ]
     },
     "utente": {
@@ -42,9 +42,9 @@
       "enum": [
         "assegnato",
         "confermato",
-        "non_viaggia",
-        "non_viaggia_chiuso",
-        "non_viaggia_tolto"
+        "non_frequenta",
+        "non_frequenta_chiuso",
+        "non_frequenta_tolto"
       ]
     },
     "scritto": {
@@ -189,7 +189,7 @@
         }
       }
     },
-    "non_viaggia": {
+    "non_frequenta": {
       "type": [
         "object",
         "null"
@@ -240,7 +240,6 @@
             "famiglia",
             "altro_mezzo",
             "assente",
-            "ritirato",
             "altro"
           ]
         },

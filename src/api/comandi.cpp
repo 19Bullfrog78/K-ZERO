@@ -714,12 +714,12 @@ std::vector<DefinizioneComando> comandi_punti() {
         auto p = base_scrittura("del periodo");
         p.push_back(utente_elenco(true));
         p.push_back(tratta(false, "Solo questa tratta (sigla del profilo); senza, tutte le tratte della nostra azienda."));
-        p.push_back(dal(false, "Primo giorno in cui non viaggia (per aggiungere il periodo, o per --togli: quale periodo)."));
-        DefinizioneParametro a = parametro_data_valore("--al", false, "Ultimo giorno in cui non viaggia; senza, il periodo resta aperto.",
+        p.push_back(dal(false, "Primo giorno in cui non frequenta (per aggiungere il periodo, o per --togli: quale periodo)."));
+        DefinizioneParametro a = parametro_data_valore("--al", false, "Ultimo giorno in cui non frequenta; senza, il periodo resta aperto.",
                                                        [](Parametri& par, const std::string& v) { par.al = kzero::day_from_text(v); });
         a.incompatibili = {"--fino-al", "--togli"};
         p.push_back(a);
-        DefinizioneParametro f = parametro_data_valore("--fino-al", false, "Chiude il periodo aperto: l'ultimo giorno in cui non viaggia.",
+        DefinizioneParametro f = parametro_data_valore("--fino-al", false, "Chiude il periodo aperto: l'ultimo giorno in cui non frequenta.",
                                                        [](Parametri& par, const std::string& v) { par.fino_al = kzero::day_from_text(v); });
         f.incompatibili = {"--al", "--togli"};
         p.push_back(f);
@@ -730,13 +730,14 @@ std::vector<DefinizioneComando> comandi_punti() {
         t.descrizione = "Toglie il periodo che comincia il giorno --dal (scritto per errore).";
         t.applica = [](Parametri& par, const std::string&) { par.togli = true; };
         p.push_back(t);
-        c.push_back({"non-viaggia",
-                     "Segna che un utente attivo non usa il servizio in un periodo (dal, al facoltativo), senza toglierlo dall'elenco: non "
-                     "conta nei numeri del confronto con le schede, e il suo punto resta (quando riprende, sale li'). Il motivo e' una scelta "
-                     "fissa sull'ingresso standard (\"motivo: famiglia\", altro_mezzo, assente, ritirato o altro) con una nota facoltativa "
+        c.push_back({"non-frequenta",
+                     "Segna che un utente iscritto e attivo al momento non usa il mezzo (non frequenta) in un periodo (dal, al facoltativo), "
+                     "senza toglierlo dall'elenco: non conta nei numeri del confronto con le schede, e il suo punto resta (quando riprende, "
+                     "sale li'); chi non c'e' piu' si toglie dall'elenco (kzero togli-da-elenco). Il motivo e' una scelta "
+                     "fissa sull'ingresso standard (\"motivo: famiglia\", altro_mezzo, assente o altro) con una nota facoltativa "
                      "(\"nota: ...\", dato personale). Con --fino-al chiude il periodo aperto; con --togli e --dal toglie un periodo scritto per "
                      "errore. Serve chi ha i dati personali e particolari; senza --scrivi mostra soltanto cosa cambierebbe.",
-                     cartella, p, Schema{"punti", 1}, esegui_non_viaggia});
+                     cartella, p, Schema{"punti", 1}, esegui_non_frequenta});
     }
     {
         std::vector<DefinizioneParametro> p{parametro_formato(), parametro_password_da_ingresso(), parametro_utente(false),
@@ -748,8 +749,8 @@ std::vector<DefinizioneComando> comandi_punti() {
                                           [](Parametri& par, const std::string& v) { par.al = kzero::day_from_text(v); }));
         c.push_back({"confronta-schede",
                      "Confronta i punti degli utenti con i numeri delle schede: per ogni versione di scheda, giorno della settimana e periodo, "
-                     "chi sale e chi scende a ogni passaggio (attivi e sospesi sbloccati quel giorno, meno chi non viaggia) contro St. Car. e "
-                     "St. Scar. (l'accompagnatore tolto), anche alla scuola di scarico; i \"doppi\"; chi non viaggia e chi non e' contato; gli "
+                     "chi sale e chi scende a ogni passaggio (attivi e sospesi sbloccati quel giorno, meno chi non frequenta) contro St. Car. e "
+                     "St. Scar. (l'accompagnatore tolto), anche alla scuola di scarico; i \"doppi\"; chi non frequenta e chi non e' contato; gli "
                      "avvisi (in testa gli utenti con diritto senza punto). Non corregge niente.",
                      cartella, p, Schema{"confronto_schede", 1}, esegui_confronta_schede});
     }

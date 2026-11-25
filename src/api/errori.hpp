@@ -89,7 +89,7 @@ enum class Errore {
     ToglimentoNonAmmesso,  // K-021: kzero togli-scheda non si puo' fare
     SchedaDellaSceltaNonNelFile,   // K-025: --validita-scheda nomina un Nr che non e' nel foglio delle schede
     PuntoNonAmmesso,       // K-027: un punto di un utente che non si puo' scrivere (kzero assegna-punto, conferma-punti)
-    NonViaggiaNonAmmesso,  // K-027: un periodo "non viaggia" che non si puo' scrivere (kzero non-viaggia)
+    NonFrequentaNonAmmesso,  // K-027: un periodo "non frequenta" che non si puo' scrivere (kzero non-frequenta)
 };
 
 struct DefinizioneErrore {

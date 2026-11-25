@@ -104,8 +104,8 @@ constexpr std::size_t kPradello = 0, kCastelrovo = 1, kScuola = 2;
 
 // --- Formato e cassaforte ----------------------------------------------------------------------------------------------------
 
-// K-027, D1 A: i punti, i periodi "non viaggia" e gli sblocchi per giorni stanno in elenco_utenti.json alla versione 3 (la scrittura
-// del programma scrive la 3); tutto comune tranne chi ha detto uno sblocco a voce e la nota di un periodo "non viaggia" (personali: nella
+// K-027, D1 A: i punti, i periodi "non frequenta" e gli sblocchi per giorni stanno in elenco_utenti.json alla versione 3 (la scrittura
+// del programma scrive la 3); tutto comune tranne chi ha detto uno sblocco a voce e la nota di un periodo "non frequenta" (personali: nella
 // cassaforte quando il pacchetto si chiude). Riletti, i dati sono gli stessi.
 TEST(Punti, FormatoVersioneTreECassaforte) {
     const PacchettoInMemoria m = con_elenco(pacchetto_k027(), [](ClientList& l, const Package& p) {
@@ -125,12 +125,12 @@ TEST(Punti, FormatoVersioneTreECassaforte) {
                regola(p, "SCH-4000903-1", "F-CASTELROVO", 1, {Weekday::Thursday, Weekday::Friday})},
               PointOrigin::Proposal, "mail del committente del 3/9");
         ListUser& n = utente(l, "NERI MARCO");
-        NotTraveling x;
+        NotAttending x;
         x.from = g("2026-11-02");
-        x.reason = NotTravelingReason::Withdrawn;
+        x.reason = NotAttendingReason::Family;
         x.note = "la famiglia lo accompagna";
         x.mark = ManualMark{"telefonata della famiglia del 30/10", g("2026-10-30")};
-        n.not_traveling.push_back(x);
+        n.not_attending.push_back(x);
     });
     const Lettura l = lettura(m);
     EXPECT_EQ(l.versioni.at("elenco_utenti.json"), 3);
@@ -157,10 +157,10 @@ TEST(Punti, FormatoVersioneTreECassaforte) {
     EXPECT_TRUE(e.rules[1].days.has(Weekday::Friday));
     EXPECT_FALSE(e.rules[1].days.has(Weekday::Monday));
     const ListUser n = utente(l.pacchetto, "NERI MARCO");
-    ASSERT_EQ(n.not_traveling.size(), 1u);
-    EXPECT_EQ(n.not_traveling[0].reason, NotTravelingReason::Withdrawn);
-    EXPECT_EQ(n.not_traveling[0].note, "la famiglia lo accompagna");
-    EXPECT_FALSE(n.not_traveling[0].to);
+    ASSERT_EQ(n.not_attending.size(), 1u);
+    EXPECT_EQ(n.not_attending[0].reason, NotAttendingReason::Family);
+    EXPECT_EQ(n.not_attending[0].note, "la famiglia lo accompagna");
+    EXPECT_FALSE(n.not_attending[0].to);
     // Chiudendo il pacchetto: chi e la nota vanno nella cassaforte (personali), il resto resta nel file normale.
     const chiusura::Separazione s = chiusura::separa(l);
     const std::string normale = s.normali.at("elenco_utenti.json").dump();
@@ -168,7 +168,7 @@ TEST(Punti, FormatoVersioneTreECassaforte) {
     EXPECT_EQ(normale.find("la famiglia lo accompagna"), std::string::npos);
     EXPECT_NE(normale.find("\"a_voce\":true"), std::string::npos);   // il fatto "a voce" e' comune
     EXPECT_NE(normale.find("F-CASTELROVO"), std::string::npos);
-    EXPECT_NE(normale.find("\"motivo\":\"ritirato\""), std::string::npos);
+    EXPECT_NE(normale.find("\"motivo\":\"famiglia\""), std::string::npos);
     std::set<std::string> personali;
     for (const Voce& x : s.contenuto.personali)
         if (x.file == "elenco_utenti.json" && x.valore.is_string()) personali.insert(x.valore.get<std::string>());
@@ -176,15 +176,15 @@ TEST(Punti, FormatoVersioneTreECassaforte) {
     EXPECT_TRUE(personali.count("la famiglia lo accompagna"));
 }
 
-// K-027 (D1): una lettura del file del committente non cambia mai i punti ne' i periodi "non viaggia" (non sono nel file). Un utente che
+// K-027 (D1): una lettura del file del committente non cambia mai i punti ne' i periodi "non frequenta" (non sono nel file). Un utente che
 // esce dall'elenco (lettura completa) se ne va con i suoi punti. Sabotaggio: la lettura perde i punti.
 TEST(Punti, LetturaDellElencoNonPerdeIPunti) {
     const PacchettoInMemoria m = con_elenco(pacchetto_k027(), [](ClientList& l, const Package& p) {
         punto(utente(l, "GIALLI PAOLO"), "AM", "2026-09-14", {regola(p, "SCH-4000903-1", "F-CASTELROVO")});
-        NotTraveling x;
+        NotAttending x;
         x.from = g("2026-11-02");
         x.mark = ManualMark{"telefonata", g("2026-10-30")};
-        utente(l, "NERI MARCO").not_traveling.push_back(x);
+        utente(l, "NERI MARCO").not_attending.push_back(x);
     });
     const Lettura l = lettura(m);
     const Index idx(l.pacchetto);
@@ -202,7 +202,7 @@ TEST(Punti, LetturaDellElencoNonPerdeIPunti) {
     ASSERT_EQ(trova("GIALLI PAOLO")->points.size(), 1u);
     EXPECT_EQ(trova("GIALLI PAOLO")->points[0].history.at(0).rules.at(0).place.code, "F-CASTELROVO");
     ASSERT_TRUE(trova("NERI MARCO"));
-    EXPECT_EQ(trova("NERI MARCO")->not_traveling.size(), 1u);
+    EXPECT_EQ(trova("NERI MARCO")->not_attending.size(), 1u);
     EXPECT_FALSE(trova("MORI LIA"));
 }
 
@@ -316,17 +316,17 @@ TEST(Punti, SospesoSbloccatoSoloIlMercoledi) {
     EXPECT_FALSE(problema(v, Check::PointsMissing, a.verdi));
 }
 
-// K-027: chi non viaggia (periodo "non viaggia") non conta e il confronto lo mostra; nessun "senza punto" nel periodo. Sabotaggio: chi non
+// K-027: chi non frequenta (periodo "non frequenta") non conta e il confronto lo mostra; nessun "senza punto" nel periodo. Sabotaggio: chi non
 // viaggia contato.
-TEST(Punti, ChiNonViaggiaNonConta) {
+TEST(Punti, ChiNonFrequentaNonConta) {
     const PacchettoInMemoria m = con_elenco(pacchetto_k027(), [](ClientList& l, const Package& p) {
         ListUser& n = utente(l, "NERI MARCO");
         punto(n, "AM", "2026-09-14", {regola(p, "SCH-4000903-1", "F-PRADELLO")});
-        NotTraveling x;
+        NotAttending x;
         x.from = g("2026-11-02");
-        x.reason = NotTravelingReason::Withdrawn;
+        x.reason = NotAttendingReason::Family;
         x.mark = ManualMark{"telefonata della famiglia del 30/10", g("2026-10-30")};
-        n.not_traveling.push_back(x);
+        n.not_attending.push_back(x);
     });
     const Alunni a = alunni(m);
     const Lettura l = lettura(m);
@@ -335,8 +335,8 @@ TEST(Punti, ChiNonViaggiaNonConta) {
     EXPECT_TRUE(salgono(c, "SCH-4000903-1", g("2026-11-02"), kPradello).empty());
     const ComparedPeriod* pe = periodo(c, "SCH-4000903-1", g("2026-11-02"));
     ASSERT_TRUE(pe);
-    EXPECT_EQ(pe->not_traveling, std::vector<Code>{a.neri});
-    // RM (nessun punto): "senza punto" solo fino al 30/10 (tutte le tratte non viaggiano dal 02/11).
+    EXPECT_EQ(pe->not_attending, std::vector<Code>{a.neri});
+    // RM (nessun punto): "senza punto" solo fino al 30/10 (tutte le tratte non frequentano dal 02/11).
     const std::vector<Problem> v = problemi_dei_punti(l);
     const Problem* p183 = nullptr;
     for (const Problem& p : v)

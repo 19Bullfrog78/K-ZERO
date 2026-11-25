@@ -13,9 +13,9 @@
 # risultare uguale e senza avvisi, con il seme delle quattro schede di tests/esempi/k025-schede; dal K-026 alla versione 4, con la
 # colonna del mezzo della scheda, i semi delle tre schede di tests/esempi/k026-schede e delle stesse con le targhe scritte in altri modi:
 # un mezzo riconosciuto e' sempre il solo con quella targa, dell'azienda del contratto o in prestito a lei, e lo stesso file riletto con
-# lo stesso pacchetto non aggiunge mai il mezzo); dal K-027 i file elenco_utenti.json (alla versione 3, con i punti, chi non viaggia e
+# lo stesso pacchetto non aggiunge mai il mezzo); dal K-027 i file elenco_utenti.json (alla versione 3, con i punti, chi non frequenta e
 # gli sblocchi per giorni: seme in tests/fuzz/semi) e stradari.json tra i bersagli del pacchetto, e le righe dei punti scritte
-# sull'ingresso (punti-campi: assegna-punto, conferma-punti, non-viaggia, lo sblocco a voce), scritte poi in una storia di prova (mai un
+# sull'ingresso (punti-campi: assegna-punto, conferma-punti, non-frequenta, lo sblocco a voce), scritte poi in una storia di prova (mai un
 # giorno prima della voce nuova cambiato).
 # Un guasto (memoria, comportamento non definito, risultato incoerente, attesa oltre 10 secondi) ferma il bersaglio:
 # il file che lo provoca resta in <lavoro>/guasti/<bersaglio>/ e lo script esce con 1. Il file va corretto e messo in

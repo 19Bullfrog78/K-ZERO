@@ -1988,15 +1988,20 @@ kzero_punti(punti_assegna_anteprima letto USCITA 0 FORMATO testo
 kzero_punti(punti_valori_scritti_male letto USCITA 2 FORMATO json SCHEMA errore ERRORE K-ERR-050
             RIGHE "punto: SCH-4000903-1 / F-CASTELROVO / 1 / domenicale"
             ARGOMENTI assegna-punto @PACCHETTO@ --utente-elenco U-000005 --tratta AM --dal 2026-09-14 ${K027_RIF} --formato json)
-kzero_punti(punti_non_viaggia_json letto USCITA 0 FORMATO json SCHEMA punti
-            RIGHE "motivo: ritirato" "nota: la famiglia lo accompagna"
-            CONTIENE "\"azione\": \"non_viaggia\"" "\"motivo\": \"ritirato\"" "\"nota\": null" "\"nota_riservata\": true"
+kzero_punti(punti_non_frequenta_json letto USCITA 0 FORMATO json SCHEMA punti
+            RIGHE "motivo: famiglia" "nota: la famiglia lo accompagna"
+            CONTIENE "\"azione\": \"non_frequenta\"" "\"motivo\": \"famiglia\"" "\"nota\": null" "\"nota_riservata\": true"
             NON_CONTIENE "la famiglia lo accompagna"
-            ARGOMENTI non-viaggia @PACCHETTO@ --utente-elenco U-000004 --dal 2026-11-02 ${K027_RIF} --scrivi @PACCHETTO@ --formato json)
-kzero_punti(punti_non_viaggia_motivo_libero letto USCITA 2 FORMATO testo ERRORE K-ERR-050
+            ARGOMENTI non-frequenta @PACCHETTO@ --utente-elenco U-000004 --dal 2026-11-02 ${K027_RIF} --scrivi @PACCHETTO@ --formato json)
+kzero_punti(punti_non_frequenta_motivo_libero letto USCITA 2 FORMATO testo ERRORE K-ERR-050
             RIGHE "motivo: operato al ginocchio"
             NON_CONTIENE "ginocchio"
-            ARGOMENTI non-viaggia @PACCHETTO@ --utente-elenco U-000004 --dal 2026-11-02 ${K027_RIF})
+            ARGOMENTI non-frequenta @PACCHETTO@ --utente-elenco U-000004 --dal 2026-11-02 ${K027_RIF})
+# Correzione D8 dell'arbitro: "ritirato" non e' un periodo (chi non c'e' piu' si toglie dall'elenco), il messaggio lo dice.
+kzero_punti(punti_non_frequenta_ritirato letto USCITA 2 FORMATO testo ERRORE K-ERR-050
+            RIGHE "motivo: ritirato"
+            CONTIENE "famiglia, altro_mezzo, assente, altro" "kzero togli-da-elenco"
+            ARGOMENTI non-frequenta @PACCHETTO@ --utente-elenco U-000004 --dal 2026-11-02 ${K027_RIF})
 kzero_punti(punti_sblocco_giorni_json letto USCITA 0 FORMATO json SCHEMA sblocco
             CONTIENE "\"schema_versione\": 2" "\"mercoledi\"" "\"a_voce\": false" "\"al\": null"
             ARGOMENTI sblocco @PACCHETTO@ --utente-elenco U-000003 --tratta AM --giorni mercoledi ${K027_RIF} --scrivi @PACCHETTO@ --formato json)
@@ -2009,7 +2014,7 @@ kzero_punti(punti_sblocco_a_voce letto USCITA 0 FORMATO testo
 kzero_punti(punti_confronta punti USCITA 0 FORMATO testo
             CONTIENE "Scheda SCH-4000903-1 (4000903/1, Andata Mattino), versione 1, dal 2026-09-14 al 2027-06-12:"
                      "07:40 F-CASTELROVO (1a volta): salgono 2 sulla scheda, 2 con il punto; scendono 0 sulla scheda, 0 con il punto. Salgono: U-000003, U-000008."
-                     "Non viaggiano (non contati): U-000004." "Con il punto qui ma non contati (vedi gli avvisi): U-000003."
+                     "Non frequentano (non contati): U-000004." "Con il punto qui ma non contati (vedi gli avvisi): U-000003."
                      "Avviso K-CTR-186: L'utente U-000003 e' sospeso"
             NON_CONTIENE "VERDI" "VIOLA"
             ARGOMENTI confronta-schede @PACCHETTO@ --scheda SCH-4000903-1 --dal 2026-11-30 --al 2026-12-04)

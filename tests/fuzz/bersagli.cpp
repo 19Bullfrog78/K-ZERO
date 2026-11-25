@@ -993,7 +993,7 @@ void prova_punti_campi(const std::uint8_t* dati, std::size_t n) {
     const int righe = static_cast<int>(r.righe.size());
     using Modo = kzero::PointLinesMode;
     using Guasto = kzero::PointLinesFault;
-    for (const Modo modo : {Modo::Assign, Modo::Confirm, Modo::NotTraveling, Modo::Voice}) {
+    for (const Modo modo : {Modo::Assign, Modo::Confirm, Modo::NotAttending, Modo::Voice}) {
         const kzero::PointLines a = kzero::parse_point_lines(r.righe, modo);
         const kzero::PointLines b = kzero::parse_point_lines(r.righe, modo);
         if (a.fault != b.fault || a.line != b.line || a.points.size() != b.points.size() || a.consent != b.consent || a.who != b.who ||
@@ -1011,12 +1011,12 @@ void prova_punti_campi(const std::uint8_t* dati, std::size_t n) {
             if (modo != Modo::Confirm && (!x.user.empty() || !x.leg.empty())) guasto("utente o tratta fuori dalla conferma");
         }
         if (modo != Modo::Assign && (a.nobody || !a.consent.empty())) guasto("\"nessuno\" o consenso fuori da assegna-punto");
-        if (modo != Modo::NotTraveling && (a.reason || !a.note.empty())) guasto("motivo o nota fuori da non-viaggia");
+        if (modo != Modo::NotAttending && (a.reason || !a.note.empty())) guasto("motivo o nota fuori da non-frequenta");
         if (modo != Modo::Voice && !a.who.empty()) guasto("\"chi\" fuori dallo sblocco a voce");
         if (modo == Modo::Assign && a.nobody == !a.points.empty()) guasto("\"nessuno\" e i punti insieme, o nessuno dei due");
         if (modo == Modo::Assign && a.nobody && !a.consent.empty()) guasto("consenso con \"nessuno\"");
         if (modo == Modo::Confirm && a.points.empty()) guasto("conferma senza righe accettata");
-        if (modo == Modo::NotTraveling && (!a.reason || a.note.size() > 2000)) guasto("non-viaggia senza motivo o con la nota troppo lunga");
+        if (modo == Modo::NotAttending && (!a.reason || a.note.size() > 2000)) guasto("non-frequenta senza motivo o con la nota troppo lunga");
         if (modo == Modo::Voice && (a.who.empty() || a.who.size() > 300)) guasto("sblocco a voce senza \"chi\" o troppo lungo");
         if (a.consent.size() > 300) guasto("consenso troppo lungo accettato");
     }
@@ -1077,13 +1077,13 @@ void scrivi_semi_punti(const std::string& cartella) {
         std::ofstream(fs::path(cartella) / "punti-campi" / nome, std::ios::binary) << testo;
     };
     // Le righe dei quattro comandi, come nelle prove (dati inventati): assegna-punto con le due volte e i giorni, la doppia tratta con il
-    // consenso, "nessuno", le righe pronte di kzero proponi-punti, non-viaggia e lo sblocco a voce.
+    // consenso, "nessuno", le righe pronte di kzero proponi-punti, non-frequenta e lo sblocco a voce.
     scrivi("seme-assegna", "punto: SCH-4000901-1 / F-LAGOBELLO / 2 / lunedi, mercoledi\npunto: SCH-4000901-1 / F-LAGOBELLO / 1 / martedi,giovedi,venerdi\n");
     scrivi("seme-doppia", "punto: 7d2a9c10-27aa-4b1e-9c00-000000000903 / F-PRADELLO\npunto: SCH-4000903-1 / F-CASTELROVO / 1 / venerdi\n"
                           "consenso: mail del committente del 3/11 (prova)\n");
     scrivi("seme-nessuno", "nessuno\n");
     scrivi("seme-conferma", "U-000001 AM: SCH-4000901-1 / F-LAGOBELLO / 1\nU-000002 AM: SCH-4000901-1 / F-PRADELLO / 1 / martedi, mercoledi\n");
-    scrivi("seme-non-viaggia", "motivo: ritirato\nnota: la famiglia lo accompagna (prova)\n");
+    scrivi("seme-non-frequenta", "motivo: famiglia\nnota: la famiglia lo accompagna (prova)\n");
     scrivi("seme-a-voce", "chi: la mamma al telefono (prova)\n");
 }
 
@@ -1104,13 +1104,13 @@ int prova_semi_punti() {
     using Modo = kzero::PointLinesMode;
     const kzero::PointLines as = kzero::parse_point_lines(righe("punto: SCH-4000901-1 / F-LAGOBELLO / 2 / lunedi, mercoledi\n"), Modo::Assign);
     const kzero::PointLines co = kzero::parse_point_lines(righe("U-000001 AM: SCH-4000901-1 / F-LAGOBELLO / 1\n"), Modo::Confirm);
-    const kzero::PointLines nv = kzero::parse_point_lines(righe("motivo: ritirato\n"), Modo::NotTraveling);
+    const kzero::PointLines nv = kzero::parse_point_lines(righe("motivo: altro mezzo\n"), Modo::NotAttending);
     const kzero::PointLines vo = kzero::parse_point_lines(righe("chi: la mamma al telefono (prova)\n"), Modo::Voice);
     if (as.fault != kzero::PointLinesFault::None || as.points.size() != 1 || as.points[0].occurrence != 2 || as.points[0].all_days ||
         co.fault != kzero::PointLinesFault::None || co.points.size() != 1 || co.points[0].user != "U-000001" ||
-        nv.fault != kzero::PointLinesFault::None || nv.reason != kzero::NotTravelingReason::Withdrawn || vo.fault != kzero::PointLinesFault::None)
+        nv.fault != kzero::PointLinesFault::None || nv.reason != kzero::NotAttendingReason::OtherVehicle || vo.fault != kzero::PointLinesFault::None)
         guasto("i semi dei punti non si leggono come atteso");
-    // I semi dei file del K-027 nei bersagli del pacchetto: l'elenco alla versione 3 (con i punti, chi non viaggia e gli sblocchi per
+    // I semi dei file del K-027 nei bersagli del pacchetto: l'elenco alla versione 3 (con i punti, chi non frequenta e gli sblocchi per
     // giorni) e lo stradario si leggono, i punti restano.
     const std::string semi = std::string(KZERO_SORGENTI) + "/tests/fuzz/semi/pacchetto-elenco_utenti.json/";
     for (const auto& x : fs::directory_iterator(semi)) {
@@ -1123,7 +1123,7 @@ int prova_semi_punti() {
         for (const kzero::ClientList& c : l.pacchetto.client_lists)
             for (const kzero::ListUser& u : c.users) {
                 punti += u.points.size();
-                fermi += u.not_traveling.size();
+                fermi += u.not_attending.size();
                 for (const kzero::ListUserUnlock& s : u.unlocks) sblocchi += s.all_days ? 0 : 1;
             }
         if (!l.usato("elenco_utenti.json") || punti == 0 || fermi == 0 || sblocchi == 0)

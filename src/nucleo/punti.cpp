@@ -133,8 +133,8 @@ std::vector<Day> add_point_entry(UserPoints& up, const PointEntry& e) {
     return sostituite;
 }
 
-const NotTraveling* not_traveling_on(const ListUser& u, Day d, const std::string& leg) {
-    for (const NotTraveling& n : u.not_traveling)
+const NotAttending* not_attending_on(const ListUser& u, Day d, const std::string& leg) {
+    for (const NotAttending& n : u.not_attending)
         if (n.covers(d, leg)) return &n;
     return nullptr;
 }
@@ -431,7 +431,7 @@ Param card_param(const ServiceCard& s) { return ref_param("scheda", Element::Ser
 
 struct DayCounts {
     std::vector<ComparedPassage> passages;
-    std::vector<Code> not_traveling, not_counted;
+    std::vector<Code> not_attending, not_counted;
 };
 
 std::string signature(const DayCounts& c) {
@@ -446,7 +446,7 @@ std::string signature(const DayCounts& c) {
         lista(p.doubles);
         lista(p.doubles_same_card);
     }
-    lista(c.not_traveling);
+    lista(c.not_attending);
     lista(c.not_counted);
     return s;
 }
@@ -547,7 +547,7 @@ private:
             const std::vector<const PointRule*> regole = up ? point_rules_on(*up, d) : std::vector<const PointRule*>{};
             const Travel viaggia = point_travel(u, l.client.code, lg.leg, d, cal_);
             const bool diritto = point_right(u, lg.leg, d);
-            const NotTraveling* nv = not_traveling_on(u, d, lg.leg);
+            const NotAttending* nv = not_attending_on(u, d, lg.leg);
             if (regole.empty()) {
                 if (viaggia == Travel::Yes && diritto && !nv && only_.empty())
                     add(Check::PointsMissing, u.active ? 0 : 1, u.src, {user_param(u), tr, days_param("giorni", d)});
@@ -620,7 +620,7 @@ private:
                     continue;
                 }
                 if (nv) {
-                    if (dc) dc->not_traveling.push_back(u.code);
+                    if (dc) dc->not_attending.push_back(u.code);
                     continue;
                 }
                 if (!dc) continue;   // fuori dal periodo del confronto
@@ -666,7 +666,7 @@ private:
                 ordina(x.doubles);
                 ordina(x.doubles_same_card);
             }
-            ordina(c.not_traveling);
+            ordina(c.not_attending);
             ordina(c.not_counted);
         }
         // Per giorno della settimana; dentro, i giorni di fila (di quel giorno della settimana) con lo stesso risultato sono un periodo.
@@ -680,7 +680,7 @@ private:
                     ComparedPeriod x;
                     x.weekday = static_cast<Weekday>(w);
                     x.passages = c.passages;
-                    x.not_traveling = c.not_traveling;
+                    x.not_attending = c.not_attending;
                     x.not_counted = c.not_counted;
                     for (const ComparedPassage& q : x.passages)
                         x.differs = x.differs || static_cast<int>(q.boarding.size()) != q.card_boarding ||
@@ -892,17 +892,17 @@ PointLines parse_point_lines(const std::vector<std::string>& lines, PointLinesMo
             if (!una_volta(nome)) return ferma(PointLinesFault::RepeatedField, riga);
             if (valore.empty() || valore.size() > 300) return ferma(PointLinesFault::Missing, riga);
             out.consent = valore;
-        } else if (mode == PointLinesMode::NotTraveling && nome == "MOTIVO") {
+        } else if (mode == PointLinesMode::NotAttending && nome == "MOTIVO") {
             if (!una_volta(nome)) return ferma(PointLinesFault::RepeatedField, riga);
-            static const std::vector<std::pair<const char*, NotTravelingReason>> motivi = {
-                {"FAMIGLIA", NotTravelingReason::Family}, {"ALTRO MEZZO", NotTravelingReason::OtherVehicle},
-                {"ASSENTE", NotTravelingReason::Absent},  {"RITIRATO", NotTravelingReason::Withdrawn},
-                {"ALTRO", NotTravelingReason::Other}};
+            static const std::vector<std::pair<const char*, NotAttendingReason>> motivi = {
+                {"FAMIGLIA", NotAttendingReason::Family}, {"ALTRO MEZZO", NotAttendingReason::OtherVehicle},
+                {"ASSENTE", NotAttendingReason::Absent},
+                {"ALTRO", NotAttendingReason::Other}};
             const std::string m = normalize_name(valore);
             for (const auto& [testo, motivo] : motivi)
                 if (m == testo) out.reason = motivo;
             if (!out.reason) return ferma(PointLinesFault::Reason, riga);
-        } else if (mode == PointLinesMode::NotTraveling && nome == "NOTA") {
+        } else if (mode == PointLinesMode::NotAttending && nome == "NOTA") {
             if (!una_volta(nome)) return ferma(PointLinesFault::RepeatedField, riga);
             if (valore.size() > 2000) return ferma(PointLinesFault::Syntax, riga);
             out.note = valore;
@@ -919,7 +919,7 @@ PointLines parse_point_lines(const std::vector<std::string>& lines, PointLinesMo
         if (!out.nobody && out.points.empty()) return ferma(PointLinesFault::Missing, 0);
     }
     if (mode == PointLinesMode::Confirm && out.points.empty()) return ferma(PointLinesFault::Missing, 0);
-    if (mode == PointLinesMode::NotTraveling && !out.reason) return ferma(PointLinesFault::Missing, 0);
+    if (mode == PointLinesMode::NotAttending && !out.reason) return ferma(PointLinesFault::Missing, 0);
     if (mode == PointLinesMode::Voice && out.who.empty()) return ferma(PointLinesFault::Missing, 0);
     return out;
 }
@@ -996,7 +996,7 @@ private:
                 }
             }
         }
-        for (const NotTraveling& n : u.not_traveling)
+        for (const NotAttending& n : u.not_attending)
             for (const std::string& l : n.legs)
                 if (profile && !profile->leg(l)) add(Check::ListInvalid, n.src, {up, text_param("tratta", l)}, 5);
         // Periodi rovesciati (K-CTR-012) e che si sovrappongono (K-CTR-140 varianti 8 e 9).
@@ -1011,11 +1011,11 @@ private:
                 }
             }
         }
-        for (std::size_t i = 0; i < u.not_traveling.size(); ++i) {
-            const NotTraveling& a = u.not_traveling[i];
+        for (std::size_t i = 0; i < u.not_attending.size(); ++i) {
+            const NotAttending& a = u.not_attending[i];
             if (a.to && *a.to < a.from) add(Check::InvertedPeriod, a.src, {date_param("dal", a.from), date_param("al", *a.to)});
             for (std::size_t j = 0; j < i; ++j) {
-                const NotTraveling& b = u.not_traveling[j];
+                const NotAttending& b = u.not_attending[j];
                 if (tratte_in_comune(a.legs, b.legs) && periodi_in_comune(a.from, a.to, b.from, b.to)) {
                     add(Check::ListInvalid, a.src, {up}, 9);
                     break;

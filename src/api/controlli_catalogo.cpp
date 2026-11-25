@@ -553,15 +553,15 @@ void aggiungi_elenco(std::vector<DefinizioneControllo>& c) {
                   "L'utente {utente} ha la tratta \"{tratta}\" due volte.",
                   "L'utente {utente} ha due modifiche a mano della colonna degli orari \"{colonna}\" (K-020): ce ne puo' essere una "
                   "sola per colonna.",
-                  // K-027: i punti, i periodi in cui non viaggia e gli sblocchi per giorni.
-                  "L'utente {utente} ha un punto, o un periodo in cui non viaggia, della tratta \"{tratta}\", che il profilo del suo elenco "
+                  // K-027: i punti, i periodi in cui non frequenta e gli sblocchi per giorni.
+                  "L'utente {utente} ha un punto, o un periodo in cui non frequenta, della tratta \"{tratta}\", che il profilo del suo elenco "
                   "non ha.",
                   "L'utente {utente} ha due volte i punti della tratta \"{tratta}\": la storia dei punti e' una sola per tratta.",
                   "L'utente {utente}, tratta \"{tratta}\": nella storia dei punti la voce dal {dal} non viene dopo quella di prima (le voci "
                   "che contano hanno dal tutti diversi e in ordine). La storia la scrivono kzero assegna-punto e kzero conferma-punti.",
                   "L'utente {utente} ha due sblocchi della tratta \"{tratta}\" che valgono in uno stesso giorno: per cambiare uno sblocco, "
                   "prima chiuderlo (kzero sblocco --fino-al) o toglierlo.",
-                  "L'utente {utente} ha due periodi in cui non viaggia che si sovrappongono (per una stessa tratta).",
+                  "L'utente {utente} ha due periodi in cui non frequenta che si sovrappongono (per una stessa tratta).",
                   "L'utente {utente}, tratta \"{tratta}\": nella voce dal {dal} due regole hanno lo stesso passaggio negli stessi giorni (il "
                   "punto si conterebbe due volte)."}});
     c.push_back({Check::ListUserCodeClash, "K-CTR-141", E, N, "Codice di un utente dell'elenco usato da un altro elemento",

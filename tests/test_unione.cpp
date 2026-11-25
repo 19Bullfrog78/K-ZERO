@@ -1154,7 +1154,7 @@ TEST(Unione, OgniCampoRiservatoDegliSchemiCompareNeiPacchettiDelleProve) {
         pacchetti.push_back({"k024-schede", k024});
     }
     {
-        // K-027: l'elenco alla versione 3 con i punti, uno sblocco a voce (chi l'ha detto, personale) e un periodo "non viaggia" con la
+        // K-027: l'elenco alla versione 3 con i punti, uno sblocco a voce (chi l'ha detto, personale) e un periodo "non frequenta" con la
         // nota (personale).
         namespace pu = kzero::prove::punti;
         InMemoria k027;
@@ -1165,11 +1165,11 @@ TEST(Unione, OgniCampoRiservatoDegliSchemiCompareNeiPacchettiDelleProve) {
                         s.who = "ufficio trasporti";
                         v.unlocks.push_back(s);
                         pu::punto(v, "AM", "2026-09-14", {pu::regola(p, "SCH-4000903-1", "F-CASTELROVO")});
-                        kzero::NotTraveling n;
+                        kzero::NotAttending n;
                         n.from = *kzero::day_from_text("2026-11-02");
                         n.note = "nota di prova";
                         n.mark = kzero::ManualMark{"telefonata", *kzero::day_from_text("2026-10-30")};
-                        pu::utente(l, "NERI MARCO").not_traveling.push_back(n);
+                        pu::utente(l, "NERI MARCO").not_attending.push_back(n);
                     }).file;
         pacchetti.push_back({"k027-punti", k027});
     }

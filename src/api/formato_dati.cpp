@@ -51,7 +51,7 @@ const std::vector<FileDati>& file_dati() {
         {"elenco_utenti.json", "elenco_utenti", {1, 2, 3}, false,
          "Elenco utenti dei committenti come lo mandano (K-019): casa, scuola, stato, fermata indicata, ditta e orari di ogni "
          "tratta, sblocchi; dalla versione 2 le modifiche a mano; dalla versione 3 gli sblocchi per giorni e periodo, i punti degli "
-         "utenti (scheda e passaggio, da quando) e i periodi in cui un utente non viaggia. Solo nel livello completo."},
+         "utenti (scheda e passaggio, da quando) e i periodi in cui un utente non frequenta. Solo nel livello completo."},
         {"profili_schede.json", "profili_schede", {1, 2, 3, 4}, false,
          "Profili di lettura delle schede dei servizi di un committente (K-021): fogli, titoli, parole, cadenze e separatori del "
          "modello in cui si copiano le schede; dalla versione 2 il foglio delle interruzioni; dalla versione 3 le regole del tipo, la "

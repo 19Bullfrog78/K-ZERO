@@ -890,14 +890,14 @@ TEST(Api, classi_marcate_negli_schemi) {
     // K-019: dell'elenco utenti sono personali nome, casa, classe e sezione (D1), la nota dello stato e il testo di una fermata non
     // riconosciuta; nient'altro (codice, scuola, stato, tratte, orari, sblocchi sono comuni). K-020: i valori di prima delle
     // modifiche a mano con la classe del loro campo (riferimenti, date, scuola, tratte e orari di prima comuni). K-027: chi ha detto uno
-    // sblocco a voce e la nota di un periodo in cui l'utente non viaggia (i punti sono tutti comuni: codici, luoghi, date, riferimenti).
+    // sblocco a voce e la nota di un periodo in cui l'utente non frequenta (i punti sono tutti comuni: codici, luoghi, date, riferimenti).
     std::set<std::string> elenco;
     for (const std::string& p : personali)
         if (p.rfind("elenco_utenti/", 0) == 0) elenco.insert(p);
     const std::string u = "elenco_utenti/elenchi/*/utenti/*/";
     const std::string m = u + "a_mano/campi/";
     EXPECT_EQ(elenco, (std::set<std::string>{u + "casa/civico", u + "casa/comune", u + "casa/frazione", u + "casa/via", u + "classe",
-                                             u + "fermata/testo", u + "nome", u + "sezione", u + "stato/nota", u + "non_viaggia/*/nota",
+                                             u + "fermata/testo", u + "nome", u + "sezione", u + "stato/nota", u + "non_frequenta/*/nota",
                                              u + "sblocchi/*/chi", m + "casa/prima/civico",
                                              m + "casa/prima/comune", m + "casa/prima/frazione", m + "casa/prima/via", m + "classe/prima",
                                              m + "fermata/prima/testo", m + "nome/prima", m + "sezione/prima", m + "stato/prima/nota"}));

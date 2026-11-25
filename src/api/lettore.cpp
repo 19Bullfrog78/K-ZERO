@@ -2072,7 +2072,7 @@ void campi_a_mano(const Conversione& c, const JsonDati& campi, const std::string
     }
 }
 
-// K-027: i punti dell'utente (per tratta, la storia) e i periodi in cui non viaggia.
+// K-027: i punti dell'utente (per tratta, la storia) e i periodi in cui non frequenta.
 void punti_utente(const Conversione& c, const JsonDati& v, const std::string& p, ListUser& x) {
     for (std::size_t i = 0; i < v.size(); ++i) {
         const auto& o = v[i];
@@ -2114,14 +2114,14 @@ void punti_utente(const Conversione& c, const JsonDati& v, const std::string& p,
         x.points.push_back(std::move(up));
     }
 }
-void non_viaggia_utente(const Conversione& c, const JsonDati& v, const std::string& p, ListUser& x) {
-    static const std::vector<std::pair<const char*, NotTravelingReason>> motivi = {
-        {"famiglia", NotTravelingReason::Family}, {"altro_mezzo", NotTravelingReason::OtherVehicle},
-        {"assente", NotTravelingReason::Absent},  {"ritirato", NotTravelingReason::Withdrawn},
-        {"altro", NotTravelingReason::Other}};
+void non_frequenta_utente(const Conversione& c, const JsonDati& v, const std::string& p, ListUser& x) {
+    static const std::vector<std::pair<const char*, NotAttendingReason>> motivi = {
+        {"famiglia", NotAttendingReason::Family}, {"altro_mezzo", NotAttendingReason::OtherVehicle},
+        {"assente", NotAttendingReason::Absent},
+        {"altro", NotAttendingReason::Other}};
     for (std::size_t i = 0; i < v.size(); ++i) {
         const auto& o = v[i];
-        NotTraveling y;
+        NotAttending y;
         y.from = c.data(o.at("dal"));
         y.to = c.data_opz(o, "al");
         y.legs = Conversione::testi(o, "tratte");
@@ -2129,7 +2129,7 @@ void non_viaggia_utente(const Conversione& c, const JsonDati& v, const std::stri
         y.note = c.testo(o, "nota");
         y.mark = ManualMark{o.at("riferimento").get<std::string>(), c.data(o.at("data"))};
         y.src = c.src(indice(p, i));
-        x.not_traveling.push_back(std::move(y));
+        x.not_attending.push_back(std::move(y));
     }
 }
 
@@ -2181,7 +2181,7 @@ void elenco_utenti(const JsonDati& d, Package& pk) {
                 x.unlocks.push_back(std::move(y));
             }
             punti_utente(c, c.elenco(u, "punti"), pu + "/punti", x);
-            non_viaggia_utente(c, c.elenco(u, "non_viaggia"), pu + "/non_viaggia", x);
+            non_frequenta_utente(c, c.elenco(u, "non_frequenta"), pu + "/non_frequenta", x);
             x.out_of_list = c.vero(u, "fuori_elenco");
             if (u.contains("a_mano")) {
                 const JsonDati& m = u.at("a_mano");

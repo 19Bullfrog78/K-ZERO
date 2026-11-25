@@ -94,7 +94,7 @@ const std::vector<DefinizioneErrore>& catalogo_errori() {
             {Errore::ToglimentoNonAmmesso, "K-ERR-055", CodiceUscita::ErroreParametri, "Scheda da togliere non ammessa"},
             {Errore::SchedaDellaSceltaNonNelFile, "K-ERR-056", CodiceUscita::ErroreParametri, "Scheda della scelta non presente nel file"},
             {Errore::PuntoNonAmmesso, "K-ERR-057", CodiceUscita::ErroreParametri, "Punto dell'utente non ammesso"},
-            {Errore::NonViaggiaNonAmmesso, "K-ERR-058", CodiceUscita::ErroreParametri, "Periodo \"non viaggia\" non ammesso"},
+            {Errore::NonFrequentaNonAmmesso, "K-ERR-058", CodiceUscita::ErroreParametri, "Periodo \"non frequenta\" non ammesso"},
         };
         std::sort(c.begin(), c.end(), [](const DefinizioneErrore& a, const DefinizioneErrore& b) {
             return a.codice < b.codice;
